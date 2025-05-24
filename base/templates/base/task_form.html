@@ -1,0 +1,67 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+    {% if task %}Edit Task{% else %}Add Task{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>
+        {% if task %}
+            Edit Task: {{ task.title }}
+        {% else %}
+            Add New Task
+        {% endif %}
+    </h2>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <div class="mb-3">
+            {{ form.title.label_tag }}
+            {{ form.title }}
+            {% if form.title.errors %}
+                <div class="text-danger">{{ form.title.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            {{ form.description.label_tag }}
+            {{ form.description }}
+            {% if form.description.errors %}
+                <div class="text-danger">{{ form.description.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            {{ form.assigned_to.label_tag }}
+            {{ form.assigned_to }}
+            {% if form.assigned_to.errors %}
+                <div class="text-danger">{{ form.assigned_to.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            {{ form.due_date.label_tag }}
+            {{ form.due_date }}
+            {% if form.due_date.errors %}
+                <div class="text-danger">{{ form.due_date.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            {{ form.status.label_tag }}
+            {{ form.status }}
+            {% if form.status.errors %}
+                <div class="text-danger">{{ form.status.errors }}</div>
+            {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            {% if task %}Update Task{% else %}Add Task{% endif %}
+        </button>
+        <a href="{% url 'task_list' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

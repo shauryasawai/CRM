@@ -1,0 +1,33 @@
+{% extends 'base/base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h2>Welcome, {{ request.user.get_full_name }} ({{ request.user.get_role_display }})</h2>
+
+{% if request.user.role == 'top_management' %}
+    <h3>Top Management KPIs</h3>
+    <ul>
+        <li>Total AUM: {{ kpis.aum }}</li>
+        <li>Total SIPs: {{ kpis.sip }}</li>
+        <li>Team Metrics: {{ kpis.team_metrics }}</li>
+    </ul>
+
+{% elif request.user.role == 'business_head' %}
+    <h3>Business Head Overview</h3>
+    <p>RM Heads under you: {{ rm_heads.count }}</p>
+    <p>Total Leads: {{ total_leads }}</p>
+    <p>Service Performance: {{ service_performance }}</p>
+
+{% elif request.user.role == 'rm_head' %}
+    <h3>RM Head Dashboard</h3>
+    <p>Your Leads: {{ leads.count }}</p>
+    <p>Your Team Leads: {{ team_leads.count }}</p>
+    <p>Tasks: {{ tasks.count }}</p>
+
+{% else %}
+    <h3>Relationship Manager</h3>
+    <p>Your Leads: {{ leads.count }}</p>
+    <p>Your Tasks: {{ tasks.count }}</p>
+    <p>Service Tickets: {{ service_requests.count }}</p>
+{% endif %}
+
+{% endblock %}

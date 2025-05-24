@@ -1,0 +1,27 @@
+{% extends 'base/base.html' %}
+{% block title %}Business Tracker{% endblock %}
+{% block content %}
+<h2>Business Tracker</h2>
+<table border="1">
+    <thead>
+        <tr>
+            <th>Month</th>
+            <th>SIP</th>
+            <th>Demat</th>
+            <th>AUM</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for entry in business_metrics %}
+        <tr>
+            <td>{{ entry.month }}</td>
+            <td>{{ entry.sip }}</td>
+            <td>{{ entry.demat }}</td>
+            <td>{{ entry.aum }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4">No business metrics data.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

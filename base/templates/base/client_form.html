@@ -1,0 +1,67 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+    {% if client %}Edit Client{% else %}Add Client{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>
+        {% if client %}
+            Edit Client: {{ client.name }}
+        {% else %}
+            Add New Client
+        {% endif %}
+    </h2>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        
+        <div class="mb-3">
+            {{ form.name.label_tag }}
+            {{ form.name }}
+            {% if form.name.errors %}
+                <div class="text-danger">{{ form.name.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="mb-3">
+            {{ form.email.label_tag }}
+            {{ form.email }}
+            {% if form.email.errors %}
+                <div class="text-danger">{{ form.email.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            {{ form.phone.label_tag }}
+            {{ form.phone }}
+            {% if form.phone.errors %}
+                <div class="text-danger">{{ form.phone.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            {{ form.address.label_tag }}
+            {{ form.address }}
+            {% if form.address.errors %}
+                <div class="text-danger">{{ form.address.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            {{ form.assigned_to.label_tag }}
+            {{ form.assigned_to }}
+            {% if form.assigned_to.errors %}
+                <div class="text-danger">{{ form.assigned_to.errors }}</div>
+            {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            {% if client %}Update Client{% else %}Add Client{% endif %}
+        </button>
+        <a href="{% url 'client_list' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

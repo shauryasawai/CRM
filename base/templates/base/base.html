@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>{% block title %}CRM System{% endblock %}</title>
+</head>
+<body>
+    <header>
+        <h1>Financial CRM</h1>
+        <nav>
+            <a href="{% url 'dashboard' %}">Dashboard</a> |
+            <a href="{% url 'lead_list' %}">Leads</a> |
+            <a href="{% url 'client_list' %}">Clients</a> |
+            <a href="{% url 'task_list' %}">Tasks</a> |
+            <a href="{% url 'service_request_list' %}">Service Requests</a> |
+            <a href="{% url 'investment_plan_review_list' %}">Investment Plans</a> |
+            <a href="{% url 'logout' %}">Logout</a>
+        </nav>
+    </header>
+    <main>
+        {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                    <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+    <footer>
+        <p>&copy; {{ year }} Financial CRM</p>
+    </footer>
+</body>
+</html>

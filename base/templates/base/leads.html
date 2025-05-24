@@ -1,0 +1,43 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Leads{% endblock %}
+
+{% block content %}
+<h1>Leads</h1>
+
+<a href="{% url 'lead_create' %}" class="btn btn-primary mb-3">Add New Lead</a>
+
+{% if leads %}
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Contact Info</th>
+            <th>Source</th>
+            <th>Status</th>
+            <th>Assigned To</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for lead in leads %}
+        <tr>
+            <td>{{ lead.name }}</td>
+            <td>{{ lead.contact_info }}</td>
+            <td>{{ lead.source }}</td>
+            <td>{{ lead.status }}</td>
+            <td>{{ lead.assigned_to.get_full_name }}</td>
+            <td>
+                <a href="{% url 'lead_update' lead.pk %}" class="btn btn-sm btn-warning">Edit</a>
+                <a href="{% url 'lead_delete' lead.pk %}" class="btn btn-sm btn-danger">Delete</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No leads found.</p>
+{% endif %}
+
+{% endblock %}

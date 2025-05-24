@@ -1,0 +1,44 @@
+{% extends "base/base.html" %}
+
+{% block title %}Investment Plans{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Investment Plans</h2>
+    <a href="{% url 'investment_plan_review_create' %}" class="btn btn-primary mb-3">Add Investment Plan</a>
+
+    {% if investment_plans %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Client</th>
+                    <th>Plan Name</th>
+                    <th>Amount</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for plan in investment_plans %}
+                <tr>
+                    <td>{{ plan.id }}</td>
+                    <td>{{ plan.client.name }}</td>
+                    <td>{{ plan.plan_name }}</td>
+                    <td>{{ plan.amount }}</td>
+                    <td>{{ plan.start_date|date:"Y-m-d" }}</td>
+                    <td>{{ plan.end_date|date:"Y-m-d" }}</td>
+                    <td>
+                        <a href="{% url 'investment_plan_edit' plan.id %}" class="btn btn-sm btn-warning">Edit</a>
+                        <a href="{% url 'investment_plan_delete' plan.id %}" class="btn btn-sm btn-danger">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No investment plans found.</p>
+    {% endif %}
+</div>
+{% endblock %}

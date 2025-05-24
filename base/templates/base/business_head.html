@@ -1,0 +1,195 @@
+<!-- templates/dashboard/business_head.html -->
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block title %}Business Head Dashboard{% endblock %}
+
+{% block breadcrumb_items %}
+<li class="breadcrumb-item active">Business Head Dashboard</li>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">RM Heads</h5>
+                        <h2 class="card-text">{{ rm_heads.count }}</h2>
+                    </div>
+                    <i class="bi bi-people fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">Active RMs</h5>
+                        <h2 class="card-text">{{ rms.count }}</h2>
+                    </div>
+                    <i class="bi bi-person-check fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">Total Leads</h5>
+                        <h2 class="card-text">{{ total_leads|default:0|intcomma }}</h2>
+                    </div>
+                    <i class="bi bi-person-plus fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">Conversions</h5>
+                        <h2 class="card-text">{{ conversions|default:0|intcomma }}</h2>
+                    </div>
+                    <i class="bi bi-graph-up fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">RM Head Performance</h5>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown">
+                        <i class="bi bi-calendar"></i> {{ timezone.now|date:"F Y" }}
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#">Last Month</a></li>
+                        <li><a class="dropdown-item" href="#">Quarter to Date</a></li>
+                        <li><a class="dropdown-item" href="#">Year to Date</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>RM Head</th>
+                                <th>Team Size</th>
+                                <th>Leads</th>
+                                <th>Conversions</th>
+                                <th>AUM (₹)</th>
+                                <th>SIPs</th>
+                                <th>Demat</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rh in rm_heads %}
+                            <tr>
+                                <td>{{ rh.get_full_name }}</td>
+                                <td>{{ rh.team_members.count }}</td>
+                                <td>{{ rh.team_leads }}</td>
+                                <td>{{ rh.team_conversions }}</td>
+                                <td>₹{{ rh.team_aum|intcomma }}</td>
+                                <td>{{ rh.team_sips }}</td>
+                                <td>{{ rh.team_demat }}</td>
+                                <td>
+                                    <a href="#" class="btn btn-sm btn-outline-primary" title="View Team">
+                                        <i class="bi bi-people"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center">No RM Heads reporting to you</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Lead Status</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="leadStatusChart" height="250"></canvas>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Recent Activities</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    {% for activity in recent_activities %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <small class="text-muted">{{ activity.timestamp|timesince }} ago</small>
+                        </div>
+                        <p class="mb-1">{{ activity.message }}</p>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted py-3">No recent activities</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    // Lead Status Chart
+    const leadStatusCtx = document.getElementById('leadStatusChart').getContext('2d');
+    const leadStatusChart = new Chart(leadStatusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['New', 'Contacted', 'Qualified', 'Converted', 'Lost'],
+            datasets: [{
+                data: [25, 15, 10, 5, 3],
+                backgroundColor: [
+                    'rgba(13, 110, 253, 0.7)',
+                    'rgba(255, 193, 7, 0.7)',
+                    'rgba(111, 66, 193, 0.7)',
+                    'rgba(25, 135, 84, 0.7)',
+                    'rgba(220, 53, 69, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(13, 110, 253, 1)',
+                    'rgba(255, 193, 7, 1)',
+                    'rgba(111, 66, 193, 1)',
+                    'rgba(25, 135, 84, 1)',
+                    'rgba(220, 53, 69, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

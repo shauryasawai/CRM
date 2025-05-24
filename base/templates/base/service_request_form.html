@@ -1,0 +1,51 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+    {% if service_request %}Edit Service Request{% else %}Add Service Request{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>
+        {% if service_request %}
+            Edit Service Request #{{ service_request.id }}
+        {% else %}
+            Add New Service Request
+        {% endif %}
+    </h2>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <div class="mb-3">
+            {{ form.client.label_tag }}
+            {{ form.client }}
+            {% if form.client.errors %}
+                <div class="text-danger">{{ form.client.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            {{ form.description.label_tag }}
+            {{ form.description }}
+            {% if form.description.errors %}
+                <div class="text-danger">{{ form.description.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            {{ form.status.label_tag }}
+            {{ form.status }}
+            {% if form.status.errors %}
+                <div class="text-danger">{{ form.status.errors }}</div>
+            {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            {% if service_request %}Update{% else %}Submit{% endif %}
+        </button>
+        <a href="{% url 'service_request_list' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}
