@@ -5,19 +5,15 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2>
-        {% if client %}
-            Edit Client: {{ client.name }}
-        {% else %}
-            Add New Client
-        {% endif %}
+<div class="container mt-4" style="max-width: 700px;">
+    <h2 class="mb-4">
+        {% if client %}Edit Client: {{ client.name }}{% else %}Add New Client{% endif %}
     </h2>
 
-    <form method="post" novalidate>
+    <form method="post">
         {% csrf_token %}
         {{ form.non_field_errors }}
-        
+
         <div class="mb-3">
             {{ form.name.label_tag }}
             {{ form.name }}
@@ -25,41 +21,57 @@
                 <div class="text-danger">{{ form.name.errors }}</div>
             {% endif %}
         </div>
-        
+
         <div class="mb-3">
-            {{ form.email.label_tag }}
-            {{ form.email }}
-            {% if form.email.errors %}
-                <div class="text-danger">{{ form.email.errors }}</div>
+            {{ form.contact_info.label_tag }}
+            {{ form.contact_info }}
+            {% if form.contact_info.errors %}
+                <div class="text-danger">{{ form.contact_info.errors }}</div>
             {% endif %}
         </div>
 
         <div class="mb-3">
-            {{ form.phone.label_tag }}
-            {{ form.phone }}
-            {% if form.phone.errors %}
-                <div class="text-danger">{{ form.phone.errors }}</div>
+            {{ form.aum.label_tag }}
+            {{ form.aum }}
+            {% if form.aum.errors %}
+                <div class="text-danger">{{ form.aum.errors }}</div>
             {% endif %}
         </div>
 
         <div class="mb-3">
-            {{ form.address.label_tag }}
-            {{ form.address }}
-            {% if form.address.errors %}
-                <div class="text-danger">{{ form.address.errors }}</div>
+            {{ form.sip_amount.label_tag }}
+            {{ form.sip_amount }}
+            {% if form.sip_amount.errors %}
+                <div class="text-danger">{{ form.sip_amount.errors }}</div>
             {% endif %}
         </div>
 
         <div class="mb-3">
-            {{ form.assigned_to.label_tag }}
-            {{ form.assigned_to }}
-            {% if form.assigned_to.errors %}
-                <div class="text-danger">{{ form.assigned_to.errors }}</div>
+            {{ form.demat_count.label_tag }}
+            {{ form.demat_count }}
+            {% if form.demat_count.errors %}
+                <div class="text-danger">{{ form.demat_count.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            {{ form.user.label_tag }}
+            {{ form.user }}
+            {% if form.user.errors %}
+                <div class="text-danger">{{ form.user.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3">
+            {{ form.lead.label_tag }}
+            {{ form.lead }}
+            {% if form.lead.errors %}
+                <div class="text-danger">{{ form.lead.errors }}</div>
             {% endif %}
         </div>
 
         <button type="submit" class="btn btn-primary">
-            {% if client %}Update Client{% else %}Add Client{% endif %}
+            {% if client %}Update{% else %}Save{% endif %}
         </button>
         <a href="{% url 'client_list' %}" class="btn btn-secondary">Cancel</a>
     </form>

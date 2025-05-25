@@ -1,33 +1,258 @@
 {% extends 'base/base.html' %}
 {% block title %}Service Requests{% endblock %}
 {% block content %}
-<h2>Service Requests</h2>
-<a href="{% url 'service_request_create' %}">Add New Service Request</a>
-<table border="1">
-    <thead>
-        <tr>
-            <th>Client</th>
-            <th>Description</th>
-            <th>Status</th>
-            <th>Raised By</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for req in service_requests %}
-        <tr>
-            <td>{{ req.client.name }}</td>
-            <td>{{ req.description|truncatechars:50 }}</td>
-            <td>{{ req.status }}</td>
-            <td>{{ req.raised_by.get_full_name }}</td>
-            <td>
-                <a href="{% url 'service_request_update' req.pk %}">Edit</a> |
-                <a href="{% url 'service_request_delete' req.pk %}">Delete</a>
-            </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="5">No service requests found.</td></tr>
-        {% endfor %}
-    </tbody>
-</table>
+<style>
+    .requests-container {
+        max-width: 1800px;
+        margin: 2rem auto;
+        padding: 2rem;
+        position: relative;
+        animation: fadeInUp 0.8s ease-out;
+    }
+
+    .requests-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .requests-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: var(--gradient-aurora);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin: 0;
+    }
+
+    .add-request-btn {
+        background: var(--gradient-primary);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        box-shadow: var(--shadow-md);
+    }
+
+    .add-request-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .requests-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        background: var(--bg-card);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .requests-table thead {
+        background: var(--gradient-cyber);
+    }
+
+    .requests-table th {
+        padding: 1.25rem 1.5rem;
+        text-align: left;
+        color: white;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.05em;
+    }
+
+    .requests-table td {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid var(--border-subtle);
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+
+    .requests-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .requests-table tbody tr:hover {
+        background: rgba(59, 130, 246, 0.05);
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.35rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .status-open {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--accent-warning);
+    }
+
+    .status-in-progress {
+        background: rgba(59, 130, 246, 0.1);
+        color: var(--accent-primary);
+    }
+
+    .status-resolved {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--accent-success);
+    }
+
+    .status-closed {
+        background: rgba(108, 122, 137, 0.1);
+        color: var(--text-muted);
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .action-btn {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 500;
+        font-size: 0.85rem;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .edit-btn {
+        background: rgba(59, 130, 246, 0.1);
+        color: var(--accent-primary);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .edit-btn:hover {
+        background: rgba(59, 130, 246, 0.2);
+    }
+
+    .delete-btn {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--accent-danger);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .delete-btn:hover {
+        background: rgba(239, 68, 68, 0.2);
+    }
+
+    .empty-message {
+        text-align: center;
+        padding: 3rem;
+        color: var(--text-muted);
+        font-size: 1.1rem;
+        background: var(--bg-card);
+        border-radius: 16px;
+        margin-top: 1rem;
+    }
+
+    .description-text {
+        max-width: 300px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .client-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .client-icon {
+        color: var(--accent-purple);
+    }
+
+    @media (max-width: 768px) {
+        .requests-container {
+            padding: 1rem;
+        }
+
+        .requests-table {
+            display: block;
+            overflow-x: auto;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .description-text {
+            max-width: 150px;
+        }
+    }
+</style>
+
+<div class="requests-container">
+    <div class="requests-header">
+        <h1 class="requests-title">Service Requests</h1>
+        <a href="{% url 'service_request_create' %}" class="add-request-btn">
+            <i class="fas fa-plus"></i> Add New Request
+        </a>
+    </div>
+
+    {% if service_requests %}
+    <table class="requests-table">
+        <thead>
+            <tr>
+                <th>Client</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>Raised By</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for req in service_requests %}
+            <tr>
+                <td class="client-info">
+                    <i class="fas fa-building client-icon"></i>
+                    {{ req.client.name }}
+                </td>
+                <td class="description-text">{{ req.description|truncatechars:50 }}</td>
+                <td>
+                    <span class="status-badge status-{{ req.status|lower|slugify }}">
+                        {{ req.status }}
+                    </span>
+                </td>
+                <td>{{ req.raised_by.get_full_name }}</td>
+                <td>
+                    <div class="action-buttons">
+                        <a href="{% url 'service_request_update' req.pk %}" class="action-btn edit-btn">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <a href="{% url 'service_request_delete' req.pk %}" class="action-btn delete-btn">
+                            <i class="fas fa-trash"></i> Delete
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-message">
+        <p>No service requests found.</p>
+    </div>
+    {% endif %}
+</div>
 {% endblock %}

@@ -1,44 +1,297 @@
-{% extends "base/base.html" %}
-
+{% extends 'base/base.html' %}
 {% block title %}Investment Plans{% endblock %}
-
 {% block content %}
-<div class="container mt-4">
-    <h2>Investment Plans</h2>
-    <a href="{% url 'investment_plan_review_create' %}" class="btn btn-primary mb-3">Add Investment Plan</a>
+<style>
+    .investments-container {
+        max-width: 1800px;
+        margin: 2rem auto;
+        padding: 2rem;
+        position: relative;
+        animation: fadeInUp 0.8s ease-out;
+    }
 
-    {% if investment_plans %}
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Client</th>
-                    <th>Plan Name</th>
-                    <th>Amount</th>
-                    <th>Start Date</th>
-                    <th>End Date</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for plan in investment_plans %}
-                <tr>
-                    <td>{{ plan.id }}</td>
-                    <td>{{ plan.client.name }}</td>
-                    <td>{{ plan.plan_name }}</td>
-                    <td>{{ plan.amount }}</td>
-                    <td>{{ plan.start_date|date:"Y-m-d" }}</td>
-                    <td>{{ plan.end_date|date:"Y-m-d" }}</td>
-                    <td>
-                        <a href="{% url 'investment_plan_edit' plan.id %}" class="btn btn-sm btn-warning">Edit</a>
-                        <a href="{% url 'investment_plan_delete' plan.id %}" class="btn btn-sm btn-danger">Delete</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p>No investment plans found.</p>
-    {% endif %}
+    .investments-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .investments-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: var(--gradient-aurora);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin: 0;
+    }
+
+    .investments-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        background: var(--bg-card);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 3rem;
+    }
+
+    .investments-table thead {
+        background: var(--gradient-cyber);
+    }
+
+    .investments-table th {
+        padding: 1.25rem 1.5rem;
+        text-align: left;
+        color: white;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.05em;
+    }
+
+    .investments-table td {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid var(--border-subtle);
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+
+    .investments-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .investments-table tbody tr:hover {
+        background: rgba(59, 130, 246, 0.05);
+    }
+
+    .investment-value {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .action-btn {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 500;
+        font-size: 0.85rem;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .edit-btn {
+        background: rgba(59, 130, 246, 0.1);
+        color: var(--accent-primary);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .edit-btn:hover {
+        background: rgba(59, 130, 246, 0.2);
+    }
+
+    .delete-btn {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--accent-danger);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .delete-btn:hover {
+        background: rgba(239, 68, 68, 0.2);
+    }
+
+    .chart-container {
+        background: var(--bg-card);
+        border-radius: 16px;
+        padding: 2rem;
+        margin-top: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .chart-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--gradient-primary);
+    }
+
+    .chart-title {
+        font-size: 1.4rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+        .investments-container {
+            padding: 1rem;
+        }
+
+        .investments-table {
+            display: block;
+            overflow-x: auto;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .chart-container {
+            padding: 1rem;
+        }
+    }
+</style>
+
+<div class="investments-container">
+    <div class="investments-header">
+        <h1 class="investments-title">Investment Plans</h1>
+    </div>
+
+    <table class="investments-table">
+        <thead>
+            <tr>
+                <th>Client</th>
+                <th>Goal</th>
+                <th>Principal (₹)</th>
+                <th>Monthly (₹)</th>
+                <th>Tenure (Years)</th>
+                <th>Total Investment (₹)</th>
+                {% if user.role == 'rm' or user.role == 'rm_head' %}
+                <th>Actions</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for review in reviews %}
+            <tr>
+                <td>{{ review.client.name }}</td>
+                <td>{{ review.goal }}</td>
+                <td class="investment-value">₹{{ review.principal_amount|floatformat:2 }}</td>
+                <td class="investment-value">₹{{ review.monthly_investment|floatformat:2 }}</td>
+                <td>{{ review.tenure_years }}</td>
+                <td class="investment-value">₹{{ review.total_investment|floatformat:2 }}</td>
+                {% if user.role == 'rm' or user.role == 'rm_head' %}
+                <td>
+                    <div class="action-buttons">
+                        <a href="{% url 'investment_plan_review_update' review.pk %}" class="action-btn edit-btn">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <a href="{% url 'investment_plan_review_delete' review.pk %}" class="action-btn delete-btn">
+                            <i class="fas fa-trash"></i> Delete
+                        </a>
+                    </div>
+                </td>
+                {% endif %}
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="{% if user.role == 'rm' or user.role == 'rm_head' %}7{% else %}6{% endif %}" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                    No investment plans found.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="chart-container">
+        <h3 class="chart-title">Investment Plan Overview</h3>
+        <canvas id="investmentChart"></canvas>
+    </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('investmentChart').getContext('2d');
+    
+    // Generate gradient for chart bars
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, 'rgba(59, 130, 246, 0.8)');
+    gradient.addColorStop(1, 'rgba(59, 130, 246, 0.2)');
+    
+    const data = {
+        labels: [{% for review in reviews %}"{{ review.goal|escapejs }}",{% endfor %}],
+        datasets: [{
+            label: 'Total Investment (₹)',
+            data: [{% for review in reviews %}{{ review.total_investment }},{% endfor %}],
+            backgroundColor: gradient,
+            borderColor: 'rgba(59, 130, 246, 1)',
+            borderWidth: 2,
+            borderRadius: 6,
+            hoverBackgroundColor: 'rgba(139, 92, 246, 0.7)'
+        }]
+    };
+    
+    const config = {
+        type: 'bar',
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return '₹' + context.raw.toLocaleString('en-IN');
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return '₹' + value.toLocaleString('en-IN');
+                        },
+                        color: 'rgba(255, 255, 255, 0.7)'
+                    },
+                    title: { 
+                        display: true, 
+                        text: 'Investment Value',
+                        color: 'rgba(255, 255, 255, 0.7)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)'
+                    },
+                    title: { 
+                        display: true, 
+                        text: 'Financial Goals',
+                        color: 'rgba(255, 255, 255, 0.7)'
+                    }
+                }
+            }
+        }
+    };
+    
+    new Chart(ctx, config);
+});
+</script>
 {% endblock %}

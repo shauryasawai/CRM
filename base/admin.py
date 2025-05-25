@@ -55,6 +55,11 @@ class BusinessTrackerAdmin(admin.ModelAdmin):
 
 @admin.register(InvestmentPlanReview)
 class InvestmentPlanReviewAdmin(admin.ModelAdmin):
-    list_display = ('client', 'review_date')
-    search_fields = ('client__name',)
-    ordering = ('-review_date',)
+    list_display = ('client', 'goal', 'principal_amount', 'tenure_years', 'monthly_investment', 'created_at', 'total_investment')
+    search_fields = ('client__name', 'goal')
+    ordering = ('-created_at',)
+
+    def total_investment(self, obj):
+        return obj.total_investment
+    total_investment.short_description = 'Total Investment'
+

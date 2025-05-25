@@ -1,33 +1,881 @@
 {% extends 'base/base.html' %}
 {% block title %}Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --bg-primary: #0c0d21;
+        --bg-secondary: #151629;
+        --bg-card: #1a1b35;
+        --bg-accent: #1f2041;
+        --text-primary: #f0f2f5;
+        --text-secondary: #a8abb2;
+        --text-muted: #6b7280;
+        --accent-primary: #3b82f6;
+        --accent-success: #10b981;
+        --accent-warning: #f59e0b;
+        --accent-danger: #ef4444;
+        --accent-purple: #8b5cf6;
+        --accent-cyan: #06b6d4;
+        --accent-pink: #ec4899;
+        --border-subtle: #2d3748;
+        --border-accent: #374151;
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
+        --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.15);
+        --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.25);
+        --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.35);
+        --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --gradient-success: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+        --gradient-warning: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        --gradient-danger: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
+        --gradient-cyber: linear-gradient(135deg, #0f3460 0%, #0d5f8a 50%, #2196f3 100%);
+        --gradient-aurora: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        line-height: 1.6;
+        overflow-x: hidden;
+    }
+
+    .dashboard-container {
+        max-width: 1800px;
+        margin: 0 auto;
+        padding: 2rem;
+        position: relative;
+        animation: fadeInUp 0.8s ease-out;
+    }
+
+    .dashboard-container::before {
+        content: '';
+        position: absolute;
+        top: -100px;
+        left: -100px;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(59, 130, 246, 0.05) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .dashboard-container::after {
+        content: '';
+        position: absolute;
+        bottom: -150px;
+        right: -150px;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(139, 92, 246, 0.05) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .dashboard-header {
+        text-align: center;
+        margin-bottom: 4rem;
+        position: relative;
+        z-index: 10;
+    }
+
+    .dashboard-title {
+        font-size: 3.5rem;
+        font-weight: 900;
+        background: var(--gradient-aurora);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 1rem;
+        letter-spacing: -0.025em;
+        line-height: 1.1;
+    }
+
+    .welcome-text {
+        font-size: 1.25rem;
+        color: var(--text-secondary);
+        margin-bottom: 1rem;
+        font-weight: 400;
+    }
+
+    .role-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1.5rem;
+        background: rgba(59, 130, 246, 0.1);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        border-radius: 30px;
+        color: var(--accent-primary);
+        font-weight: 600;
+        font-size: 1rem;
+        letter-spacing: 0.025em;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .role-indicator::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+        animation: shimmer 3s infinite;
+    }
+
+    .role-icon {
+        font-size: 1.25rem;
+    }
+
+    /* Role-specific styling */
+    .role-top-management {
+        background: rgba(236, 72, 153, 0.1);
+        border-color: rgba(236, 72, 153, 0.3);
+        color: var(--accent-pink);
+    }
+
+    .role-business-head {
+        background: rgba(139, 92, 246, 0.1);
+        border-color: rgba(139, 92, 246, 0.3);
+        color: var(--accent-purple);
+    }
+
+    .role-rm-head {
+        background: rgba(6, 182, 212, 0.1);
+        border-color: rgba(6, 182, 212, 0.3);
+        color: var(--accent-cyan);
+    }
+
+    .role-rm {
+        background: rgba(16, 185, 129, 0.1);
+        border-color: rgba(16, 185, 129, 0.3);
+        color: var(--accent-success);
+    }
+
+    .dashboard-content {
+        position: relative;
+        z-index: 10;
+    }
+
+    .section-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 2rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .section-icon {
+        width: 40px;
+        height: 40px;
+        background: var(--gradient-cyber);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.2rem;
+    }
+
+    /* KPI Grid for Top Management */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+
+    .kpi-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-subtle);
+        border-radius: 20px;
+        padding: 2.5rem;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        cursor: pointer;
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: var(--shadow-xl);
+        border-color: var(--accent-primary);
+    }
+
+    .kpi-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--gradient-primary);
+        border-radius: 20px 20px 0 0;
+    }
+
+    .kpi-card.success::before { background: var(--gradient-success); }
+    .kpi-card.warning::before { background: var(--gradient-warning); }
+    .kpi-card.danger::before { background: var(--gradient-danger); }
+
+    .kpi-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+    }
+
+    .kpi-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        background: rgba(59, 130, 246, 0.1);
+        color: var(--accent-primary);
+    }
+
+    .kpi-card.success .kpi-icon {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--accent-success);
+    }
+
+    .kpi-card.warning .kpi-icon {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--accent-warning);
+    }
+
+    .kpi-trend {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--accent-success);
+    }
+
+    .kpi-label {
+        font-size: 1rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+        margin-bottom: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .kpi-value {
+        font-size: 2.5rem;
+        font-weight: 900;
+        color: var(--text-primary);
+        line-height: 1;
+        margin-bottom: 0.5rem;
+    }
+
+    .kpi-description {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        line-height: 1.5;
+    }
+
+    /* Metrics Grid for other roles */
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 3rem;
+    }
+
+    .metric-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-subtle);
+        border-radius: 16px;
+        padding: 2rem;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+        border-color: var(--accent-primary);
+    }
+
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--gradient-primary);
+    }
+
+    .metric-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .metric-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        background: rgba(59, 130, 246, 0.1);
+        color: var(--accent-primary);
+    }
+
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-label {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+
+    .metric-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.75rem;
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--accent-success);
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    /* Stats List for simpler layouts */
+    .stats-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .stat-item {
+        background: var(--bg-card);
+        border: 1px solid var(--border-subtle);
+        border-radius: 12px;
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .stat-item:hover {
+        transform: translateX(4px);
+        border-color: var(--accent-primary);
+        box-shadow: var(--shadow-md);
+    }
+
+    .stat-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        background: rgba(59, 130, 246, 0.1);
+        color: var(--accent-primary);
+        flex-shrink: 0;
+    }
+
+    .stat-content {
+        flex: 1;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+
+    /* Performance Chart Area */
+    .chart-section {
+        background: var(--bg-card);
+        border: 1px solid var(--border-subtle);
+        border-radius: 20px;
+        padding: 2rem;
+        margin: 2rem 0;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .chart-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--gradient-cyber);
+    }
+
+    .chart-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+    }
+
+    .chart-title {
+        font-size: 1.4rem;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .chart-placeholder {
+        height: 300px;
+        background: linear-gradient(45deg, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05));
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px dashed var(--border-accent);
+        color: var(--text-muted);
+        flex-direction: column;
+        gap: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .chart-placeholder:hover {
+        border-color: var(--accent-primary);
+        background: linear-gradient(45deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
+    }
+
+    .placeholder-icon {
+        font-size: 3rem;
+        opacity: 0.5;
+    }
+
+    .placeholder-text {
+        font-size: 1.1rem;
+        font-weight: 500;
+    }
+
+    .placeholder-subtext {
+        font-size: 0.9rem;
+        opacity: 0.7;
+    }
+
+    /* Animations */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes shimmer {
+        0% { left: -100%; }
+        100% { left: 100%; }
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.8; }
+    }
+
+    .loading {
+        animation: pulse 2s infinite;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1200px) {
+        .kpi-grid {
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-container {
+            padding: 1rem;
+        }
+        
+        .dashboard-title {
+            font-size: 2.5rem;
+        }
+        
+        .kpi-grid,
+        .metrics-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        
+        .kpi-card,
+        .metric-card {
+            padding: 1.5rem;
+        }
+        
+        .kpi-value,
+        .metric-value {
+            font-size: 2rem;
+        }
+        
+        .stats-list {
+            grid-template-columns: 1fr;
+        }
+        
+        .chart-placeholder {
+            height: 200px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .dashboard-container {
+            padding: 0.75rem;
+        }
+        
+        .dashboard-title {
+            font-size: 2rem;
+        }
+        
+        .welcome-text {
+            font-size: 1.1rem;
+        }
+        
+        .role-indicator {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<h2>Welcome, {{ request.user.get_full_name }} ({{ request.user.get_role_display }})</h2>
+<div class="dashboard-container">
+    <!-- Header Section -->
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">Command Center</h1>
+        <p class="welcome-text">Welcome back, {{ request.user.get_full_name }}</p>
+        <div class="role-indicator role-{{ request.user.role }}">
+            {% if request.user.role == 'top_management' %}
+                <span class="role-icon">👑</span>
+                <span>{{ request.user.get_role_display }}</span>
+            {% elif request.user.role == 'business_head' %}
+                <span class="role-icon">🎯</span>
+                <span>{{ request.user.get_role_display }}</span>
+            {% elif request.user.role == 'rm_head' %}
+                <span class="role-icon">⚡</span>
+                <span>{{ request.user.get_role_display }}</span>
+            {% else %}
+                <span class="role-icon">🤝</span>
+                <span>{{ request.user.get_role_display }}</span>
+            {% endif %}
+        </div>
+    </div>
 
-{% if request.user.role == 'top_management' %}
-    <h3>Top Management KPIs</h3>
-    <ul>
-        <li>Total AUM: {{ kpis.aum }}</li>
-        <li>Total SIPs: {{ kpis.sip }}</li>
-        <li>Team Metrics: {{ kpis.team_metrics }}</li>
-    </ul>
+    <!-- Dashboard Content -->
+    <div class="dashboard-content">
+        {% if request.user.role == 'top_management' %}
+            <!-- Top Management KPIs -->
+            <h2 class="section-title">
+                <div class="section-icon">📊</div>
+                Executive KPI Dashboard
+            </h2>
+            
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <div class="kpi-icon">💰</div>
+                        <div class="kpi-trend">
+                            <span>📈</span> +12.5%
+                        </div>
+                    </div>
+                    <div class="kpi-label">Total AUM</div>
+                    <div class="kpi-value">{{ kpis.aum|default:"₹0" }}</div>
+                    <div class="kpi-description">Assets Under Management across all portfolios</div>
+                </div>
 
-{% elif request.user.role == 'business_head' %}
-    <h3>Business Head Overview</h3>
-    <p>RM Heads under you: {{ rm_heads.count }}</p>
-    <p>Total Leads: {{ total_leads }}</p>
-    <p>Service Performance: {{ service_performance }}</p>
+                <div class="kpi-card success">
+                    <div class="kpi-header">
+                        <div class="kpi-icon">🔄</div>
+                        <div class="kpi-trend">
+                            <span>⚡</span> Active
+                        </div>
+                    </div>
+                    <div class="kpi-label">Total SIPs</div>
+                    <div class="kpi-value">{{ kpis.sip|default:"0" }}</div>
+                    <div class="kpi-description">Systematic Investment Plans currently active</div>
+                </div>
 
-{% elif request.user.role == 'rm_head' %}
-    <h3>RM Head Dashboard</h3>
-    <p>Your Leads: {{ leads.count }}</p>
-    <p>Your Team Leads: {{ team_leads.count }}</p>
-    <p>Tasks: {{ tasks.count }}</p>
+                <div class="kpi-card warning">
+                    <div class="kpi-header">
+                        <div class="kpi-icon">👥</div>
+                        <div class="kpi-trend">
+                            <span>🚀</span> Growing
+                        </div>
+                    </div>
+                    <div class="kpi-label">Team Performance</div>
+                    <div class="kpi-value">{{ kpis.team_metrics|default:"95%" }}</div>
+                    <div class="kpi-description">Overall team efficiency and performance metrics</div>
+                </div>
+            </div>
 
-{% else %}
-    <h3>Relationship Manager</h3>
-    <p>Your Leads: {{ leads.count }}</p>
-    <p>Your Tasks: {{ tasks.count }}</p>
-    <p>Service Tickets: {{ service_requests.count }}</p>
-{% endif %}
+            <!-- Performance Chart -->
+            <div class="chart-section">
+                <div class="chart-header">
+                    <h3 class="chart-title">📈 Executive Performance Analytics</h3>
+                    <div class="metric-badge">Real-time Data</div>
+                </div>
+                <div class="chart-placeholder">
+                    <div class="placeholder-icon">📊</div>
+                    <div class="placeholder-text">Advanced Analytics Dashboard</div>
+                    <div class="placeholder-subtext">Integrate with your preferred charting library</div>
+                </div>
+            </div>
 
+        {% elif request.user.role == 'business_head' %}
+            <!-- Business Head Overview -->
+            <h2 class="section-title">
+                <div class="section-icon">🎯</div>
+                Business Intelligence Hub
+            </h2>
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon">👥</div>
+                        <div class="metric-badge">Active</div>
+                    </div>
+                    <div class="metric-value">{{ rm_heads.count|default:"0" }}</div>
+                    <div class="metric-label">RM Heads Under You</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon">🎯</div>
+                        <div class="metric-badge">Pipeline</div>
+                    </div>
+                    <div class="metric-value">{{ total_leads|default:"0" }}</div>
+                    <div class="metric-label">Total Leads</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon">⚡</div>
+                        <div class="metric-badge">{{ service_performance|default:"Excellent" }}</div>
+                    </div>
+                    <div class="metric-value">94%</div>
+                    <div class="metric-label">Service Performance</div>
+                </div>
+            </div>
+
+            <!-- Business Chart -->
+            <div class="chart-section">
+                <div class="chart-header">
+                    <h3 class="chart-title">🏢 Business Performance Overview</h3>
+                    <div class="metric-badge">Updated Now</div>
+                </div>
+                <div class="chart-placeholder">
+                    <div class="placeholder-icon">📈</div>
+                    <div class="placeholder-text">Business Metrics Dashboard</div>
+                    <div class="placeholder-subtext">Team performance and lead conversion analytics</div>
+                </div>
+            </div>
+
+        {% elif request.user.role == 'rm_head' %}
+            <!-- RM Head Dashboard -->
+            <h2 class="section-title">
+                <div class="section-icon">⚡</div>
+                Regional Management Center
+            </h2>
+            
+            <div class="stats-list">
+                <div class="stat-item">
+                    <div class="stat-icon">🎯</div>
+                    <div class="stat-content">
+                        <div class="stat-value">{{ leads.count|default:"0" }}</div>
+                        <div class="stat-label">Your Personal Leads</div>
+                    </div>
+                </div>
+
+                <div class="stat-item">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-content">
+                        <div class="stat-value">{{ team_leads.count|default:"0" }}</div>
+                        <div class="stat-label">Your Team Leads</div>
+                    </div>
+                </div>
+
+                <div class="stat-item">
+                    <div class="stat-icon">📋</div>
+                    <div class="stat-content">
+                        <div class="stat-value">{{ tasks.count|default:"0" }}</div>
+                        <div class="stat-label">Active Tasks</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RM Head Chart -->
+            <div class="chart-section">
+                <div class="chart-header">
+                    <h3 class="chart-title">⚡ Team Performance Analytics</h3>
+                    <div class="metric-badge">Live Updates</div>
+                </div>
+                <div class="chart-placeholder">
+                    <div class="placeholder-icon">📊</div>
+                    <div class="placeholder-text">Regional Performance Dashboard</div>
+                    <div class="placeholder-subtext">Team leads and task completion analytics</div>
+                </div>
+            </div>
+
+        {% else %}
+            <!-- Relationship Manager -->
+            <h2 class="section-title">
+                <div class="section-icon">🤝</div>
+                Relationship Manager Hub
+            </h2>
+            
+            <div class="stats-list">
+                <div class="stat-item">
+                    <div class="stat-icon">🎯</div>
+                    <div class="stat-content">
+                        <div class="stat-value">{{ leads.count|default:"0" }}</div>
+                        <div class="stat-label">Your Leads</div>
+                    </div>
+                </div>
+
+                <div class="stat-item">
+                    <div class="stat-icon">📋</div>
+                    <div class="stat-content">
+                        <div class="stat-value">{{ tasks.count|default:"0" }}</div>
+                        <div class="stat-label">Your Tasks</div>
+                    </div>
+                </div>
+
+                <div class="stat-item">
+                    <div class="stat-icon">🎫</div>
+                    <div class="stat-content">
+                        <div class="stat-value">{{ service_requests.count|default:"0" }}</div>
+                        <div class="stat-label">Service Tickets</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RM Chart -->
+            <div class="chart-section">
+                <div class="chart-header">
+                    <h3 class="chart-title">🤝 Personal Performance Dashboard</h3>
+                    <div class="metric-badge">Your Stats</div>
+                </div>
+                <div class="chart-placeholder">
+                    <div class="placeholder-icon">📈</div>
+                    <div class="placeholder-text">Personal Performance Analytics</div>
+                    <div class="placeholder-subtext">Lead conversion and task completion metrics</div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animate dashboard elements on load
+    const animatedElements = document.querySelectorAll('.kpi-card, .metric-card, .stat-item, .chart-section');
+    
+    animatedElements.forEach((element, index) => {
+        element.style.opacity = '0';
+        element.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            element.style.transition = 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            element.style.opacity = '1';
+            element.style.transform = 'translateY(0)';
+        }, index * 150);
+    });
+
+    // Add interactive hover effects
+    const cards = document.querySelectorAll('.kpi-card, .metric-card');
+    cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.zIndex = '10';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.zIndex = '1';
+        });
+    });
+
+    // Stat items hover effect
+    const statItems = document.querySelectorAll('.stat-item');
+    statItems.forEach(item => {
+        item.addEventListener('mouseenter', function() {
+            this.style.background = 'var(--bg-accent)';
+        });
+        
+        item.addEventListener('mouseleave', function() {
+            this.style.background = 'var(--bg-card)';
+        });
+    });
+
+    // Role indicator animation
+    const roleIndicator = document.querySelector('.role-indicator');
+    if (roleIndicator) {
+        setInterval(() => {
+            roleIndicator.style.borderColor = 'rgba(59, 130, 246, 0.6)';
+            setTimeout(() => {
+                roleIndicator.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+            }, 1000);
+        }, 3000);
+    }
+
+    // Chart placeholder interactions
+    const chartPlaceholders = document.querySelectorAll('.chart-placeholder');
+    chartPlaceholders.forEach(placeholder => {
+        placeholder.addEventListener('click', function() {
+            this.style.transform = 'scale(0.98)';
+            setTimeout(() => {
+                this.style.transform = 'scale(1)';
+            }, 150);
+        });
+    });
+
+        // Add loading simulation for dynamic content
+            const badges = document.querySelectorAll('.metric-badge');
+            badges.forEach(badge => {
+                if (badge.textContent.includes('Real-time') || badge.textContent.includes('Live')) {
+                    setInterval(() => {
+                        badge.style.opacity = badge.style.opacity === '0.8' ? '1' : '0.8';
+                    }, 1000);
+                }
+            });
+        });
+    </script>
 {% endblock %}

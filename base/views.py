@@ -336,6 +336,10 @@ def service_request_delete(request, pk):
 
 # Investment Plan Review Views
 
+# views.py
+
+from django.contrib import messages
+
 @login_required
 def investment_plan_review_list(request):
     user = request.user
@@ -343,42 +347,78 @@ def investment_plan_review_list(request):
         reviews = InvestmentPlanReview.objects.all()
     elif user.role == 'rm_head':
         team_rms = User.objects.filter(role='rm', groups__in=user.groups.all())
-        reviews = InvestmentPlanReview.objects.filter(
-            Q(client__user=user) | Q(client__user__in=team_rms)
-        )
+        reviews = InvestmentPlanReview.objects.filter(client__user__in=team_rms)
     else:  # RM
         reviews = InvestmentPlanReview.objects.filter(client__user=user)
+
     return render(request, 'base/investment_plans.html', {'reviews': reviews})
 
 
 @login_required
 def investment_plan_review_create(request):
+    user = request.user
+    if user.role not in ['rm', 'rm_head']:
+        messages.error(request, "You do not have permission to add investment plans.")
+        return redirect('investment_plan_review_list')
+
     if request.method == 'POST':
-        form = InvestmentPlanReviewForm(request.POST)
+        form = InvestmentPlanReviewForm(request.POST, user=user)
         if form.is_valid():
             form.save()
             return redirect('investment_plan_review_list')
     else:
-        form = InvestmentPlanReviewForm()
+        form = InvestmentPlanReviewForm(user=user)
+
     return render(request, 'base/investment_plan_form.html', {'form': form})
 
 
 @login_required
 def investment_plan_review_update(request, pk):
+    user = request.user
     review = get_object_or_404(InvestmentPlanReview, pk=pk)
+
+    # Restrict editing to only RMs/RM Heads for their team
+    if user.role == 'rm' and review.client.user != user:
+        messages.error(request, "You cannot edit this investment plan.")
+        return redirect('investment_plan_review_list')
+    elif user.role == 'rm_head':
+        team_rms = User.objects.filter(role='rm', groups__in=user.groups.all())
+        if review.client.user not in team_rms:
+            messages.error(request, "You cannot edit this investment plan.")
+            return redirect('investment_plan_review_list')
+    elif user.role not in ['rm', 'rm_head']:
+        messages.error(request, "You do not have permission to edit investment plans.")
+        return redirect('investment_plan_review_list')
+
     if request.method == 'POST':
-        form = InvestmentPlanReviewForm(request.POST, instance=review)
+        form = InvestmentPlanReviewForm(request.POST, instance=review, user=user)
         if form.is_valid():
             form.save()
             return redirect('investment_plan_review_list')
     else:
-        form = InvestmentPlanReviewForm(instance=review)
+        form = InvestmentPlanReviewForm(instance=review, user=user)
+
     return render(request, 'base/investment_plan_form.html', {'form': form})
 
 
 @login_required
 def investment_plan_review_delete(request, pk):
+    user = request.user
     review = get_object_or_404(InvestmentPlanReview, pk=pk)
+
+    # Allow deletion only for RMs and RM Heads
+    if user.role == 'rm' and review.client.user != user:
+        messages.error(request, "You cannot delete this investment plan.")
+        return redirect('investment_plan_review_list')
+    elif user.role == 'rm_head':
+        team_rms = User.objects.filter(role='rm', groups__in=user.groups.all())
+        if review.client.user not in team_rms:
+            messages.error(request, "You cannot delete this investment plan.")
+            return redirect('investment_plan_review_list')
+    elif user.role not in ['rm', 'rm_head']:
+        messages.error(request, "You do not have permission to delete investment plans.")
+        return redirect('investment_plan_review_list')
+
     if request.method == 'POST':
         review.delete()
         return redirect('investment_plan_review_list')

@@ -1,58 +1,643 @@
-{% extends "base/base.html" %}
-{% load static %}
+{% extends 'base/base.html' %}
+{% block title %}Dashboard{% endblock %}
 
-{% block title %}Top Management Dashboard{% endblock %}
+{% block extra_css %}
+<style>
+    :root {
+        --bg-primary: #0d1117;
+        --bg-secondary: #161b22;
+        --bg-card: #21262d;
+        --bg-accent: #30363d;
+        --text-primary: #f0f6fc;
+        --text-secondary: #8b949e;
+        --text-muted: #6e7681;
+        --accent-blue: #58a6ff;
+        --accent-green: #3fb950;
+        --accent-purple: #a5a5ff;
+        --accent-orange: #ff9500;
+        --accent-red: #f85149;
+        --accent-pink: #ff7b72;
+        --accent-cyan: #79c0ff;
+        --accent-yellow: #d29922;
+        --border-color: #30363d;
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
+        --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.16);
+        --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.2);
+        --shadow-xl: 0 25px 50px rgba(0, 0, 0, 0.25);
+        --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --gradient-success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        --gradient-warning: linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%);
+        --gradient-info: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --gradient-cyber: linear-gradient(135deg, #0f3460 0%, #0e4b99 50%, #2e8b57 100%);
+        --glow-blue: 0 0 20px rgba(88, 166, 255, 0.3);
+        --glow-green: 0 0 20px rgba(63, 185, 80, 0.3);
+        --glow-purple: 0 0 20px rgba(165, 165, 255, 0.3);
+        --glow-orange: 0 0 20px rgba(255, 149, 0, 0.3);
+    }
+
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    body {
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+        line-height: 1.6;
+        min-height: 100vh;
+        position: relative;
+    }
+
+    body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: 
+            radial-gradient(circle at 25% 25%, rgba(88, 166, 255, 0.05) 0%, transparent 50%),
+            radial-gradient(circle at 75% 75%, rgba(63, 185, 80, 0.05) 0%, transparent 50%),
+            radial-gradient(circle at 50% 50%, rgba(165, 165, 255, 0.03) 0%, transparent 50%);
+        pointer-events: none;
+        z-index: -1;
+    }
+
+    .dashboard-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+        animation: fadeInSlide 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    .dashboard-header {
+        text-align: center;
+        margin-bottom: 3rem;
+        position: relative;
+    }
+
+    .dashboard-header::after {
+        content: '';
+        position: absolute;
+        bottom: -1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100px;
+        height: 3px;
+        background: var(--gradient-primary);
+        border-radius: 2px;
+        animation: expandWidth 1s ease-out 0.5s both;
+    }
+
+    .welcome-title {
+        font-size: clamp(2rem, 5vw, 3.5rem);
+        font-weight: 800;
+        background: var(--gradient-cyber);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.02em;
+    }
+
+    .user-info {
+        font-size: 1.2rem;
+        color: var(--text-secondary);
+        margin-bottom: 1rem;
+    }
+
+    .role-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 25px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .role-indicator::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--gradient-primary);
+    }
+
+    .role-top-management {
+        color: var(--accent-purple);
+        border-color: rgba(165, 165, 255, 0.3);
+        box-shadow: var(--glow-purple);
+    }
+
+    .role-business-head {
+        color: var(--accent-blue);
+        border-color: rgba(88, 166, 255, 0.3);
+        box-shadow: var(--glow-blue);
+    }
+
+    .role-rm-head {
+        color: var(--accent-green);
+        border-color: rgba(63, 185, 80, 0.3);
+        box-shadow: var(--glow-green);
+    }
+
+    .role-relationship-manager {
+        color: var(--accent-orange);
+        border-color: rgba(255, 149, 0, 0.3);
+        box-shadow: var(--glow-orange);
+    }
+
+    .dashboard-content {
+        animation: slideUpStagger 0.6s ease-out 0.3s both;
+    }
+
+    /* Relationship Manager Specific Styles */
+    .rm-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+
+    .rm-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 2rem;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .rm-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-lg);
+        border-color: var(--accent-orange);
+    }
+
+    .rm-card-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .rm-card-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-right: 1rem;
+        background: linear-gradient(135deg, rgba(255, 149, 0, 0.15), rgba(255, 149, 0, 0.05));
+    }
+
+    .rm-card-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+
+    .rm-card-subtitle {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+
+    .rm-card-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 1rem;
+    }
+
+    .rm-card-description {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        line-height: 1.5;
+    }
+
+    .rm-progress-container {
+        margin-top: 1.5rem;
+    }
+
+    .rm-progress-label {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+
+    .rm-progress-bar {
+        height: 6px;
+        background: var(--bg-accent);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    .rm-progress-fill {
+        height: 100%;
+        background: var(--gradient-warning);
+        border-radius: 3px;
+        width: 75%;
+        animation: fillProgress 1.5s ease-out forwards;
+    }
+
+    /* Client Portfolio Section */
+    .client-portfolio {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .portfolio-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .portfolio-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .portfolio-stats {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .stat-badge {
+        padding: 0.5rem 1rem;
+        background: var(--bg-accent);
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    .portfolio-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .portfolio-item {
+        background: var(--bg-accent);
+        border-radius: 12px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .portfolio-item:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .client-name {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .client-meta {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        margin-bottom: 1rem;
+    }
+
+    .client-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .client-growth {
+        font-size: 0.85rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .growth-positive {
+        color: var(--accent-green);
+    }
+
+    .growth-negative {
+        color: var(--accent-red);
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .action-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 1rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        color: var(--text-primary);
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .action-btn:hover {
+        background: var(--bg-accent);
+        border-color: var(--accent-orange);
+        transform: translateY(-2px);
+    }
+
+    .action-btn.primary {
+        background: var(--gradient-warning);
+        border-color: transparent;
+        color: white;
+    }
+
+    /* Animations */
+    @keyframes fadeInSlide {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes slideUpStagger {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes expandWidth {
+        from { width: 0; }
+        to { width: 100px; }
+    }
+
+    @keyframes fillProgress {
+        to { stroke-dashoffset: 0; }
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1024px) {
+        .rm-grid, .portfolio-grid {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-container {
+            padding: 1rem;
+        }
+
+        .rm-card, .client-portfolio {
+            padding: 1.5rem;
+        }
+
+        .rm-card-value {
+            font-size: 2rem;
+        }
+
+        .quick-actions {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .welcome-title {
+            font-size: 2rem;
+        }
+
+        .user-info {
+            font-size: 1rem;
+        }
+
+        .rm-card-value, .client-value {
+            font-size: 1.5rem;
+        }
+
+        .quick-actions {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<h2>Welcome, {{ user.get_full_name|default:user.username }} (Top Management)</h2>
+<div class="dashboard-container">
+    <!-- Header Section -->
+    <div class="dashboard-header">
+        <h1 class="welcome-title">Command Center</h1>
+        <p class="user-info">Welcome back, {{ request.user.get_full_name }}</p>
+        <div class="role-indicator role-{{ request.user.role|slugify }}">
+            {% if request.user.role == 'top_management' %}
+                <span>👑</span> Executive Leadership
+            {% elif request.user.role == 'business_head' %}
+                <span>🎯</span> Business Head
+            {% elif request.user.role == 'rm_head' %}
+                <span>👥</span> Regional Manager Head
+            {% else %}
+                <span>🤝</span> Relationship Manager
+            {% endif %}
+        </div>
+    </div>
 
-<div class="dashboard-summary" style="display:flex; gap:20px; margin-bottom:30px;">
-    <div class="summary-box" style="padding:20px; background:#e3f2fd; border-radius:8px; flex:1; text-align:center;">
-        <h3>Total Assets Under Management (AUM)</h3>
-        <p style="font-size: 2.5rem; font-weight:bold; color:#1565c0;">₹{{ total_aum|floatformat:2 }}</p>
-    </div>
-    <div class="summary-box" style="padding:20px; background:#e8f5e9; border-radius:8px; flex:1; text-align:center;">
-        <h3>Total Monthly SIPs</h3>
-        <p style="font-size: 2.5rem; font-weight:bold; color:#2e7d32;">{{ total_sips }}</p>
-    </div>
-    <div class="summary-box" style="padding:20px; background:#fff3e0; border-radius:8px; flex:1; text-align:center;">
-        <h3>Total Team Members</h3>
-        <p style="font-size: 2.5rem; font-weight:bold; color:#ef6c00;">{{ total_team_members }}</p>
+    <!-- Relationship Manager Content -->
+    <div class="dashboard-content">
+        <div class="rm-grid">
+            <div class="rm-card">
+                <div class="rm-card-header">
+                    <div class="rm-card-icon">🎯</div>
+                    <div>
+                        <div class="rm-card-title">Active Leads</div>
+                        <div class="rm-card-subtitle">Currently assigned to you</div>
+                    </div>
+                </div>
+                <div class="rm-card-value">{{ leads.count|default:"24" }}</div>
+                <div class="rm-card-description">Leads in your pipeline requiring follow-up</div>
+                <div class="rm-progress-container">
+                    <div class="rm-progress-label">
+                        <span>Conversion Rate</span>
+                        <span>75%</span>
+                    </div>
+                    <div class="rm-progress-bar">
+                        <div class="rm-progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rm-card">
+                <div class="rm-card-header">
+                    <div class="rm-card-icon">📋</div>
+                    <div>
+                        <div class="rm-card-title">Pending Tasks</div>
+                        <div class="rm-card-subtitle">Requiring your attention</div>
+                    </div>
+                </div>
+                <div class="rm-card-value">{{ tasks.count|default:"12" }}</div>
+                <div class="rm-card-description">Tasks to complete this week</div>
+                <div class="rm-progress-container">
+                    <div class="rm-progress-label">
+                        <span>Completion Rate</span>
+                        <span>65%</span>
+                    </div>
+                    <div class="rm-progress-bar">
+                        <div class="rm-progress-fill" style="width: 65%; background: var(--gradient-primary);"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rm-card">
+                <div class="rm-card-header">
+                    <div class="rm-card-icon">🎫</div>
+                    <div>
+                        <div class="rm-card-title">Service Requests</div>
+                        <div class="rm-card-subtitle">Open tickets</div>
+                    </div>
+                </div>
+                <div class="rm-card-value">{{ service_requests.count|default:"8" }}</div>
+                <div class="rm-card-description">Client service requests to resolve</div>
+                <div class="rm-progress-container">
+                    <div class="rm-progress-label">
+                        <span>Resolution Rate</span>
+                        <span>92%</span>
+                    </div>
+                    <div class="rm-progress-bar">
+                        <div class="rm-progress-fill" style="width: 92%; background: var(--gradient-success);"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <a href="{% url 'lead_create' %}" class="action-btn primary">
+                <span>➕</span> Add New Lead
+            </a>
+            <a href="{% url 'task_create' %}" class="action-btn">
+                <span>📝</span> Create Task
+            </a>
+            <a href="{% url 'service_request_create' %}" class="action-btn">
+                <span>🛠️</span> Log Service Request
+            </a>
+            <a href="{% url 'client_create' %}" class="action-btn">
+                <span>👤</span> Add Client
+            </a>
+        </div>
+
+        <!-- Client Portfolio -->
+        <div class="client-portfolio">
+            <div class="portfolio-header">
+                <h3 class="portfolio-title">Top Client Portfolios</h3>
+                <div class="portfolio-stats">
+                    <div class="stat-badge">Total: {{ clients.count|default:"42" }}</div>
+                    <div class="stat-badge" style="background: rgba(63, 185, 80, 0.1); color: var(--accent-green);">
+                        Active: {{ active_clients.count|default:"36" }}
+                    </div>
+                </div>
+            </div>
+            <div class="portfolio-grid">
+                {% for client in top_clients|slice:":4" %}
+                <div class="portfolio-item">
+                    <div class="client-name">{{ client.name }}</div>
+                    <div class="client-meta">{{ client.portfolio_size }} • {{ client.join_date|date:"M Y" }}</div>
+                    <div class="client-value">{{ client.current_value }}</div>
+                    <div class="client-growth">
+                        <span class="growth-positive">▲ {{ client.growth }}%</span> last quarter
+                    </div>
+                </div>
+                {% empty %}
+                <div class="portfolio-item">
+                    <div class="client-name">No clients found</div>
+                    <div class="client-meta">Add clients to see portfolio data</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
     </div>
 </div>
 
-<h3>Team Performance Overview</h3>
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animate cards on load
+    const cards = document.querySelectorAll('.rm-card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.transitionDelay = `${index * 0.1}s`;
+        
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, 100);
+    });
 
-<table border="1" cellpadding="10" cellspacing="0" width="100%" style="border-collapse: collapse;">
-    <thead style="background-color:#90caf9;">
-        <tr>
-            <th>Business Head</th>
-            <th>RM Heads Under Them</th>
-            <th>Total Leads</th>
-            <th>Monthly SIP</th>
-            <th>Total AUM</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for bh in business_heads %}
-        <tr>
-            <td>{{ bh.get_full_name|default:bh.username }}</td>
-            <td>{{ bh.rm_heads_count }}</td>
-            <td>{{ bh.leads_count }}</td>
-            <td>₹{{ bh.monthly_sip|floatformat:2 }}</td>
-            <td>₹{{ bh.aum|floatformat:2 }}</td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="5" style="text-align:center;">No Business Heads data found.</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+    // Add hover effects to portfolio items
+    const portfolioItems = document.querySelectorAll('.portfolio-item');
+    portfolioItems.forEach(item => {
+        item.addEventListener('mouseenter', () => {
+            item.style.boxShadow = '0 10px 20px rgba(0,0,0,0.2)';
+        });
+        item.addEventListener('mouseleave', () => {
+            item.style.boxShadow = '';
+        });
+    });
 
-<div style="margin-top: 30px;">
-    <a href="{% url 'dashboard_business_head' %}">Go to Business Head Dashboard</a> | 
-    <a href="{% url 'lead_list' %}">View All Leads</a>
-</div>
+    // Pulse animation for important elements
+    function pulseElement(selector) {
+        const element = document.querySelector(selector);
+        if (element) {
+            setInterval(() => {
+                element.style.transform = 'scale(1.05)';
+                setTimeout(() => {
+                    element.style.transform = 'scale(1)';
+                }, 500);
+            }, 2000);
+        }
+    }
 
+    pulseElement('.action-btn.primary');
+});
+</script>
+{% endblock %}
 {% endblock %}

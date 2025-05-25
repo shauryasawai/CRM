@@ -2,21 +2,133 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <title>{% block title %}CRM System{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Financial CRM{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+    <style>
+        :root {
+            --bg-primary: #0c0d21;
+            --bg-secondary: #151629;
+            --bg-card: #1a1b35;
+            --text-primary: #f0f2f5;
+            --text-secondary: #a8abb2;
+            --accent-primary: #3b82f6;
+            --accent-success: #10b981;
+            --accent-danger: #ef4444;
+            --border-subtle: #2d3748;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: var(--bg-secondary);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        nav {
+            margin-top: 1rem;
+        }
+
+        nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            margin-right: 1rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        nav a:hover {
+            color: var(--accent-primary);
+        }
+
+        main {
+            flex: 1;
+            padding: 2rem;
+        }
+
+        .messages {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 2rem 0;
+        }
+
+        .messages li {
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 6px;
+        }
+
+        .messages .success {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--accent-success);
+            border-left: 4px solid var(--accent-success);
+        }
+
+        .messages .error {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--accent-danger);
+            border-left: 4px solid var(--accent-danger);
+        }
+
+        footer {
+            text-align: center;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        @media (max-width: 768px) {
+            header {
+                padding: 1rem;
+            }
+            
+            nav {
+                overflow-x: auto;
+                white-space: nowrap;
+                padding-bottom: 0.5rem;
+            }
+            
+            main {
+                padding: 1rem;
+            }
+        }
+    </style>
 </head>
 <body>
     <header>
         <h1>Financial CRM</h1>
         <nav>
-            <a href="{% url 'dashboard' %}">Dashboard</a> |
-            <a href="{% url 'lead_list' %}">Leads</a> |
-            <a href="{% url 'client_list' %}">Clients</a> |
-            <a href="{% url 'task_list' %}">Tasks</a> |
-            <a href="{% url 'service_request_list' %}">Service Requests</a> |
-            <a href="{% url 'investment_plan_review_list' %}">Investment Plans</a> |
-            <a href="{% url 'logout' %}">Logout</a>
+            <a href="{% url 'dashboard' %}">Dashboard</a>
+            <a href="{% url 'lead_list' %}">Leads</a>
+            <a href="{% url 'client_list' %}">Clients</a>
+            <a href="{% url 'task_list' %}">Tasks</a>
+            <a href="{% url 'service_request_list' %}">Service</a>
+            <a href="{% url 'investment_plan_review_list' %}">Investments</a>
+            <a href="{% url 'logout' %}" style="color: var(--accent-danger);">Logout</a>
         </nav>
     </header>
+    
     <main>
         {% if messages %}
             <ul class="messages">
@@ -25,10 +137,14 @@
                 {% endfor %}
             </ul>
         {% endif %}
+        
         {% block content %}{% endblock %}
     </main>
+    
     <footer>
-        <p>&copy; {{ year }} Financial CRM</p>
+        <p>&copy; {% now "Y" %} Financial CRM. All rights reserved.</p>
     </footer>
+
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

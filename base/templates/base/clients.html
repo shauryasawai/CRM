@@ -1,35 +1,186 @@
 {% extends 'base/base.html' %}
 {% block title %}Clients{% endblock %}
 {% block content %}
-<h2>Clients</h2>
-<a href="{% url 'client_create' %}">Add New Client</a>
-<table border="1">
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Phone</th>
-            <th>Address</th>
-            <th>Assigned To</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for client in clients %}
-        <tr>
-            <td>{{ client.name }}</td>
-            <td>{{ client.email }}</td>
-            <td>{{ client.phone }}</td>
-            <td>{{ client.address }}</td>
-            <td>{{ client.user.get_full_name }}</td>
-            <td>
-                <a href="{% url 'client_update' client.pk %}">Edit</a> |
-                <a href="{% url 'client_delete' client.pk %}">Delete</a>
-            </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="6">No clients found.</td></tr>
-        {% endfor %}
-    </tbody>
-</table>
+<style>
+    .clients-container {
+        max-width: 1800px;
+        margin: 2rem auto;
+        padding: 2rem;
+        position: relative;
+        animation: fadeInUp 0.8s ease-out;
+    }
+
+    .clients-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .clients-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: var(--gradient-aurora);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin: 0;
+    }
+
+    .add-client-btn {
+        background: var(--gradient-primary);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        box-shadow: var(--shadow-md);
+    }
+
+    .add-client-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .clients-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        background: var(--bg-card);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .clients-table thead {
+        background: var(--gradient-cyber);
+    }
+
+    .clients-table th {
+        padding: 1.25rem 1.5rem;
+        text-align: left;
+        color: white;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.05em;
+    }
+
+    .clients-table td {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid var(--border-subtle);
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+
+    .clients-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .clients-table tbody tr:hover {
+        background: rgba(59, 130, 246, 0.05);
+    }
+
+    .action-links {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .action-link {
+        color: var(--accent-primary);
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        padding: 0.25rem 0;
+        border-bottom: 1px solid transparent;
+    }
+
+    .action-link:hover {
+        color: var(--accent-cyan);
+        border-bottom: 1px solid var(--accent-cyan);
+    }
+
+    .action-link.delete {
+        color: var(--accent-danger);
+    }
+
+    .action-link.delete:hover {
+        color: var(--accent-pink);
+        border-bottom: 1px solid var(--accent-pink);
+    }
+
+    .empty-message {
+        text-align: center;
+        padding: 2rem;
+        color: var(--text-muted);
+        font-size: 1.1rem;
+    }
+
+    @media (max-width: 768px) {
+        .clients-container {
+            padding: 1rem;
+        }
+
+        .clients-table {
+            display: block;
+            overflow-x: auto;
+        }
+
+        .action-links {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+    }
+</style>
+
+<div class="clients-container">
+    <div class="clients-header">
+        <h1 class="clients-title">Clients</h1>
+        <a href="{% url 'client_create' %}" class="add-client-btn">
+            <i class="fas fa-plus"></i> Add New Client
+        </a>
+    </div>
+
+    <table class="clients-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Address</th>
+                <th>Assigned To</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for client in clients %}
+            <tr>
+                <td>{{ client.name }}</td>
+                <td>{{ client.email }}</td>
+                <td>{{ client.phone }}</td>
+                <td>{{ client.address }}</td>
+                <td>{{ client.user.get_full_name }}</td>
+                <td>
+                    <div class="action-links">
+                        <a href="{% url 'client_update' client.pk %}" class="action-link">Edit</a>
+                        <a href="{% url 'client_delete' client.pk %}" class="action-link delete">Delete</a>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="empty-message">No clients found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}

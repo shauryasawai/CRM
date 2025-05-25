@@ -74,7 +74,18 @@ class ServiceRequestForm(forms.ModelForm):
 class InvestmentPlanReviewForm(forms.ModelForm):
     class Meta:
         model = InvestmentPlanReview
-        fields = ['client', 'notes']
-        widgets = {
-            'notes': forms.Textarea(attrs={'rows': 4}),
-        }
+        fields = ['client', 'goal', 'principal_amount', 'tenure_years', 'monthly_investment']
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+        if user:
+            if user.role == 'rm':
+                self.fields['client'].queryset = Client.objects.filter(user=user)
+            elif user.role == 'rm_head':
+                team_rms = User.objects.filter(role='rm', groups__in=user.groups.all())
+                self.fields['client'].queryset = Client.objects.filter(user__in=team_rms)
+            else:
+                self.fields['client'].queryset = Client.objects.none()
+

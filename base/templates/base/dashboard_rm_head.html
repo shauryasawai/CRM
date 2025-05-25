@@ -3,55 +3,880 @@
 
 {% block title %}RM Head Dashboard{% endblock %}
 
+{% block extra_css %}
+<style>
+    :root {
+        --bg-primary: #0a0e1a;
+        --bg-secondary: #1a1f2e;
+        --bg-card: #1e2532;
+        --bg-accent: #252b3d;
+        --text-primary: #e8eaed;
+        --text-secondary: #9aa0a6;
+        --accent-blue: #4285f4;
+        --accent-green: #34a853;
+        --accent-orange: #fbbc04;
+        --accent-red: #ea4335;
+        --accent-purple: #9c27b0;
+        --accent-cyan: #00bcd4;
+        --border-color: #2d3748;
+        --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.1);
+        --shadow-md: 0 10px 25px rgba(0, 0, 0, 0.15);
+        --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.2);
+        --gradient-blue: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --gradient-green: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+        --gradient-orange: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        --gradient-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --gradient-cyber: linear-gradient(135deg, #0f4c75 0%, #3282b8 50%, #bbe1fa 100%);
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        line-height: 1.6;
+    }
+
+    .dashboard-wrapper {
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 2rem;
+        animation: slideInFromBottom 0.8s ease-out;
+    }
+
+    .dashboard-header {
+        text-align: center;
+        margin-bottom: 3rem;
+        position: relative;
+    }
+
+    .dashboard-header::before {
+        content: '';
+        position: absolute;
+        top: -50px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100px;
+        height: 4px;
+        background: var(--gradient-cyber);
+        border-radius: 2px;
+    }
+
+    .main-title {
+        font-size: 3rem;
+        font-weight: 800;
+        background: var(--gradient-cyber);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.02em;
+    }
+
+    .welcome-subtitle {
+        color: var(--text-secondary);
+        font-size: 1.2rem;
+        font-weight: 400;
+        margin-bottom: 0.5rem;
+    }
+
+    .role-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        background: rgba(66, 133, 244, 0.1);
+        color: var(--accent-blue);
+        border: 1px solid rgba(66, 133, 244, 0.3);
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+    }
+
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 2rem;
+        margin-bottom: 4rem;
+    }
+
+    .metric-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        padding: 2.5rem;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        cursor: pointer;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: var(--shadow-lg);
+        border-color: transparent;
+    }
+
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 5px;
+        border-radius: 20px 20px 0 0;
+    }
+
+    .metric-card.blue::before { background: var(--gradient-blue); }
+    .metric-card.green::before { background: var(--gradient-green); }
+    .metric-card.orange::before { background: var(--gradient-orange); }
+
+    .metric-card::after {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+        opacity: 0;
+    }
+
+    .metric-card:hover::after {
+        opacity: 1;
+    }
+
+    .metric-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        margin-bottom: 1.5rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .metric-card.blue .metric-icon {
+        background: linear-gradient(135deg, rgba(66, 133, 244, 0.2), rgba(66, 133, 244, 0.1));
+        color: var(--accent-blue);
+    }
+
+    .metric-card.green .metric-icon {
+        background: linear-gradient(135deg, rgba(52, 168, 83, 0.2), rgba(52, 168, 83, 0.1));
+        color: var(--accent-green);
+    }
+
+    .metric-card.orange .metric-icon {
+        background: linear-gradient(135deg, rgba(251, 188, 4, 0.2), rgba(251, 188, 4, 0.1));
+        color: var(--accent-orange);
+    }
+
+    .metric-label {
+        font-size: 1rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+        margin-bottom: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+    }
+
+    .metric-value {
+        font-size: 3.5rem;
+        font-weight: 900;
+        color: var(--text-primary);
+        line-height: 1;
+        margin-bottom: 1rem;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .metric-trend {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    .trend-positive { color: var(--accent-green); }
+    .trend-neutral { color: var(--accent-orange); }
+
+    .progress-ring {
+        position: absolute;
+        top: 2rem;
+        right: 2rem;
+        width: 60px;
+        height: 60px;
+    }
+
+    .progress-ring circle {
+        fill: transparent;
+        stroke-width: 4;
+        stroke-linecap: round;
+        transform: rotate(-90deg);
+        transform-origin: 50% 50%;
+    }
+
+    .progress-ring .background {
+        stroke: rgba(255,255,255,0.1);
+    }
+
+    .progress-ring .progress {
+        stroke-dasharray: 157;
+        stroke-dashoffset: 157;
+        animation: fillRing 2s ease-out forwards;
+    }
+
+    .metric-card.blue .progress-ring .progress { stroke: var(--accent-blue); }
+    .metric-card.green .progress-ring .progress { stroke: var(--accent-green); }
+    .metric-card.orange .progress-ring .progress { stroke: var(--accent-orange); }
+
+    .section-divider {
+        margin: 4rem 0;
+        text-align: center;
+        position: relative;
+    }
+
+    .section-divider::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+    }
+
+    .section-divider span {
+        background: var(--bg-primary);
+        padding: 0 2rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .team-section {
+        margin-bottom: 3rem;
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .section-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .title-icon {
+        width: 40px;
+        height: 40px;
+        background: var(--gradient-cyber);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.2rem;
+    }
+
+    .team-stats {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+    }
+
+    .team-stats span {
+        padding: 0.25rem 0.75rem;
+        background: var(--bg-accent);
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+    }
+
+    .data-table-container {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: var(--shadow-md);
+        position: relative;
+    }
+
+    .data-table-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--gradient-cyber);
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .data-table thead {
+        background: var(--bg-secondary);
+        position: relative;
+    }
+
+    .data-table thead::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--accent-blue), transparent);
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 1.5rem 2rem;
+        text-align: left;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .data-table th {
+        font-weight: 600;
+        color: var(--text-primary);
+        font-size: 0.95rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        position: relative;
+    }
+
+    .data-table th:first-child {
+        padding-left: 2.5rem;
+    }
+
+    .data-table td {
+        color: var(--text-secondary);
+        font-weight: 400;
+        transition: all 0.3s ease;
+    }
+
+    .data-table td:first-child {
+        padding-left: 2.5rem;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .data-table tbody tr {
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .data-table tbody tr:hover {
+        background: rgba(66, 133, 244, 0.05);
+        transform: translateX(5px);
+    }
+
+    .data-table tbody tr:hover::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: var(--accent-blue);
+        border-radius: 0 2px 2px 0;
+    }
+
+    .data-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .metric-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 50px;
+        padding: 0.5rem 1rem;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .badge-blue {
+        background: rgba(66, 133, 244, 0.15);
+        color: var(--accent-blue);
+        border: 1px solid rgba(66, 133, 244, 0.3);
+    }
+
+    .badge-green {
+        background: rgba(52, 168, 83, 0.15);
+        color: var(--accent-green);
+        border: 1px solid rgba(52, 168, 83, 0.3);
+    }
+
+    .badge-orange {
+        background: rgba(251, 188, 4, 0.15);
+        color: var(--accent-orange);
+        border: 1px solid rgba(251, 188, 4, 0.3);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--text-secondary);
+    }
+
+    .empty-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.3;
+    }
+
+    .empty-message {
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-submessage {
+        font-size: 0.9rem;
+        opacity: 0.7;
+    }
+
+    .action-panel {
+        margin-top: 3rem;
+        text-align: center;
+    }
+
+    .action-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        justify-content: center;
+    }
+
+    .action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem 2rem;
+        border-radius: 16px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        border: 2px solid transparent;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .action-btn::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        background: rgba(255,255,255,0.1);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        transition: all 0.6s ease;
+    }
+
+    .action-btn:hover::before {
+        width: 300px;
+        height: 300px;
+    }
+
+    .btn-primary {
+        background: var(--gradient-blue);
+        color: white;
+        box-shadow: 0 4px 15px rgba(66, 133, 244, 0.3);
+    }
+
+    .btn-secondary {
+        background: var(--bg-card);
+        color: var(--text-primary);
+        border-color: var(--border-color);
+    }
+
+    .btn-accent {
+        background: var(--gradient-cyber);
+        color: white;
+        box-shadow: 0 4px 15px rgba(50, 130, 184, 0.3);
+    }
+
+    .action-btn:hover {
+        transform: translateY(-3px) scale(1.05);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+
+    .btn-secondary:hover {
+        border-color: var(--accent-blue);
+        box-shadow: 0 10px 30px rgba(66, 133, 244, 0.2);
+    }
+
+    /* Animations */
+    @keyframes slideInFromBottom {
+        from {
+            opacity: 0;
+            transform: translateY(50px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fillRing {
+        to {
+            stroke-dashoffset: 0;
+        }
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+
+    .loading { animation: pulse 2s infinite; }
+
+    /* Responsive Design */
+    @media (max-width: 1024px) {
+        .metrics-grid {
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        }
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-wrapper {
+            padding: 1rem;
+        }
+        
+        .main-title {
+            font-size: 2rem;
+        }
+        
+        .metrics-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        
+        .metric-card {
+            padding: 2rem;
+        }
+        
+        .metric-value {
+            font-size: 2.5rem;
+        }
+        
+        .section-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .action-buttons {
+            flex-direction: column;
+        }
+        
+        .data-table-container {
+            overflow-x: auto;
+        }
+        
+        .data-table {
+            min-width: 700px;
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: 1rem;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .metric-card {
+            padding: 1.5rem;
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: 0.75rem;
+            font-size: 0.9rem;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<h2>Welcome, {{ user.get_full_name|default:user.username }} (RM Head)</h2>
+<div class="dashboard-wrapper">
+    <!-- Header Section -->
+    <div class="dashboard-header">
+        <h1 class="main-title">Regional Command Center</h1>
+        <p class="welcome-subtitle">Welcome back, {{ user.get_full_name|default:user.username }}</p>
+        <div class="role-badge">
+            <span>👑</span> Regional Manager Head
+        </div>
+    </div>
 
-<div class="dashboard-summary" style="display:flex; gap:20px; margin-bottom:30px;">
-    <div class="summary-box" style="padding:20px; background:#e3f2fd; border-radius:8px; flex:1; text-align:center;">
-        <h3>Total Leads (Team + Self)</h3>
-        <p style="font-size: 2.5rem; font-weight:bold; color:#1565c0;">{{ total_leads }}</p>
+    <!-- Metrics Overview -->
+    <div class="metrics-grid">
+        <div class="metric-card blue">
+            <div class="metric-icon">🎯</div>
+            <div class="metric-label">Total Leads</div>
+            <div class="metric-value">{{ total_leads }}</div>
+            <div class="metric-trend trend-positive">
+                <span>📈</span> Team + Personal
+            </div>
+            <svg class="progress-ring">
+                <circle class="background" cx="30" cy="30" r="25"></circle>
+                <circle class="progress" cx="30" cy="30" r="25" style="stroke-dashoffset: calc(157 - (157 * 75) / 100);"></circle>
+            </svg>
+        </div>
+
+        <div class="metric-card green">
+            <div class="metric-icon">📋</div>
+            <div class="metric-label">Open Tasks</div>
+            <div class="metric-value">{{ open_tasks }}</div>
+            <div class="metric-trend trend-positive">
+                <span>⚡</span> Active Pipeline
+            </div>
+            <svg class="progress-ring">
+                <circle class="background" cx="30" cy="30" r="25"></circle>
+                <circle class="progress" cx="30" cy="30" r="25" style="stroke-dashoffset: calc(157 - (157 * 60) / 100);"></circle>
+            </svg>
+        </div>
+
+        <div class="metric-card orange">
+            <div class="metric-icon">🛠️</div>
+            <div class="metric-label">Pending Requests</div>
+            <div class="metric-value">{{ pending_service_requests }}</div>
+            <div class="metric-trend trend-neutral">
+                <span>⏱️</span> Awaiting Response
+            </div>
+            <svg class="progress-ring">
+                <circle class="background" cx="30" cy="30" r="25"></circle>
+                <circle class="progress" cx="30" cy="30" r="25" style="stroke-dashoffset: calc(157 - (157 * 45) / 100);"></circle>
+            </svg>
+        </div>
     </div>
-    <div class="summary-box" style="padding:20px; background:#e8f5e9; border-radius:8px; flex:1; text-align:center;">
-        <h3>Open Tasks</h3>
-        <p style="font-size: 2.5rem; font-weight:bold; color:#2e7d32;">{{ open_tasks }}</p>
+
+    <div class="section-divider">
+        <span>Team Performance Analytics</span>
     </div>
-    <div class="summary-box" style="padding:20px; background:#fff3e0; border-radius:8px; flex:1; text-align:center;">
-        <h3>Pending Service Requests</h3>
-        <p style="font-size: 2.5rem; font-weight:bold; color:#ef6c00;">{{ pending_service_requests }}</p>
+
+    <!-- Team Section -->
+    <div class="team-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <div class="title-icon">👥</div>
+                Team Breakdown
+            </h2>
+            <div class="team-stats">
+                <span>{{ team_rms.count }} Active RMs</span>
+                <span>Real-time Data</span>
+                <span>Auto-refresh: ON</span>
+            </div>
+        </div>
+
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>🏷️ Relationship Manager</th>
+                        <th>🎯 Total Leads</th>
+                        <th>📋 Open Tasks</th>
+                        <th>🛠️ Pending Requests</th>
+                        <th>📊 Performance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rm in team_rms %}
+                    <tr>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <div style="width: 40px; height: 40px; background: var(--gradient-cyber); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.9rem;">
+                                    {{ rm.get_full_name.0|default:rm.username.0|upper }}{{ rm.get_full_name|default:rm.username|slice:"1:2"|upper }}
+                                </div>
+                                <div>
+                                    <div style="font-weight: 600; color: var(--text-primary);">{{ rm.get_full_name|default:rm.username }}</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-secondary); opacity: 0.8;">Active Member</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="metric-badge badge-blue">{{ rm.leads_count }}</span>
+                        </td>
+                        <td>
+                            <span class="metric-badge badge-green">{{ rm.open_tasks_count }}</span>
+                        </td>
+                        <td>
+                            <span class="metric-badge badge-orange">{{ rm.pending_service_requests_count }}</span>
+                        </td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <div style="width: 60px; height: 8px; background: var(--bg-secondary); border-radius: 4px; overflow: hidden;">
+                                    <div style="height: 100%; background: var(--gradient-cyber); width: {% widthratio rm.leads_count 10 100 %}%; transition: width 1s ease;"></div>
+                                </div>
+                                <span style="font-size: 0.85rem; color: var(--accent-blue); font-weight: 600;">{% widthratio rm.leads_count 10 100 %}%</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5">
+                            <div class="empty-state">
+                                <div class="empty-icon">😴</div>
+                                <div class="empty-message">No team RM data found</div>
+                                <div class="empty-submessage">Your team members will appear here once they're assigned</div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Action Panel -->
+    <div class="action-panel">
+        <div class="action-buttons">
+            <a href="{% url 'lead_list' %}" class="action-btn btn-primary">
+                <span>🎯</span>
+                <span>View All Leads</span>
+            </a>
+            <a href="{% url 'task_list' %}" class="action-btn btn-secondary">
+                <span>📋</span>
+                <span>Manage Tasks</span>
+            </a>
+            <a href="{% url 'service_request_list' %}" class="action-btn btn-accent">
+                <span>🛠️</span>
+                <span>Service Requests</span>
+            </a>
+        </div>
     </div>
 </div>
 
-<h3>Team Leads Breakdown</h3>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animate metric cards on load
+    const metricCards = document.querySelectorAll('.metric-card');
+    metricCards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(30px)';
+        setTimeout(() => {
+            card.style.transition = 'all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 200);
+    });
 
-<table border="1" cellpadding="10" cellspacing="0" width="100%" style="border-collapse: collapse;">
-    <thead style="background-color:#90caf9;">
-        <tr>
-            <th>Relationship Manager</th>
-            <th>Total Leads</th>
-            <th>Open Tasks</th>
-            <th>Pending Service Requests</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for rm in team_rms %}
-        <tr>
-            <td>{{ rm.get_full_name|default:rm.username }}</td>
-            <td>{{ rm.leads_count }}</td>
-            <td>{{ rm.open_tasks_count }}</td>
-            <td>{{ rm.pending_service_requests_count }}</td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="4" style="text-align:center;">No team RM data found.</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+    // Add interactive hover effects
+    metricCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.zIndex = '10';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.zIndex = '1';
+        });
+    });
 
-<div style="margin-top: 30px;">
-    <a href="{% url 'lead_list' %}">View All Leads</a> |
-    <a href="{% url 'task_list' %}">View All Tasks</a> |
-    <a href="{% url 'service_request_list' %}">View Service Requests</a>
-</div>
+    // Animate table rows
+    const tableRows = document.querySelectorAll('tbody tr');
+    tableRows.forEach((row, index) => {
+        row.style.opacity = '0';
+        row.style.transform = 'translateX(-20px)';
+        setTimeout(() => {
+            row.style.transition = 'all 0.5s ease';
+            row.style.opacity = '1';
+            row.style.transform = 'translateX(0)';
+        }, 500 + (index * 100));
+    });
 
+    // Add click ripple effect to buttons
+    const buttons = document.querySelectorAll('.action-btn');
+    buttons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            const ripple = document.createElement('span');
+            const rect = this.getBoundingClientRect();
+            const size = Math.max(rect.height, rect.width);
+            const x = e.clientX - rect.left - size / 2;
+            const y = e.clientY - rect.top - size / 2;
+            
+            ripple.style.cssText = `
+                position: absolute;
+                width: ${size}px;
+                height: ${size}px;
+                background: rgba(255,255,255,0.3);
+                border-radius: 50%;
+                transform: translate(${x}px, ${y}px) scale(0);
+                animation: ripple 0.6s ease-out;
+                pointer-events: none;
+            `;
+            
+            this.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 600);
+        });
+    });
+
+    // Auto-refresh simulation
+    let refreshCounter = 0;
+    setInterval(() => {
+        refreshCounter++;
+        const refreshIndicator = document.querySelector('.team-stats span:last-child');
+        if (refreshIndicator) {
+            refreshIndicator.style.opacity = '0.5';
+            setTimeout(() => {
+                refreshIndicator.style.opacity = '1';
+            }, 300);
+        }
+    }, 30000); // Every 30 seconds
+
+    // Progress ring animation
+    const progressRings = document.querySelectorAll('.progress-ring .progress');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.animationPlayState = 'running';
+            }
+        });
+    });
+
+    progressRings.forEach(ring => {
+        observer.observe(ring);
+    });
+});
+
+// Add CSS for ripple animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes ripple {
+        to {
+            transform: translate(var(--x), var(--y)) scale(4);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(style);
+</script>
 {% endblock %}

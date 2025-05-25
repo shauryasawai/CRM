@@ -4,40 +4,242 @@
 {% block title %}Leads{% endblock %}
 
 {% block content %}
-<h1>Leads</h1>
+<style>
+    .leads-container {
+        max-width: 1800px;
+        margin: 2rem auto;
+        padding: 2rem;
+        position: relative;
+        animation: fadeInUp 0.8s ease-out;
+    }
 
-<a href="{% url 'lead_create' %}" class="btn btn-primary mb-3">Add New Lead</a>
+    .leads-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
 
-{% if leads %}
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Contact Info</th>
-            <th>Source</th>
-            <th>Status</th>
-            <th>Assigned To</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for lead in leads %}
-        <tr>
-            <td>{{ lead.name }}</td>
-            <td>{{ lead.contact_info }}</td>
-            <td>{{ lead.source }}</td>
-            <td>{{ lead.status }}</td>
-            <td>{{ lead.assigned_to.get_full_name }}</td>
-            <td>
-                <a href="{% url 'lead_update' lead.pk %}" class="btn btn-sm btn-warning">Edit</a>
-                <a href="{% url 'lead_delete' lead.pk %}" class="btn btn-sm btn-danger">Delete</a>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% else %}
-<p>No leads found.</p>
-{% endif %}
+    .leads-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: var(--gradient-aurora);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin: 0;
+    }
 
+    .add-lead-btn {
+        background: var(--gradient-primary);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        box-shadow: var(--shadow-md);
+    }
+
+    .add-lead-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .leads-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        background: var(--bg-card);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .leads-table thead {
+        background: var(--gradient-cyber);
+    }
+
+    .leads-table th {
+        padding: 1.25rem 1.5rem;
+        text-align: left;
+        color: white;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.05em;
+    }
+
+    .leads-table td {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid var(--border-subtle);
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+
+    .leads-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .leads-table tbody tr:hover {
+        background: rgba(59, 130, 246, 0.05);
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.35rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .status-new {
+        background: rgba(6, 182, 212, 0.1);
+        color: var(--accent-cyan);
+    }
+
+    .status-contact {
+        background: rgba(59, 130, 246, 0.1);
+        color: var(--accent-primary);
+    }
+
+    .status-qualified {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--accent-success);
+    }
+
+    .status-lost {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--accent-danger);
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .action-btn {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 500;
+        font-size: 0.85rem;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .edit-btn {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--accent-warning);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .edit-btn:hover {
+        background: rgba(245, 158, 11, 0.2);
+    }
+
+    .delete-btn {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--accent-danger);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .delete-btn:hover {
+        background: rgba(239, 68, 68, 0.2);
+    }
+
+    .empty-message {
+        text-align: center;
+        padding: 3rem;
+        color: var(--text-muted);
+        font-size: 1.1rem;
+        background: var(--bg-card);
+        border-radius: 16px;
+        margin-top: 1rem;
+    }
+
+    .contact-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    @media (max-width: 768px) {
+        .leads-container {
+            padding: 1rem;
+        }
+
+        .leads-table {
+            display: block;
+            overflow-x: auto;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+    }
+</style>
+
+<div class="leads-container">
+    <div class="leads-header">
+        <h1 class="leads-title">Leads</h1>
+        <a href="{% url 'lead_create' %}" class="add-lead-btn">
+            <i class="fas fa-plus"></i> Add New Lead
+        </a>
+    </div>
+
+    {% if leads %}
+    <table class="leads-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Contact Info</th>
+                <th>Source</th>
+                <th>Status</th>
+                <th>Assigned To</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for lead in leads %}
+            <tr>
+                <td>{{ lead.name }}</td>
+                <td class="contact-info">{{ lead.contact_info }}</td>
+                <td>{{ lead.source }}</td>
+                <td>
+                    <span class="status-badge status-{{ lead.status|lower }}">
+                        {{ lead.status }}
+                    </span>
+                </td>
+                <td>{{ lead.assigned_to.get_full_name }}</td>
+                <td>
+                    <div class="action-buttons">
+                        <a href="{% url 'lead_update' lead.pk %}" class="action-btn edit-btn">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <a href="{% url 'lead_delete' lead.pk %}" class="action-btn delete-btn">
+                            <i class="fas fa-trash"></i> Delete
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-message">
+        <p>No leads found.</p>
+    </div>
+    {% endif %}
+</div>
 {% endblock %}

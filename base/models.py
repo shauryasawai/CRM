@@ -136,14 +136,24 @@ class BusinessTracker(models.Model):
         return self.month.strftime('%B %Y')
 
 
+from django.db import models
+from django.conf import settings
+
 class InvestmentPlanReview(models.Model):
     client = models.ForeignKey(
-        Client,
+        'Client',  # or settings.AUTH_USER_MODEL if Client is a user model
         on_delete=models.CASCADE,
         related_name='investment_reviews'
     )
-    review_date = models.DateField(auto_now_add=True)
-    notes = models.TextField()
+    goal = models.CharField(max_length=255, null=True, blank=True)  # nullable for smooth migration
+    principal_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0.00)
+    tenure_years = models.PositiveIntegerField(default=1)
+    monthly_investment = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)  # keep null=True for migration
+
+    def total_investment(self):
+        return self.monthly_investment * 12 * self.tenure_years + self.principal_amount
 
     def __str__(self):
-        return f"Investment Review for {self.client.name} on {self.review_date}"
+        return f"{self.goal or 'No Goal'} for {self.client.name}"
+
