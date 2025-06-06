@@ -1,0 +1,107 @@
+{% extends "hrm/base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Attendance Tracking</h2>
+    
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body text-center">
+                    {% if today_attendance %}
+                        <h5>Today's Status</h5>
+                        <p>Logged in at: {{ today_attendance.login_time|time }}</p>
+                        {% if today_attendance.is_remote %}
+                            <p class="text-warning">Remote Login</p>
+                        {% endif %}
+                        {% if today_attendance.is_late %}
+                            <p class="text-danger">Late Arrival</p>
+                        {% endif %}
+                        
+                        {% if not today_attendance.logout_time %}
+                            <form method="post" class="mt-3">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="logout">
+                                <button type="submit" class="btn btn-danger">Logout</button>
+                            </form>
+                        {% else %}
+                            <p>Logged out at: {{ today_attendance.logout_time|time }}</p>
+                        {% endif %}
+                    {% else %}
+                        <h5>Today's Status</h5>
+                        <p>Not logged in yet</p>
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="login">
+                            <input type="hidden" name="location" id="location" value="">
+                            <button type="submit" class="btn btn-success">Login</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">This Month's Summary</h5>
+                    <p>Total Working Days: {{ monthly_attendance|length }}</p>
+                    <p>Remote Days: {{ monthly_attendance|length|default:0 }}</p>
+                    <p>Late Days: {{ monthly_attendance|length|default:0 }}</p>
+                    <a href="{% url 'monthly_report' %}" class="btn btn-sm btn-primary">View Full Report</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h5>Recent Attendance</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Login Time</th>
+                            <th>Logout Time</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for att in monthly_attendance %}
+                        <tr>
+                            <td>{{ att.date }}</td>
+                            <td>{{ att.login_time|time }}</td>
+                            <td>{{ att.logout_time|time|default:"-" }}</td>
+                            <td>
+                                {% if att.is_remote %}
+                                    <span class="badge badge-warning">Remote</span>
+                                {% endif %}
+                                {% if att.is_late %}
+                                    <span class="badge badge-danger">Late</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center">No attendance records found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Get location if available
+if (navigator.geolocation && document.getElementById('location')) {
+    navigator.geolocation.getCurrentPosition(function(position) {
+        document.getElementById('location').value = 
+            position.coords.latitude + ',' + position.coords.longitude;
+    });
+}
+</script>
+{% endblock %}

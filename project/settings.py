@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -38,7 +39,27 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'base',
+    'hrm'
 ]
+
+DATE_INPUT_FORMATS = [
+    '%Y-%m-%d',
+    '%d/%m/%Y',
+    '%d-%m-%Y',
+]
+
+DATETIME_INPUT_FORMATS = [
+    '%Y-%m-%d %H:%M:%S',
+    '%Y-%m-%d %H:%M',
+    '%d/%m/%Y %H:%M:%S',
+    '%d/%m/%Y %H:%M',
+    '%Y-%m-%dT%H:%M:%S',
+    '%Y-%m-%dT%H:%M',
+]
+
+# Time zone setting (if not already set)
+USE_TZ = True
+TIME_ZONE = 'Asia/Kolkata'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -74,11 +95,15 @@ AUTH_USER_MODEL = 'base.User'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+import dj_database_url  # Add this at the top if using connection string
+import os
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.parse(
+        'postgresql://postgres:Shaurya123..@db.kqskqkvwwhjlwuxbqxcq.supabase.co:5432/postgres',
+        conn_max_age=600,
+        ssl_require=True
+    )
 }
 
 
@@ -122,3 +147,19 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# HRM specific settings
+HRM_SETTINGS = {
+    'STANDARD_WORK_HOURS': 8,
+    'STANDARD_LOGIN_TIME': '09:00',
+    'LATE_THRESHOLD_MINUTES': 15,
+    'OFFICE_RADIUS_METERS': 500,
+    'MONTHLY_REVIEW_DATE': 25,
+    'LEAVE_REQUEST_ESCALATION_HOURS': 48,
+}
+
+# Login URLs (if using Django auth)
+LOGIN_URL = '/admin/login/'
+LOGIN_REDIRECT_URL = '/hrm/'
+LOGOUT_REDIRECT_URL = '/admin/login/'
+

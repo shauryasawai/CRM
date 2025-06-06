@@ -1,0 +1,73 @@
+{% extends "hrm/base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2>Employee Directory</h2>
+        </div>
+        <div class="col-md-6">
+            <form method="get" class="form-inline float-right">
+                <div class="form-group mr-2">
+                    <select name="department" class="form-control">
+                        <option value="">All Departments</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept.id }}" {% if request.GET.department == dept.id|stringformat:"s" %}selected{% endif %}>
+                            {{ dept.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group mr-2">
+                    <input type="text" name="search" class="form-control" placeholder="Search..." 
+                           value="{{ request.GET.search }}">
+                </div>
+                <button type="submit" class="btn btn-primary">Filter</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Designation</th>
+                            <th>Department</th>
+                            <th>Hierarchy</th>
+                            <th>Manager</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for emp in employees %}
+                        <tr>
+                            <td>{{ emp.user.get_full_name }}</td>
+                            <td>{{ emp.designation }}</td>
+                            <td>{{ emp.department.name }}</td>
+                            <td>{{ emp.get_hierarchy_level_display }}</td>
+                            <td>
+                                {% if emp.reporting_manager %}
+                                    {{ emp.reporting_manager.user.get_full_name }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'mark_attendance' emp.id %}" class="btn btn-sm btn-info">Mark Attendance</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">No employees found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

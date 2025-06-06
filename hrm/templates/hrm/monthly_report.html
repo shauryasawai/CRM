@@ -1,0 +1,118 @@
+{% extends "hrm/base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2>Monthly Attendance Report</h2>
+        </div>
+        <div class="col-md-6">
+            <form method="get" class="form-inline float-right">
+                <div class="form-group mr-2">
+                    <select name="month" class="form-control">
+                        <option value="1" {% if selected_month == 1 %}selected{% endif %}>01 - January</option>
+                        <option value="2" {% if selected_month == 2 %}selected{% endif %}>02 - February</option>
+                        <option value="3" {% if selected_month == 3 %}selected{% endif %}>03 - March</option>
+                        <option value="4" {% if selected_month == 4 %}selected{% endif %}>04 - April</option>
+                        <option value="5" {% if selected_month == 5 %}selected{% endif %}>05 - May</option>
+                        <option value="6" {% if selected_month == 6 %}selected{% endif %}>06 - June</option>
+                        <option value="7" {% if selected_month == 7 %}selected{% endif %}>07 - July</option>
+                        <option value="8" {% if selected_month == 8 %}selected{% endif %}>08 - August</option>
+                        <option value="9" {% if selected_month == 9 %}selected{% endif %}>09 - September</option>
+                        <option value="10" {% if selected_month == 10 %}selected{% endif %}>10 - October</option>
+                        <option value="11" {% if selected_month == 11 %}selected{% endif %}>11 - November</option>
+                        <option value="12" {% if selected_month == 12 %}selected{% endif %}>12 - December</option>
+                    </select>
+                </div>
+                <div class="form-group mr-2">
+                    <select name="year" class="form-control">
+                        {% for year in year_range %}
+                            <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>
+                                {{ year }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Filter</button>
+            </form>
+        </div>
+    </div>
+
+    {% for data in attendance_data %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>{{ data.employee.user.get_full_name }} - {{ data.employee.designation }}</h5>
+            <div class="row">
+                <div class="col-md-4">
+                    <span class="badge badge-info">Total Hours: {{ data.total_hours }}</span>
+                </div>
+                <div class="col-md-4">
+                    <span class="badge badge-warning">Remote Days: {{ data.remote_days }}</span>
+                </div>
+                <div class="col-md-4">
+                    <span class="badge badge-danger">Late Days: {{ data.late_days }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Login Time</th>
+                            <th>Logout Time</th>
+                            <th>Working Hours</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for att in data.attendance %}
+                        <tr {% if att.is_remote %}class="table-warning"{% endif %}>
+                            <td>{{ att.date|date:"D, d M Y" }}</td>
+                            <td>{{ att.login_time|time:"H:i" }}</td>
+                            <td>
+                                {% if att.logout_time %}
+                                    {{ att.logout_time|time:"H:i" }}
+                                {% else %}
+                                    <span class="text-muted">Not logged out</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if att.logout_time and att.login_time %}
+                                    {% with diff=att.logout_time|timesince:att.login_time %}
+                                        {{ diff }}
+                                    {% endwith %}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if att.is_remote %}
+                                    <span class="badge badge-warning">Remote</span>
+                                {% endif %}
+                                {% if att.is_late %}
+                                    <span class="badge badge-danger">Late</span>
+                                {% endif %}
+                                {% if not att.is_remote and not att.is_late %}
+                                    <span class="badge badge-success">Normal</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">No attendance records found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="alert alert-info">
+        No attendance data available for the selected period.
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
