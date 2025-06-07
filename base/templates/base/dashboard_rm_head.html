@@ -474,6 +474,13 @@
         justify-content: center;
     }
 
+    .header-actions {
+        display: flex;
+        justify-content: center;
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+
     .action-btn {
         display: inline-flex;
         align-items: center;
@@ -636,6 +643,11 @@
         <div class="role-badge">
             <span>👑</span> Regional Manager Head
         </div>
+        <div class="header-actions">
+            <a href="{% url 'hrm_dashboard' %}" class="action-btn btn-accent">
+                <span>👥</span> HRMS Portal
+            </a>
+        </div>
     </div>
 
     <!-- Metrics Overview -->
@@ -760,8 +772,8 @@
     <!-- Action Panel -->
     <div class="action-panel">
         <div class="action-buttons">
-            <a href="{% url 'hrm_dashboard' %}" class="btn btn-accent">
-            <span>📋</span> HRMS Portal
+            <a href="{% url 'hrm_dashboard' %}" class="action-btn btn-accent">
+                <span>📋</span> HRMS Portal
             </a>
             <a href="{% url 'lead_list' %}" class="action-btn btn-primary">
                 <span>🎯</span>

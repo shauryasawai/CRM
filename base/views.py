@@ -7,6 +7,9 @@ from django.utils import timezone
 from django.db.models import Sum, Count, Q, Avg
 from django.http import JsonResponse, HttpResponseForbidden
 from django.core.exceptions import PermissionDenied
+from django.db.models import Sum, Avg, F, Q
+from django.db.models.functions import Extract
+from django.utils import timezone
 
 from .models import User, Lead, Client, Task, ServiceRequest, BusinessTracker, InvestmentPlanReview, Team
 from .forms import LeadForm, ClientForm, TaskForm, ServiceRequestForm, InvestmentPlanReviewForm
@@ -120,11 +123,25 @@ def dashboard(request):
         
         # Performance metrics
         lead_conversion_rate = (converted_leads / total_leads * 100) if total_leads > 0 else 0
-        avg_response_time = ServiceRequest.objects.filter(
-            status__in=['resolved', 'closed']
-        ).aggregate(
-            avg_time=Avg('resolved_at__date') - Avg('created_at__date')
-        )['avg_time']
+        
+        # Calculate average response time properly
+        resolved_requests = ServiceRequest.objects.filter(
+            status__in=['resolved', 'closed'],
+            resolved_at__isnull=False
+        ).annotate(
+            response_time=F('resolved_at') - F('created_at')
+        )
+        
+        if resolved_requests.exists():
+            # Calculate average response time in days
+            total_response_time = resolved_requests.aggregate(
+                avg_seconds=Avg(
+                    Extract('epoch', F('resolved_at')) - Extract('epoch', F('created_at'))
+                )
+            )['avg_seconds']
+            avg_response_time_days = total_response_time / (24 * 60 * 60) if total_response_time else 0
+        else:
+            avg_response_time_days = 0
 
         context.update({
             'rm_heads': rm_heads,
@@ -133,7 +150,7 @@ def dashboard(request):
             'converted_leads': converted_leads,
             'lead_conversion_rate': round(lead_conversion_rate, 2),
             'open_service_requests': open_service_requests,
-            'avg_response_time': avg_response_time,
+            'avg_response_time': round(avg_response_time_days, 2),
         })
         template_name = 'base/dashboard_business_head.html'
 

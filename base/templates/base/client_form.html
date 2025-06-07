@@ -5,75 +5,682 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4" style="max-width: 700px;">
-    <h2 class="mb-4">
-        {% if client %}Edit Client: {{ client.name }}{% else %}Add New Client{% endif %}
-    </h2>
+<style>
+    * {
+        box-sizing: border-box;
+    }
 
-    <form method="post">
-        {% csrf_token %}
-        {{ form.non_field_errors }}
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+        color: #e2e8f0;
+        min-height: 100vh;
+        position: relative;
+    }
 
-        <div class="mb-3">
-            {{ form.name.label_tag }}
-            {{ form.name }}
-            {% if form.name.errors %}
-                <div class="text-danger">{{ form.name.errors }}</div>
-            {% endif %}
-        </div>
+    body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.1) 0%, transparent 50%),
+                    radial-gradient(circle at 40% 80%, rgba(120, 219, 226, 0.1) 0%, transparent 50%);
+        pointer-events: none;
+        z-index: -1;
+    }
 
-        <div class="mb-3">
-            {{ form.contact_info.label_tag }}
-            {{ form.contact_info }}
-            {% if form.contact_info.errors %}
-                <div class="text-danger">{{ form.contact_info.errors }}</div>
-            {% endif %}
-        </div>
+    .container {
+        position: relative;
+        z-index: 1;
+    }
 
-        <div class="mb-3">
-            {{ form.aum.label_tag }}
-            {{ form.aum }}
-            {% if form.aum.errors %}
-                <div class="text-danger">{{ form.aum.errors }}</div>
-            {% endif %}
-        </div>
+    .form-card {
+        background: rgba(30, 41, 59, 0.6);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(148, 163, 184, 0.1);
+        border-radius: 24px;
+        padding: 40px;
+        box-shadow: 
+            0 25px 50px -12px rgba(0, 0, 0, 0.25),
+            0 0 0 1px rgba(255, 255, 255, 0.05);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        margin-top: 20px;
+    }
 
-        <div class="mb-3">
-            {{ form.sip_amount.label_tag }}
-            {{ form.sip_amount }}
-            {% if form.sip_amount.errors %}
-                <div class="text-danger">{{ form.sip_amount.errors }}</div>
-            {% endif %}
-        </div>
+    .form-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 
+            0 32px 64px -12px rgba(0, 0, 0, 0.35),
+            0 0 0 1px rgba(255, 255, 255, 0.1);
+    }
 
-        <div class="mb-3">
-            {{ form.demat_count.label_tag }}
-            {{ form.demat_count }}
-            {% if form.demat_count.errors %}
-                <div class="text-danger">{{ form.demat_count.errors }}</div>
-            {% endif %}
-        </div>
+    .form-header {
+        text-align: center;
+        margin-bottom: 40px;
+        position: relative;
+    }
 
-        <div class="mb-3">
-            {{ form.user.label_tag }}
-            {{ form.user }}
-            {% if form.user.errors %}
-                <div class="text-danger">{{ form.user.errors }}</div>
-            {% endif %}
-        </div>
+    .form-header::after {
+        content: '';
+        position: absolute;
+        bottom: -15px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60px;
+        height: 3px;
+        background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+        border-radius: 2px;
+    }
 
-        <div class="mb-3">
-            {{ form.lead.label_tag }}
-            {{ form.lead }}
-            {% if form.lead.errors %}
-                <div class="text-danger">{{ form.lead.errors }}</div>
-            {% endif %}
-        </div>
+    .form-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 8px;
+    }
 
-        <button type="submit" class="btn btn-primary">
-            {% if client %}Update{% else %}Save{% endif %}
-        </button>
-        <a href="{% url 'client_list' %}" class="btn btn-secondary">Cancel</a>
-    </form>
+    .mb-3 {
+        margin-bottom: 28px;
+        position: relative;
+    }
+
+    .mb-3 label {
+        display: block;
+        font-weight: 600;
+        color: #f1f5f9;
+        margin-bottom: 8px;
+        font-size: 0.95rem;
+        letter-spacing: 0.5px;
+    }
+
+    .form-control, input, select, textarea {
+        width: 100%;
+        padding: 16px 20px;
+        background: rgba(15, 23, 42, 0.8) !important;
+        border: 2px solid rgba(148, 163, 184, 0.2) !important;
+        border-radius: 12px !important;
+        color: #e2e8f0 !important;
+        font-size: 1rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+    }
+
+    .form-control:focus, input:focus, select:focus, textarea:focus {
+        outline: none !important;
+        border-color: #3b82f6 !important;
+        box-shadow: 
+            0 0 0 4px rgba(59, 130, 246, 0.1),
+            0 8px 25px -8px rgba(59, 130, 246, 0.2) !important;
+        transform: translateY(-1px);
+    }
+
+    .form-control:hover:not(:focus), input:hover:not(:focus), select:hover:not(:focus) {
+        border-color: rgba(148, 163, 184, 0.3) !important;
+        transform: translateY(-1px);
+    }
+
+    .form-control::placeholder, input::placeholder {
+        color: #64748b;
+    }
+
+    select.form-control, select {
+        cursor: pointer;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
+        background-position: right 12px center !important;
+        background-repeat: no-repeat !important;
+        background-size: 16px !important;
+        padding-right: 48px !important;
+    }
+
+    select option {
+        background: #1e293b;
+        color: #e2e8f0;
+        padding: 8px;
+    }
+
+    .text-danger {
+        color: #ef4444 !important;
+        font-size: 0.875rem;
+        margin-top: 6px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .text-danger::before {
+        content: '⚠';
+        font-size: 0.875rem;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        margin-top: 40px;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        padding: 14px 32px;
+        border: none;
+        border-radius: 12px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+        transition: left 0.5s;
+    }
+
+    .btn:hover::before {
+        left: 100%;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%) !important;
+        color: white !important;
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        border: none !important;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+        text-decoration: none;
+    }
+
+    .btn-secondary {
+        background: rgba(71, 85, 105, 0.8) !important;
+        color: #e2e8f0 !important;
+        border: 1px solid rgba(148, 163, 184, 0.3) !important;
+    }
+
+    .btn-secondary:hover {
+        background: rgba(71, 85, 105, 1) !important;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        text-decoration: none;
+        color: #e2e8f0 !important;
+    }
+
+    .floating-elements {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: -1;
+    }
+
+    .floating-circle {
+        position: absolute;
+        border-radius: 50%;
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
+        animation: float 6s ease-in-out infinite;
+    }
+
+    .floating-circle:nth-child(1) {
+        width: 80px;
+        height: 80px;
+        top: 10%;
+        left: 10%;
+        animation-delay: 0s;
+    }
+
+    .floating-circle:nth-child(2) {
+        width: 120px;
+        height: 120px;
+        top: 70%;
+        right: 10%;
+        animation-delay: 2s;
+    }
+
+    .floating-circle:nth-child(3) {
+        width: 60px;
+        height: 60px;
+        top: 30%;
+        right: 20%;
+        animation-delay: 4s;
+    }
+
+    @keyframes float {
+        0%, 100% {
+            transform: translateY(0px) rotate(0deg);
+        }
+        33% {
+            transform: translateY(-20px) rotate(120deg);
+        }
+        66% {
+            transform: translateY(10px) rotate(240deg);
+        }
+    }
+
+    .input-group {
+        position: relative;
+    }
+
+    .input-icon {
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #64748b;
+        transition: color 0.3s ease;
+        pointer-events: none;
+        z-index: 10;
+    }
+
+    .form-control:focus + .input-icon {
+        color: #3b82f6;
+    }
+
+    /* Handle select dropdown icon positioning */
+    .has-select .input-icon {
+        right: 48px;
+    }
+
+    @media (max-width: 768px) {
+        .form-card {
+            padding: 24px;
+            border-radius: 16px;
+            margin: 10px;
+        }
+
+        .form-title {
+            font-size: 2rem;
+        }
+
+        .form-actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    /* Non-field errors styling */
+    .errorlist {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 20px;
+        list-style: none;
+    }
+
+    .errorlist li {
+        color: #ef4444;
+        font-size: 0.9rem;
+    }
+
+    /* Help text styling */
+    .helptext {
+        color: #94a3b8;
+        font-size: 0.85rem;
+        margin-top: 4px;
+    }
+
+    /* Focus animations */
+    .mb-3:focus-within {
+        transform: scale(1.01);
+    }
+
+    /* Required field indicator */
+    .required::after {
+        content: '*';
+        color: #ef4444;
+        margin-left: 4px;
+    }
+
+    /* Two-column layout for better space utilization */
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin-bottom: 28px;
+    }
+
+    @media (max-width: 768px) {
+        .form-row {
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+    }
+</style>
+
+<div class="floating-elements">
+    <div class="floating-circle"></div>
+    <div class="floating-circle"></div>
+    <div class="floating-circle"></div>
 </div>
+
+<div class="container mt-4" style="max-width: 800px;">
+    <div class="form-card">
+        <div class="form-header">
+            <h2 class="form-title">
+                {% if client %}Edit Client: {{ client.name }}{% else %}Add New Client{% endif %}
+            </h2>
+        </div>
+
+        <form method="post" novalidate id="clientForm">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div class="errorlist">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <!-- Client Name -->
+            <div class="mb-3">
+                <div class="input-group">
+                    <label for="{{ form.name.id_for_label }}" class="{% if form.name.field.required %}required{% endif %}">
+                        {{ form.name.label }}
+                    </label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="{{ form.name.id_for_label }}" 
+                           name="{{ form.name.html_name }}" 
+                           value="{{ form.name.value|default_if_none:'' }}"
+                           placeholder="Enter client name"
+                           {% if form.name.field.required %}required{% endif %}>
+                    <span class="input-icon">👤</span>
+                </div>
+                {% if form.name.errors %}
+                    <div class="text-danger">{{ form.name.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Contact Info -->
+            <div class="mb-3">
+                <div class="input-group">
+                    <label for="{{ form.contact_info.id_for_label }}" class="{% if form.contact_info.field.required %}required{% endif %}">
+                        {{ form.contact_info.label }}
+                    </label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="{{ form.contact_info.id_for_label }}" 
+                           name="{{ form.contact_info.html_name }}" 
+                           value="{{ form.contact_info.value|default_if_none:'' }}"
+                           placeholder="Phone/Email"
+                           {% if form.contact_info.field.required %}required{% endif %}>
+                    <span class="input-icon">📞</span>
+                </div>
+                {% if form.contact_info.errors %}
+                    <div class="text-danger">{{ form.contact_info.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Two-column layout for financial fields -->
+            <div class="form-row">
+                <!-- AUM -->
+                <div class="mb-3">
+                    <div class="input-group">
+                        <label for="{{ form.aum.id_for_label }}" class="{% if form.aum.field.required %}required{% endif %}">
+                            {{ form.aum.label }}
+                        </label>
+                        <input type="number" 
+                               class="form-control" 
+                               id="{{ form.aum.id_for_label }}" 
+                               name="{{ form.aum.html_name }}" 
+                               value="{{ form.aum.value|default_if_none:'' }}"
+                               step="0.01"
+                               min="0"
+                               placeholder="0.00"
+                               {% if form.aum.field.required %}required{% endif %}>
+                        <span class="input-icon">💰</span>
+                    </div>
+                    {% if form.aum.errors %}
+                        <div class="text-danger">{{ form.aum.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- SIP Amount -->
+                <div class="mb-3">
+                    <div class="input-group">
+                        <label for="{{ form.sip_amount.id_for_label }}" class="{% if form.sip_amount.field.required %}required{% endif %}">
+                            {{ form.sip_amount.label }}
+                        </label>
+                        <input type="number" 
+                               class="form-control" 
+                               id="{{ form.sip_amount.id_for_label }}" 
+                               name="{{ form.sip_amount.html_name }}" 
+                               value="{{ form.sip_amount.value|default_if_none:'' }}"
+                               step="0.01"
+                               min="0"
+                               placeholder="0.00"
+                               {% if form.sip_amount.field.required %}required{% endif %}>
+                        <span class="input-icon">📈</span>
+                    </div>
+                    {% if form.sip_amount.errors %}
+                        <div class="text-danger">{{ form.sip_amount.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Demat Count -->
+            <div class="mb-3">
+                <div class="input-group">
+                    <label for="{{ form.demat_count.id_for_label }}" class="{% if form.demat_count.field.required %}required{% endif %}">
+                        {{ form.demat_count.label }}
+                    </label>
+                    <input type="number" 
+                           class="form-control" 
+                           id="{{ form.demat_count.id_for_label }}" 
+                           name="{{ form.demat_count.html_name }}" 
+                           value="{{ form.demat_count.value|default_if_none:'' }}"
+                           min="0"
+                           placeholder="0"
+                           {% if form.demat_count.field.required %}required{% endif %}>
+                    <span class="input-icon">🏦</span>
+                </div>
+                {% if form.demat_count.errors %}
+                    <div class="text-danger">{{ form.demat_count.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Assigned User -->
+            <div class="mb-3">
+                <div class="input-group has-select">
+                    <label for="{{ form.user.id_for_label }}" class="{% if form.user.field.required %}required{% endif %}">
+                        {{ form.user.label }}
+                    </label>
+                    <select class="form-control" 
+                            id="{{ form.user.id_for_label }}" 
+                            name="{{ form.user.html_name }}"
+                            {% if form.user.field.required %}required{% endif %}>
+                        <option value="">Select User</option>
+                        {% for user in form.user.field.queryset %}
+                            <option value="{{ user.id }}" 
+                                    {% if form.user.value == user.id %}selected{% endif %}>
+                                {{ user.get_full_name }} ({{ user.get_role_display }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <span class="input-icon">👨‍💼</span>
+                </div>
+                {% if form.user.errors %}
+                    <div class="text-danger">{{ form.user.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Associated Lead -->
+            <div class="mb-3">
+                <div class="input-group has-select">
+                    <label for="{{ form.lead.id_for_label }}" class="{% if form.lead.field.required %}required{% endif %}">
+                        {{ form.lead.label }}
+                    </label>
+                    <select class="form-control" 
+                            id="{{ form.lead.id_for_label }}" 
+                            name="{{ form.lead.html_name }}"
+                            {% if form.lead.field.required %}required{% endif %}>
+                        <option value="">Select Lead (Optional)</option>
+                        {% for lead in form.lead.field.queryset %}
+                            <option value="{{ lead.id }}" 
+                                    {% if form.lead.value == lead.id %}selected{% endif %}>
+                                {{ lead.name }} - {{ lead.contact_info }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <span class="input-icon">🎯</span>
+                </div>
+                {% if form.lead.errors %}
+                    <div class="text-danger">{{ form.lead.errors }}</div>
+                {% endif %}
+                <div class="helptext">
+                    Link this client to a converted lead (optional)
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    ✨ {% if client %}Update Client{% else %}Save Client{% endif %}
+                </button>
+                <a href="{% url 'client_list' %}" class="btn btn-secondary">
+                    ← Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Enhanced form interactions
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('clientForm');
+        const inputs = document.querySelectorAll('input, select, textarea');
+
+        // Add focus animations
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                const container = this.closest('.mb-3');
+                if (container) {
+                    container.style.transform = 'scale(1.01)';
+                }
+            });
+
+            input.addEventListener('blur', function() {
+                const container = this.closest('.mb-3');
+                if (container) {
+                    container.style.transform = 'scale(1)';
+                }
+            });
+        });
+
+        // Form validation enhancements
+        form.addEventListener('submit', function(e) {
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            
+            // Basic client-side validation
+            const nameField = document.getElementById('{{ form.name.id_for_label }}');
+            const userField = document.getElementById('{{ form.user.id_for_label }}');
+            
+            let isValid = true;
+            
+            // Check required fields
+            if (!nameField.value.trim()) {
+                isValid = false;
+                nameField.focus();
+                nameField.style.borderColor = '#ef4444';
+            }
+            
+            if (userField.hasAttribute('required') && !userField.value) {
+                isValid = false;
+                if (isValid) userField.focus();
+                userField.style.borderColor = '#ef4444';
+            }
+            
+            if (isValid) {
+                submitBtn.innerHTML = '⏳ Processing...';
+                submitBtn.disabled = true;
+                
+                // Re-enable after a delay (in case of validation errors)
+                setTimeout(() => {
+                    if (submitBtn.disabled) {
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
+                    }
+                }, 3000);
+            } else {
+                e.preventDefault();
+            }
+        });
+
+        // Reset border color on input
+        inputs.forEach(input => {
+            input.addEventListener('input', function() {
+                this.style.borderColor = 'rgba(148, 163, 184, 0.2)';
+            });
+        });
+
+        // Add smooth hover effects
+        document.querySelectorAll('.btn').forEach(btn => {
+            btn.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-2px)';
+            });
+            
+            btn.addEventListener('mouseleave', function() {
+                if (!this.disabled) {
+                    this.style.transform = 'translateY(0)';
+                }
+            });
+        });
+
+        // Auto-format number inputs
+        const numberInputs = document.querySelectorAll('input[type="number"]');
+        numberInputs.forEach(input => {
+            input.addEventListener('blur', function() {
+                if (this.value && this.step === '0.01') {
+                    this.value = parseFloat(this.value).toFixed(2);
+                }
+            });
+        });
+
+        // Enhanced select styling
+        const selects = document.querySelectorAll('select');
+        selects.forEach(select => {
+            select.addEventListener('change', function() {
+                if (this.value) {
+                    this.style.color = '#e2e8f0';
+                } else {
+                    this.style.color = '#64748b';
+                }
+            });
+            
+            // Initial state
+            if (select.value) {
+                select.style.color = '#e2e8f0';
+            } else {
+                select.style.color = '#64748b';
+            }
+        });
+    });
+</script>
+
 {% endblock %}

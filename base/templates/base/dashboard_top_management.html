@@ -375,6 +375,27 @@
         color: white;
     }
 
+    .btn-hrms {
+        background: var(--gradient-primary);
+        color: white;
+        box-shadow: var(--glow-blue);
+        border: none;
+    }
+
+    .btn-hrms:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(88, 166, 255, 0.4);
+    }
+
+    /* Add header actions container */
+    .header-actions {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin-top: 1.5rem;
+        flex-wrap: wrap;
+    }
+
     /* Animations */
     @keyframes fadeInSlide {
         from {
@@ -479,6 +500,11 @@
                 <span>🤝</span> Relationship Manager
             {% endif %}
         </div>
+        <div class="header-actions">
+            <a href="{% url 'hrm_dashboard' %}" class="action-btn btn-hrms">
+                <span>📋</span> HRMS Portal
+            </a>
+        </div>
     </div>
 
     <!-- Relationship Manager Content -->
@@ -550,8 +576,8 @@
 
         <!-- Quick Actions -->
         <div class="quick-actions">
-            <a href="{% url 'hrm_dashboard' %}" class="btn btn-accent">
-                <span>📋</span> HRMS Portal
+            <a href="{% url 'hrm_dashboard' %}" class="action-btn btn-hrms">
+                <span>👥</span> HRMS Portal
             </a>
             <a href="{% url 'lead_create' %}" class="action-btn primary">
                 <span>➕</span> Add New Lead

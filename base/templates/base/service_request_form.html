@@ -4,48 +4,764 @@
     {% if service_request %}Edit Service Request{% else %}Add Service Request{% endif %}
 {% endblock %}
 
+{% block extra_css %}
+<style>
+:root {
+  --primary-color: #8b5cf6;
+  --primary-hover: #7c3aed;
+  --success-color: #10b981;
+  --success-hover: #059669;
+  --danger-color: #ef4444;
+  --warning-color: #f59e0b;
+  --info-color: #06b6d4;
+  --dark-bg: #0f172a;
+  --card-bg: #1e293b;
+  --input-bg: #334155;
+  --input-border: #475569;
+  --input-focus: #64748b;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --border-color: #334155;
+  --accent-gradient: linear-gradient(135deg, #8b5cf6, #06b6d4);
+}
+
+body {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  min-height: 100vh;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.form-container {
+  max-width: 700px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.form-card {
+  background: var(--card-bg);
+  border-radius: 20px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-color);
+  position: relative;
+}
+
+.form-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--accent-gradient);
+}
+
+.form-header {
+  background: linear-gradient(135deg, var(--primary-color), var(--info-color));
+  padding: 2.5rem 2rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.form-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="service-grid" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23service-grid)"/></svg>');
+  opacity: 0.4;
+}
+
+.form-title {
+  color: white;
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.form-subtitle {
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0.75rem 0 0 0;
+  font-size: 1.1rem;
+  position: relative;
+  z-index: 1;
+  font-weight: 400;
+}
+
+.service-icon {
+  position: absolute;
+  top: 2rem;
+  right: 2rem;
+  font-size: 3rem;
+  opacity: 0.2;
+  z-index: 1;
+}
+
+.form-body {
+  padding: 2.5rem;
+}
+
+.form-group {
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+.form-group label {
+  display: block;
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  position: relative;
+}
+
+.form-group label::after {
+  content: '';
+  position: absolute;
+  bottom: -0.25rem;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--accent-gradient);
+  transition: width 0.3s ease;
+}
+
+.form-group.focused label::after {
+  width: 100%;
+}
+
+/* Style Django form widgets directly */
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="url"],
+input[type="number"],
+select,
+textarea {
+  width: 100%;
+  padding: 1rem 1.25rem;
+  background: var(--input-bg);
+  border: 2px solid var(--input-border);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+  font-family: inherit;
+  position: relative;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="tel"]:focus,
+input[type="url"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
+  background: var(--input-focus);
+  transform: translateY(-2px);
+}
+
+input[type="text"]::placeholder,
+input[type="email"]::placeholder,
+input[type="tel"]::placeholder,
+input[type="url"]::placeholder,
+input[type="number"]::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.6;
+}
+
+select {
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1.2rem;
+  padding-right: 3rem;
+  appearance: none;
+  cursor: pointer;
+}
+
+select option {
+  background: var(--input-bg);
+  color: var(--text-primary);
+  padding: 0.75rem;
+}
+
+.field-icon {
+  position: absolute;
+  right: 1rem;
+  top: 3rem;
+  color: var(--text-muted);
+  pointer-events: none;
+  font-size: 1.2rem;
+  transition: all 0.3s ease;
+}
+
+.form-group.focused .field-icon {
+  color: var(--primary-color);
+  transform: scale(1.1);
+}
+
+.error-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0 0 0;
+}
+
+.error-list li {
+  color: var(--danger-color);
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-left: 4px solid var(--danger-color);
+}
+
+.error-list li::before {
+  content: '⚠️';
+  font-size: 1rem;
+}
+
+.form-group.has-error input,
+.form-group.has-error select,
+.form-group.has-error textarea {
+  border-color: var(--danger-color);
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15);
+}
+
+.form-group.has-success input,
+.form-group.has-success select,
+.form-group.has-success textarea {
+  border-color: var(--success-color);
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border-color);
+  margin-top: 2rem;
+}
+
+.btn {
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn:hover::before {
+  left: 100%;
+}
+
+.btn-primary {
+  background: var(--accent-gradient);
+  color: white;
+  box-shadow: 0 8px 25px 0 rgba(139, 92, 246, 0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 35px 0 rgba(139, 92, 246, 0.4);
+}
+
+.btn-secondary {
+  background: var(--input-bg);
+  color: var(--text-secondary);
+  border: 2px solid var(--input-border);
+}
+
+.btn-secondary:hover {
+  background: var(--input-focus);
+  color: var(--text-primary);
+  transform: translateY(-2px);
+  border-color: var(--primary-color);
+}
+
+.form-progress {
+  height: 6px;
+  background: var(--input-border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+.form-progress-bar {
+  height: 100%;
+  background: var(--accent-gradient);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+  position: relative;
+}
+
+.form-progress-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.status-new {
+  background: rgba(6, 182, 212, 0.2);
+  color: var(--info-color);
+  border: 1px solid var(--info-color);
+}
+
+.status-in-progress {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--warning-color);
+  border: 1px solid var(--warning-color);
+}
+
+.status-completed {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--success-color);
+  border: 1px solid var(--success-color);
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.9);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid var(--input-border);
+  border-top: 4px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.success-message {
+  background: var(--accent-gradient);
+  color: white;
+  padding: 1.25rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-weight: 500;
+}
+
+.success-message::before {
+  content: '✅';
+  font-size: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .form-container {
+    margin: 1rem auto;
+    padding: 0 0.5rem;
+  }
+  
+  .form-header, .form-body {
+    padding: 2rem 1.5rem;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .btn {
+    justify-content: center;
+  }
+  
+  .service-icon {
+    display: none;
+  }
+  
+  .form-title {
+    font-size: 1.5rem;
+  }
+}
+
+/* Animation for form fields */
+.form-group {
+  opacity: 0;
+  transform: translateY(30px);
+  animation: slideInUp 0.6s ease forwards;
+}
+
+.form-group:nth-child(1) { animation-delay: 0.1s; }
+.form-group:nth-child(2) { animation-delay: 0.2s; }
+.form-group:nth-child(3) { animation-delay: 0.3s; }
+.form-group:nth-child(4) { animation-delay: 0.4s; }
+.form-group:nth-child(5) { animation-delay: 0.5s; }
+
+@keyframes slideInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Priority styling for visual feedback */
+.priority-low { border-left: 4px solid var(--success-color); }
+.priority-medium { border-left: 4px solid var(--warning-color); }
+.priority-high { border-left: 4px solid var(--danger-color); }
+.priority-urgent { border-left: 4px solid #dc2626; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <h2>
+<div class="form-container">
+  <div class="form-card">
+    <div class="form-header">
+      <div class="service-icon">🛠️</div>
+      <h1 class="form-title">
         {% if service_request %}
-            Edit Service Request #{{ service_request.id }}
+          Edit Service Request
         {% else %}
-            Add New Service Request
+          New Service Request
         {% endif %}
-    </h2>
-
-    <form method="post" novalidate>
+      </h1>
+      <p class="form-subtitle">
+        {% if service_request %}
+          Update service request #{{ service_request.id }}
+        {% else %}
+          Create a new service request to track client needs
+        {% endif %}
+      </p>
+    </div>
+    
+    <div class="form-body">
+      <div class="form-progress">
+        <div class="form-progress-bar" id="progressBar" style="width: 0%"></div>
+      </div>
+      
+      {% if service_request and service_request.status %}
+        <div class="status-indicator status-{{ service_request.status|lower }}">
+          <span>Current Status: {{ service_request.get_status_display }}</span>
+        </div>
+      {% endif %}
+      
+      <form method="post" novalidate id="serviceRequestForm">
         {% csrf_token %}
-        {{ form.non_field_errors }}
-
-        <div class="mb-3">
-            {{ form.client.label_tag }}
-            {{ form.client }}
-            {% if form.client.errors %}
-                <div class="text-danger">{{ form.client.errors }}</div>
-            {% endif %}
+        
+        {% if form.non_field_errors %}
+          <div class="error-list">
+            {% for error in form.non_field_errors %}
+              <div class="alert alert-danger">{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+        
+        <!-- Client Field -->
+        <div class="form-group {% if form.client.errors %}has-error{% endif %}" data-field="client">
+          {{ form.client.label_tag }}
+          {{ form.client }}
+          <div class="field-icon">👤</div>
+          {% if form.client.errors %}
+            <ul class="error-list">
+              {% for error in form.client.errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
         </div>
-
-        <div class="mb-3">
-            {{ form.description.label_tag }}
-            {{ form.description }}
-            {% if form.description.errors %}
-                <div class="text-danger">{{ form.description.errors }}</div>
-            {% endif %}
+        
+        <!-- Description Field -->
+        <div class="form-group {% if form.description.errors %}has-error{% endif %}" data-field="description">
+          {{ form.description.label_tag }}
+          {{ form.description }}
+          {% if form.description.errors %}
+            <ul class="error-list">
+              {% for error in form.description.errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
         </div>
-
-        <div class="mb-3">
-            {{ form.status.label_tag }}
-            {{ form.status }}
-            {% if form.status.errors %}
-                <div class="text-danger">{{ form.status.errors }}</div>
-            {% endif %}
+        
+        <!-- Priority Field -->
+        <div class="form-group {% if form.priority.errors %}has-error{% endif %}" data-field="priority">
+          {{ form.priority.label_tag }}
+          {{ form.priority }}
+          <div class="field-icon">⚡</div>
+          {% if form.priority.errors %}
+            <ul class="error-list">
+              {% for error in form.priority.errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
         </div>
-
-        <button type="submit" class="btn btn-primary">
-            {% if service_request %}Update{% else %}Submit{% endif %}
-        </button>
-        <a href="{% url 'service_request_list' %}" class="btn btn-secondary">Cancel</a>
-    </form>
+        
+        <!-- Assigned To Field -->
+        <div class="form-group {% if form.assigned_to.errors %}has-error{% endif %}" data-field="assigned_to">
+          {{ form.assigned_to.label_tag }}
+          {{ form.assigned_to }}
+          <div class="field-icon">👨‍💼</div>
+          {% if form.assigned_to.errors %}
+            <ul class="error-list">
+              {% for error in form.assigned_to.errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+        
+        <div class="form-actions">
+          <a href="{% url 'service_request_list' %}" class="btn btn-secondary">
+            ← Cancel
+          </a>
+          <button type="submit" class="btn btn-primary" id="submitBtn">
+            {% if service_request %}
+              💾 Update Request
+            {% else %}
+              ✨ Submit Request
+            {% endif %}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('serviceRequestForm');
+  const progressBar = document.getElementById('progressBar');
+  const submitBtn = document.getElementById('submitBtn');
+  const loadingOverlay = document.getElementById('loadingOverlay');
+  const formFields = form.querySelectorAll('input, select, textarea');
+  
+  // Calculate form completion progress
+  function updateProgress() {
+    let filledFields = 0;
+    const requiredFields = ['client', 'description', 'priority', 'assigned_to'];
+    
+    requiredFields.forEach(fieldName => {
+      const field = form.querySelector(`[name="${fieldName}"]`);
+      if (field && field.value.trim()) {
+        filledFields++;
+      }
+    });
+    
+    const progress = (filledFields / requiredFields.length) * 100;
+    progressBar.style.width = progress + '%';
+  }
+  
+  // Add priority visual feedback
+  function updatePriorityVisuals() {
+    const priorityField = form.querySelector('[name="priority"]');
+    const formGroup = priorityField?.closest('.form-group');
+    
+    if (priorityField && formGroup) {
+      // Remove existing priority classes
+      formGroup.classList.remove('priority-low', 'priority-medium', 'priority-high', 'priority-urgent');
+      
+      // Add class based on current selection
+      if (priorityField.value) {
+        formGroup.classList.add(`priority-${priorityField.value.toLowerCase()}`);
+      }
+    }
+  }
+  
+  // Add real-time validation and interactions
+  formFields.forEach(field => {
+    field.addEventListener('input', function() {
+      updateProgress();
+      validateField(this);
+      
+      // Special handling for priority field
+      if (this.name === 'priority') {
+        updatePriorityVisuals();
+      }
+    });
+    
+    field.addEventListener('focus', function() {
+      this.closest('.form-group').classList.add('focused');
+    });
+    
+    field.addEventListener('blur', function() {
+      this.closest('.form-group').classList.remove('focused');
+      validateField(this);
+    });
+  });
+  
+  function validateField(field) {
+    const formGroup = field.closest('.form-group');
+    const isValid = field.checkValidity() && field.value.trim() !== '';
+    
+    formGroup.classList.remove('has-error', 'has-success');
+    
+    if (field.value.trim() !== '') {
+      if (isValid) {
+        formGroup.classList.add('has-success');
+      } else {
+        formGroup.classList.add('has-error');
+      }
+    }
+  }
+  
+  // Handle form submission
+  form.addEventListener('submit', function(e) {
+    let isValid = true;
+    
+    // Validate all fields
+    formFields.forEach(field => {
+      validateField(field);
+      if (!field.checkValidity() || (field.hasAttribute('required') && !field.value.trim())) {
+        isValid = false;
+      }
+    });
+    
+    if (isValid) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '⏳ Processing...';
+      loadingOverlay.style.display = 'flex';
+    } else {
+      e.preventDefault();
+      // Scroll to first error
+      const firstError = form.querySelector('.has-error');
+      if (firstError) {
+        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  });
+  
+  // Initialize progress and priority visuals
+  updateProgress();
+  updatePriorityVisuals();
+  
+  // Auto-resize textarea
+  const textarea = form.querySelector('textarea');
+  if (textarea) {
+    textarea.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.max(120, this.scrollHeight) + 'px';
+    });
+  }
+  
+  // Add keyboard shortcuts
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        form.dispatchEvent(new Event('submit'));
+      } else if (e.key === 'Escape') {
+        window.location.href = "{% url 'service_request_list' %}";
+      }
+    }
+  });
+  
+  // Add helpful tooltips for field icons
+  const fieldIcons = document.querySelectorAll('.field-icon');
+  fieldIcons.forEach(icon => {
+    icon.addEventListener('mouseenter', function() {
+      const fieldName = this.closest('.form-group').dataset.field;
+      let tooltip = '';
+      
+      switch(fieldName) {
+        case 'client':
+          tooltip = 'Select the client for this service request';
+          break;
+        case 'description':
+          tooltip = 'Describe the service request in detail';
+          break;
+        case 'priority':
+          tooltip = 'Set the priority level for this request';
+          break;
+        case 'assigned_to':
+          tooltip = 'Assign this request to a team member';
+          break;
+      }
+      
+      // Simple tooltip implementation
+      if (tooltip) {
+        this.setAttribute('title', tooltip);
+      }
+    });
+  });
+});
+</script>
 {% endblock %}

@@ -5,63 +5,758 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2>
-        {% if task %}
-            Edit Task: {{ task.title }}
-        {% else %}
-            Add New Task
-        {% endif %}
-    </h2>
-
-    <form method="post" novalidate>
-        {% csrf_token %}
-        {{ form.non_field_errors }}
-
-        <div class="mb-3">
-            {{ form.title.label_tag }}
-            {{ form.title }}
-            {% if form.title.errors %}
-                <div class="text-danger">{{ form.title.errors }}</div>
-            {% endif %}
+<div class="form-container">
+    <div class="form-card">
+        <div class="form-header">
+            <div class="task-icon">✨</div>
+            <h1 class="form-title">
+                {% if task %}
+                    Edit Task
+                {% else %}
+                    Create New Task
+                {% endif %}
+            </h1>
+            <p class="form-subtitle">
+                {% if task %}
+                    Update task: {{ task.title }}
+                {% else %}
+                    Add a new task to your workflow
+                {% endif %}
+            </p>
         </div>
+        
+        <div class="form-body">
+            <div class="form-progress">
+                <div class="form-progress-bar" id="progressBar" style="width: 0%"></div>
+            </div>
+            
+            <form method="post" novalidate id="taskForm">
+                {% csrf_token %}
+                
+                <!-- Global Errors -->
+                {% if form.non_field_errors %}
+                    <div class="global-errors">
+                        <div>{{ form.non_field_errors }}</div>
+                    </div>
+                {% endif %}
+                
+                <!-- Title Field -->
+                <div class="form-group {% if form.title.errors %}has-error{% endif %}" data-field="title">
+                    <label for="{{ form.title.id_for_label }}">
+                        Task Title
+                        <span class="required-star">*</span>
+                    </label>
+                    <input type="text" 
+                           id="{{ form.title.id_for_label }}" 
+                           name="{{ form.title.html_name }}" 
+                           value="{{ form.title.value|default_if_none:'' }}"
+                           placeholder="Enter task title..."
+                           required>
+                    <div class="field-icon">📝</div>
+                    {% if form.title.errors %}
+                        <ul class="error-list">
+                            {% for error in form.title.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
 
-        <div class="mb-3">
-            {{ form.description.label_tag }}
-            {{ form.description }}
-            {% if form.description.errors %}
-                <div class="text-danger">{{ form.description.errors }}</div>
-            {% endif %}
+                <!-- Description Field -->
+                <div class="form-group {% if form.description.errors %}has-error{% endif %}" data-field="description">
+                    <label for="{{ form.description.id_for_label }}">Description</label>
+                    <textarea id="{{ form.description.id_for_label }}" 
+                              name="{{ form.description.html_name }}" 
+                              placeholder="Describe the task details...">{{ form.description.value|default_if_none:'' }}</textarea>
+                    {% if form.description.errors %}
+                        <ul class="error-list">
+                            {% for error in form.description.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+
+                <!-- Two Column Layout -->
+                <div class="form-row">
+                    <!-- Assigned To Field -->
+                    <div class="form-group {% if form.assigned_to.errors %}has-error{% endif %}" data-field="assigned_to">
+                        <label for="{{ form.assigned_to.id_for_label }}">
+                            Assigned To
+                            <span class="required-star">*</span>
+                        </label>
+                        <select id="{{ form.assigned_to.id_for_label }}" 
+                                name="{{ form.assigned_to.html_name }}" 
+                                required>
+                            <option value="">Select assignee...</option>
+                            {% for user in form.assigned_to.field.queryset %}
+                                <option value="{{ user.id }}" 
+                                        {% if form.assigned_to.value == user.id %}selected{% endif %}>
+                                    {{ user.get_full_name }} ({{ user.get_role_display }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <div class="field-icon">👤</div>
+                        {% if form.assigned_to.errors %}
+                            <ul class="error-list">
+                                {% for error in form.assigned_to.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+
+                    <!-- Priority Field -->
+                    <div class="form-group {% if form.priority.errors %}has-error{% endif %}" data-field="priority">
+                        <label for="{{ form.priority.id_for_label }}">
+                            Priority
+                            <span class="required-star">*</span>
+                        </label>
+                        <select id="{{ form.priority.id_for_label }}" 
+                                name="{{ form.priority.html_name }}" 
+                                required>
+                            <option value="">Select priority...</option>
+                            {% for value, label in form.priority.field.choices %}
+                                <option value="{{ value }}" 
+                                        {% if form.priority.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <div class="field-icon">⭐</div>
+                        {% if form.priority.errors %}
+                            <ul class="error-list">
+                                {% for error in form.priority.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Due Date Field -->
+                <div class="form-group {% if form.due_date.errors %}has-error{% endif %}" data-field="due_date">
+                    <label for="{{ form.due_date.id_for_label }}">
+                        Due Date & Time
+                        <span class="required-star">*</span>
+                    </label>
+                    <input type="datetime-local" 
+                           id="{{ form.due_date.id_for_label }}" 
+                           name="{{ form.due_date.html_name }}" 
+                           value="{{ form.due_date.value|date:'Y-m-d\TH:i'|default_if_none:'' }}"
+                           required>
+                    <div class="field-icon">📅</div>
+                    {% if form.due_date.errors %}
+                        <ul class="error-list">
+                            {% for error in form.due_date.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+                
+                <div class="form-actions">
+                    <a href="{% url 'task_list' %}" class="btn btn-secondary">
+                        ← Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        {% if task %}
+                            💾 Update Task
+                        {% else %}
+                            ✨ Create Task
+                        {% endif %}
+                    </button>
+                </div>
+            </form>
         </div>
-
-        <div class="mb-3">
-            {{ form.assigned_to.label_tag }}
-            {{ form.assigned_to }}
-            {% if form.assigned_to.errors %}
-                <div class="text-danger">{{ form.assigned_to.errors }}</div>
-            {% endif %}
-        </div>
-
-        <div class="mb-3">
-            {{ form.due_date.label_tag }}
-            {{ form.due_date }}
-            {% if form.due_date.errors %}
-                <div class="text-danger">{{ form.due_date.errors }}</div>
-            {% endif %}
-        </div>
-
-        <div class="mb-3">
-            {{ form.status.label_tag }}
-            {{ form.status }}
-            {% if form.status.errors %}
-                <div class="text-danger">{{ form.status.errors }}</div>
-            {% endif %}
-        </div>
-
-        <button type="submit" class="btn btn-primary">
-            {% if task %}Update Task{% else %}Add Task{% endif %}
-        </button>
-        <a href="{% url 'task_list' %}" class="btn btn-secondary">Cancel</a>
-    </form>
+    </div>
 </div>
+
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+</div>
+
+<style>
+:root {
+  --primary-color: #8b5cf6;
+  --primary-hover: #7c3aed;
+  --success-color: #10b981;
+  --success-hover: #059669;
+  --danger-color: #ef4444;
+  --warning-color: #f59e0b;
+  --info-color: #06b6d4;
+  --dark-bg: #0f172a;
+  --card-bg: #1e293b;
+  --input-bg: #334155;
+  --input-border: #475569;
+  --input-focus: #64748b;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --border-color: #334155;
+  --accent-gradient: linear-gradient(135deg, #8b5cf6, #06b6d4);
+}
+
+body {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  min-height: 100vh;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+.form-container {
+  max-width: 700px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.form-card {
+  background: var(--card-bg);
+  border-radius: 20px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-color);
+  position: relative;
+}
+
+.form-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--accent-gradient);
+}
+
+.form-header {
+  background: linear-gradient(135deg, var(--primary-color), var(--info-color));
+  padding: 2.5rem 2rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.form-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="task-grid" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23task-grid)"/></svg>');
+  opacity: 0.4;
+}
+
+.form-title {
+  color: white;
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.form-subtitle {
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0.75rem 0 0 0;
+  font-size: 1.1rem;
+  position: relative;
+  z-index: 1;
+  font-weight: 400;
+}
+
+.task-icon {
+  position: absolute;
+  top: 2rem;
+  right: 2rem;
+  font-size: 3rem;
+  opacity: 0.2;
+  z-index: 1;
+}
+
+.form-body {
+  padding: 2.5rem;
+}
+
+.form-group {
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+.form-group label {
+  display: block;
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  position: relative;
+}
+
+.form-group label::after {
+  content: '';
+  position: absolute;
+  bottom: -0.25rem;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--accent-gradient);
+  transition: width 0.3s ease;
+}
+
+.form-group.focused label::after {
+  width: 100%;
+}
+
+.required-star {
+  color: var(--danger-color);
+  margin-left: 0.25rem;
+}
+
+/* Style form inputs */
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="url"],
+input[type="number"],
+input[type="datetime-local"],
+select,
+textarea {
+  width: 100%;
+  padding: 1rem 1.25rem;
+  background: var(--input-bg);
+  border: 2px solid var(--input-border);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+  font-family: inherit;
+  position: relative;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="tel"]:focus,
+input[type="url"]:focus,
+input[type="number"]:focus,
+input[type="datetime-local"]:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
+  background: var(--input-focus);
+  transform: translateY(-2px);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.6;
+}
+
+select {
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1.2rem;
+  padding-right: 3rem;
+  appearance: none;
+  cursor: pointer;
+}
+
+select option {
+  background: var(--input-bg);
+  color: var(--text-primary);
+  padding: 0.75rem;
+}
+
+.field-icon {
+  position: absolute;
+  right: 1rem;
+  top: 3rem;
+  color: var(--text-muted);
+  pointer-events: none;
+  font-size: 1.2rem;
+  transition: all 0.3s ease;
+}
+
+.form-group.focused .field-icon {
+  color: var(--primary-color);
+  transform: scale(1.1);
+}
+
+.error-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0 0 0;
+}
+
+.error-list li {
+  color: var(--danger-color);
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-left: 4px solid var(--danger-color);
+}
+
+.error-list li::before {
+  content: '⚠️';
+  font-size: 1rem;
+}
+
+.form-group.has-error input,
+.form-group.has-error select,
+.form-group.has-error textarea {
+  border-color: var(--danger-color);
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15);
+}
+
+.form-group.has-success input,
+.form-group.has-success select,
+.form-group.has-success textarea {
+  border-color: var(--success-color);
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border-color);
+  margin-top: 2rem;
+}
+
+.btn {
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn:hover::before {
+  left: 100%;
+}
+
+.btn-primary {
+  background: var(--accent-gradient);
+  color: white;
+  box-shadow: 0 8px 25px 0 rgba(139, 92, 246, 0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 35px 0 rgba(139, 92, 246, 0.4);
+}
+
+.btn-secondary {
+  background: var(--input-bg);
+  color: var(--text-secondary);
+  border: 2px solid var(--input-border);
+}
+
+.btn-secondary:hover {
+  background: var(--input-focus);
+  color: var(--text-primary);
+  transform: translateY(-2px);
+  border-color: var(--primary-color);
+}
+
+.form-progress {
+  height: 6px;
+  background: var(--input-border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+.form-progress-bar {
+  height: 100%;
+  background: var(--accent-gradient);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+  position: relative;
+}
+
+.form-progress-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.9);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid var(--input-border);
+  border-top: 4px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.success-message {
+  background: var(--accent-gradient);
+  color: white;
+  padding: 1.25rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-weight: 500;
+}
+
+.success-message::before {
+  content: '✅';
+  font-size: 1.5rem;
+}
+
+.global-errors {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--danger-color);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 2rem;
+  color: var(--danger-color);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.global-errors::before {
+  content: '⚠️';
+  font-size: 1.2rem;
+}
+
+@media (max-width: 768px) {
+  .form-container {
+    margin: 1rem auto;
+    padding: 0 0.5rem;
+  }
+  
+  .form-header, .form-body {
+    padding: 2rem 1.5rem;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .btn {
+    justify-content: center;
+  }
+  
+  .task-icon {
+    display: none;
+  }
+  
+  .form-title {
+    font-size: 1.5rem;
+  }
+}
+
+/* Animation for form fields */
+.form-group {
+  opacity: 0;
+  transform: translateY(30px);
+  animation: slideInUp 0.6s ease forwards;
+}
+
+.form-group:nth-child(1) { animation-delay: 0.1s; }
+.form-group:nth-child(2) { animation-delay: 0.2s; }
+.form-group:nth-child(3) { animation-delay: 0.3s; }
+.form-group:nth-child(4) { animation-delay: 0.4s; }
+.form-group:nth-child(5) { animation-delay: 0.5s; }
+.form-group:nth-child(6) { animation-delay: 0.6s; }
+
+@keyframes slideInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('taskForm');
+    const inputs = form.querySelectorAll('input, select, textarea');
+    const progressBar = document.getElementById('progressBar');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    
+    // Progress bar animation
+    function updateProgress() {
+        const requiredInputs = form.querySelectorAll('input[required], select[required], textarea[required]');
+        const filled = Array.from(requiredInputs).filter(input => input.value.trim() !== '').length;
+        const progress = (filled / requiredInputs.length) * 100;
+        progressBar.style.width = progress + '%';
+    }
+
+    // Focus management
+    function handleFocus(event) {
+        const formGroup = event.target.closest('.form-group');
+        if (formGroup) {
+            formGroup.classList.add('focused');
+        }
+    }
+
+    function handleBlur(event) {
+        const formGroup = event.target.closest('.form-group');
+        if (formGroup) {
+            formGroup.classList.remove('focused');
+        }
+    }
+
+    // Form validation
+    function validateField(input) {
+        const formGroup = input.closest('.form-group');
+        if (!formGroup) return;
+
+        formGroup.classList.remove('has-error', 'has-success');
+        
+        if (input.hasAttribute('required') && !input.value.trim()) {
+            formGroup.classList.add('has-error');
+        } else if (input.value.trim()) {
+            formGroup.classList.add('has-success');
+        }
+    }
+
+    // Form submission
+    function handleSubmit(event) {
+        // Show loading overlay
+        loadingOverlay.style.display = 'flex';
+        
+        // Validate all fields before submission
+        let hasErrors = false;
+        const requiredInputs = form.querySelectorAll('input[required], select[required], textarea[required]');
+        
+        requiredInputs.forEach(input => {
+            if (!input.value.trim()) {
+                const formGroup = input.closest('.form-group');
+                if (formGroup) {
+                    formGroup.classList.add('has-error');
+                    hasErrors = true;
+                }
+            }
+        });
+
+        if (hasErrors) {
+            event.preventDefault();
+            loadingOverlay.style.display = 'none';
+            return false;
+        }
+
+        // If form is valid, let it submit normally
+        // The loading overlay will be hidden when the page reloads
+    }
+
+    // Event listeners
+    inputs.forEach(input => {
+        input.addEventListener('focus', handleFocus);
+        input.addEventListener('blur', handleBlur);
+        input.addEventListener('input', function() {
+            updateProgress();
+            validateField(this);
+        });
+        input.addEventListener('change', function() {
+            updateProgress();
+            validateField(this);
+        });
+    });
+    
+    form.addEventListener('submit', handleSubmit);
+    
+    // Initial progress calculation
+    updateProgress();
+    
+    // Initialize field states
+    inputs.forEach(input => {
+        if (input.value.trim()) {
+            const formGroup = input.closest('.form-group');
+            if (formGroup) {
+                formGroup.classList.add('has-success');
+            }
+        }
+    });
+});
+</script>
 {% endblock %}

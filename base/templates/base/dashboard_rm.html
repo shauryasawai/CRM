@@ -469,6 +469,21 @@
         transition: all 0.3s ease;
     }
 
+    .header-actions {
+        display: flex;
+        justify-content: center;
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    /* Add this for the HRMS button specific styling */
+    .btn-hrms {
+        background: var(--gradient-primary);
+        color: white;
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+    }
+
     .chart-placeholder:hover {
         border-color: var(--accent-primary);
         background: linear-gradient(45deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
@@ -579,6 +594,7 @@
 
 {% block content %}
 <div class="dashboard-container">
+    
     <!-- Header Section -->
     <div class="dashboard-header">
         <h1 class="dashboard-title">Command Center</h1>
@@ -597,6 +613,11 @@
                 <span class="role-icon">🤝</span>
                 <span>{{ request.user.get_role_display }}</span>
             {% endif %}
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'hrm_dashboard' %}" class="action-btn btn-hrms">
+                <span>📋</span> HRMS Portal
+            </a>
         </div>
     </div>
 
@@ -653,6 +674,10 @@
                     <h3 class="chart-title">📈 Executive Performance Analytics</h3>
                     <div class="metric-badge">Real-time Data</div>
                 </div>
+                <div class="header-actions" style="margin-top: 2rem;">
+                <a href="{% url 'hrm_dashboard' %}" class="action-btn btn-hrms">
+                    <span>👥</span> HRMS Portal
+                </a></div>
                 <div class="chart-placeholder">
                     <div class="placeholder-icon">📊</div>
                     <div class="placeholder-text">Advanced Analytics Dashboard</div>
@@ -748,6 +773,11 @@
                     <h3 class="chart-title">⚡ Team Performance Analytics</h3>
                     <div class="metric-badge">Live Updates</div>
                 </div>
+                <div class="header-actions" style="margin-top: 2rem;">
+                <a href="{% url 'hrm_dashboard' %}" class="action-btn btn-hrms">
+                    <span>👥</span> HRMS Portal
+                </a>
+            </div>
                 <div class="chart-placeholder">
                     <div class="placeholder-icon">📊</div>
                     <div class="placeholder-text">Regional Performance Dashboard</div>

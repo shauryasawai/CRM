@@ -60,13 +60,19 @@
         font-weight: 400;
     }
 
+    .header-actions {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
     .stats-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
         gap: 1.5rem;
         margin-bottom: 3rem;
     }
-
     .stat-card {
         background: var(--bg-card);
         border: 1px solid var(--border-color);
@@ -387,6 +393,11 @@
     <div class="dashboard-header">
         <h1 class="dashboard-title">Business Intelligence Hub</h1>
         <p class="dashboard-subtitle">Welcome back, {{ user.get_full_name|default:user.username }}</p>
+        <div class="header-actions">
+            <a href="{% url 'hrm_dashboard' %}" class="btn btn-accent">
+                <span>📋</span> HRMS Portal
+            </a>
+        </div>
     </div>
 
     <!-- Statistics Cards -->
@@ -520,9 +531,6 @@
 
     <!-- Action Buttons -->
     <div class="action-buttons">
-        <a href="{% url 'hrm_dashboard' %}" class="btn btn-accent">
-            <span>📋</span> HRMS Portal
-        </a>
         <a href="{% url 'lead_list' %}" class="btn btn-primary">
             <span>🎯</span> View All Leads
         </a>
@@ -531,6 +539,9 @@
         </a>
         <a href="{% url 'task_list' %}" class="btn btn-accent">
             <span>📋</span> Manage Tasks
+        </a>
+        <a href="{% url 'hrm_dashboard' %}" class="btn btn-accent">
+            <span>👥</span> HRMS Portal
         </a>
     </div>
 </div>

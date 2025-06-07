@@ -5,39 +5,575 @@
   {% if form.instance.pk %}Edit Lead{% else %}Add Lead{% endif %}
 {% endblock %}
 
+{% block extra_css %}
+<style>
+:root {
+  --primary-color: #3b82f6;
+  --primary-hover: #2563eb;
+  --success-color: #10b981;
+  --success-hover: #059669;
+  --danger-color: #ef4444;
+  --warning-color: #f59e0b;
+  --dark-bg: #0f172a;
+  --card-bg: #1e293b;
+  --input-bg: #334155;
+  --input-border: #475569;
+  --input-focus: #64748b;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --border-color: #334155;
+}
+
+body {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  min-height: 100vh;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.form-container {
+  max-width: 600px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.form-card {
+  background: var(--card-bg);
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-color);
+}
+
+.form-header {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+  padding: 2rem;
+  text-align: center;
+  position: relative;
+}
+
+.form-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+  opacity: 0.3;
+}
+
+.form-title {
+  color: white;
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.form-subtitle {
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0.5rem 0 0 0;
+  font-size: 1rem;
+  position: relative;
+  z-index: 1;
+}
+
+.form-body {
+  padding: 2rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.form-group label {
+  display: block;
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Style Django form widgets directly */
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="url"],
+select,
+textarea {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="tel"]:focus,
+input[type="url"]:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  background: var(--input-focus);
+}
+
+input[type="text"]::placeholder,
+input[type="email"]::placeholder,
+input[type="tel"]::placeholder,
+input[type="url"]::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+select {
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+  padding-right: 2.5rem;
+  appearance: none;
+  cursor: pointer;
+}
+
+select option {
+  background: var(--input-bg);
+  color: var(--text-primary);
+  padding: 0.5rem;
+}
+
+/* Maintain original form-control class for backward compatibility */
+.form-control {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  background: var(--input-focus);
+}
+
+.error-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0 0;
+}
+
+.error-list li {
+  color: var(--danger-color);
+  font-size: 0.875rem;
+  padding: 0.25rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.error-list li::before {
+  content: '⚠';
+  font-size: 0.75rem;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+  margin-top: 2rem;
+}
+
+.btn {
+  padding: 0.875rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+  color: white;
+  box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px 0 rgba(59, 130, 246, 0.4);
+}
+
+.btn-secondary {
+  background: var(--input-bg);
+  color: var(--text-secondary);
+  border: 1px solid var(--input-border);
+}
+
+.btn-secondary:hover {
+  background: var(--input-focus);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.success-message {
+  background: linear-gradient(135deg, var(--success-color), var(--success-hover));
+  color: white;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form-group.has-error input,
+.form-group.has-error select,
+.form-group.has-error textarea {
+  border-color: var(--danger-color);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.form-group.has-success input,
+.form-group.has-success select,
+.form-group.has-success textarea {
+  border-color: var(--success-color);
+}
+
+.field-icon {
+  position: absolute;
+  right: 1rem;
+  top: 2.5rem;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.8);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--input-border);
+  border-top: 3px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.form-progress {
+  height: 4px;
+  background: var(--input-border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
+.form-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-color), var(--success-color));
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .form-container {
+    margin: 1rem auto;
+    padding: 0 0.5rem;
+  }
+  
+  .form-header, .form-body {
+    padding: 1.5rem;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .btn {
+    justify-content: center;
+  }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<h1>{% if form.instance.pk %}Edit Lead{% else %}Add Lead{% endif %}</h1>
+<div class="form-container">
+  <div class="form-card">
+    <div class="form-header">
+      <h1 class="form-title">
+        {% if form.instance.pk %}
+          Edit Lead
+        {% else %}
+          Create New Lead
+        {% endif %}
+      </h1>
+      <p class="form-subtitle">
+        {% if form.instance.pk %}
+          Update lead information and assignment
+        {% else %}
+          Add a new lead to your pipeline
+        {% endif %}
+      </p>
+    </div>
+    
+    <div class="form-body">
+      <div class="form-progress">
+        <div class="form-progress-bar" id="progressBar" style="width: 0%"></div>
+      </div>
+      
+      <form method="post" novalidate id="leadForm">
+        {% csrf_token %}
+        
+        {% if form.non_field_errors %}
+          <div class="error-list">
+            {% for error in form.non_field_errors %}
+              <div class="alert alert-danger">{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+        
+        <div class="form-group {% if form.name.errors %}has-error{% endif %}" data-field="name">
+          {{ form.name.label_tag }}
+          {{ form.name }}
+          <div class="field-icon">👤</div>
+          {% if form.name.errors %}
+            <ul class="error-list">
+              {% for error in form.name.errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+        
+        <div class="form-group {% if form.contact_info.errors %}has-error{% endif %}" data-field="contact_info">
+          {{ form.contact_info.label_tag }}
+          {{ form.contact_info }}
+          <div class="field-icon">📞</div>
+          {% if form.contact_info.errors %}
+            <ul class="error-list">
+              {% for error in form.contact_info.errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+        
+        <div class="form-group {% if form.source.errors %}has-error{% endif %}" data-field="source">
+          {{ form.source.label_tag }}
+          {{ form.source }}
+          <div class="field-icon">🔗</div>
+          {% if form.source.errors %}
+            <ul class="error-list">
+              {% for error in form.source.errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+        
+        <div class="form-group {% if form.status.errors %}has-error{% endif %}" data-field="status">
+          {{ form.status.label_tag }}
+          {{ form.status }}
+          <div class="field-icon">📊</div>
+          {% if form.status.errors %}
+            <ul class="error-list">
+              {% for error in form.status.errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+        
+        <div class="form-group {% if form.assigned_to.errors %}has-error{% endif %}" data-field="assigned_to">
+          {{ form.assigned_to.label_tag }}
+          {{ form.assigned_to }}
+          <div class="field-icon">👥</div>
+          {% if form.assigned_to.errors %}
+            <ul class="error-list">
+              {% for error in form.assigned_to.errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+        
+        <div class="form-group {% if form.notes.errors %}has-error{% endif %}" data-field="notes">
+          {{ form.notes.label_tag }}
+          {{ form.notes }}
+          {% if form.notes.errors %}
+            <ul class="error-list">
+              {% for error in form.notes.errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+        
+        <div class="form-actions">
+          <a href="{% url 'lead_list' %}" class="btn btn-secondary">
+            ← Cancel
+          </a>
+          <button type="submit" class="btn btn-primary" id="submitBtn">
+            {% if form.instance.pk %}
+              💾 Update Lead
+            {% else %}
+              ✨ Create Lead
+            {% endif %}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
-<form method="post" novalidate>
-    {% csrf_token %}
-    {{ form.non_field_errors }}
-    <div class="form-group">
-        {{ form.name.label_tag }} 
-        {{ form.name }}
-        {{ form.name.errors }}
-    </div>
-    <div class="form-group">
-        {{ form.contact_info.label_tag }} 
-        {{ form.contact_info }}
-        {{ form.contact_info.errors }}
-    </div>
-    <div class="form-group">
-        {{ form.source.label_tag }} 
-        {{ form.source }}
-        {{ form.source.errors }}
-    </div>
-    <div class="form-group">
-        {{ form.status.label_tag }} 
-        {{ form.status }}
-        {{ form.status.errors }}
-    </div>
-    <div class="form-group">
-        {{ form.assigned_to.label_tag }} 
-        {{ form.assigned_to }}
-        {{ form.assigned_to.errors }}
-    </div>
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+</div>
 
-    <button type="submit" class="btn btn-success mt-2">Save</button>
-    <a href="{% url 'lead_list' %}" class="btn btn-secondary mt-2">Cancel</a>
-</form>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('leadForm');
+  const progressBar = document.getElementById('progressBar');
+  const submitBtn = document.getElementById('submitBtn');
+  const loadingOverlay = document.getElementById('loadingOverlay');
+  const formFields = form.querySelectorAll('input, select, textarea');
+  
+  // Calculate form completion progress
+  function updateProgress() {
+    let filledFields = 0;
+    const requiredFields = ['name', 'contact_info', 'status'];
+    
+    requiredFields.forEach(fieldName => {
+      const field = form.querySelector(`[name="${fieldName}"]`);
+      if (field && field.value.trim()) {
+        filledFields++;
+      }
+    });
+    
+    const progress = (filledFields / requiredFields.length) * 100;
+    progressBar.style.width = progress + '%';
+  }
+  
+  // Add real-time validation
+  formFields.forEach(field => {
+    field.addEventListener('input', function() {
+      updateProgress();
+      validateField(this);
+    });
+    
+    field.addEventListener('focus', function() {
+      this.parentElement.classList.add('focused');
+    });
+    
+    field.addEventListener('blur', function() {
+      this.parentElement.classList.remove('focused');
+      validateField(this);
+    });
+  });
+  
+  function validateField(field) {
+    const formGroup = field.closest('.form-group');
+    const isValid = field.checkValidity() && field.value.trim() !== '';
+    
+    formGroup.classList.remove('has-error', 'has-success');
+    
+    if (field.value.trim() !== '') {
+      if (isValid) {
+        formGroup.classList.add('has-success');
+      } else {
+        formGroup.classList.add('has-error');
+      }
+    }
+  }
+  
+  // Handle form submission
+  form.addEventListener('submit', function(e) {
+    let isValid = true;
+    
+    // Validate all fields
+    formFields.forEach(field => {
+      validateField(field);
+      if (!field.checkValidity() || (field.hasAttribute('required') && !field.value.trim())) {
+        isValid = false;
+      }
+    });
+    
+    if (isValid) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '⏳ Saving...';
+      loadingOverlay.style.display = 'flex';
+    } else {
+      e.preventDefault();
+      // Scroll to first error
+      const firstError = form.querySelector('.has-error');
+      if (firstError) {
+        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  });
+  
+  // Initialize progress
+  updateProgress();
+  
+  // Add smooth animations
+  const formGroups = document.querySelectorAll('.form-group');
+  formGroups.forEach((group, index) => {
+    group.style.opacity = '0';
+    group.style.transform = 'translateY(20px)';
+    
+    setTimeout(() => {
+      group.style.transition = 'all 0.4s ease';
+      group.style.opacity = '1';
+      group.style.transform = 'translateY(0)';
+    }, index * 100);
+  });
+});
+</script>
 {% endblock %}
