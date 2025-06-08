@@ -5,172 +5,395 @@
 
 {% block content %}
 <style>
+    :root {
+        --primary-green: #D3FF61;
+        --primary-black: #000000;
+        --primary-white: #FFFFFF;
+        --soft-gray: #F8F9FA;
+        --medium-gray: #6C757D;
+        --light-gray: #E9ECEF;
+        --dark-gray: #343A40;
+        --success-green: #28A745;
+        --warning-orange: #FD7E14;
+        --danger-red: #DC3545;
+        --info-blue: #17A2B8;
+        --shadow-light: 0 2px 4px rgba(0, 0, 0, 0.1);
+        --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.15);
+        --shadow-heavy: 0 8px 25px rgba(0, 0, 0, 0.2);
+        --border-radius: 12px;
+        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        background: linear-gradient(135deg, var(--primary-green) 0%, #B8E94A 100%);
+        min-height: 100vh;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        line-height: 1.6;
+    }
+
     .leads-container {
-        max-width: 1800px;
-        margin: 2rem auto;
+        max-width: 1400px;
+        margin: 0 auto;
         padding: 2rem;
-        position: relative;
         animation: fadeInUp 0.8s ease-out;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     .leads-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 2rem;
+        margin-bottom: 2.5rem;
         flex-wrap: wrap;
-        gap: 1rem;
+        gap: 1.5rem;
+        background: var(--primary-white);
+        padding: 2rem;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-medium);
+        border: 1px solid rgba(0, 0, 0, 0.05);
     }
 
     .leads-title {
-        font-size: 2.5rem;
-        font-weight: 700;
-        background: var(--gradient-aurora);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        font-size: clamp(2rem, 4vw, 3rem);
+        font-weight: 800;
+        color: var(--primary-black);
         margin: 0;
+        position: relative;
+        letter-spacing: -0.02em;
+    }
+
+    .leads-title::after {
+        content: '';
+        position: absolute;
+        bottom: -8px;
+        left: 0;
+        width: 60px;
+        height: 4px;
+        background: var(--primary-green);
+        border-radius: 2px;
     }
 
     .add-lead-btn {
-        background: var(--gradient-primary);
-        color: white;
+        background: var(--primary-black);
+        color: var(--primary-white);
         border: none;
-        padding: 0.75rem 1.5rem;
-        border-radius: 8px;
+        padding: 1rem 2rem;
+        border-radius: var(--border-radius);
         font-weight: 600;
+        font-size: 1rem;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: var(--transition);
         text-decoration: none;
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
-        box-shadow: var(--shadow-md);
+        gap: 0.75rem;
+        box-shadow: var(--shadow-medium);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .add-lead-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, var(--primary-green), transparent);
+        transition: left 0.5s;
+    }
+
+    .add-lead-btn:hover::before {
+        left: 100%;
     }
 
     .add-lead-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--shadow-lg);
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-heavy);
+        background: linear-gradient(135deg, var(--primary-black) 0%, #333333 100%);
+    }
+
+    .add-lead-btn i {
+        font-size: 1.1rem;
+    }
+
+    .table-container {
+        background: var(--primary-white);
+        border-radius: var(--border-radius);
+        overflow: hidden;
+        box-shadow: var(--shadow-medium);
+        border: 1px solid rgba(0, 0, 0, 0.05);
     }
 
     .leads-table {
         width: 100%;
         border-collapse: separate;
         border-spacing: 0;
-        background: var(--bg-card);
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: var(--shadow-sm);
+        background: transparent;
     }
 
     .leads-table thead {
-        background: var(--gradient-cyber);
+        background: var(--primary-black);
+        position: sticky;
+        top: 0;
+        z-index: 10;
     }
 
     .leads-table th {
-        padding: 1.25rem 1.5rem;
+        padding: 1.5rem 2rem;
         text-align: left;
-        color: white;
-        font-weight: 600;
+        color: var(--primary-white);
+        font-weight: 700;
         text-transform: uppercase;
-        font-size: 0.85rem;
-        letter-spacing: 0.05em;
+        font-size: 0.875rem;
+        letter-spacing: 0.1em;
+        border-bottom: 3px solid var(--primary-green);
     }
 
     .leads-table td {
-        padding: 1.25rem 1.5rem;
-        border-bottom: 1px solid var(--border-subtle);
-        color: var(--text-secondary);
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid var(--light-gray);
+        color: var(--dark-gray);
         font-weight: 500;
+        vertical-align: middle;
+    }
+
+    .leads-table tbody tr {
+        transition: var(--transition);
+        position: relative;
+    }
+
+    .leads-table tbody tr::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 0;
+        height: 100%;
+        background: var(--primary-green);
+        transition: width 0.3s ease;
+        z-index: 1;
+    }
+
+    .leads-table tbody tr:hover::before {
+        width: 4px;
+    }
+
+    .leads-table tbody tr:hover {
+        background: linear-gradient(90deg, rgba(211, 255, 97, 0.1) 0%, rgba(211, 255, 97, 0.05) 100%);
+        transform: translateX(4px);
     }
 
     .leads-table tbody tr:last-child td {
         border-bottom: none;
     }
 
-    .leads-table tbody tr:hover {
-        background: rgba(59, 130, 246, 0.05);
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        box-shadow: var(--shadow-light);
+        position: relative;
+        overflow: hidden;
     }
 
-    .status-badge {
-        display: inline-block;
-        padding: 0.35rem 0.75rem;
-        border-radius: 12px;
-        font-size: 0.8rem;
-        font-weight: 600;
+    .status-badge::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0.75rem;
+        transform: translateY(-50%);
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
     }
 
     .status-new {
-        background: rgba(6, 182, 212, 0.1);
-        color: var(--accent-cyan);
+        background: linear-gradient(135deg, var(--info-blue), #0D7B9F);
+        color: var(--primary-white);
+    }
+
+    .status-new::before {
+        background: var(--primary-white);
+        animation: pulse 2s infinite;
     }
 
     .status-contact {
-        background: rgba(59, 130, 246, 0.1);
-        color: var(--accent-primary);
+        background: linear-gradient(135deg, #6F42C1, #5A35A8);
+        color: var(--primary-white);
+    }
+
+    .status-contact::before {
+        background: var(--primary-white);
     }
 
     .status-qualified {
-        background: rgba(16, 185, 129, 0.1);
-        color: var(--accent-success);
+        background: linear-gradient(135deg, var(--success-green), #1E7E34);
+        color: var(--primary-white);
+    }
+
+    .status-qualified::before {
+        background: var(--primary-white);
     }
 
     .status-lost {
-        background: rgba(239, 68, 68, 0.1);
-        color: var(--accent-danger);
+        background: linear-gradient(135deg, var(--danger-red), #B02A37);
+        color: var(--primary-white);
+    }
+
+    .status-lost::before {
+        background: var(--primary-white);
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
     }
 
     .action-buttons {
         display: flex;
         gap: 0.75rem;
+        align-items: center;
     }
 
     .action-btn {
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        font-weight: 500;
-        font-size: 0.85rem;
-        transition: all 0.2s ease;
+        padding: 0.75rem 1.25rem;
+        border-radius: var(--border-radius);
+        font-weight: 600;
+        font-size: 0.875rem;
+        transition: var(--transition);
         text-decoration: none;
         display: inline-flex;
         align-items: center;
-        gap: 0.25rem;
+        gap: 0.5rem;
+        border: 2px solid transparent;
+        position: relative;
+        overflow: hidden;
     }
 
     .edit-btn {
-        background: rgba(245, 158, 11, 0.1);
-        color: var(--accent-warning);
-        border: 1px solid rgba(245, 158, 11, 0.3);
+        background: linear-gradient(135deg, var(--warning-orange), #E8590C);
+        color: var(--primary-white);
+        box-shadow: var(--shadow-light);
     }
 
     .edit-btn:hover {
-        background: rgba(245, 158, 11, 0.2);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-medium);
+        background: linear-gradient(135deg, #E8590C, var(--warning-orange));
     }
 
     .delete-btn {
-        background: rgba(239, 68, 68, 0.1);
-        color: var(--accent-danger);
-        border: 1px solid rgba(239, 68, 68, 0.3);
+        background: transparent;
+        color: var(--danger-red);
+        border-color: var(--danger-red);
     }
 
     .delete-btn:hover {
-        background: rgba(239, 68, 68, 0.2);
+        background: var(--danger-red);
+        color: var(--primary-white);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-medium);
     }
 
     .empty-message {
         text-align: center;
-        padding: 3rem;
-        color: var(--text-muted);
-        font-size: 1.1rem;
-        background: var(--bg-card);
-        border-radius: 16px;
-        margin-top: 1rem;
+        padding: 4rem 2rem;
+        background: var(--primary-white);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-medium);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        margin-top: 2rem;
+    }
+
+    .empty-message p {
+        font-size: 1.25rem;
+        color: var(--medium-gray);
+        margin: 0;
+        font-weight: 500;
+    }
+
+    .empty-message::before {
+        content: '📋';
+        display: block;
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
     }
 
     .contact-info {
         display: flex;
         flex-direction: column;
         gap: 0.25rem;
+        color: var(--dark-gray);
+    }
+
+    .contact-info .email {
+        color: var(--info-blue);
+        font-weight: 600;
+    }
+
+    .contact-info .phone {
+        color: var(--medium-gray);
+        font-size: 0.9rem;
+    }
+
+    .lead-name {
+        font-weight: 700;
+        color: var(--primary-black);
+        font-size: 1.1rem;
+    }
+
+    .lead-source {
+        background: var(--soft-gray);
+        padding: 0.25rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        color: var(--dark-gray);
+        border: 1px solid var(--light-gray);
+    }
+
+    .assigned-user {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--dark-gray);
+        font-weight: 600;
+    }
+
+    .assigned-user::before {
+        content: '👤';
+        opacity: 0.7;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1024px) {
+        .leads-container {
+            padding: 1.5rem;
+        }
+        
+        .leads-header {
+            padding: 1.5rem;
+        }
     }
 
     @media (max-width: 768px) {
@@ -178,67 +401,155 @@
             padding: 1rem;
         }
 
-        .leads-table {
-            display: block;
+        .leads-header {
+            flex-direction: column;
+            align-items: stretch;
+            text-align: center;
+            padding: 1.5rem;
+        }
+
+        .add-lead-btn {
+            align-self: center;
+            padding: 1rem 1.5rem;
+        }
+
+        .table-container {
             overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .leads-table {
+            min-width: 800px;
+        }
+
+        .leads-table th,
+        .leads-table td {
+            padding: 1rem;
+            font-size: 0.875rem;
         }
 
         .action-buttons {
             flex-direction: column;
             gap: 0.5rem;
+            min-width: 120px;
         }
+
+        .action-btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .leads-title {
+            font-size: 1.75rem;
+        }
+
+        .leads-table th,
+        .leads-table td {
+            padding: 0.75rem;
+        }
+
+        .empty-message {
+            padding: 2rem 1rem;
+        }
+    }
+
+    /* Loading and Animation Enhancements */
+    .leads-table tbody tr {
+        animation: slideInUp 0.6s ease-out;
+        animation-fill-mode: both;
+    }
+
+    .leads-table tbody tr:nth-child(1) { animation-delay: 0.1s; }
+    .leads-table tbody tr:nth-child(2) { animation-delay: 0.2s; }
+    .leads-table tbody tr:nth-child(3) { animation-delay: 0.3s; }
+    .leads-table tbody tr:nth-child(4) { animation-delay: 0.4s; }
+    .leads-table tbody tr:nth-child(5) { animation-delay: 0.5s; }
+
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Focus states for accessibility */
+    .add-lead-btn:focus,
+    .action-btn:focus {
+        outline: 3px solid var(--primary-green);
+        outline-offset: 2px;
     }
 </style>
 
 <div class="leads-container">
     <div class="leads-header">
-        <h1 class="leads-title">Leads</h1>
+        <h1 class="leads-title">Leads Management</h1>
         <a href="{% url 'lead_create' %}" class="add-lead-btn">
             <i class="fas fa-plus"></i> Add New Lead
         </a>
     </div>
 
     {% if leads %}
-    <table class="leads-table">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Contact Info</th>
-                <th>Source</th>
-                <th>Status</th>
-                <th>Assigned To</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for lead in leads %}
-            <tr>
-                <td>{{ lead.name }}</td>
-                <td class="contact-info">{{ lead.contact_info }}</td>
-                <td>{{ lead.source }}</td>
-                <td>
-                    <span class="status-badge status-{{ lead.status|lower }}">
-                        {{ lead.status }}
-                    </span>
-                </td>
-                <td>{{ lead.assigned_to.get_full_name }}</td>
-                <td>
-                    <div class="action-buttons">
-                        <a href="{% url 'lead_update' lead.pk %}" class="action-btn edit-btn">
-                            <i class="fas fa-edit"></i> Edit
-                        </a>
-                        <a href="{% url 'lead_delete' lead.pk %}" class="action-btn delete-btn">
-                            <i class="fas fa-trash"></i> Delete
-                        </a>
-                    </div>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-container">
+        <table class="leads-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Contact Info</th>
+                    <th>Source</th>
+                    <th>Status</th>
+                    <th>Assigned To</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lead in leads %}
+                <tr>
+                    <td>
+                        <div class="lead-name">{{ lead.name }}</div>
+                    </td>
+                    <td>
+                        <div class="contact-info">
+                            <div class="email">{{ lead.email|default:'' }}</div>
+                            <div class="phone">{{ lead.phone|default:lead.contact_info }}</div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="lead-source">{{ lead.source }}</span>
+                    </td>
+                    <td>
+                        <span class="status-badge status-{{ lead.status|lower }}">
+                            {{ lead.status }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="assigned-user">
+                            {{ lead.assigned_to.get_full_name }}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <a href="{% url 'lead_update' lead.pk %}" class="action-btn edit-btn">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                            <a href="{% url 'lead_delete' lead.pk %}" class="action-btn delete-btn">
+                                <i class="fas fa-trash"></i> Delete
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
     {% else %}
     <div class="empty-message">
-        <p>No leads found.</p>
+        <p>No leads found. Start by adding your first lead!</p>
     </div>
     {% endif %}
 </div>
