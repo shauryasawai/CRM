@@ -4,35 +4,26 @@
 {% block extra_css %}
 <style>
     :root {
-        --bg-primary: #0d1117;
-        --bg-secondary: #161b22;
-        --bg-card: #21262d;
-        --bg-accent: #30363d;
-        --text-primary: #f0f6fc;
-        --text-secondary: #8b949e;
-        --text-muted: #6e7681;
-        --accent-blue: #58a6ff;
-        --accent-green: #3fb950;
-        --accent-purple: #a5a5ff;
-        --accent-orange: #ff9500;
-        --accent-red: #f85149;
-        --accent-pink: #ff7b72;
-        --accent-cyan: #79c0ff;
-        --accent-yellow: #d29922;
-        --border-color: #30363d;
-        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
-        --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.16);
-        --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.2);
-        --shadow-xl: 0 25px 50px rgba(0, 0, 0, 0.25);
-        --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        --gradient-success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-        --gradient-warning: linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%);
-        --gradient-info: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        --gradient-cyber: linear-gradient(135deg, #0f3460 0%, #0e4b99 50%, #2e8b57 100%);
-        --glow-blue: 0 0 20px rgba(88, 166, 255, 0.3);
-        --glow-green: 0 0 20px rgba(63, 185, 80, 0.3);
-        --glow-purple: 0 0 20px rgba(165, 165, 255, 0.3);
-        --glow-orange: 0 0 20px rgba(255, 149, 0, 0.3);
+        --primary-lime: #D3FF61;
+        --primary-lime-dark: #B8E649;
+        --primary-lime-light: #E8FF9E;
+        --primary-lime-alpha: rgba(211, 255, 97, 0.1);
+        --primary-lime-alpha-strong: rgba(211, 255, 97, 0.2);
+        --pure-black: #000000;
+        --pure-white: #FFFFFF;
+        --dark-gray: #1A1A1A;
+        --medium-gray: #333333;
+        --light-gray: #F5F5F5;
+        --text-primary: #000000;
+        --text-secondary: #333333;
+        --text-muted: #666666;
+        --text-inverse: #FFFFFF;
+        --shadow-lime: 0 4px 20px rgba(211, 255, 97, 0.3);
+        --shadow-black: 0 4px 20px rgba(0, 0, 0, 0.15);
+        --shadow-heavy: 0 8px 32px rgba(0, 0, 0, 0.2);
+        --gradient-lime: linear-gradient(135deg, #D3FF61 0%, #B8E649 100%);
+        --gradient-dark: linear-gradient(135deg, #1A1A1A 0%, #333333 100%);
+        --gradient-inverse: linear-gradient(135deg, #333333 0%, #1A1A1A 100%);
     }
 
     * {
@@ -42,14 +33,16 @@
     }
 
     body {
-        background: var(--bg-primary);
+        background: var(--primary-lime);
         color: var(--text-primary);
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         line-height: 1.6;
         min-height: 100vh;
         position: relative;
+        overflow-x: hidden;
     }
 
+    /* Animated background pattern */
     body::before {
         content: '';
         position: fixed;
@@ -58,349 +51,491 @@
         width: 100%;
         height: 100%;
         background: 
-            radial-gradient(circle at 25% 25%, rgba(88, 166, 255, 0.05) 0%, transparent 50%),
-            radial-gradient(circle at 75% 75%, rgba(63, 185, 80, 0.05) 0%, transparent 50%),
-            radial-gradient(circle at 50% 50%, rgba(165, 165, 255, 0.03) 0%, transparent 50%);
+            radial-gradient(circle at 20% 20%, rgba(0, 0, 0, 0.03) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(0, 0, 0, 0.03) 0%, transparent 50%),
+            radial-gradient(circle at 40% 60%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
         pointer-events: none;
         z-index: -1;
+        animation: subtleFloat 20s ease-in-out infinite;
     }
 
     .dashboard-container {
         max-width: 1400px;
         margin: 0 auto;
         padding: 2rem;
-        animation: fadeInSlide 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        animation: fadeInUp 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     }
 
+    /* Header Section */
     .dashboard-header {
         text-align: center;
-        margin-bottom: 3rem;
+        margin-bottom: 4rem;
         position: relative;
+        padding: 2rem 0;
     }
 
     .dashboard-header::after {
         content: '';
         position: absolute;
-        bottom: -1rem;
+        bottom: 0;
         left: 50%;
         transform: translateX(-50%);
-        width: 100px;
-        height: 3px;
-        background: var(--gradient-primary);
+        width: 120px;
+        height: 4px;
+        background: var(--gradient-dark);
         border-radius: 2px;
         animation: expandWidth 1s ease-out 0.5s both;
     }
 
     .welcome-title {
-        font-size: clamp(2rem, 5vw, 3.5rem);
-        font-weight: 800;
-        background: var(--gradient-cyber);
+        font-size: clamp(2.5rem, 6vw, 4rem);
+        font-weight: 900;
+        background: var(--gradient-dark);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        margin-bottom: 0.5rem;
-        letter-spacing: -0.02em;
+        margin-bottom: 1rem;
+        letter-spacing: -0.03em;
+        text-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        animation: titleGlow 3s ease-in-out infinite alternate;
     }
 
     .user-info {
-        font-size: 1.2rem;
+        font-size: 1.4rem;
         color: var(--text-secondary);
-        margin-bottom: 1rem;
+        margin-bottom: 1.5rem;
+        font-weight: 500;
+        opacity: 0;
+        animation: fadeIn 0.8s ease-out 0.3s forwards;
     }
 
     .role-indicator {
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
-        padding: 0.75rem 1.5rem;
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: 25px;
-        font-weight: 600;
-        font-size: 0.9rem;
+        gap: 0.75rem;
+        padding: 1rem 2rem;
+        background: var(--pure-white);
+        border: 2px solid var(--pure-black);
+        border-radius: 50px;
+        font-weight: 700;
+        font-size: 1rem;
         text-transform: uppercase;
         letter-spacing: 0.5px;
         position: relative;
         overflow: hidden;
+        box-shadow: var(--shadow-black);
+        transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        animation: slideInUp 0.6s ease-out 0.4s both;
+    }
+
+    .role-indicator:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-heavy);
     }
 
     .role-indicator::before {
         content: '';
         position: absolute;
         top: 0;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background: var(--gradient-primary);
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(211, 255, 97, 0.4), transparent);
+        transition: left 0.6s ease;
     }
 
-    .role-top-management {
-        color: var(--accent-purple);
-        border-color: rgba(165, 165, 255, 0.3);
-        box-shadow: var(--glow-purple);
+    .role-indicator:hover::before {
+        left: 100%;
     }
 
-    .role-business-head {
-        color: var(--accent-blue);
-        border-color: rgba(88, 166, 255, 0.3);
-        box-shadow: var(--glow-blue);
-    }
-
-    .role-rm-head {
-        color: var(--accent-green);
-        border-color: rgba(63, 185, 80, 0.3);
-        box-shadow: var(--glow-green);
-    }
-
+    .role-top-management,
+    .role-business-head,
+    .role-rm-head,
     .role-relationship-manager {
-        color: var(--accent-orange);
-        border-color: rgba(255, 149, 0, 0.3);
-        box-shadow: var(--glow-orange);
+        color: var(--text-primary);
+        background: var(--pure-white);
     }
 
+    .header-actions {
+        display: flex;
+        justify-content: center;
+        gap: 1.5rem;
+        margin-top: 2rem;
+        flex-wrap: wrap;
+        animation: slideInUp 0.6s ease-out 0.6s both;
+    }
+
+    /* Main Content */
     .dashboard-content {
-        animation: slideUpStagger 0.6s ease-out 0.3s both;
+        animation: slideUpStagger 0.6s ease-out 0.4s both;
     }
 
-    /* Relationship Manager Specific Styles */
     .rm-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
         gap: 2rem;
         margin-bottom: 3rem;
     }
 
     .rm-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: 16px;
-        padding: 2rem;
+        background: var(--pure-white);
+        border: 2px solid var(--pure-black);
+        border-radius: 20px;
+        padding: 2.5rem;
         position: relative;
         overflow: hidden;
-        transition: all 0.3s ease;
+        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        box-shadow: var(--shadow-black);
+        animation: cardSlideIn 0.6s ease-out both;
     }
 
+    .rm-card:nth-child(1) { animation-delay: 0.1s; }
+    .rm-card:nth-child(2) { animation-delay: 0.2s; }
+    .rm-card:nth-child(3) { animation-delay: 0.3s; }
+
     .rm-card:hover {
-        transform: translateY(-5px);
-        box-shadow: var(--shadow-lg);
-        border-color: var(--accent-orange);
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: var(--shadow-heavy);
+        border-color: var(--primary-lime-dark);
+    }
+
+    .rm-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 5px;
+        background: var(--gradient-lime);
     }
 
     .rm-card-header {
         display: flex;
         align-items: center;
-        margin-bottom: 1.5rem;
+        margin-bottom: 2rem;
     }
 
     .rm-card-icon {
-        width: 50px;
-        height: 50px;
-        border-radius: 12px;
+        width: 60px;
+        height: 60px;
+        border-radius: 16px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.5rem;
-        margin-right: 1rem;
-        background: linear-gradient(135deg, rgba(255, 149, 0, 0.15), rgba(255, 149, 0, 0.05));
+        font-size: 1.8rem;
+        margin-right: 1.5rem;
+        background: var(--gradient-lime);
+        color: var(--pure-black);
+        font-weight: bold;
+        box-shadow: var(--shadow-lime);
+        transition: all 0.3s ease;
+    }
+
+    .rm-card:hover .rm-card-icon {
+        transform: rotate(5deg) scale(1.1);
     }
 
     .rm-card-title {
-        font-size: 1.1rem;
-        font-weight: 600;
+        font-size: 1.3rem;
+        font-weight: 700;
         color: var(--text-primary);
-        margin-bottom: 0.25rem;
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.01em;
     }
 
     .rm-card-subtitle {
-        font-size: 0.85rem;
-        color: var(--text-secondary);
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        font-weight: 500;
     }
 
     .rm-card-value {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: var(--text-primary);
+        font-size: 3rem;
+        font-weight: 900;
+        color: var(--pure-black);
         margin-bottom: 1rem;
+        letter-spacing: -0.02em;
+        background: var(--gradient-dark);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
 
     .rm-card-description {
-        font-size: 0.9rem;
-        color: var(--text-muted);
-        line-height: 1.5;
+        font-size: 1rem;
+        color: var(--text-secondary);
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
+        font-weight: 500;
     }
 
     .rm-progress-container {
-        margin-top: 1.5rem;
+        margin-top: 2rem;
     }
 
     .rm-progress-label {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 0.5rem;
-        font-size: 0.85rem;
+        margin-bottom: 0.75rem;
+        font-size: 0.9rem;
         color: var(--text-secondary);
+        font-weight: 600;
     }
 
     .rm-progress-bar {
-        height: 6px;
-        background: var(--bg-accent);
-        border-radius: 3px;
+        height: 8px;
+        background: var(--light-gray);
+        border-radius: 4px;
         overflow: hidden;
+        position: relative;
     }
 
     .rm-progress-fill {
         height: 100%;
-        background: var(--gradient-warning);
-        border-radius: 3px;
+        background: var(--gradient-lime);
+        border-radius: 4px;
         width: 75%;
-        animation: fillProgress 1.5s ease-out forwards;
+        animation: fillProgress 2s ease-out forwards;
+        position: relative;
+        overflow: hidden;
     }
 
-    /* Client Portfolio Section */
-    .client-portfolio {
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: 16px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-    }
-
-    .portfolio-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-    }
-
-    .portfolio-title {
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: var(--text-primary);
-    }
-
-    .portfolio-stats {
-        display: flex;
-        gap: 1rem;
-    }
-
-    .stat-badge {
-        padding: 0.5rem 1rem;
-        background: var(--bg-accent);
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 500;
-    }
-
-    .portfolio-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-        gap: 1.5rem;
-    }
-
-    .portfolio-item {
-        background: var(--bg-accent);
-        border-radius: 12px;
-        padding: 1.5rem;
-        transition: all 0.3s ease;
-    }
-
-    .portfolio-item:hover {
-        transform: translateY(-3px);
-        box-shadow: var(--shadow-md);
-    }
-
-    .client-name {
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-    }
-
-    .client-meta {
-        font-size: 0.85rem;
-        color: var(--text-secondary);
-        margin-bottom: 1rem;
-    }
-
-    .client-value {
-        font-size: 1.5rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-    }
-
-    .client-growth {
-        font-size: 0.85rem;
-        display: flex;
-        align-items: center;
-    }
-
-    .growth-positive {
-        color: var(--accent-green);
-    }
-
-    .growth-negative {
-        color: var(--accent-red);
+    .rm-progress-fill::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+        animation: progressShine 2s ease-out 1s;
     }
 
     /* Quick Actions */
     .quick-actions {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 1rem;
-        margin-bottom: 2rem;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 3rem;
     }
 
     .action-btn {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 0.5rem;
-        padding: 1rem;
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
+        gap: 0.75rem;
+        padding: 1.25rem 1.5rem;
+        background: var(--pure-white);
+        border: 2px solid var(--pure-black);
+        border-radius: 16px;
         color: var(--text-primary);
         text-decoration: none;
-        font-weight: 500;
-        transition: all 0.3s ease;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        box-shadow: var(--shadow-black);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .action-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: var(--gradient-lime);
+        transition: left 0.3s ease;
+        z-index: -1;
     }
 
     .action-btn:hover {
-        background: var(--bg-accent);
-        border-color: var(--accent-orange);
-        transform: translateY(-2px);
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-heavy);
+        color: var(--pure-black);
+    }
+
+    .action-btn:hover::before {
+        left: 0;
     }
 
     .action-btn.primary {
-        background: var(--gradient-warning);
-        border-color: transparent;
-        color: white;
+        background: var(--gradient-lime);
+        border-color: var(--primary-lime-dark);
+        color: var(--pure-black);
+        font-weight: 700;
+    }
+
+    .action-btn.primary::before {
+        background: var(--gradient-dark);
+    }
+
+    .action-btn.primary:hover {
+        color: var(--pure-white);
     }
 
     .btn-hrms {
-        background: var(--gradient-primary);
-        color: white;
-        box-shadow: var(--glow-blue);
-        border: none;
+        background: var(--gradient-dark);
+        color: var(--pure-white);
+        border-color: var(--pure-black);
+    }
+
+    .btn-hrms::before {
+        background: var(--gradient-lime);
     }
 
     .btn-hrms:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(88, 166, 255, 0.4);
+        color: var(--pure-black);
     }
 
-    /* Add header actions container */
-    .header-actions {
+    /* Client Portfolio */
+    .client-portfolio {
+        background: var(--pure-white);
+        border: 2px solid var(--pure-black);
+        border-radius: 20px;
+        padding: 2.5rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow-black);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .client-portfolio::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 5px;
+        background: var(--gradient-lime);
+    }
+
+    .portfolio-header {
         display: flex;
-        justify-content: center;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
         gap: 1rem;
-        margin-top: 1.5rem;
+    }
+
+    .portfolio-title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        letter-spacing: -0.01em;
+    }
+
+    .portfolio-stats {
+        display: flex;
+        gap: 1rem;
         flex-wrap: wrap;
     }
 
+    .stat-badge {
+        padding: 0.75rem 1.5rem;
+        background: var(--primary-lime);
+        color: var(--pure-black);
+        border-radius: 25px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        border: 2px solid var(--pure-black);
+        transition: all 0.3s ease;
+    }
+
+    .stat-badge:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lime);
+    }
+
+    .portfolio-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 2rem;
+    }
+
+    .portfolio-item {
+        background: var(--light-gray);
+        border: 2px solid var(--medium-gray);
+        border-radius: 16px;
+        padding: 2rem;
+        transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .portfolio-item:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-heavy);
+        border-color: var(--primary-lime-dark);
+        background: var(--pure-white);
+    }
+
+    .portfolio-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: var(--gradient-lime);
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+    }
+
+    .portfolio-item:hover::before {
+        transform: scaleX(1);
+    }
+
+    .client-name {
+        font-weight: 700;
+        font-size: 1.2rem;
+        margin-bottom: 0.75rem;
+        color: var(--text-primary);
+    }
+
+    .client-meta {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        margin-bottom: 1.5rem;
+        font-weight: 500;
+    }
+
+    .client-value {
+        font-size: 1.8rem;
+        font-weight: 800;
+        margin-bottom: 0.75rem;
+        color: var(--pure-black);
+        letter-spacing: -0.01em;
+    }
+
+    .client-growth {
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        font-weight: 600;
+    }
+
+    .growth-positive {
+        color: #2D5A2D;
+        background: rgba(45, 90, 45, 0.1);
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+    }
+
+    .growth-negative {
+        color: #8B0000;
+        background: rgba(139, 0, 0, 0.1);
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+    }
+
     /* Animations */
-    @keyframes fadeInSlide {
+    @keyframes fadeInUp {
         from {
             opacity: 0;
-            transform: translateY(30px);
+            transform: translateY(40px);
         }
         to {
             opacity: 1;
@@ -411,6 +546,17 @@
     @keyframes slideUpStagger {
         from {
             opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
             transform: translateY(20px);
         }
         to {
@@ -419,66 +565,140 @@
         }
     }
 
+    @keyframes cardSlideIn {
+        from {
+            opacity: 0;
+            transform: translateY(30px) scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
     @keyframes expandWidth {
         from { width: 0; }
-        to { width: 100px; }
+        to { width: 120px; }
     }
 
     @keyframes fillProgress {
-        to { stroke-dashoffset: 0; }
+        from { width: 0; }
+        to { width: 75%; }
     }
 
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.7; }
+    @keyframes progressShine {
+        from { left: -100%; }
+        to { left: 100%; }
     }
 
-    @keyframes float {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-10px); }
+    @keyframes titleGlow {
+        from { text-shadow: 0 0 20px rgba(0, 0, 0, 0.1); }
+        to { text-shadow: 0 0 40px rgba(0, 0, 0, 0.2); }
+    }
+
+    @keyframes subtleFloat {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-10px) rotate(1deg); }
     }
 
     /* Responsive Design */
     @media (max-width: 1024px) {
         .rm-grid, .portfolio-grid {
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        }
+        
+        .portfolio-header {
+            flex-direction: column;
+            align-items: flex-start;
         }
     }
 
     @media (max-width: 768px) {
         .dashboard-container {
-            padding: 1rem;
-        }
-
-        .rm-card, .client-portfolio {
             padding: 1.5rem;
         }
 
+        .rm-card, .client-portfolio {
+            padding: 2rem;
+        }
+
         .rm-card-value {
-            font-size: 2rem;
+            font-size: 2.5rem;
         }
 
         .quick-actions {
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        }
+
+        .header-actions {
+            flex-direction: column;
+            align-items: center;
         }
     }
 
     @media (max-width: 480px) {
+        .dashboard-container {
+            padding: 1rem;
+        }
+
         .welcome-title {
-            font-size: 2rem;
+            font-size: 2.5rem;
         }
 
         .user-info {
-            font-size: 1rem;
+            font-size: 1.1rem;
         }
 
         .rm-card-value, .client-value {
-            font-size: 1.5rem;
+            font-size: 2rem;
         }
 
         .quick-actions {
             grid-template-columns: 1fr;
         }
+
+        .rm-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .portfolio-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Enhanced focus states for accessibility */
+    .action-btn:focus,
+    .rm-card:focus {
+        outline: 3px solid var(--primary-lime);
+        outline-offset: 2px;
+    }
+
+    /* Smooth scrolling */
+    html {
+        scroll-behavior: smooth;
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: var(--light-gray);
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: var(--gradient-lime);
+        border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--primary-lime-dark);
     }
 </style>
 {% endblock %}
@@ -507,7 +727,7 @@
         </div>
     </div>
 
-    <!-- Relationship Manager Content -->
+    <!-- Main Dashboard Content -->
     <div class="dashboard-content">
         <div class="rm-grid">
             <div class="rm-card">
@@ -519,7 +739,7 @@
                     </div>
                 </div>
                 <div class="rm-card-value">{{ leads.count|default:"24" }}</div>
-                <div class="rm-card-description">Leads in your pipeline requiring follow-up</div>
+                <div class="rm-card-description">Leads in your pipeline requiring follow-up and conversion</div>
                 <div class="rm-progress-container">
                     <div class="rm-progress-label">
                         <span>Conversion Rate</span>
@@ -540,14 +760,14 @@
                     </div>
                 </div>
                 <div class="rm-card-value">{{ tasks.count|default:"12" }}</div>
-                <div class="rm-card-description">Tasks to complete this week</div>
+                <div class="rm-card-description">Critical tasks to complete this week for optimal performance</div>
                 <div class="rm-progress-container">
                     <div class="rm-progress-label">
                         <span>Completion Rate</span>
                         <span>65%</span>
                     </div>
                     <div class="rm-progress-bar">
-                        <div class="rm-progress-fill" style="width: 65%; background: var(--gradient-primary);"></div>
+                        <div class="rm-progress-fill" style="width: 65%; background: var(--gradient-dark);"></div>
                     </div>
                 </div>
             </div>
@@ -561,14 +781,14 @@
                     </div>
                 </div>
                 <div class="rm-card-value">{{ service_requests.count|default:"8" }}</div>
-                <div class="rm-card-description">Client service requests to resolve</div>
+                <div class="rm-card-description">Client service requests awaiting resolution and follow-up</div>
                 <div class="rm-progress-container">
                     <div class="rm-progress-label">
                         <span>Resolution Rate</span>
                         <span>92%</span>
                     </div>
                     <div class="rm-progress-bar">
-                        <div class="rm-progress-fill" style="width: 92%; background: var(--gradient-success);"></div>
+                        <div class="rm-progress-fill" style="width: 92%; background: linear-gradient(135deg, #2D5A2D 0%, #4A7C4A 100%);"></div>
                     </div>
                 </div>
             </div>
@@ -599,7 +819,7 @@
                 <h3 class="portfolio-title">Top Client Portfolios</h3>
                 <div class="portfolio-stats">
                     <div class="stat-badge">Total: {{ clients.count|default:"42" }}</div>
-                    <div class="stat-badge" style="background: rgba(63, 185, 80, 0.1); color: var(--accent-green);">
+                    <div class="stat-badge" style="background: linear-gradient(135deg, #2D5A2D 0%, #4A7C4A 100%); color: var(--pure-white);">
                         Active: {{ active_clients.count|default:"36" }}
                     </div>
                 </div>
@@ -618,6 +838,10 @@
                 <div class="portfolio-item">
                     <div class="client-name">No clients found</div>
                     <div class="client-meta">Add clients to see portfolio data</div>
+                    <div class="client-value">--</div>
+                    <div class="client-growth">
+                        <span style="color: var(--text-muted);">Start building your portfolio</span>
+                    </div>
                 </div>
                 {% endfor %}
             </div>
@@ -628,45 +852,191 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Animate cards on load
+    // Enhanced card animation sequence
     const cards = document.querySelectorAll('.rm-card');
     cards.forEach((card, index) => {
         card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
-        card.style.transitionDelay = `${index * 0.1}s`;
+        card.style.transform = 'translateY(30px) scale(0.95)';
+        card.style.transitionDelay = `${index * 0.15}s`;
         
         setTimeout(() => {
             card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-        }, 100);
+            card.style.transform = 'translateY(0) scale(1)';
+        }, 150 + (index * 100));
     });
 
-    // Add hover effects to portfolio items
+    // Enhanced portfolio item interactions
     const portfolioItems = document.querySelectorAll('.portfolio-item');
-    portfolioItems.forEach(item => {
+    portfolioItems.forEach((item, index) => {
+        // Staggered animation
+        item.style.animationDelay = `${0.6 + (index * 0.1)}s`;
+        
+        // Enhanced hover effects
         item.addEventListener('mouseenter', () => {
-            item.style.boxShadow = '0 10px 20px rgba(0,0,0,0.2)';
+            item.style.transform = 'translateY(-8px) scale(1.02)';
+            item.style.boxShadow = '0 15px 35px rgba(0, 0, 0, 0.2)';
         });
+        
         item.addEventListener('mouseleave', () => {
+            item.style.transform = 'translateY(0) scale(1)';
             item.style.boxShadow = '';
         });
     });
 
-    // Pulse animation for important elements
-    function pulseElement(selector) {
-        const element = document.querySelector(selector);
-        if (element) {
-            setInterval(() => {
-                element.style.transform = 'scale(1.05)';
-                setTimeout(() => {
-                    element.style.transform = 'scale(1)';
-                }, 500);
-            }, 2000);
+    // Progress bar animation
+    const progressBars = document.querySelectorAll('.rm-progress-fill');
+    const observerOptions = {
+        threshold: 0.5,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const progressBar = entry.target.querySelector('.rm-progress-fill');
+                if (progressBar) {
+                    progressBar.style.animation = 'fillProgress 2s ease-out forwards';
+                }
+            }
+        });
+    }, observerOptions);
+
+    // Observe progress containers
+    document.querySelectorAll('.rm-progress-container').forEach(container => {
+        observer.observe(container);
+    });
+
+    // Enhanced action button interactions
+    const actionBtns = document.querySelectorAll('.action-btn');
+    actionBtns.forEach(btn => {
+        btn.addEventListener('mouseenter', () => {
+            btn.style.transform = 'translateY(-4px) scale(1.02)';
+        });
+        
+        btn.addEventListener('mouseleave', () => {
+            btn.style.transform = 'translateY(0) scale(1)';
+        });
+
+        // Add ripple effect on click
+        btn.addEventListener('click', function(e) {
+            const ripple = document.createElement('span');
+            const rect = this.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = e.clientX - rect.left - size / 2;
+            const y = e.clientY - rect.top - size / 2;
+            
+            ripple.style.cssText = `
+                position: absolute;
+                width: ${size}px;
+                height: ${size}px;
+                left: ${x}px;
+                top: ${y}px;
+                background: rgba(211, 255, 97, 0.4);
+                border-radius: 50%;
+                transform: scale(0);
+                animation: ripple 0.6s linear;
+                pointer-events: none;
+                z-index: 0;
+            `;
+            
+            this.style.position = 'relative';
+            this.style.overflow = 'hidden';
+            this.appendChild(ripple);
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
+        });
+    });
+
+    // Smooth scroll for internal links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+
+    // Dynamic stats counter animation
+    const animateValue = (element, start, end, duration) => {
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            const currentValue = Math.floor(progress * (end - start) + start);
+            element.textContent = currentValue;
+            if (progress < 1) {
+                window.requestAnimationFrame(step);
+            }
+        };
+        window.requestAnimationFrame(step);
+    };
+
+    // Animate card values when they come into view
+    const valueObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const valueElement = entry.target;
+                const finalValue = parseInt(valueElement.textContent) || 0;
+                if (finalValue > 0) {
+                    animateValue(valueElement, 0, finalValue, 2000);
+                }
+                valueObserver.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.5 });
+
+    document.querySelectorAll('.rm-card-value').forEach(valueEl => {
+        valueObserver.observe(valueEl);
+    });
+
+    // Enhanced keyboard navigation
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Tab') {
+            document.body.classList.add('keyboard-navigation');
         }
+    });
+
+    document.addEventListener('mousedown', function() {
+        document.body.classList.remove('keyboard-navigation');
+    });
+
+    // Performance optimization: Reduce animations on low-end devices
+    if (navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4) {
+        document.documentElement.style.setProperty('--animation-duration', '0.3s');
     }
 
-    pulseElement('.action-btn.primary');
+    // Add loading state management
+    window.addEventListener('beforeunload', function() {
+        document.body.style.opacity = '0.7';
+        document.body.style.transition = 'opacity 0.3s ease';
+    });
+
+    console.log('🚀 Dashboard enhanced and ready!');
 });
+
+// Add CSS for ripple animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes ripple {
+        to {
+            transform: scale(4);
+            opacity: 0;
+        }
+    }
+    
+    .keyboard-navigation *:focus {
+        outline: 3px solid var(--primary-lime) !important;
+        outline-offset: 2px !important;
+    }
+`;
+document.head.appendChild(style);
 </script>
 {% endblock %}
 {% endblock %}
