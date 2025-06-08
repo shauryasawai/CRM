@@ -3,14 +3,338 @@
 {% block title %}Confirm Delete Task{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2>Confirm Delete</h2>
-    <p>Are you sure you want to delete the task <strong>{{ task.title }}</strong>?</p>
+<style>
+    /* Modern CSS Reset and Base Styles */
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
 
-    <form method="post">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-danger">Yes, Delete</button>
-        <a href="{% url 'task_list' %}" class="btn btn-secondary">Cancel</a>
-    </form>
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        background: linear-gradient(135deg, #D3FF61 0%, #B8E849 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        line-height: 1.6;
+    }
+
+    .confirmation-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(10px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        animation: fadeIn 0.3s ease-out;
+    }
+
+    .confirmation-modal {
+        background: white;
+        border-radius: 24px;
+        padding: 48px;
+        max-width: 520px;
+        width: 100%;
+        box-shadow: 
+            0 32px 64px rgba(0, 0, 0, 0.15),
+            0 8px 32px rgba(0, 0, 0, 0.1),
+            0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+        position: relative;
+        transform: translateY(0);
+        animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        text-align: center;
+    }
+
+    .warning-icon {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #ff6b6b, #ff5252);
+        border-radius: 50%;
+        margin: 0 auto 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: pulse 2s infinite;
+        position: relative;
+    }
+
+    .warning-icon::before {
+        content: '⚠';
+        font-size: 36px;
+        color: white;
+        font-weight: bold;
+    }
+
+    .warning-icon::after {
+        content: '';
+        position: absolute;
+        top: -8px;
+        left: -8px;
+        right: -8px;
+        bottom: -8px;
+        border: 2px solid rgba(255, 107, 107, 0.3);
+        border-radius: 50%;
+        animation: ripple 2s infinite;
+    }
+
+    .confirmation-title {
+        font-size: 32px;
+        font-weight: 800;
+        color: #1a1a1a;
+        margin-bottom: 16px;
+        letter-spacing: -0.02em;
+    }
+
+    .confirmation-message {
+        font-size: 18px;
+        color: #4a4a4a;
+        margin-bottom: 40px;
+        line-height: 1.5;
+    }
+
+    .task-name {
+        color: #1a1a1a;
+        font-weight: 700;
+        background: linear-gradient(135deg, #D3FF61, #B8E849);
+        padding: 4px 12px;
+        border-radius: 8px;
+        display: inline-block;
+        margin: 0 4px;
+        box-shadow: 0 2px 8px rgba(211, 255, 97, 0.3);
+    }
+
+    .button-group {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        padding: 16px 32px;
+        border: none;
+        border-radius: 16px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        text-decoration: none;
+        display: inline-block;
+        min-width: 140px;
+        position: relative;
+        overflow: hidden;
+        text-align: center;
+        letter-spacing: 0.02em;
+    }
+
+    .btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: left 0.5s;
+    }
+
+    .btn:hover::before {
+        left: 100%;
+    }
+
+    .btn-danger {
+        background: linear-gradient(135deg, #ff6b6b, #ff5252);
+        color: white;
+        box-shadow: 0 8px 24px rgba(255, 107, 107, 0.4);
+    }
+
+    .btn-danger:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 32px rgba(255, 107, 107, 0.6);
+        background: linear-gradient(135deg, #ff5252, #ff4444);
+    }
+
+    .btn-danger:active {
+        transform: translateY(0);
+        box-shadow: 0 4px 16px rgba(255, 107, 107, 0.4);
+    }
+
+    .btn-secondary {
+        background: #f8f9fa;
+        color: #495057;
+        border: 2px solid #e9ecef;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-secondary:hover {
+        background: white;
+        border-color: #D3FF61;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        color: #1a1a1a;
+    }
+
+    .btn-secondary:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(40px) scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    @keyframes pulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.05);
+        }
+    }
+
+    @keyframes ripple {
+        0% {
+            transform: scale(1);
+            opacity: 1;
+        }
+        100% {
+            transform: scale(1.3);
+            opacity: 0;
+        }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .confirmation-modal {
+            padding: 32px 24px;
+            margin: 20px;
+            border-radius: 20px;
+        }
+
+        .confirmation-title {
+            font-size: 28px;
+        }
+
+        .confirmation-message {
+            font-size: 16px;
+        }
+
+        .button-group {
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px 24px;
+        }
+
+        .warning-icon {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 24px;
+        }
+
+        .warning-icon::before {
+            font-size: 28px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .confirmation-modal {
+            padding: 24px 20px;
+        }
+
+        .confirmation-title {
+            font-size: 24px;
+            margin-bottom: 12px;
+        }
+
+        .confirmation-message {
+            font-size: 15px;
+            margin-bottom: 32px;
+        }
+    }
+
+    /* Focus States for Accessibility */
+    .btn:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(211, 255, 97, 0.5), 0 8px 24px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-danger:focus {
+        box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.3), 0 12px 32px rgba(255, 107, 107, 0.6);
+    }
+
+    /* High contrast mode support */
+    @media (prefers-contrast: high) {
+        .confirmation-modal {
+            border: 2px solid #000;
+        }
+        
+        .btn {
+            border: 2px solid currentColor;
+        }
+    }
+
+    /* Reduced motion support */
+    @media (prefers-reduced-motion: reduce) {
+        * {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+</style>
+
+<div class="confirmation-overlay">
+    <div class="confirmation-modal">
+        <div class="warning-icon"></div>
+        
+        <h2 class="confirmation-title">Confirm Delete</h2>
+        
+        <p class="confirmation-message">
+            Are you sure you want to delete the task
+            <span class="task-name">{{ task.title }}</span>?
+            This action cannot be undone.
+        </p>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="button-group">
+                <button type="submit" class="btn btn-danger">
+                    Yes, Delete Task
+                </button>
+                <a href="{% url 'task_list' %}" class="btn btn-secondary">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
 </div>
 {% endblock %}
