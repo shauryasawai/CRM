@@ -3,14 +3,287 @@
 {% block title %}Confirm Delete Client{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2>Confirm Delete</h2>
-    <p>Are you sure you want to delete the client <strong>{{ client.name }}</strong>?</p>
+<style>
+    .delete-confirmation-container {
+        background: linear-gradient(135deg, #090A19 0%, #0F1128 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
 
-    <form method="post">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-danger">Yes, Delete</button>
-        <a href="{% url 'client_list' %}" class="btn btn-secondary">Cancel</a>
-    </form>
+    .confirmation-card {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(81, 77, 141, 0.2);
+        border-radius: 24px;
+        padding: 48px 40px;
+        max-width: 480px;
+        width: 100%;
+        box-shadow: 
+            0 20px 25px -5px rgba(0, 0, 0, 0.3),
+            0 10px 10px -5px rgba(0, 0, 0, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        animation: slideIn 0.4s ease-out;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .confirmation-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, #514D8D, transparent);
+        animation: shimmer 2s ease-in-out infinite;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(30px) scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    @keyframes shimmer {
+        0%, 100% { opacity: 0; }
+        50% { opacity: 1; }
+    }
+
+    .warning-icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 32px;
+        background: linear-gradient(135deg, #FF6B6B, #FF8E8E);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 32px rgba(255, 107, 107, 0.3);
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); box-shadow: 0 8px 32px rgba(255, 107, 107, 0.3); }
+        50% { transform: scale(1.05); box-shadow: 0 12px 40px rgba(255, 107, 107, 0.4); }
+    }
+
+    .warning-icon svg {
+        width: 36px;
+        height: 36px;
+        color: white;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    }
+
+    .confirmation-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: #FFFFFF;
+        text-align: center;
+        margin-bottom: 16px;
+        letter-spacing: -0.02em;
+    }
+
+    .confirmation-message {
+        font-size: 16px;
+        color: rgba(255, 255, 255, 0.8);
+        text-align: center;
+        margin-bottom: 40px;
+        line-height: 1.6;
+    }
+
+    .client-name {
+        color: #514D8D;
+        font-weight: 600;
+        background: rgba(81, 77, 141, 0.1);
+        padding: 2px 8px;
+        border-radius: 6px;
+        border: 1px solid rgba(81, 77, 141, 0.2);
+    }
+
+    .button-group {
+        display: flex;
+        gap: 16px;
+        flex-direction: column;
+    }
+
+    .btn-modern {
+        padding: 16px 32px;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+        text-transform: none;
+        letter-spacing: 0.02em;
+    }
+
+    .btn-modern::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+        transition: left 0.6s;
+    }
+
+    .btn-modern:hover::before {
+        left: 100%;
+    }
+
+    .btn-delete {
+        background: linear-gradient(135deg, #FF4757, #FF6B7A);
+        color: white;
+        box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3);
+    }
+
+    .btn-delete:hover {
+        background: linear-gradient(135deg, #FF3742, #FF5A6D);
+        box-shadow: 0 8px 25px rgba(255, 71, 87, 0.4);
+        transform: translateY(-2px);
+        color: white;
+    }
+
+    .btn-delete:active {
+        transform: translateY(0);
+    }
+
+    .btn-cancel {
+        background: rgba(81, 77, 141, 0.1);
+        color: #514D8D;
+        border: 2px solid rgba(81, 77, 141, 0.3);
+        backdrop-filter: blur(10px);
+    }
+
+    .btn-cancel:hover {
+        background: rgba(81, 77, 141, 0.2);
+        border-color: #514D8D;
+        color: #514D8D;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(81, 77, 141, 0.2);
+    }
+
+    .btn-cancel:active {
+        transform: translateY(0);
+    }
+
+    .form-container {
+        position: relative;
+    }
+
+    @media (max-width: 640px) {
+        .confirmation-card {
+            padding: 32px 24px;
+            margin: 16px;
+        }
+        
+        .confirmation-title {
+            font-size: 24px;
+        }
+        
+        .button-group {
+            gap: 12px;
+        }
+        
+        .btn-modern {
+            padding: 14px 24px;
+            font-size: 15px;
+        }
+    }
+
+    /* Add subtle animations for better UX */
+    .confirmation-card:hover {
+        border-color: rgba(81, 77, 141, 0.3);
+        box-shadow: 
+            0 25px 35px -5px rgba(0, 0, 0, 0.35),
+            0 15px 15px -5px rgba(0, 0, 0, 0.25),
+            inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    }
+
+    /* Loading state for form submission */
+    .btn-delete:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+        transform: none !important;
+    }
+</style>
+
+<div class="delete-confirmation-container">
+    <div class="confirmation-card">
+        <div class="warning-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.232 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+            </svg>
+        </div>
+        
+        <h2 class="confirmation-title">Confirm Deletion</h2>
+        
+        <p class="confirmation-message">
+            Are you sure you want to permanently delete the client 
+            <span class="client-name">{{ client.name }}</span>?
+            <br><br>
+            This action cannot be undone and will remove all associated data.
+        </p>
+
+        <div class="form-container">
+            <form method="post">
+                {% csrf_token %}
+                <div class="button-group">
+                    <button type="submit" class="btn-modern btn-delete" id="deleteBtn">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        Yes, Delete Client
+                    </button>
+                    <a href="{% url 'client_list' %}" class="btn-modern btn-cancel">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                        </svg>
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
+
+<script>
+    // Add confirmation feedback
+    document.getElementById('deleteBtn').addEventListener('click', function(e) {
+        const btn = e.target;
+        btn.disabled = true;
+        btn.innerHTML = `
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="animation: spin 1s linear infinite">
+                <circle cx="12" cy="12" r="10" stroke-width="4" stroke="currentColor" stroke-dasharray="31.416" stroke-dashoffset="31.416" fill="none" opacity="0.25"/>
+                <path d="M4 12a8 8 0 018-8v8H4z" fill="currentColor"/>
+            </svg>
+            Deleting...
+        `;
+    });
+</script>
+
+<style>
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+</style>
+
 {% endblock %}
