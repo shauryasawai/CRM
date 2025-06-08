@@ -3,14 +3,487 @@
 {% block title %}Confirm Delete Client{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2>Confirm Delete</h2>
-    <p>Are you sure you want to delete the client <strong>{{ client.name }}</strong>?</p>
+<style>
+    .delete-confirmation-container {
+        background: linear-gradient(135deg, #D3FF61 0%, #B8E835 20%, #090A19 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        position: relative;
+        overflow: hidden;
+    }
 
-    <form method="post">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-danger">Yes, Delete</button>
-        <a href="{% url 'client_list' %}" class="btn btn-secondary">Cancel</a>
-    </form>
+    .delete-confirmation-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="%23D3FF61" stroke-width="0.3" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+        animation: float 20s ease-in-out infinite;
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-10px) rotate(1deg); }
+    }
+
+    .confirmation-card {
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(30px);
+        border: 2px solid rgba(211, 255, 97, 0.2);
+        border-radius: 32px;
+        padding: 56px 48px;
+        max-width: 520px;
+        width: 100%;
+        box-shadow: 
+            0 32px 64px rgba(0, 0, 0, 0.25),
+            0 16px 32px rgba(0, 0, 0, 0.15),
+            inset 0 2px 0 rgba(255, 255, 255, 0.8),
+            0 0 0 1px rgba(211, 255, 97, 0.1);
+        animation: slideInScale 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        position: relative;
+        overflow: hidden;
+        z-index: 10;
+    }
+
+    .confirmation-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #FF4757, #D3FF61, #FF4757);
+        background-size: 200% 100%;
+        animation: gradientShift 3s ease-in-out infinite;
+    }
+
+    .confirmation-card::after {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(211, 255, 97, 0.03) 0%, transparent 70%);
+        animation: rotate 15s linear infinite;
+        pointer-events: none;
+    }
+
+    @keyframes slideInScale {
+        from {
+            opacity: 0;
+            transform: translateY(50px) scale(0.9);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    @keyframes gradientShift {
+        0%, 100% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+    }
+
+    @keyframes rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    .warning-icon {
+        width: 96px;
+        height: 96px;
+        margin: 0 auto 40px;
+        background: linear-gradient(135deg, #FF4757, #FF6B7A, #FF8E8E);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 
+            0 12px 40px rgba(255, 71, 87, 0.4),
+            0 4px 16px rgba(255, 71, 87, 0.2),
+            inset 0 2px 0 rgba(255, 255, 255, 0.3);
+        animation: dangerPulse 2.5s ease-in-out infinite;
+        position: relative;
+        z-index: 2;
+    }
+
+    .warning-icon::before {
+        content: '';
+        position: absolute;
+        top: -8px;
+        left: -8px;
+        right: -8px;
+        bottom: -8px;
+        background: linear-gradient(135deg, rgba(255, 71, 87, 0.2), transparent);
+        border-radius: 50%;
+        animation: dangerRipple 2.5s ease-in-out infinite;
+    }
+
+    @keyframes dangerPulse {
+        0%, 100% { 
+            transform: scale(1); 
+            box-shadow: 
+                0 12px 40px rgba(255, 71, 87, 0.4),
+                0 4px 16px rgba(255, 71, 87, 0.2),
+                inset 0 2px 0 rgba(255, 255, 255, 0.3);
+        }
+        50% { 
+            transform: scale(1.08); 
+            box-shadow: 
+                0 16px 48px rgba(255, 71, 87, 0.5),
+                0 8px 24px rgba(255, 71, 87, 0.3),
+                inset 0 2px 0 rgba(255, 255, 255, 0.4);
+        }
+    }
+
+    @keyframes dangerRipple {
+        0% { transform: scale(1); opacity: 0.8; }
+        50% { transform: scale(1.2); opacity: 0.4; }
+        100% { transform: scale(1.4); opacity: 0; }
+    }
+
+    .warning-icon svg {
+        width: 44px;
+        height: 44px;
+        color: white;
+        filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.3));
+        z-index: 3;
+        position: relative;
+    }
+
+    .confirmation-title {
+        font-size: 32px;
+        font-weight: 800;
+        color: #000000;
+        text-align: center;
+        margin-bottom: 20px;
+        letter-spacing: -0.03em;
+        position: relative;
+        z-index: 2;
+    }
+
+    .confirmation-message {
+        font-size: 17px;
+        color: rgba(0, 0, 0, 0.75);
+        text-align: center;
+        margin-bottom: 48px;
+        line-height: 1.7;
+        position: relative;
+        z-index: 2;
+    }
+
+    .client-name {
+        color: #000000;
+        font-weight: 700;
+        background: linear-gradient(135deg, rgba(211, 255, 97, 0.3), rgba(211, 255, 97, 0.1));
+        padding: 6px 12px;
+        border-radius: 12px;
+        border: 2px solid rgba(211, 255, 97, 0.4);
+        display: inline-block;
+        margin: 0 4px;
+        box-shadow: 0 2px 8px rgba(211, 255, 97, 0.2);
+    }
+
+    .button-group {
+        display: flex;
+        gap: 16px;
+        flex-direction: column;
+        position: relative;
+        z-index: 2;
+    }
+
+    .btn-modern {
+        padding: 18px 36px;
+        border: none;
+        border-radius: 16px;
+        font-size: 16px;
+        font-weight: 700;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+        text-transform: none;
+        letter-spacing: 0.02em;
+        min-height: 58px;
+    }
+
+    .btn-modern::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: left 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .btn-modern:hover::before {
+        left: 100%;
+    }
+
+    .btn-delete {
+        background: linear-gradient(135deg, #FF4757, #FF6B7A, #FF8E8E);
+        color: white;
+        box-shadow: 
+            0 8px 24px rgba(255, 71, 87, 0.4),
+            0 4px 12px rgba(255, 71, 87, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-delete:hover {
+        background: linear-gradient(135deg, #FF3742, #FF5A6D, #FF7B8A);
+        box-shadow: 
+            0 12px 36px rgba(255, 71, 87, 0.5),
+            0 8px 20px rgba(255, 71, 87, 0.3);
+        transform: translateY(-3px) scale(1.02);
+        color: white;
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-delete:active {
+        transform: translateY(-1px) scale(1.01);
+    }
+
+    .btn-cancel {
+        background: rgba(0, 0, 0, 0.05);
+        color: #000000;
+        border: 2px solid rgba(0, 0, 0, 0.15);
+        backdrop-filter: blur(10px);
+        font-weight: 600;
+    }
+
+    .btn-cancel:hover {
+        background: rgba(0, 0, 0, 0.08);
+        border-color: rgba(0, 0, 0, 0.25);
+        color: #000000;
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 
+            0 12px 36px rgba(0, 0, 0, 0.15),
+            0 8px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    .btn-cancel:active {
+        transform: translateY(-1px) scale(1.01);
+    }
+
+    .form-container {
+        position: relative;
+        z-index: 2;
+    }
+
+    /* Enhanced loading state */
+    .btn-delete:disabled {
+        opacity: 0.8;
+        cursor: not-allowed;
+        transform: none !important;
+        background: linear-gradient(135deg, #999, #bbb);
+        animation: loading 1.5s ease-in-out infinite;
+    }
+
+    @keyframes loading {
+        0%, 100% { opacity: 0.8; }
+        50% { opacity: 1; }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 640px) {
+        .delete-confirmation-container {
+            padding: 16px;
+        }
+        
+        .confirmation-card {
+            padding: 40px 28px;
+            margin: 12px;
+            border-radius: 24px;
+        }
+        
+        .confirmation-title {
+            font-size: 26px;
+        }
+        
+        .confirmation-message {
+            font-size: 16px;
+            margin-bottom: 40px;
+        }
+        
+        .button-group {
+            gap: 12px;
+        }
+        
+        .btn-modern {
+            padding: 16px 28px;
+            font-size: 15px;
+            min-height: 52px;
+        }
+
+        .warning-icon {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 32px;
+        }
+
+        .warning-icon svg {
+            width: 36px;
+            height: 36px;
+        }
+    }
+
+    /* Enhanced hover effects */
+    .confirmation-card:hover {
+        border-color: rgba(211, 255, 97, 0.4);
+        box-shadow: 
+            0 40px 80px rgba(0, 0, 0, 0.3),
+            0 20px 40px rgba(0, 0, 0, 0.2),
+            inset 0 2px 0 rgba(255, 255, 255, 0.9),
+            0 0 0 1px rgba(211, 255, 97, 0.2);
+    }
+
+    /* Improved accessibility */
+    .btn-modern:focus {
+        outline: 3px solid rgba(211, 255, 97, 0.6);
+        outline-offset: 2px;
+    }
+
+    .btn-delete:focus {
+        outline-color: rgba(255, 71, 87, 0.6);
+    }
+
+    /* Subtle animations for better UX */
+    .client-name {
+        animation: highlight 0.8s ease-out 0.5s both;
+    }
+
+    @keyframes highlight {
+        from {
+            background: rgba(211, 255, 97, 0.1);
+            transform: scale(1);
+        }
+        50% {
+            background: rgba(211, 255, 97, 0.4);
+            transform: scale(1.05);
+        }
+        to {
+            background: linear-gradient(135deg, rgba(211, 255, 97, 0.3), rgba(211, 255, 97, 0.1));
+            transform: scale(1);
+        }
+    }
+</style>
+
+<div class="delete-confirmation-container">
+    <div class="confirmation-card">
+        <div class="warning-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.232 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+            </svg>
+        </div>
+        
+        <h2 class="confirmation-title">Confirm Deletion</h2>
+        
+        <p class="confirmation-message">
+            Are you sure you want to permanently delete the client 
+            <span class="client-name">{{ client.name }}</span>?
+            <br><br>
+            This action cannot be undone and will remove all associated data.
+        </p>
+
+        <div class="form-container">
+            <form method="post">
+                {% csrf_token %}
+                <div class="button-group">
+                    <button type="submit" class="btn-modern btn-delete" id="deleteBtn">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        Yes, Delete Client
+                    </button>
+                    <a href="{% url 'client_list' %}" class="btn-modern btn-cancel">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                        </svg>
+                        Cancel & Go Back
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
+
+<script>
+    // Enhanced confirmation feedback with better UX
+    document.getElementById('deleteBtn').addEventListener('click', function(e) {
+        const btn = e.target.closest('button');
+        const originalContent = btn.innerHTML;
+        
+        btn.disabled = true;
+        btn.style.cursor = 'not-allowed';
+        btn.innerHTML = `
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="animation: spin 1s linear infinite">
+                <circle cx="12" cy="12" r="10" stroke-width="4" stroke="currentColor" stroke-dasharray="31.416" stroke-dashoffset="31.416" fill="none" opacity="0.25"/>
+                <path d="M4 12a8 8 0 018-8v8H4z" fill="currentColor"/>
+            </svg>
+            Processing...
+        `;
+
+        // Add shake animation to the card for emphasis
+        const card = document.querySelector('.confirmation-card');
+        card.style.animation = 'shake 0.5s ease-in-out';
+        
+        // Reset if form submission fails (fallback)
+        setTimeout(() => {
+            if (btn.disabled) {
+                btn.disabled = false;
+                btn.style.cursor = 'pointer';
+                btn.innerHTML = originalContent;
+                card.style.animation = '';
+            }
+        }, 10000);
+    });
+
+    // Add keyboard shortcuts for better accessibility
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            window.location.href = "{% url 'client_list' %}";
+        }
+    });
+
+    // Add smooth reveal animation for elements
+    document.addEventListener('DOMContentLoaded', function() {
+        const elements = document.querySelectorAll('.confirmation-title, .confirmation-message, .button-group');
+        elements.forEach((el, index) => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                el.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+                el.style.opacity = '1';
+                el.style.transform = 'translateY(0)';
+            }, 300 + (index * 150));
+        });
+    });
+</script>
+
+<style>
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-4px); }
+        75% { transform: translateX(4px); }
+    }
+</style>
+
 {% endblock %}

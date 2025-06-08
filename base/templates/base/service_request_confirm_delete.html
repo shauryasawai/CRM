@@ -3,14 +3,314 @@
 {% block title %}Confirm Delete Service Request{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2>Confirm Delete</h2>
-    <p>Are you sure you want to delete the service request for client <strong>{{ service_request.client.name }}</strong>?</p>
+<style>
+    /* === Modern Glassmorphic Style === */
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
 
-    <form method="post">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-danger">Yes, Delete</button>
-        <a href="{% url 'service_request_list' %}" class="btn btn-secondary">Cancel</a>
-    </form>
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: linear-gradient(135deg, #090A19 0%, #0f1024 50%, #151633 100%);
+        min-height: 100vh;
+        color: #ffffff;
+        line-height: 1.6;
+        overflow-x: hidden;
+    }
+
+    .container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 2rem 1.5rem;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        position: relative;
+    }
+
+    .bg-decoration {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: -1;
+    }
+
+    .bg-decoration::before {
+        content: '';
+        position: absolute;
+        top: 20%;
+        right: -10%;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(81, 77, 141, 0.1) 0%, transparent 70%);
+        border-radius: 50%;
+        animation: float 6s ease-in-out infinite;
+    }
+
+    .bg-decoration::after {
+        content: '';
+        position: absolute;
+        bottom: 20%;
+        left: -10%;
+        width: 250px;
+        height: 250px;
+        background: radial-gradient(circle, rgba(81, 77, 141, 0.08) 0%, transparent 70%);
+        border-radius: 50%;
+        animation: float 8s ease-in-out infinite reverse;
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0px) translateX(0px); }
+        50% { transform: translateY(-20px) translateX(10px); }
+    }
+
+    .delete-card {
+        background: rgba(255, 255, 255, 0.02);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(81, 77, 141, 0.2);
+        border-radius: 24px;
+        padding: 3rem 2.5rem;
+        box-shadow: 
+            0 20px 40px rgba(0, 0, 0, 0.3),
+            0 0 0 1px rgba(255, 255, 255, 0.05),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        position: relative;
+        overflow: hidden;
+        transform: translateY(20px);
+        animation: slideUp 0.6s ease-out forwards;
+    }
+
+    @keyframes slideUp {
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .warning-icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 2rem;
+        background: linear-gradient(135deg, #ff4757 0%, #ff3838 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 10px 30px rgba(255, 71, 87, 0.3);
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+
+    .warning-icon::before {
+        content: '!';
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: white;
+    }
+
+    .title {
+        font-size: 2rem;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 1.5rem;
+        background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .message {
+        font-size: 1.125rem;
+        text-align: center;
+        margin-bottom: 2.5rem;
+        color: rgba(255, 255, 255, 0.8);
+        line-height: 1.7;
+    }
+
+    .highlight {
+        color: #514D8D;
+        font-weight: 600;
+        background: linear-gradient(135deg, #514D8D 0%, #6b66a3 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        padding: 1rem 2rem;
+        border: none;
+        border-radius: 12px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 140px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+        transition: left 0.5s;
+    }
+
+    .btn:hover::before {
+        left: 100%;
+    }
+
+    .btn-danger {
+        background: linear-gradient(135deg, #ff4757 0%, #ff3838 100%);
+        color: white;
+        box-shadow: 0 8px 25px rgba(255, 71, 87, 0.3);
+    }
+
+    .btn-danger:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 35px rgba(255, 71, 87, 0.4);
+        background: linear-gradient(135deg, #ff3838 0%, #ff2828 100%);
+    }
+
+    .btn-secondary {
+        background: rgba(81, 77, 141, 0.1);
+        color: #514D8D;
+        border: 2px solid rgba(81, 77, 141, 0.3);
+        box-shadow: 0 8px 25px rgba(81, 77, 141, 0.1);
+    }
+
+    .btn-secondary:hover {
+        background: rgba(81, 77, 141, 0.2);
+        border-color: rgba(81, 77, 141, 0.5);
+        transform: translateY(-2px);
+        box-shadow: 0 12px 35px rgba(81, 77, 141, 0.2);
+        color: #6b66a3;
+    }
+
+    .btn.loading {
+        pointer-events: none;
+        opacity: 0.7;
+    }
+
+    .btn.loading::after {
+        content: '';
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        border: 2px solid transparent;
+        border-top: 2px solid currentColor;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 768px) {
+        .container {
+            padding: 1.5rem 1rem;
+        }
+
+        .delete-card {
+            padding: 2rem 1.5rem;
+            border-radius: 20px;
+        }
+
+        .title {
+            font-size: 1.75rem;
+        }
+
+        .message {
+            font-size: 1rem;
+        }
+
+        .form-actions {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .btn {
+            width: 100%;
+            max-width: 280px;
+        }
+
+        .warning-icon {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 1.5rem;
+        }
+
+        .warning-icon::before {
+            font-size: 2rem;
+        }
+    }
+</style>
+
+<div class="bg-decoration"></div>
+
+<div class="container">
+    <div class="delete-card">
+        <div class="warning-icon"></div>
+
+        <h2 class="title">Confirm Delete</h2>
+
+        <p class="message">
+            Are you sure you want to delete the service request for client 
+            <span class="highlight">{{ service_request.client.name }}</span>?
+        </p>
+
+        <form method="post" id="deleteForm">
+            {% csrf_token %}
+            <div class="form-actions">
+                <button type="submit" class="btn btn-danger" id="deleteBtn">
+                    Yes, Delete
+                </button>
+                <a href="{% url 'service_request_list' %}" class="btn btn-secondary">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
 </div>
+
+<script>
+    document.getElementById('deleteForm').addEventListener('submit', function () {
+        const btn = document.getElementById('deleteBtn');
+        btn.classList.add('loading');
+        btn.textContent = 'Deleting...';
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            const cancelBtn = document.querySelector('.btn-secondary');
+            if (cancelBtn) cancelBtn.click();
+        }
+    });
+</script>
 {% endblock %}

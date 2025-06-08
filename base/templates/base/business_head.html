@@ -9,144 +9,439 @@
 {% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card text-white bg-primary mb-3">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h5 class="card-title">RM Heads</h5>
-                        <h2 class="card-text">{{ rm_heads.count }}</h2>
-                    </div>
-                    <i class="bi bi-people fs-1 opacity-50"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-success mb-3">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h5 class="card-title">Active RMs</h5>
-                        <h2 class="card-text">{{ rms.count }}</h2>
-                    </div>
-                    <i class="bi bi-person-check fs-1 opacity-50"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-info mb-3">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h5 class="card-title">Total Leads</h5>
-                        <h2 class="card-text">{{ total_leads|default:0|intcomma }}</h2>
-                    </div>
-                    <i class="bi bi-person-plus fs-1 opacity-50"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-warning mb-3">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h5 class="card-title">Conversions</h5>
-                        <h2 class="card-text">{{ conversions|default:0|intcomma }}</h2>
-                    </div>
-                    <i class="bi bi-graph-up fs-1 opacity-50"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+<style>
+:root {
+    --primary-green: #D3FF61;
+    --primary-black: #1a1a1a;
+    --soft-black: #2d2d2d;
+    --light-gray: #f8f9fa;
+    --border-gray: #e9ecef;
+    --shadow-light: 0 2px 4px rgba(0,0,0,0.1);
+    --shadow-medium: 0 4px 12px rgba(0,0,0,0.15);
+    --shadow-heavy: 0 8px 32px rgba(0,0,0,0.2);
+}
 
-<div class="row">
-    <div class="col-md-8">
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">RM Head Performance</h5>
-                <div class="dropdown">
-                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown">
-                        <i class="bi bi-calendar"></i> {{ timezone.now|date:"F Y" }}
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="#">Last Month</a></li>
-                        <li><a class="dropdown-item" href="#">Quarter to Date</a></li>
-                        <li><a class="dropdown-item" href="#">Year to Date</a></li>
-                    </ul>
+body {
+    background: linear-gradient(135deg, var(--primary-green) 0%, #ffffff 100%);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+}
+
+.dashboard-container {
+    padding: 2rem 0;
+}
+
+/* Enhanced Card Styles */
+.metric-card {
+    background: white;
+    border-radius: 16px;
+    border: none;
+    box-shadow: var(--shadow-light);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    position: relative;
+}
+
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-green), #a8e63d);
+}
+
+.metric-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-heavy);
+}
+
+.metric-card .card-body {
+    padding: 1.75rem;
+}
+
+.metric-card .metric-icon {
+    width: 60px;
+    height: 60px;
+    background: var(--primary-green);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.metric-card .metric-icon i {
+    font-size: 1.5rem;
+    color: var(--primary-black);
+}
+
+.metric-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+}
+
+.metric-value {
+    font-size: 2.25rem;
+    font-weight: 800;
+    color: var(--primary-black);
+    line-height: 1.2;
+}
+
+/* Enhanced Table Card */
+.table-card {
+    background: white;
+    border-radius: 16px;
+    border: none;
+    box-shadow: var(--shadow-medium);
+    overflow: hidden;
+}
+
+.table-card .card-header {
+    background: linear-gradient(135deg, var(--primary-black), var(--soft-black));
+    color: white;
+    border: none;
+    padding: 1.5rem 2rem;
+}
+
+.table-card .card-header h5 {
+    font-weight: 700;
+    margin: 0;
+}
+
+.date-selector {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    transition: all 0.3s ease;
+}
+
+.date-selector:hover {
+    background: rgba(255,255,255,0.2);
+    border-color: var(--primary-green);
+}
+
+.performance-table {
+    margin: 0;
+}
+
+.performance-table thead th {
+    background: var(--light-gray);
+    color: var(--primary-black);
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: none;
+    padding: 1rem;
+}
+
+.performance-table tbody tr {
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.performance-table tbody tr:hover {
+    background: rgba(211, 255, 97, 0.1);
+    transform: scale(1.01);
+}
+
+.performance-table tbody td {
+    padding: 1rem;
+    border-top: 1px solid var(--border-gray);
+    vertical-align: middle;
+}
+
+.action-btn {
+    background: var(--primary-green);
+    border: none;
+    color: var(--primary-black);
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.action-btn:hover {
+    background: #a8e63d;
+    transform: scale(1.1);
+    color: var(--primary-black);
+}
+
+/* Chart Cards */
+.chart-card {
+    background: white;
+    border-radius: 16px;
+    border: none;
+    box-shadow: var(--shadow-medium);
+    margin-bottom: 1.5rem;
+}
+
+.chart-card .card-header {
+    background: linear-gradient(135deg, var(--primary-green), #a8e63d);
+    color: var(--primary-black);
+    border: none;
+    padding: 1.25rem 1.5rem;
+    border-radius: 16px 16px 0 0;
+}
+
+.chart-card .card-header h5 {
+    font-weight: 700;
+    margin: 0;
+}
+
+/* Activities Card */
+.activities-card {
+    background: white;
+    border-radius: 16px;
+    border: none;
+    box-shadow: var(--shadow-medium);
+}
+
+.activities-card .card-header {
+    background: var(--primary-black);
+    color: white;
+    border: none;
+    padding: 1.25rem 1.5rem;
+    border-radius: 16px 16px 0 0;
+}
+
+.activity-item {
+    border: none;
+    border-radius: 0;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-gray);
+    transition: all 0.2s ease;
+}
+
+.activity-item:hover {
+    background: rgba(211, 255, 97, 0.05);
+    border-left: 4px solid var(--primary-green);
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-time {
+    font-size: 0.75rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.activity-message {
+    color: var(--primary-black);
+    font-size: 0.875rem;
+    margin: 0.25rem 0 0 0;
+}
+
+/* Responsive Enhancements */
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 1rem 0;
+    }
+    
+    .metric-card .card-body {
+        padding: 1.25rem;
+    }
+    
+    .metric-value {
+        font-size: 1.75rem;
+    }
+    
+    .table-card .card-header {
+        padding: 1rem;
+    }
+    
+    .performance-table {
+        font-size: 0.875rem;
+    }
+}
+
+/* Loading Animation */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.metric-card, .table-card, .chart-card, .activities-card {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.metric-card:nth-child(1) { animation-delay: 0.1s; }
+.metric-card:nth-child(2) { animation-delay: 0.2s; }
+.metric-card:nth-child(3) { animation-delay: 0.3s; }
+.metric-card:nth-child(4) { animation-delay: 0.4s; }
+</style>
+
+<div class="dashboard-container">
+    <!-- Metrics Row -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card">
+                <div class="card-body text-center">
+                    <div class="metric-icon mx-auto">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <div class="metric-title">RM Heads</div>
+                    <div class="metric-value">{{ rm_heads.count }}</div>
                 </div>
             </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover">
-                        <thead class="table-light">
-                            <tr>
-                                <th>RM Head</th>
-                                <th>Team Size</th>
-                                <th>Leads</th>
-                                <th>Conversions</th>
-                                <th>AUM (₹)</th>
-                                <th>SIPs</th>
-                                <th>Demat</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for rh in rm_heads %}
-                            <tr>
-                                <td>{{ rh.get_full_name }}</td>
-                                <td>{{ rh.team_members.count }}</td>
-                                <td>{{ rh.team_leads }}</td>
-                                <td>{{ rh.team_conversions }}</td>
-                                <td>₹{{ rh.team_aum|intcomma }}</td>
-                                <td>{{ rh.team_sips }}</td>
-                                <td>{{ rh.team_demat }}</td>
-                                <td>
-                                    <a href="#" class="btn btn-sm btn-outline-primary" title="View Team">
-                                        <i class="bi bi-people"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="8" class="text-center">No RM Heads reporting to you</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card">
+                <div class="card-body text-center">
+                    <div class="metric-icon mx-auto">
+                        <i class="bi bi-person-check"></i>
+                    </div>
+                    <div class="metric-title">Active RMs</div>
+                    <div class="metric-value">{{ rms.count }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card">
+                <div class="card-body text-center">
+                    <div class="metric-icon mx-auto">
+                        <i class="bi bi-person-plus"></i>
+                    </div>
+                    <div class="metric-title">Total Leads</div>
+                    <div class="metric-value">{{ total_leads|default:0|intcomma }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card">
+                <div class="card-body text-center">
+                    <div class="metric-icon mx-auto">
+                        <i class="bi bi-graph-up"></i>
+                    </div>
+                    <div class="metric-title">Conversions</div>
+                    <div class="metric-value">{{ conversions|default:0|intcomma }}</div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">Lead Status</h5>
-            </div>
-            <div class="card-body">
-                <canvas id="leadStatusChart" height="250"></canvas>
+
+    <!-- Main Content Row -->
+    <div class="row">
+        <div class="col-xl-8 col-lg-7 mb-4">
+            <div class="card table-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">RM Head Performance</h5>
+                    <div class="dropdown">
+                        <button class="btn date-selector dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown">
+                            <i class="bi bi-calendar me-2"></i>{{ timezone.now|date:"F Y" }}
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#">Last Month</a></li>
+                            <li><a class="dropdown-item" href="#">Quarter to Date</a></li>
+                            <li><a class="dropdown-item" href="#">Year to Date</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table performance-table">
+                            <thead>
+                                <tr>
+                                    <th>RM Head</th>
+                                    <th>Team Size</th>
+                                    <th>Leads</th>
+                                    <th>Conversions</th>
+                                    <th>AUM (₹)</th>
+                                    <th>SIPs</th>
+                                    <th>Demat</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rh in rm_heads %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm bg-light rounded-circle d-flex align-items-center justify-content-center me-3">
+                                                {{ rh.get_full_name|first }}
+                                            </div>
+                                            <strong>{{ rh.get_full_name }}</strong>
+                                        </div>
+                                    </td>
+                                    <td><span class="badge bg-primary rounded-pill">{{ rh.team_members.count }}</span></td>
+                                    <td><strong>{{ rh.team_leads }}</strong></td>
+                                    <td><strong class="text-success">{{ rh.team_conversions }}</strong></td>
+                                    <td><strong>₹{{ rh.team_aum|intcomma }}</strong></td>
+                                    <td>{{ rh.team_sips }}</td>
+                                    <td>{{ rh.team_demat }}</td>
+                                    <td>
+                                        <button class="btn action-btn" title="View Team">
+                                            <i class="bi bi-people"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        <i class="bi bi-people fs-1 d-block mb-2 opacity-25"></i>
+                                        No RM Heads reporting to you
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Recent Activities</h5>
+        
+        <div class="col-xl-4 col-lg-5">
+            <!-- Lead Status Chart -->
+            <div class="card chart-card">
+                <div class="card-header">
+                    <h5 class="mb-0">Lead Status Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="leadStatusChart" height="250"></canvas>
+                </div>
             </div>
-            <div class="card-body">
-                <div class="list-group list-group-flush">
-                    {% for activity in recent_activities %}
-                    <div class="list-group-item">
-                        <div class="d-flex w-100 justify-content-between">
-                            <small class="text-muted">{{ activity.timestamp|timesince }} ago</small>
+            
+            <!-- Recent Activities -->
+            <div class="card activities-card">
+                <div class="card-header">
+                    <h5 class="mb-0">Recent Activities</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for activity in recent_activities %}
+                        <div class="list-group-item activity-item">
+                            <div class="d-flex w-100 justify-content-between align-items-start">
+                                <div class="activity-time">{{ activity.timestamp|timesince }} ago</div>
+                            </div>
+                            <p class="activity-message">{{ activity.message }}</p>
                         </div>
-                        <p class="mb-1">{{ activity.message }}</p>
+                        {% empty %}
+                        <div class="activity-item text-center py-4">
+                            <i class="bi bi-clock-history fs-1 text-muted opacity-25 d-block mb-2"></i>
+                            <span class="text-muted">No recent activities</span>
+                        </div>
+                        {% endfor %}
                     </div>
-                    {% empty %}
-                    <div class="text-center text-muted py-3">No recent activities</div>
-                    {% endfor %}
                 </div>
             </div>
         </div>
@@ -154,8 +449,9 @@
 </div>
 
 {% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 <script>
-    // Lead Status Chart
+    // Enhanced Lead Status Chart
     const leadStatusCtx = document.getElementById('leadStatusChart').getContext('2d');
     const leadStatusChart = new Chart(leadStatusCtx, {
         type: 'doughnut',
@@ -164,31 +460,75 @@
             datasets: [{
                 data: [25, 15, 10, 5, 3],
                 backgroundColor: [
-                    'rgba(13, 110, 253, 0.7)',
-                    'rgba(255, 193, 7, 0.7)',
-                    'rgba(111, 66, 193, 0.7)',
-                    'rgba(25, 135, 84, 0.7)',
-                    'rgba(220, 53, 69, 0.7)'
+                    '#D3FF61',
+                    '#a8e63d',
+                    '#1a1a1a',
+                    '#2d2d2d',
+                    '#6c757d'
                 ],
-                borderColor: [
-                    'rgba(13, 110, 253, 1)',
-                    'rgba(255, 193, 7, 1)',
-                    'rgba(111, 66, 193, 1)',
-                    'rgba(25, 135, 84, 1)',
-                    'rgba(220, 53, 69, 1)'
-                ],
-                borderWidth: 1
+                borderColor: '#ffffff',
+                borderWidth: 3,
+                hoverBorderWidth: 4,
+                hoverOffset: 8
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            cutout: '60%',
             plugins: {
                 legend: {
                     position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        font: {
+                            family: 'Inter',
+                            size: 12,
+                            weight: '500'
+                        },
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    }
+                },
+                tooltip: {
+                    backgroundColor: '#1a1a1a',
+                    titleColor: '#ffffff',
+                    bodyColor: '#ffffff',
+                    borderColor: '#D3FF61',
+                    borderWidth: 1,
+                    cornerRadius: 8,
+                    displayColors: false
                 }
+            },
+            animation: {
+                animateScale: true,
+                animateRotate: true,
+                duration: 1000,
+                easing: 'easeOutCubic'
             }
         }
+    });
+
+    // Add loading states and interactions
+    document.addEventListener('DOMContentLoaded', function() {
+        // Animate metric cards on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.metric-card, .table-card, .chart-card, .activities-card').forEach(card => {
+            observer.observe(card);
+        });
     });
 </script>
 {% endblock %}
