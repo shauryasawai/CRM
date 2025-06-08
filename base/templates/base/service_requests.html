@@ -2,83 +2,171 @@
 {% block title %}Service Requests{% endblock %}
 {% block content %}
 <style>
+    :root {
+        --primary-bg: #D3FF61;
+        --card-bg: rgba(255, 255, 255, 0.95);
+        --text-primary: #000000;
+        --text-secondary: #333333;
+        --text-muted: #666666;
+        --border-color: rgba(0, 0, 0, 0.1);
+        --shadow-light: 0 2px 10px rgba(0, 0, 0, 0.08);
+        --shadow-medium: 0 4px 20px rgba(0, 0, 0, 0.12);
+        --shadow-heavy: 0 8px 40px rgba(0, 0, 0, 0.16);
+        --gradient-accent: linear-gradient(135deg, #D3FF61 0%, #B8E639 100%);
+        --gradient-dark: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        background: var(--primary-bg);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        line-height: 1.6;
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+    }
+
     .requests-container {
-        max-width: 1800px;
-        margin: 2rem auto;
+        max-width: 1400px;
+        margin: 0 auto;
         padding: 2rem;
-        position: relative;
-        animation: fadeInUp 0.8s ease-out;
+        animation: slideInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     .requests-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 2rem;
+        margin-bottom: 3rem;
         flex-wrap: wrap;
-        gap: 1rem;
+        gap: 1.5rem;
     }
 
     .requests-title {
-        font-size: 2.5rem;
-        font-weight: 700;
-        background: var(--gradient-aurora);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        font-size: clamp(2rem, 4vw, 3.5rem);
+        font-weight: 800;
+        color: var(--text-primary);
         margin: 0;
+        letter-spacing: -0.02em;
+        position: relative;
+    }
+
+    .requests-title::after {
+        content: '';
+        position: absolute;
+        bottom: -8px;
+        left: 0;
+        width: 60px;
+        height: 4px;
+        background: var(--gradient-dark);
+        border-radius: 2px;
     }
 
     .add-request-btn {
-        background: var(--gradient-primary);
+        background: var(--gradient-dark);
         color: white;
         border: none;
-        padding: 0.75rem 1.5rem;
-        border-radius: 8px;
+        padding: 1rem 2rem;
+        border-radius: 50px;
         font-weight: 600;
+        font-size: 0.95rem;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         text-decoration: none;
         display: inline-flex;
         align-items: center;
         gap: 0.5rem;
-        box-shadow: var(--shadow-md);
+        box-shadow: var(--shadow-medium);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .add-request-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s;
     }
 
     .add-request-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--shadow-lg);
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-heavy);
+    }
+
+    .add-request-btn:hover::before {
+        left: 100%;
+    }
+
+    .table-container {
+        background: var(--card-bg);
+        border-radius: 20px;
+        box-shadow: var(--shadow-medium);
+        overflow: hidden;
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--border-color);
     }
 
     .requests-table {
         width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-        background: var(--bg-card);
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: var(--shadow-sm);
+        border-collapse: collapse;
+        background: transparent;
     }
 
     .requests-table thead {
-        background: var(--gradient-cyber);
+        background: var(--gradient-dark);
+        position: relative;
+    }
+
+    .requests-table thead::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(211, 255, 97, 0.5), transparent);
     }
 
     .requests-table th {
-        padding: 1.25rem 1.5rem;
+        padding: 1.5rem 2rem;
         text-align: left;
         color: white;
-        font-weight: 600;
+        font-weight: 700;
         text-transform: uppercase;
-        font-size: 0.85rem;
-        letter-spacing: 0.05em;
+        font-size: 0.8rem;
+        letter-spacing: 0.1em;
+        position: relative;
     }
 
     .requests-table td {
-        padding: 1.25rem 1.5rem;
-        border-bottom: 1px solid var(--border-subtle);
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid var(--border-color);
         color: var(--text-secondary);
         font-weight: 500;
+        vertical-align: middle;
+    }
+
+    .requests-table tbody tr {
+        transition: all 0.3s ease;
+        position: relative;
     }
 
     .requests-table tbody tr:last-child td {
@@ -86,82 +174,131 @@
     }
 
     .requests-table tbody tr:hover {
-        background: rgba(59, 130, 246, 0.05);
+        background: rgba(0, 0, 0, 0.02);
+        transform: scale(1.001);
+    }
+
+    .requests-table tbody tr:hover::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 4px;
+        background: var(--gradient-dark);
+        border-radius: 0 2px 2px 0;
     }
 
     .status-badge {
-        display: inline-block;
-        padding: 0.35rem 0.75rem;
-        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
         font-size: 0.8rem;
-        font-weight: 600;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .status-badge::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        opacity: 0.1;
+        border-radius: inherit;
     }
 
     .status-open {
+        color: #d97706;
         background: rgba(245, 158, 11, 0.1);
-        color: var(--accent-warning);
+        border: 1px solid rgba(245, 158, 11, 0.2);
     }
 
     .status-in-progress {
-        background: rgba(59, 130, 246, 0.1);
-        color: var(--accent-primary);
+        color: #2563eb;
+        background: rgba(37, 99, 235, 0.1);
+        border: 1px solid rgba(37, 99, 235, 0.2);
     }
 
     .status-resolved {
-        background: rgba(16, 185, 129, 0.1);
-        color: var(--accent-success);
+        color: #059669;
+        background: rgba(5, 150, 105, 0.1);
+        border: 1px solid rgba(5, 150, 105, 0.2);
     }
 
     .status-closed {
-        background: rgba(108, 122, 137, 0.1);
-        color: var(--text-muted);
+        color: #6b7280;
+        background: rgba(107, 114, 128, 0.1);
+        border: 1px solid rgba(107, 114, 128, 0.2);
     }
 
     .action-buttons {
         display: flex;
         gap: 0.75rem;
+        align-items: center;
     }
 
     .action-btn {
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        font-weight: 500;
+        padding: 0.6rem 1.2rem;
+        border-radius: 12px;
+        font-weight: 600;
         font-size: 0.85rem;
-        transition: all 0.2s ease;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         text-decoration: none;
         display: inline-flex;
         align-items: center;
-        gap: 0.25rem;
+        gap: 0.4rem;
+        position: relative;
+        overflow: hidden;
     }
 
     .edit-btn {
-        background: rgba(59, 130, 246, 0.1);
-        color: var(--accent-primary);
-        border: 1px solid rgba(59, 130, 246, 0.3);
+        background: rgba(37, 99, 235, 0.1);
+        color: #2563eb;
+        border: 1px solid rgba(37, 99, 235, 0.2);
     }
 
     .edit-btn:hover {
-        background: rgba(59, 130, 246, 0.2);
+        background: rgba(37, 99, 235, 0.15);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
     }
 
     .delete-btn {
         background: rgba(239, 68, 68, 0.1);
-        color: var(--accent-danger);
-        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #dc2626;
+        border: 1px solid rgba(239, 68, 68, 0.2);
     }
 
     .delete-btn:hover {
-        background: rgba(239, 68, 68, 0.2);
+        background: rgba(239, 68, 68, 0.15);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
     }
 
     .empty-message {
         text-align: center;
-        padding: 3rem;
+        padding: 4rem 2rem;
         color: var(--text-muted);
         font-size: 1.1rem;
-        background: var(--bg-card);
-        border-radius: 16px;
-        margin-top: 1rem;
+        background: var(--card-bg);
+        border-radius: 20px;
+        box-shadow: var(--shadow-light);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--border-color);
+    }
+
+    .empty-message::before {
+        content: '📋';
+        display: block;
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
     }
 
     .description-text {
@@ -169,16 +306,33 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        font-weight: 500;
     }
 
     .client-info {
         display: flex;
         align-items: center;
-        gap: 0.75rem;
+        gap: 1rem;
+        font-weight: 600;
+        color: var(--text-primary);
     }
 
     .client-icon {
-        color: var(--accent-purple);
+        color: var(--text-primary);
+        font-size: 1.1rem;
+        opacity: 0.7;
+    }
+
+    .raised-by {
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1200px) {
+        .requests-container {
+            padding: 1.5rem;
+        }
     }
 
     @media (max-width: 768px) {
@@ -186,19 +340,97 @@
             padding: 1rem;
         }
 
-        .requests-table {
-            display: block;
+        .requests-header {
+            flex-direction: column;
+            align-items: stretch;
+            text-align: center;
+            gap: 1rem;
+        }
+
+        .table-container {
             overflow-x: auto;
+            border-radius: 16px;
+        }
+
+        .requests-table {
+            min-width: 700px;
+        }
+
+        .requests-table th,
+        .requests-table td {
+            padding: 1rem 1.5rem;
         }
 
         .action-buttons {
             flex-direction: column;
             gap: 0.5rem;
+            min-width: 120px;
+        }
+
+        .description-text {
+            max-width: 200px;
+        }
+
+        .add-request-btn {
+            justify-content: center;
+            padding: 1rem 1.5rem;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .requests-table th,
+        .requests-table td {
+            padding: 0.75rem 1rem;
         }
 
         .description-text {
             max-width: 150px;
         }
+
+        .client-info {
+            gap: 0.5rem;
+        }
+    }
+
+    /* Loading Animation */
+    .requests-table tbody tr {
+        animation: fadeInRow 0.5s ease-out backwards;
+    }
+
+    .requests-table tbody tr:nth-child(1) { animation-delay: 0.1s; }
+    .requests-table tbody tr:nth-child(2) { animation-delay: 0.2s; }
+    .requests-table tbody tr:nth-child(3) { animation-delay: 0.3s; }
+    .requests-table tbody tr:nth-child(4) { animation-delay: 0.4s; }
+    .requests-table tbody tr:nth-child(5) { animation-delay: 0.5s; }
+
+    @keyframes fadeInRow {
+        from {
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    /* Scrollbar Styling */
+    .table-container::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .table-container::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.05);
+        border-radius: 4px;
+    }
+
+    .table-container::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 4px;
+    }
+
+    .table-container::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.3);
     }
 </style>
 
@@ -211,48 +443,59 @@
     </div>
 
     {% if service_requests %}
-    <table class="requests-table">
-        <thead>
-            <tr>
-                <th>Client</th>
-                <th>Description</th>
-                <th>Status</th>
-                <th>Raised By</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for req in service_requests %}
-            <tr>
-                <td class="client-info">
-                    <i class="fas fa-building client-icon"></i>
-                    {{ req.client.name }}
-                </td>
-                <td class="description-text">{{ req.description|truncatechars:50 }}</td>
-                <td>
-                    <span class="status-badge status-{{ req.status|lower|slugify }}">
-                        {{ req.status }}
-                    </span>
-                </td>
-                <td>{{ req.raised_by.get_full_name }}</td>
-                <td>
-                    <div class="action-buttons">
-                        <a href="{% url 'service_request_update' req.pk %}" class="action-btn edit-btn">
-                            <i class="fas fa-edit"></i> Edit
-                        </a>
-                        <a href="{% url 'service_request_delete' req.pk %}" class="action-btn delete-btn">
-                            <i class="fas fa-trash"></i> Delete
-                        </a>
-                    </div>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-container">
+        <table class="requests-table">
+            <thead>
+                <tr>
+                    <th>Client</th>
+                    <th>Description</th>
+                    <th>Status</th>
+                    <th>Raised By</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in service_requests %}
+                <tr>
+                    <td>
+                        <div class="client-info">
+                            <i class="fas fa-building client-icon"></i>
+                            <span>{{ req.client.name }}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="description-text" title="{{ req.description }}">
+                            {{ req.description|truncatechars:50 }}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="status-badge status-{{ req.status|lower|slugify }}">
+                            {{ req.status }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="raised-by">{{ req.raised_by.get_full_name }}</div>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <a href="{% url 'service_request_update' req.pk %}" class="action-btn edit-btn">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                            <a href="{% url 'service_request_delete' req.pk %}" class="action-btn delete-btn">
+                                <i class="fas fa-trash"></i> Delete
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
     {% else %}
     <div class="empty-message">
-        <p>No service requests found.</p>
+        <p>No service requests found. Create your first request to get started!</p>
     </div>
     {% endif %}
 </div>
+
 {% endblock %}

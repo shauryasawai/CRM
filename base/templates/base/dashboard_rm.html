@@ -3,80 +3,76 @@
 
 {% block extra_css %}
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+    
     :root {
-        --bg-primary: #0c0d21;
-        --bg-secondary: #151629;
-        --bg-card: #1a1b35;
-        --bg-accent: #1f2041;
-        --text-primary: #f0f2f5;
-        --text-secondary: #a8abb2;
-        --text-muted: #6b7280;
-        --accent-primary: #3b82f6;
-        --accent-success: #10b981;
-        --accent-warning: #f59e0b;
-        --accent-danger: #ef4444;
-        --accent-purple: #8b5cf6;
-        --accent-cyan: #06b6d4;
-        --accent-pink: #ec4899;
-        --border-subtle: #2d3748;
-        --border-accent: #374151;
-        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
-        --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.15);
-        --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.25);
-        --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.35);
-        --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        --gradient-success: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
-        --gradient-warning: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        --gradient-danger: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
-        --gradient-cyber: linear-gradient(135deg, #0f3460 0%, #0d5f8a 50%, #2196f3 100%);
-        --gradient-aurora: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+        --bg-primary: #D3FF61;
+        --bg-secondary: #EFFFAB;
+        --bg-card: #FFFFFF;
+        --bg-accent: #F8FFF0;
+        --bg-overlay: rgba(255, 255, 255, 0.95);
+        --text-primary: #1A1A1A;
+        --text-secondary: #404040;
+        --text-muted: #6B7280;
+        --text-contrast: #FFFFFF;
+        --accent-primary: #000000;
+        --accent-success: #059669;
+        --accent-warning: #D97706;
+        --accent-danger: #DC2626;
+        --accent-purple: #7C3AED;
+        --accent-cyan: #0891B2;
+        --accent-pink: #DB2777;
+        --border-light: #E5E7EB;
+        --border-accent: #D1D5DB;
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        --gradient-primary: linear-gradient(135deg, #D3FF61 0%, #EFFFAB 100%);
+        --gradient-dark: linear-gradient(135deg, #1A1A1A 0%, #404040 100%);
+        --gradient-success: linear-gradient(135deg, #059669 0%, #10B981 100%);
+        --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+        --gradient-mesh: radial-gradient(circle at 20% 20%, rgba(211, 255, 97, 0.3) 0%, transparent 50%),
+                         radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.3) 0%, transparent 50%),
+                         radial-gradient(circle at 40% 40%, rgba(0, 0, 0, 0.1) 0%, transparent 50%);
     }
 
     * {
         box-sizing: border-box;
+        margin: 0;
+        padding: 0;
     }
 
     body {
         background: var(--bg-primary);
+        background-image: var(--gradient-mesh);
         color: var(--text-primary);
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        margin: 0;
-        padding: 0;
-        min-height: 100vh;
         line-height: 1.6;
         overflow-x: hidden;
+        min-height: 100vh;
     }
 
     .dashboard-container {
-        max-width: 1800px;
+        max-width: 1920px;
         margin: 0 auto;
         padding: 2rem;
         position: relative;
-        animation: fadeInUp 0.8s ease-out;
+        animation: fadeInUp 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     }
 
     .dashboard-container::before {
         content: '';
-        position: absolute;
-        top: -100px;
-        left: -100px;
-        width: 300px;
-        height: 300px;
-        background: radial-gradient(circle, rgba(59, 130, 246, 0.05) 0%, transparent 70%);
-        border-radius: 50%;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(45deg, transparent 0%, rgba(255, 255, 255, 0.02) 50%, transparent 100%);
+        animation: shimmer 3s ease-in-out infinite;
         pointer-events: none;
-    }
-
-    .dashboard-container::after {
-        content: '';
-        position: absolute;
-        bottom: -150px;
-        right: -150px;
-        width: 400px;
-        height: 400px;
-        background: radial-gradient(circle, rgba(139, 92, 246, 0.05) 0%, transparent 70%);
-        border-radius: 50%;
-        pointer-events: none;
+        z-index: 1;
     }
 
     .dashboard-header {
@@ -87,38 +83,60 @@
     }
 
     .dashboard-title {
-        font-size: 3.5rem;
+        font-size: clamp(2.5rem, 5vw, 4rem);
         font-weight: 900;
-        background: var(--gradient-aurora);
+        background: var(--gradient-dark);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
         margin-bottom: 1rem;
-        letter-spacing: -0.025em;
+        letter-spacing: -0.05em;
         line-height: 1.1;
+        position: relative;
+    }
+
+    .dashboard-title::after {
+        content: '';
+        position: absolute;
+        bottom: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60px;
+        height: 4px;
+        background: var(--gradient-primary);
+        border-radius: 2px;
     }
 
     .welcome-text {
-        font-size: 1.25rem;
+        font-size: 1.3rem;
         color: var(--text-secondary);
-        margin-bottom: 1rem;
-        font-weight: 400;
+        margin-bottom: 2rem;
+        font-weight: 500;
+        opacity: 0.9;
     }
 
     .role-indicator {
         display: inline-flex;
         align-items: center;
         gap: 0.75rem;
-        padding: 0.75rem 1.5rem;
-        background: rgba(59, 130, 246, 0.1);
-        border: 1px solid rgba(59, 130, 246, 0.3);
-        border-radius: 30px;
-        color: var(--accent-primary);
-        font-weight: 600;
+        padding: 1rem 2rem;
+        background: var(--bg-card);
+        border: 2px solid var(--border-light);
+        border-radius: 50px;
+        color: var(--text-primary);
+        font-weight: 700;
         font-size: 1rem;
-        letter-spacing: 0.025em;
+        letter-spacing: 0.05em;
         position: relative;
         overflow: hidden;
+        box-shadow: var(--shadow-lg);
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .role-indicator:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-xl);
+        border-color: var(--accent-primary);
     }
 
     .role-indicator::before {
@@ -128,37 +146,84 @@
         left: -100%;
         width: 100%;
         height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-        animation: shimmer 3s infinite;
+        background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.05), transparent);
+        animation: slideShimmer 3s infinite;
     }
 
     .role-icon {
-        font-size: 1.25rem;
+        font-size: 1.5rem;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
     }
 
     /* Role-specific styling */
     .role-top-management {
-        background: rgba(236, 72, 153, 0.1);
-        border-color: rgba(236, 72, 153, 0.3);
-        color: var(--accent-pink);
+        background: linear-gradient(135deg, #DB2777 0%, #EC4899 100%);
+        color: var(--text-contrast);
+        border-color: #DB2777;
     }
 
     .role-business-head {
-        background: rgba(139, 92, 246, 0.1);
-        border-color: rgba(139, 92, 246, 0.3);
-        color: var(--accent-purple);
+        background: linear-gradient(135deg, #7C3AED 0%, #8B5CF6 100%);
+        color: var(--text-contrast);
+        border-color: #7C3AED;
     }
 
     .role-rm-head {
-        background: rgba(6, 182, 212, 0.1);
-        border-color: rgba(6, 182, 212, 0.3);
-        color: var(--accent-cyan);
+        background: linear-gradient(135deg, #0891B2 0%, #06B6D4 100%);
+        color: var(--text-contrast);
+        border-color: #0891B2;
     }
 
     .role-rm {
-        background: rgba(16, 185, 129, 0.1);
-        border-color: rgba(16, 185, 129, 0.3);
-        color: var(--accent-success);
+        background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+        color: var(--text-contrast);
+        border-color: #059669;
+    }
+
+    .header-actions {
+        display: flex;
+        justify-content: center;
+        gap: 1.5rem;
+        margin-top: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem 2rem;
+        background: var(--bg-card);
+        color: var(--text-primary);
+        text-decoration: none;
+        border-radius: 16px;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        border: 2px solid var(--border-light);
+        box-shadow: var(--shadow-md);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .action-btn:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-xl);
+        border-color: var(--accent-primary);
+        background: var(--accent-primary);
+        color: var(--text-contrast);
+    }
+
+    .btn-hrms {
+        background: var(--gradient-dark);
+        color: var(--text-contrast);
+        border-color: var(--accent-primary);
+    }
+
+    .btn-hrms:hover {
+        background: var(--bg-card);
+        color: var(--text-primary);
+        transform: translateY(-4px) scale(1.05);
     }
 
     .dashboard-content {
@@ -167,53 +232,178 @@
     }
 
     .section-title {
-        font-size: 1.75rem;
-        font-weight: 700;
+        font-size: 2rem;
+        font-weight: 800;
         color: var(--text-primary);
-        margin-bottom: 2rem;
+        margin-bottom: 2.5rem;
         display: flex;
         align-items: center;
-        gap: 0.75rem;
+        gap: 1rem;
     }
 
     .section-icon {
-        width: 40px;
-        height: 40px;
-        background: var(--gradient-cyber);
-        border-radius: 12px;
+        width: 50px;
+        height: 50px;
+        background: var(--gradient-dark);
+        border-radius: 16px;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: white;
-        font-size: 1.2rem;
+        color: var(--text-contrast);
+        font-size: 1.5rem;
+        box-shadow: var(--shadow-lg);
     }
 
     /* KPI Grid for Top Management */
     .kpi-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
         gap: 2rem;
         margin-bottom: 3rem;
     }
 
     .kpi-card {
         background: var(--bg-card);
-        border: 1px solid var(--border-subtle);
-        border-radius: 20px;
+        border: 1px solid var(--border-light);
+        border-radius: 24px;
         padding: 2.5rem;
         position: relative;
         overflow: hidden;
         transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         cursor: pointer;
+        box-shadow: var(--shadow-md);
+        backdrop-filter: blur(10px);
+    }
+
+    .kpi-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 5px;
+        background: var(--gradient-primary);
+        border-radius: 24px 24px 0 0;
     }
 
     .kpi-card:hover {
-        transform: translateY(-8px) scale(1.02);
+        transform: translateY(-12px) scale(1.02);
+        box-shadow: var(--shadow-2xl);
+        border-color: var(--accent-primary);
+    }
+
+    .kpi-card.success::before { 
+        background: var(--gradient-success); 
+    }
+    
+    .kpi-card.warning::before { 
+        background: linear-gradient(135deg, #D97706 0%, #F59E0B 100%); 
+    }
+    
+    .kpi-card.danger::before { 
+        background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%); 
+    }
+
+    .kpi-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+    }
+
+    .kpi-icon {
+        width: 70px;
+        height: 70px;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.2rem;
+        background: linear-gradient(135deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.05));
+        color: var(--text-primary);
+        box-shadow: var(--shadow-md);
+        transition: all 0.3s ease;
+    }
+
+    .kpi-card:hover .kpi-icon {
+        transform: scale(1.1);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .kpi-card.success .kpi-icon {
+        background: linear-gradient(135deg, rgba(5, 150, 105, 0.2), rgba(16, 185, 129, 0.1));
+        color: var(--accent-success);
+    }
+
+    .kpi-card.warning .kpi-icon {
+        background: linear-gradient(135deg, rgba(217, 119, 6, 0.2), rgba(245, 158, 11, 0.1));
+        color: var(--accent-warning);
+    }
+
+    .kpi-trend {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--accent-success);
+        background: rgba(5, 150, 105, 0.1);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+    }
+
+    .kpi-label {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+    }
+
+    .kpi-value {
+        font-size: 2.8rem;
+        font-weight: 900;
+        color: var(--text-primary);
+        line-height: 1;
+        margin-bottom: 1rem;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .kpi-description {
+        font-size: 1rem;
+        color: var(--text-secondary);
+        line-height: 1.5;
+        opacity: 0.8;
+    }
+
+    /* Metrics Grid for other roles */
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+
+    .metric-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-light);
+        border-radius: 20px;
+        padding: 2rem;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        cursor: pointer;
+        box-shadow: var(--shadow-md);
+    }
+
+    .metric-card:hover {
+        transform: translateY(-8px);
         box-shadow: var(--shadow-xl);
         border-color: var(--accent-primary);
     }
 
-    .kpi-card::before {
+    .metric-card::before {
         content: '';
         position: absolute;
         top: 0;
@@ -224,134 +414,36 @@
         border-radius: 20px 20px 0 0;
     }
 
-    .kpi-card.success::before { background: var(--gradient-success); }
-    .kpi-card.warning::before { background: var(--gradient-warning); }
-    .kpi-card.danger::before { background: var(--gradient-danger); }
-
-    .kpi-header {
+    .metric-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
         margin-bottom: 1.5rem;
     }
 
-    .kpi-icon {
-        width: 60px;
-        height: 60px;
-        border-radius: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 2rem;
-        background: rgba(59, 130, 246, 0.1);
-        color: var(--accent-primary);
-    }
-
-    .kpi-card.success .kpi-icon {
-        background: rgba(16, 185, 129, 0.1);
-        color: var(--accent-success);
-    }
-
-    .kpi-card.warning .kpi-icon {
-        background: rgba(245, 158, 11, 0.1);
-        color: var(--accent-warning);
-    }
-
-    .kpi-trend {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-size: 0.9rem;
-        font-weight: 500;
-        color: var(--accent-success);
-    }
-
-    .kpi-label {
-        font-size: 1rem;
-        color: var(--text-secondary);
-        font-weight: 500;
-        margin-bottom: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    .kpi-value {
-        font-size: 2.5rem;
-        font-weight: 900;
-        color: var(--text-primary);
-        line-height: 1;
-        margin-bottom: 0.5rem;
-    }
-
-    .kpi-description {
-        font-size: 0.9rem;
-        color: var(--text-muted);
-        line-height: 1.5;
-    }
-
-    /* Metrics Grid for other roles */
-    .metrics-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 3rem;
-    }
-
-    .metric-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border-subtle);
-        border-radius: 16px;
-        padding: 2rem;
-        position: relative;
-        overflow: hidden;
-        transition: all 0.3s ease;
-        cursor: pointer;
-    }
-
-    .metric-card:hover {
-        transform: translateY(-4px);
-        box-shadow: var(--shadow-lg);
-        border-color: var(--accent-primary);
-    }
-
-    .metric-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: var(--gradient-primary);
-    }
-
-    .metric-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 1rem;
-    }
-
     .metric-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.5rem;
-        background: rgba(59, 130, 246, 0.1);
-        color: var(--accent-primary);
+        font-size: 1.8rem;
+        background: linear-gradient(135deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.05));
+        color: var(--text-primary);
+        box-shadow: var(--shadow-sm);
     }
 
     .metric-value {
-        font-size: 2rem;
+        font-size: 2.5rem;
         font-weight: 800;
         color: var(--text-primary);
         margin-bottom: 0.5rem;
+        font-variant-numeric: tabular-nums;
     }
 
     .metric-label {
-        font-size: 0.9rem;
+        font-size: 1rem;
         color: var(--text-secondary);
         font-weight: 500;
     }
@@ -359,49 +451,69 @@
     .metric-badge {
         display: inline-flex;
         align-items: center;
-        padding: 0.25rem 0.75rem;
-        background: rgba(16, 185, 129, 0.1);
+        padding: 0.4rem 1rem;
+        background: rgba(5, 150, 105, 0.1);
         color: var(--accent-success);
-        border-radius: 12px;
-        font-size: 0.8rem;
+        border-radius: 16px;
+        font-size: 0.85rem;
         font-weight: 600;
+        border: 1px solid rgba(5, 150, 105, 0.2);
     }
 
     /* Stats List for simpler layouts */
     .stats-list {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
         gap: 1.5rem;
     }
 
     .stat-item {
         background: var(--bg-card);
-        border: 1px solid var(--border-subtle);
-        border-radius: 12px;
-        padding: 1.5rem;
+        border: 1px solid var(--border-light);
+        border-radius: 16px;
+        padding: 2rem;
         display: flex;
         align-items: center;
-        gap: 1rem;
-        transition: all 0.3s ease;
+        gap: 1.5rem;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        box-shadow: var(--shadow-md);
+        position: relative;
+        overflow: hidden;
     }
 
     .stat-item:hover {
-        transform: translateX(4px);
+        transform: translateX(8px) translateY(-4px);
         border-color: var(--accent-primary);
-        box-shadow: var(--shadow-md);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .stat-item::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: var(--gradient-primary);
+        transition: width 0.3s ease;
+    }
+
+    .stat-item:hover::before {
+        width: 8px;
     }
 
     .stat-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 10px;
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.2rem;
-        background: rgba(59, 130, 246, 0.1);
-        color: var(--accent-primary);
+        font-size: 1.5rem;
+        background: linear-gradient(135deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.05));
+        color: var(--text-primary);
         flex-shrink: 0;
+        box-shadow: var(--shadow-sm);
     }
 
     .stat-content {
@@ -409,14 +521,15 @@
     }
 
     .stat-value {
-        font-size: 1.5rem;
-        font-weight: 700;
+        font-size: 2rem;
+        font-weight: 800;
         color: var(--text-primary);
         margin-bottom: 0.25rem;
+        font-variant-numeric: tabular-nums;
     }
 
     .stat-label {
-        font-size: 0.85rem;
+        font-size: 0.95rem;
         color: var(--text-secondary);
         font-weight: 500;
     }
@@ -424,12 +537,14 @@
     /* Performance Chart Area */
     .chart-section {
         background: var(--bg-card);
-        border: 1px solid var(--border-subtle);
-        border-radius: 20px;
-        padding: 2rem;
+        border: 1px solid var(--border-light);
+        border-radius: 24px;
+        padding: 2.5rem;
         margin: 2rem 0;
         position: relative;
         overflow: hidden;
+        box-shadow: var(--shadow-lg);
+        backdrop-filter: blur(10px);
     }
 
     .chart-section::before {
@@ -438,8 +553,9 @@
         top: 0;
         left: 0;
         right: 0;
-        height: 4px;
-        background: var(--gradient-cyber);
+        height: 5px;
+        background: var(--gradient-dark);
+        border-radius: 24px 24px 0 0;
     }
 
     .chart-header {
@@ -447,18 +563,23 @@
         align-items: center;
         justify-content: space-between;
         margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
     }
 
     .chart-title {
-        font-size: 1.4rem;
-        font-weight: 600;
+        font-size: 1.6rem;
+        font-weight: 700;
         color: var(--text-primary);
     }
 
     .chart-placeholder {
-        height: 300px;
-        background: linear-gradient(45deg, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05));
-        border-radius: 12px;
+        height: 320px;
+        background: linear-gradient(135deg, 
+            rgba(211, 255, 97, 0.1) 0%,
+            rgba(255, 255, 255, 0.1) 50%,
+            rgba(0, 0, 0, 0.05) 100%);
+        border-radius: 16px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -467,48 +588,43 @@
         flex-direction: column;
         gap: 1rem;
         transition: all 0.3s ease;
-    }
-
-    .header-actions {
-        display: flex;
-        justify-content: center;
-        gap: 1.5rem;
-        margin-top: 1.5rem;
-        flex-wrap: wrap;
-    }
-
-    /* Add this for the HRMS button specific styling */
-    .btn-hrms {
-        background: var(--gradient-primary);
-        color: white;
-        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        position: relative;
+        overflow: hidden;
     }
 
     .chart-placeholder:hover {
         border-color: var(--accent-primary);
-        background: linear-gradient(45deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
+        background: linear-gradient(135deg, 
+            rgba(211, 255, 97, 0.2) 0%,
+            rgba(255, 255, 255, 0.2) 50%,
+            rgba(0, 0, 0, 0.1) 100%);
+        transform: scale(1.01);
     }
 
     .placeholder-icon {
-        font-size: 3rem;
-        opacity: 0.5;
+        font-size: 4rem;
+        opacity: 0.6;
+        color: var(--text-primary);
     }
 
     .placeholder-text {
-        font-size: 1.1rem;
-        font-weight: 500;
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: var(--text-primary);
     }
 
     .placeholder-subtext {
-        font-size: 0.9rem;
+        font-size: 1rem;
         opacity: 0.7;
+        color: var(--text-secondary);
+        text-align: center;
     }
 
     /* Animations */
     @keyframes fadeInUp {
         from {
             opacity: 0;
-            transform: translateY(30px);
+            transform: translateY(40px);
         }
         to {
             opacity: 1;
@@ -517,23 +633,53 @@
     }
 
     @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    @keyframes slideShimmer {
         0% { left: -100%; }
         100% { left: 100%; }
     }
 
     @keyframes pulse {
         0%, 100% { opacity: 1; }
-        50% { opacity: 0.8; }
+        50% { opacity: 0.7; }
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
     }
 
     .loading {
         animation: pulse 2s infinite;
     }
 
+    .floating {
+        animation: float 6s ease-in-out infinite;
+    }
+
     /* Responsive Design */
-    @media (max-width: 1200px) {
+    @media (max-width: 1400px) {
         .kpi-grid {
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        }
+    }
+
+    @media (max-width: 1024px) {
+        .dashboard-container {
+            padding: 1.5rem;
+        }
+        
+        .kpi-grid,
+        .metrics-grid {
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .stats-list {
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
         }
     }
 
@@ -546,28 +692,46 @@
             font-size: 2.5rem;
         }
         
+        .welcome-text {
+            font-size: 1.1rem;
+        }
+        
         .kpi-grid,
-        .metrics-grid {
+        .metrics-grid,
+        .stats-list {
             grid-template-columns: 1fr;
             gap: 1rem;
         }
         
         .kpi-card,
-        .metric-card {
+        .metric-card,
+        .stat-item {
             padding: 1.5rem;
         }
         
         .kpi-value,
-        .metric-value {
+        .metric-value,
+        .stat-value {
             font-size: 2rem;
         }
         
-        .stats-list {
-            grid-template-columns: 1fr;
+        .chart-placeholder {
+            height: 250px;
         }
         
-        .chart-placeholder {
-            height: 200px;
+        .section-title {
+            font-size: 1.5rem;
+        }
+        
+        .header-actions {
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .action-btn {
+            width: 100%;
+            max-width: 300px;
+            justify-content: center;
         }
     }
 
@@ -580,14 +744,62 @@
             font-size: 2rem;
         }
         
-        .welcome-text {
-            font-size: 1.1rem;
-        }
-        
         .role-indicator {
-            padding: 0.5rem 1rem;
+            padding: 0.75rem 1.5rem;
             font-size: 0.9rem;
         }
+        
+        .kpi-card,
+        .metric-card,
+        .stat-item {
+            padding: 1.25rem;
+        }
+        
+        .chart-section {
+            padding: 1.5rem;
+        }
+    }
+
+    /* Print Styles */
+    @media print {
+        .dashboard-container {
+            background: white;
+            color: black;
+        }
+        
+        .action-btn {
+            display: none;
+        }
+        
+        .chart-placeholder {
+            border: 1px solid #ccc;
+        }
+    }
+
+    /* Dark mode compatibility */
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --text-primary: #1A1A1A;
+            --text-secondary: #404040;
+        }
+    }
+
+    /* Accessibility improvements */
+    @media (prefers-reduced-motion: reduce) {
+        * {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+
+    /* Focus states for accessibility */
+    .action-btn:focus,
+    .kpi-card:focus,
+    .metric-card:focus,
+    .stat-item:focus {
+        outline: 3px solid var(--accent-primary);
+        outline-offset: 2px;
     }
 </style>
 {% endblock %}
@@ -631,7 +843,7 @@
             </h2>
             
             <div class="kpi-grid">
-                <div class="kpi-card">
+                <div class="kpi-card floating">
                     <div class="kpi-header">
                         <div class="kpi-icon">💰</div>
                         <div class="kpi-trend">
@@ -643,7 +855,7 @@
                     <div class="kpi-description">Assets Under Management across all portfolios</div>
                 </div>
 
-                <div class="kpi-card success">
+                <div class="kpi-card success floating">
                     <div class="kpi-header">
                         <div class="kpi-icon">🔄</div>
                         <div class="kpi-trend">
@@ -655,7 +867,7 @@
                     <div class="kpi-description">Systematic Investment Plans currently active</div>
                 </div>
 
-                <div class="kpi-card warning">
+                <div class="kpi-card warning floating">
                     <div class="kpi-header">
                         <div class="kpi-icon">👥</div>
                         <div class="kpi-trend">
@@ -667,245 +879,3 @@
                     <div class="kpi-description">Overall team efficiency and performance metrics</div>
                 </div>
             </div>
-
-            <!-- Performance Chart -->
-            <div class="chart-section">
-                <div class="chart-header">
-                    <h3 class="chart-title">📈 Executive Performance Analytics</h3>
-                    <div class="metric-badge">Real-time Data</div>
-                </div>
-                <div class="header-actions" style="margin-top: 2rem;">
-                <a href="{% url 'hrm_dashboard' %}" class="action-btn btn-hrms">
-                    <span>👥</span> HRMS Portal
-                </a></div>
-                <div class="chart-placeholder">
-                    <div class="placeholder-icon">📊</div>
-                    <div class="placeholder-text">Advanced Analytics Dashboard</div>
-                    <div class="placeholder-subtext">Integrate with your preferred charting library</div>
-                </div>
-            </div>
-
-        {% elif request.user.role == 'business_head' %}
-            <!-- Business Head Overview -->
-            <h2 class="section-title">
-                <div class="section-icon">🎯</div>
-                Business Intelligence Hub
-            </h2>
-            
-            <div class="metrics-grid">
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">👥</div>
-                        <div class="metric-badge">Active</div>
-                    </div>
-                    <div class="metric-value">{{ rm_heads.count|default:"0" }}</div>
-                    <div class="metric-label">RM Heads Under You</div>
-                </div>
-
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">🎯</div>
-                        <div class="metric-badge">Pipeline</div>
-                    </div>
-                    <div class="metric-value">{{ total_leads|default:"0" }}</div>
-                    <div class="metric-label">Total Leads</div>
-                </div>
-
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">⚡</div>
-                        <div class="metric-badge">{{ service_performance|default:"Excellent" }}</div>
-                    </div>
-                    <div class="metric-value">94%</div>
-                    <div class="metric-label">Service Performance</div>
-                </div>
-            </div>
-
-            <!-- Business Chart -->
-            <div class="chart-section">
-                <div class="chart-header">
-                    <h3 class="chart-title">🏢 Business Performance Overview</h3>
-                    <div class="metric-badge">Updated Now</div>
-                </div>
-                <div class="chart-placeholder">
-                    <div class="placeholder-icon">📈</div>
-                    <div class="placeholder-text">Business Metrics Dashboard</div>
-                    <div class="placeholder-subtext">Team performance and lead conversion analytics</div>
-                </div>
-            </div>
-
-        {% elif request.user.role == 'rm_head' %}
-            <!-- RM Head Dashboard -->
-            <h2 class="section-title">
-                <div class="section-icon">⚡</div>
-                Regional Management Center
-            </h2>
-            
-            <div class="stats-list">
-                <div class="stat-item">
-                    <div class="stat-icon">🎯</div>
-                    <div class="stat-content">
-                        <div class="stat-value">{{ leads.count|default:"0" }}</div>
-                        <div class="stat-label">Your Personal Leads</div>
-                    </div>
-                </div>
-
-                <div class="stat-item">
-                    <div class="stat-icon">👥</div>
-                    <div class="stat-content">
-                        <div class="stat-value">{{ team_leads.count|default:"0" }}</div>
-                        <div class="stat-label">Your Team Leads</div>
-                    </div>
-                </div>
-
-                <div class="stat-item">
-                    <div class="stat-icon">📋</div>
-                    <div class="stat-content">
-                        <div class="stat-value">{{ tasks.count|default:"0" }}</div>
-                        <div class="stat-label">Active Tasks</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- RM Head Chart -->
-            <div class="chart-section">
-                <div class="chart-header">
-                    <h3 class="chart-title">⚡ Team Performance Analytics</h3>
-                    <div class="metric-badge">Live Updates</div>
-                </div>
-                <div class="header-actions" style="margin-top: 2rem;">
-                <a href="{% url 'hrm_dashboard' %}" class="action-btn btn-hrms">
-                    <span>👥</span> HRMS Portal
-                </a>
-            </div>
-                <div class="chart-placeholder">
-                    <div class="placeholder-icon">📊</div>
-                    <div class="placeholder-text">Regional Performance Dashboard</div>
-                    <div class="placeholder-subtext">Team leads and task completion analytics</div>
-                </div>
-            </div>
-
-        {% else %}
-            <!-- Relationship Manager -->
-            <h2 class="section-title">
-                <div class="section-icon">🤝</div>
-                Relationship Manager Hub
-            </h2>
-            
-            <div class="stats-list">
-                <div class="stat-item">
-                    <div class="stat-icon">🎯</div>
-                    <div class="stat-content">
-                        <div class="stat-value">{{ leads.count|default:"0" }}</div>
-                        <div class="stat-label">Your Leads</div>
-                    </div>
-                </div>
-
-                <div class="stat-item">
-                    <div class="stat-icon">📋</div>
-                    <div class="stat-content">
-                        <div class="stat-value">{{ tasks.count|default:"0" }}</div>
-                        <div class="stat-label">Your Tasks</div>
-                    </div>
-                </div>
-
-                <div class="stat-item">
-                    <div class="stat-icon">🎫</div>
-                    <div class="stat-content">
-                        <div class="stat-value">{{ service_requests.count|default:"0" }}</div>
-                        <div class="stat-label">Service Tickets</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- RM Chart -->
-            <div class="chart-section">
-                <div class="chart-header">
-                    <h3 class="chart-title">🤝 Personal Performance Dashboard</h3>
-                    <div class="metric-badge">Your Stats</div>
-                </div>
-                <div class="chart-placeholder">
-                    <div class="placeholder-icon">📈</div>
-                    <div class="placeholder-text">Personal Performance Analytics</div>
-                    <div class="placeholder-subtext">Lead conversion and task completion metrics</div>
-                </div>
-            </div>
-        {% endif %}
-    </div>
-</div>
-
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Animate dashboard elements on load
-    const animatedElements = document.querySelectorAll('.kpi-card, .metric-card, .stat-item, .chart-section');
-    
-    animatedElements.forEach((element, index) => {
-        element.style.opacity = '0';
-        element.style.transform = 'translateY(20px)';
-        
-        setTimeout(() => {
-            element.style.transition = 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-            element.style.opacity = '1';
-            element.style.transform = 'translateY(0)';
-        }, index * 150);
-    });
-
-    // Add interactive hover effects
-    const cards = document.querySelectorAll('.kpi-card, .metric-card');
-    cards.forEach(card => {
-        card.addEventListener('mouseenter', function() {
-            this.style.zIndex = '10';
-        });
-        
-        card.addEventListener('mouseleave', function() {
-            this.style.zIndex = '1';
-        });
-    });
-
-    // Stat items hover effect
-    const statItems = document.querySelectorAll('.stat-item');
-    statItems.forEach(item => {
-        item.addEventListener('mouseenter', function() {
-            this.style.background = 'var(--bg-accent)';
-        });
-        
-        item.addEventListener('mouseleave', function() {
-            this.style.background = 'var(--bg-card)';
-        });
-    });
-
-    // Role indicator animation
-    const roleIndicator = document.querySelector('.role-indicator');
-    if (roleIndicator) {
-        setInterval(() => {
-            roleIndicator.style.borderColor = 'rgba(59, 130, 246, 0.6)';
-            setTimeout(() => {
-                roleIndicator.style.borderColor = 'rgba(59, 130, 246, 0.3)';
-            }, 1000);
-        }, 3000);
-    }
-
-    // Chart placeholder interactions
-    const chartPlaceholders = document.querySelectorAll('.chart-placeholder');
-    chartPlaceholders.forEach(placeholder => {
-        placeholder.addEventListener('click', function() {
-            this.style.transform = 'scale(0.98)';
-            setTimeout(() => {
-                this.style.transform = 'scale(1)';
-            }, 150);
-        });
-    });
-
-        // Add loading simulation for dynamic content
-            const badges = document.querySelectorAll('.metric-badge');
-            badges.forEach(badge => {
-                if (badge.textContent.includes('Real-time') || badge.textContent.includes('Live')) {
-                    setInterval(() => {
-                        badge.style.opacity = badge.style.opacity === '0.8' ? '1' : '0.8';
-                    }, 1000);
-                }
-            });
-        });
-    </script>
-{% endblock %}
