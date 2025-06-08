@@ -835,7 +835,6 @@
 
     <!-- Dashboard Content -->
     <div class="dashboard-content">
-        {% if request.user.role == 'top_management' %}
             <!-- Top Management KPIs -->
             <h2 class="section-title">
                 <div class="section-icon">📊</div>
@@ -879,3 +878,4 @@
                     <div class="kpi-description">Overall team efficiency and performance metrics</div>
                 </div>
             </div>
+            {% endblock %}
