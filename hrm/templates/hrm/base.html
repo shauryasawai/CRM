@@ -3,132 +3,393 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Financial HRM{% endblock %}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>{% block title %}Financial CRM{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     {% block extra_css %}{% endblock %}
-    <style>
+   <style>
         :root {
-            --bg-primary: #0c0d21;
-            --bg-secondary: #151629;
-            --bg-card: #1a1b35;
-            --text-primary: #f0f2f5;
-            --text-secondary: #a8abb2;
-            --accent-primary: #3b82f6;
-            --accent-success: #10b981;
-            --accent-danger: #ef4444;
-            --border-subtle: #2d3748;
+            --primary-green: #D3FF61;
+            --dark-green: #B8E642;
+            --light-green: #E8FF8F;
+            --black: #000000;
+            --dark-gray: #1a1a1a;
+            --medium-gray: #2d2d2d;
+            --light-gray: #f8f9fa;
+            --white: #ffffff;
+            --shadow-light: rgba(211, 255, 97, 0.1);
+            --shadow-medium: rgba(0, 0, 0, 0.1);
+            --shadow-heavy: rgba(0, 0, 0, 0.25);
+            --border-radius: 12px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
         body {
-            font-family: 'Inter', sans-serif;
-            margin: 0;
-            padding: 0;
-            background: var(--bg-primary);
-            color: var(--text-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--primary-green) 0%, var(--light-green) 100%);
+            color: var(--black);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            line-height: 1.6;
+            font-weight: 400;
         }
 
+        /* Header Styles */
         header {
-            background: var(--bg-secondary);
-            padding: 1rem 2rem;
-            border-bottom: 1px solid var(--border-subtle);
+            background: var(--white);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            box-shadow: 0 4px 20px var(--shadow-medium);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary-green), var(--dark-green));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--black);
+            font-size: 1.2rem;
+            font-weight: 700;
         }
 
         header h1 {
-            margin: 0;
-            font-size: 1.8rem;
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--black);
+            letter-spacing: -0.025em;
         }
 
+        /* Navigation Styles */
         nav {
-            margin-top: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
         }
 
-        nav a {
-            color: var(--text-secondary);
+        .nav-link {
+            color: var(--black);
             text-decoration: none;
-            margin-right: 1rem;
+            padding: 0.75rem 1.25rem;
+            border-radius: var(--border-radius);
             font-weight: 500;
-            transition: color 0.2s;
+            font-size: 0.95rem;
+            transition: var(--transition);
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        nav a:hover {
-            color: var(--accent-primary);
+        .nav-link:hover {
+            background: var(--primary-green);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px var(--shadow-light);
         }
 
+        .nav-link.logout {
+            background: var(--black);
+            color: var(--white);
+        }
+
+        .nav-link.logout:hover {
+            background: var(--medium-gray);
+            box-shadow: 0 8px 25px var(--shadow-heavy);
+        }
+
+        .mobile-menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--black);
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        /* Main Content */
         main {
             flex: 1;
-            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 3rem 2rem;
         }
 
+        /* Messages Styles */
         .messages {
             list-style: none;
-            padding: 0;
-            margin: 0 0 2rem 0;
+            margin-bottom: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
         }
 
         .messages li {
-            padding: 1rem;
-            margin-bottom: 0.5rem;
-            border-radius: 6px;
+            padding: 1.25rem 1.5rem;
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: 0 4px 15px var(--shadow-medium);
+            animation: slideIn 0.5s ease-out;
         }
 
         .messages .success {
-            background: rgba(16, 185, 129, 0.2);
-            color: var(--accent-success);
-            border-left: 4px solid var(--accent-success);
+            background: var(--white);
+            color: #059669;
+            border-left: 4px solid #10b981;
+        }
+
+        .messages .success::before {
+            content: '\f058';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            color: #10b981;
         }
 
         .messages .error {
-            background: rgba(239, 68, 68, 0.2);
-            color: var(--accent-danger);
-            border-left: 4px solid var(--accent-danger);
+            background: var(--white);
+            color: #dc2626;
+            border-left: 4px solid #ef4444;
         }
 
+        .messages .error::before {
+            content: '\f06a';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            color: #ef4444;
+        }
+
+        /* Content Cards */
+        .content-card {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            box-shadow: 0 8px 30px var(--shadow-medium);
+            transition: var(--transition);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .content-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px var(--shadow-medium);
+        }
+
+        /* Footer */
         footer {
+            background: var(--black);
+            color: var(--white);
             text-align: center;
-            padding: 1rem;
-            background: var(--bg-secondary);
-            color: var(--text-secondary);
+            padding: 2rem;
             font-size: 0.9rem;
-            border-top: 1px solid var(--border-subtle);
+            font-weight: 400;
         }
 
-        @media (max-width: 768px) {
-            header {
-                padding: 1rem;
+        footer p {
+            opacity: 0.8;
+        }
+
+        /* Animations */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
             }
-            
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header-container {
+                padding: 1rem;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .mobile-menu-toggle {
+                display: block;
+                position: absolute;
+                top: 1rem;
+                right: 1rem;
+            }
+
             nav {
-                overflow-x: auto;
-                white-space: nowrap;
-                padding-bottom: 0.5rem;
+                width: 100%;
+                flex-direction: column;
+                gap: 0.5rem;
+                display: none;
+            }
+
+            nav.active {
+                display: flex;
+                animation: slideIn 0.3s ease-out;
+            }
+
+            .nav-link {
+                width: 100%;
+                justify-content: center;
+            }
+
+            main {
+                padding: 2rem 1rem;
+            }
+
+            header h1 {
+                font-size: 1.5rem;
+            }
+
+            .content-card {
+                padding: 1.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header-container {
+                padding: 0.75rem;
+            }
+
+            main {
+                padding: 1.5rem 0.75rem;
+            }
+
+            .messages li {
+                padding: 1rem;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Dark mode preference support */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --shadow-medium: rgba(0, 0, 0, 0.3);
+            }
+        }
+
+        /* High contrast support */
+        @media (prefers-contrast: high) {
+            .nav-link:hover {
+                background: var(--black);
+                color: var(--white);
+            }
+        }
+
+        /* Reduced motion support */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            header, footer, nav {
+                display: none;
             }
             
             main {
-                padding: 1rem;
+                padding: 0;
+                max-width: none;
+            }
+            
+            .content-card {
+                box-shadow: none;
+                border: 1px solid var(--black);
             }
         }
     </style>
 </head>
 <body>
     <header>
-        <h1>Financial CRM</h1>
-        <nav>
-            <a href="{% url 'dashboard' %}">Dashboard</a>
-            <a href="{% url 'lead_list' %}">Leads</a>
-            <a href="{% url 'client_list' %}">Clients</a>
-            <a href="{% url 'task_list' %}">Tasks</a>
-            <a href="{% url 'service_request_list' %}">Service</a>
-            <a href="{% url 'investment_plan_review_list' %}">Investments</a>
-            <a href="{% url 'logout' %}" style="color: var(--accent-danger);">Logout</a>
-        </nav>
+        <div class="header-container">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h1>Financial CRM</h1>
+            </div>
+            
+            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+            <nav id="mainNav">
+                <a href="{% url 'dashboard' %}" class="nav-link">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Dashboard
+                </a>
+                <a href="{% url 'lead_list' %}" class="nav-link">
+                    <i class="fas fa-user-plus"></i>
+                    Leads
+                </a>
+                <a href="{% url 'client_list' %}" class="nav-link">
+                    <i class="fas fa-users"></i>
+                    Clients
+                </a>
+                <a href="{% url 'task_list' %}" class="nav-link">
+                    <i class="fas fa-tasks"></i>
+                    Tasks
+                </a>
+                <a href="{% url 'service_request_list' %}" class="nav-link">
+                    <i class="fas fa-concierge-bell"></i>
+                    Service
+                </a>
+                <a href="{% url 'investment_plan_review_list' %}" class="nav-link">
+                    <i class="fas fa-chart-pie"></i>
+                    Investments
+                </a>
+                <a href="{% url 'logout' %}" class="nav-link logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </a>
+            </nav>
+        </div>
     </header>
-    
+
     <main>
         {% if messages %}
             <ul class="messages">
@@ -138,13 +399,21 @@
             </ul>
         {% endif %}
         
-        {% block content %}{% endblock %}
+        <div class="content-card">
+            {% block content %}{% endblock %}
+        </div>
     </main>
-    
+
     <footer>
         <p>&copy; {% now "Y" %} Financial CRM. All rights reserved.</p>
     </footer>
 
+    <script>
+        // Full mobile nav + interaction logic from base_demo
+        {{ base_demo_script|safe }}
+    </script>
+
     {% block extra_js %}{% endblock %}
 </body>
+
 </html>
