@@ -4,322 +4,516 @@
 
 {% block content %}
 <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
 
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #090A19 0%, #0f1024 50%, #151633 100%);
-            min-height: 100vh;
-            color: #ffffff;
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background: linear-gradient(135deg, #D3FF61 0%, #a8d945 30%, #D3FF61 100%);
+        min-height: 100vh;
+        color: #000000;
+        line-height: 1.6;
+        overflow-x: hidden;
+        position: relative;
+    }
 
+    /* Animated background pattern */
+    .bg-pattern {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 1;
+        opacity: 0.03;
+        background-image: 
+            radial-gradient(circle at 25% 25%, #000000 1px, transparent 1px),
+            radial-gradient(circle at 75% 75%, #000000 1px, transparent 1px);
+        background-size: 50px 50px;
+        background-position: 0 0, 25px 25px;
+        animation: patternMove 20s linear infinite;
+    }
+
+    @keyframes patternMove {
+        0% { transform: translate(0, 0); }
+        100% { transform: translate(50px, 50px); }
+    }
+
+    /* Floating geometric shapes */
+    .bg-decoration {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    .bg-decoration::before {
+        content: '';
+        position: absolute;
+        top: 15%;
+        right: 10%;
+        width: 200px;
+        height: 200px;
+        background: linear-gradient(45deg, rgba(0, 0, 0, 0.05) 0%, transparent 70%);
+        border-radius: 50% 20% 50% 20%;
+        animation: floatRotate 15s ease-in-out infinite;
+        transform-origin: center;
+    }
+
+    .bg-decoration::after {
+        content: '';
+        position: absolute;
+        bottom: 20%;
+        left: 8%;
+        width: 150px;
+        height: 150px;
+        background: linear-gradient(135deg, rgba(0, 0, 0, 0.03) 0%, transparent 70%);
+        clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+        animation: floatScale 12s ease-in-out infinite;
+    }
+
+    @keyframes floatRotate {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-30px) rotate(180deg); }
+    }
+
+    @keyframes floatScale {
+        0%, 100% { transform: translateY(0px) scale(1); }
+        50% { transform: translateY(-20px) scale(1.1); }
+    }
+
+    .container {
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 3rem 2rem;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        position: relative;
+        z-index: 2;
+    }
+
+    .delete-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        border: 2px solid rgba(0, 0, 0, 0.08);
+        border-radius: 32px;
+        padding: 4rem 3rem;
+        box-shadow: 
+            0 32px 64px rgba(0, 0, 0, 0.12),
+            0 16px 32px rgba(0, 0, 0, 0.08),
+            0 0 0 1px rgba(255, 255, 255, 0.8),
+            inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        position: relative;
+        overflow: hidden;
+        transform: translateY(30px) scale(0.95);
+        opacity: 0;
+        animation: cardEntrance 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    @keyframes cardEntrance {
+        to {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+    }
+
+    .delete-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, transparent, #D3FF61, transparent);
+        border-radius: 32px 32px 0 0;
+    }
+
+    .warning-section {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .warning-icon {
+        width: 100px;
+        height: 100px;
+        margin: 0 auto 2rem;
+        background: linear-gradient(135deg, #ff4757 0%, #ff3838 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        box-shadow: 
+            0 20px 40px rgba(255, 71, 87, 0.25),
+            0 8px 16px rgba(255, 71, 87, 0.15);
+        animation: warningPulse 3s ease-in-out infinite;
+        border: 4px solid rgba(255, 255, 255, 0.9);
+    }
+
+    @keyframes warningPulse {
+        0%, 100% { 
+            transform: scale(1);
+            box-shadow: 
+                0 20px 40px rgba(255, 71, 87, 0.25),
+                0 8px 16px rgba(255, 71, 87, 0.15);
+        }
+        50% { 
+            transform: scale(1.05);
+            box-shadow: 
+                0 25px 50px rgba(255, 71, 87, 0.35),
+                0 12px 24px rgba(255, 71, 87, 0.25);
+        }
+    }
+
+    .warning-icon::before {
+        content: '⚠';
+        font-size: 3rem;
+        color: white;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+        background: linear-gradient(135deg, #000000 0%, #333333 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+        font-size: 1.125rem;
+        color: #666666;
+        font-weight: 500;
+        margin-bottom: 2.5rem;
+    }
+
+    .message {
+        font-size: 1.25rem;
+        text-align: center;
+        margin-bottom: 3rem;
+        color: #333333;
+        line-height: 1.8;
+        font-weight: 500;
+    }
+
+    .lead-info {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: 2px solid #D3FF61;
+        border-radius: 20px;
+        padding: 1.5rem;
+        margin: 2rem 0;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .lead-info::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(211, 255, 97, 0.1), transparent);
+        animation: shimmer 3s infinite;
+    }
+
+    @keyframes shimmer {
+        0% { left: -100%; }
+        100% { left: 100%; }
+    }
+
+    .highlight {
+        color: #000000;
+        font-weight: 700;
+        font-size: 1.4em;
+        background: linear-gradient(135deg, #D3FF61 0%, #a8d945 100%);
+        padding: 0.5rem 1rem;
+        border-radius: 12px;
+        display: inline-block;
+        box-shadow: 0 4px 12px rgba(211, 255, 97, 0.3);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1.5rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: 3rem;
+    }
+
+    .btn {
+        padding: 1.25rem 2.5rem;
+        border: none;
+        border-radius: 16px;
+        font-size: 1.1rem;
+        font-weight: 700;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 180px;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border: 2px solid transparent;
+    }
+
+    .btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.6s ease;
+    }
+
+    .btn:hover::before {
+        left: 100%;
+    }
+
+    .btn-danger {
+        background: linear-gradient(135deg, #ff4757 0%, #ff3838 100%);
+        color: white;
+        box-shadow: 
+            0 12px 32px rgba(255, 71, 87, 0.3),
+            0 4px 12px rgba(255, 71, 87, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-danger:hover {
+        transform: translateY(-4px) scale(1.02);
+        box-shadow: 
+            0 20px 48px rgba(255, 71, 87, 0.4),
+            0 8px 20px rgba(255, 71, 87, 0.3);
+        background: linear-gradient(135deg, #ff3838 0%, #ff2828 100%);
+    }
+
+    .btn-danger:active {
+        transform: translateY(-2px) scale(1.01);
+    }
+
+    .btn-secondary {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        color: #000000;
+        border: 2px solid rgba(0, 0, 0, 0.1);
+        box-shadow: 
+            0 12px 32px rgba(0, 0, 0, 0.1),
+            0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .btn-secondary:hover {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-color: #D3FF61;
+        transform: translateY(-4px) scale(1.02);
+        box-shadow: 
+            0 20px 48px rgba(0, 0, 0, 0.15),
+            0 8px 20px rgba(211, 255, 97, 0.3);
+        color: #000000;
+    }
+
+    .btn-secondary:active {
+        transform: translateY(-2px) scale(1.01);
+    }
+
+    /* Warning message */
+    .warning-message {
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+        border: 2px solid #ffc107;
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin: 2rem 0;
+        color: #856404;
+        font-weight: 600;
+        text-align: center;
+        box-shadow: 0 8px 24px rgba(255, 193, 7, 0.2);
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
         .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 2rem 1.5rem;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            position: relative;
-        }
-
-        /* Animated background elements */
-        .bg-decoration {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: -1;
-        }
-
-        .bg-decoration::before {
-            content: '';
-            position: absolute;
-            top: 20%;
-            right: -10%;
-            width: 300px;
-            height: 300px;
-            background: radial-gradient(circle, rgba(81, 77, 141, 0.1) 0%, transparent 70%);
-            border-radius: 50%;
-            animation: float 6s ease-in-out infinite;
-        }
-
-        .bg-decoration::after {
-            content: '';
-            position: absolute;
-            bottom: 20%;
-            left: -10%;
-            width: 250px;
-            height: 250px;
-            background: radial-gradient(circle, rgba(81, 77, 141, 0.08) 0%, transparent 70%);
-            border-radius: 50%;
-            animation: float 8s ease-in-out infinite reverse;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) translateX(0px); }
-            50% { transform: translateY(-20px) translateX(10px); }
+            padding: 2rem 1rem;
         }
 
         .delete-card {
-            background: rgba(255, 255, 255, 0.02);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(81, 77, 141, 0.2);
+            padding: 3rem 2rem;
             border-radius: 24px;
-            padding: 3rem 2.5rem;
-            box-shadow: 
-                0 20px 40px rgba(0, 0, 0, 0.3),
-                0 0 0 1px rgba(255, 255, 255, 0.05),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            position: relative;
-            overflow: hidden;
-            transform: translateY(20px);
-            animation: slideUp 0.6s ease-out forwards;
         }
 
-        @keyframes slideUp {
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
+        .title {
+            font-size: 2rem;
         }
 
-        .delete-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(81, 77, 141, 0.8), transparent);
+        .message {
+            font-size: 1.125rem;
+        }
+
+        .form-actions {
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .btn {
+            width: 100%;
+            max-width: 300px;
+            min-width: auto;
         }
 
         .warning-icon {
             width: 80px;
             height: 80px;
-            margin: 0 auto 2rem;
-            background: linear-gradient(135deg, #ff4757 0%, #ff3838 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            box-shadow: 0 10px 30px rgba(255, 71, 87, 0.3);
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+            margin-bottom: 1.5rem;
         }
 
         .warning-icon::before {
-            content: '!';
             font-size: 2.5rem;
-            font-weight: bold;
-            color: white;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .delete-card {
+            padding: 2rem 1.5rem;
+            margin: 1rem;
         }
 
         .title {
-            font-size: 2rem;
-            font-weight: 700;
-            text-align: center;
-            margin-bottom: 1.5rem;
-            background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .message {
-            font-size: 1.125rem;
-            text-align: center;
-            margin-bottom: 2.5rem;
-            color: rgba(255, 255, 255, 0.8);
-            line-height: 1.7;
-        }
-
-        .highlight {
-            color: #514D8D;
-            font-weight: 600;
-            background: linear-gradient(135deg, #514D8D 0%, #6b66a3 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .form-actions {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
+            font-size: 1.75rem;
         }
 
         .btn {
             padding: 1rem 2rem;
-            border: none;
-            border-radius: 12px;
             font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 140px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
         }
+    }
 
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-            transition: left 0.5s;
+    /* Focus states for accessibility */
+    .btn:focus {
+        outline: 3px solid #D3FF61;
+        outline-offset: 3px;
+    }
+
+    /* Loading state animation */
+    .btn.loading {
+        pointer-events: none;
+        opacity: 0.8;
+        position: relative;
+    }
+
+    .btn.loading::after {
+        content: '';
+        position: absolute;
+        width: 24px;
+        height: 24px;
+        border: 3px solid transparent;
+        border-top: 3px solid currentColor;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-left: 10px;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Hover effects for the entire card */
+    .delete-card:hover {
+        transform: translateY(-2px) scale(1.005);
+        box-shadow: 
+            0 40px 80px rgba(0, 0, 0, 0.15),
+            0 20px 40px rgba(0, 0, 0, 0.1),
+            0 0 0 1px rgba(255, 255, 255, 0.9),
+            inset 0 1px 0 rgba(255, 255, 255, 0.95);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Enhanced typography */
+    .message strong {
+        font-weight: 700;
+        color: #000000;
+    }
+
+    /* Micro-interactions */
+    .lead-info:hover {
+        transform: scale(1.02);
+        transition: transform 0.3s ease;
+    }
+
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
+        .delete-card {
+            background: rgba(0, 0, 0, 0.95);
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.1);
         }
-
-        .btn:hover::before {
-            left: 100%;
+        
+        .title {
+            background: linear-gradient(135deg, #ffffff 0%, #cccccc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #ff4757 0%, #ff3838 100%);
-            color: white;
-            box-shadow: 0 8px 25px rgba(255, 71, 87, 0.3);
+        
+        .message {
+            color: #cccccc;
         }
-
-        .btn-danger:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 35px rgba(255, 71, 87, 0.4);
-            background: linear-gradient(135deg, #ff3838 0%, #ff2828 100%);
+        
+        .lead-info {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            border-color: #D3FF61;
         }
+    }
+</style>
 
-        .btn-danger:active {
-            transform: translateY(0);
-        }
-
-        .btn-secondary {
-            background: rgba(81, 77, 141, 0.1);
-            color: #514D8D;
-            border: 2px solid rgba(81, 77, 141, 0.3);
-            box-shadow: 0 8px 25px rgba(81, 77, 141, 0.1);
-        }
-
-        .btn-secondary:hover {
-            background: rgba(81, 77, 141, 0.2);
-            border-color: rgba(81, 77, 141, 0.5);
-            transform: translateY(-2px);
-            box-shadow: 0 12px 35px rgba(81, 77, 141, 0.2);
-            color: #6b66a3;
-        }
-
-        .btn-secondary:active {
-            transform: translateY(0);
-        }
-
-        /* Responsive design */
-        @media (max-width: 768px) {
-            .container {
-                padding: 1.5rem 1rem;
-            }
-
-            .delete-card {
-                padding: 2rem 1.5rem;
-                border-radius: 20px;
-            }
-
-            .title {
-                font-size: 1.75rem;
-            }
-
-            .message {
-                font-size: 1rem;
-            }
-
-            .form-actions {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .btn {
-                width: 100%;
-                max-width: 280px;
-            }
-
-            .warning-icon {
-                width: 60px;
-                height: 60px;
-                margin-bottom: 1.5rem;
-            }
-
-            .warning-icon::before {
-                font-size: 2rem;
-            }
-        }
-
-        /* Focus states for accessibility */
-        .btn:focus {
-            outline: 2px solid #514D8D;
-            outline-offset: 2px;
-        }
-
-        /* Loading state animation */
-        .btn.loading {
-            pointer-events: none;
-            opacity: 0.7;
-        }
-
-        .btn.loading::after {
-            content: '';
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            border: 2px solid transparent;
-            border-top: 2px solid currentColor;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-    </style>
-
+<div class="bg-pattern"></div>
 <div class="bg-decoration"></div>
 
 <div class="container">
     <div class="delete-card">
-        <div class="warning-icon"></div>
+        <div class="warning-section">
+            <div class="warning-icon"></div>
+            <h2 class="title">Confirm Deletion</h2>
+            <p class="subtitle">This action cannot be undone</p>
+        </div>
 
-        <h2 class="title">Confirm Delete</h2>
+        <div class="warning-message">
+            <strong>⚠️ Warning:</strong> This will permanently remove all associated data and cannot be reversed.
+        </div>
 
         <p class="message">
-            Are you sure you want to delete the lead 
-            <span class="highlight">{{ lead.name }}</span>?
+            You are about to permanently delete the lead:
         </p>
+
+        <div class="lead-info">
+            <span class="highlight">{{ lead.name }}</span>
+        </div>
 
         <form method="post" id="deleteForm">
             {% csrf_token %}
             <div class="form-actions">
                 <button type="submit" class="btn btn-danger" id="deleteBtn">
-                    Yes, Delete
+                    🗑️ Delete Permanently
                 </button>
                 <a href="{% url 'lead_list' %}" class="btn btn-secondary">
-                    Cancel
+                    ← Cancel & Go Back
                 </a>
             </div>
         </form>
@@ -327,17 +521,71 @@
 </div>
 
 <script>
-    document.getElementById('deleteForm').addEventListener('submit', function () {
+    // Enhanced form submission with loading state
+    document.getElementById('deleteForm').addEventListener('submit', function (e) {
         const btn = document.getElementById('deleteBtn');
         btn.classList.add('loading');
-        btn.textContent = 'Deleting...';
+        btn.innerHTML = '⏳ Deleting...';
+        
+        // Disable the button to prevent double submission
+        btn.disabled = true;
+        
+        // Add a slight delay for better UX
+        setTimeout(() => {
+            // Form will submit normally after this
+        }, 500);
     });
 
+    // Enhanced keyboard navigation
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
             const cancelBtn = document.querySelector('.btn-secondary');
-            if (cancelBtn) cancelBtn.click();
+            if (cancelBtn) {
+                cancelBtn.style.transform = 'scale(1.05)';
+                setTimeout(() => {
+                    cancelBtn.style.transform = '';
+                    cancelBtn.click();
+                }, 150);
+            }
         }
+        
+        // Enter key confirmation (with caution)
+        if (e.key === 'Enter' && e.ctrlKey) {
+            const deleteBtn = document.getElementById('deleteBtn');
+            if (deleteBtn && confirm('Are you absolutely sure? This cannot be undone.')) {
+                deleteBtn.click();
+            }
+        }
+    });
+
+    // Add focus management for accessibility
+    document.addEventListener('DOMContentLoaded', function() {
+        const deleteBtn = document.getElementById('deleteBtn');
+        if (deleteBtn) {
+            deleteBtn.focus();
+        }
+    });
+
+    // Add subtle parallax effect to background elements
+    document.addEventListener('mousemove', function(e) {
+        const decoration = document.querySelector('.bg-decoration');
+        const x = e.clientX / window.innerWidth;
+        const y = e.clientY / window.innerHeight;
+        
+        decoration.style.transform = `translate(${x * 10}px, ${y * 10}px)`;
+    });
+
+    // Enhanced button interactions
+    document.querySelectorAll('.btn').forEach(btn => {
+        btn.addEventListener('mouseenter', function() {
+            this.style.transform = this.style.transform + ' scale(1.02)';
+        });
+        
+        btn.addEventListener('mouseleave', function() {
+            if (!this.classList.contains('loading')) {
+                this.style.transform = this.style.transform.replace(' scale(1.02)', '');
+            }
+        });
     });
 </script>
 {% endblock %}
