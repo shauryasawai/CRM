@@ -3,27 +3,29 @@
 
 {% block extra_css %}
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+    
     :root {
-        --primary-lime: #D3FF61;
-        --primary-lime-dark: #B8E649;
-        --primary-lime-light: #E8FF9E;
-        --primary-lime-alpha: rgba(211, 255, 97, 0.1);
-        --primary-lime-alpha-strong: rgba(211, 255, 97, 0.2);
-        --pure-black: #000000;
-        --pure-white: #FFFFFF;
-        --dark-gray: #1A1A1A;
-        --medium-gray: #333333;
-        --light-gray: #F5F5F5;
+        --primary-bg: #D3FF61;
+        --primary-dark: #B8E54A;
+        --primary-light: #E8FF9C;
+        --accent-black: #000000;
+        --accent-white: #FFFFFF;
         --text-primary: #000000;
         --text-secondary: #333333;
         --text-muted: #666666;
-        --text-inverse: #FFFFFF;
-        --shadow-lime: 0 4px 20px rgba(211, 255, 97, 0.3);
-        --shadow-black: 0 4px 20px rgba(0, 0, 0, 0.15);
-        --shadow-heavy: 0 8px 32px rgba(0, 0, 0, 0.2);
-        --gradient-lime: linear-gradient(135deg, #D3FF61 0%, #B8E649 100%);
-        --gradient-dark: linear-gradient(135deg, #1A1A1A 0%, #333333 100%);
-        --gradient-inverse: linear-gradient(135deg, #333333 0%, #1A1A1A 100%);
+        --card-bg: rgba(255, 255, 255, 0.95);
+        --card-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        --card-shadow-hover: 0 20px 60px rgba(0, 0, 0, 0.15);
+        --border-light: rgba(0, 0, 0, 0.08);
+        --border-medium: rgba(0, 0, 0, 0.12);
+        --success-color: #10B981;
+        --warning-color: #F59E0B;
+        --error-color: #EF4444;
+        --info-color: #3B82F6;
+        --gradient-primary: linear-gradient(135deg, #D3FF61 0%, #B8E54A 100%);
+        --gradient-dark: linear-gradient(135deg, #000000 0%, #333333 100%);
+        --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
     }
 
     * {
@@ -33,9 +35,9 @@
     }
 
     body {
-        background: var(--primary-lime);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: var(--primary-bg);
         color: var(--text-primary);
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         line-height: 1.6;
         min-height: 100vh;
         position: relative;
@@ -51,12 +53,17 @@
         width: 100%;
         height: 100%;
         background: 
-            radial-gradient(circle at 20% 20%, rgba(0, 0, 0, 0.03) 0%, transparent 50%),
-            radial-gradient(circle at 80% 80%, rgba(0, 0, 0, 0.03) 0%, transparent 50%),
-            radial-gradient(circle at 40% 60%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+            radial-gradient(circle at 20% 80%, rgba(0, 0, 0, 0.03) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, rgba(0, 0, 0, 0.03) 0%, transparent 50%),
+            radial-gradient(circle at 40% 40%, rgba(255, 255, 255, 0.1) 0%, transparent 30%);
         pointer-events: none;
         z-index: -1;
-        animation: subtleFloat 20s ease-in-out infinite;
+        animation: backgroundShift 20s ease-in-out infinite;
+    }
+
+    @keyframes backgroundShift {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
     }
 
     .dashboard-container {
@@ -66,47 +73,43 @@
         animation: fadeInUp 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     }
 
-    /* Header Section */
     .dashboard-header {
         text-align: center;
         margin-bottom: 4rem;
         position: relative;
-        padding: 2rem 0;
-    }
-
-    .dashboard-header::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 120px;
-        height: 4px;
-        background: var(--gradient-dark);
-        border-radius: 2px;
-        animation: expandWidth 1s ease-out 0.5s both;
     }
 
     .welcome-title {
-        font-size: clamp(2.5rem, 6vw, 4rem);
+        font-size: clamp(2.5rem, 6vw, 4.5rem);
         font-weight: 900;
         background: var(--gradient-dark);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        margin-bottom: 1rem;
+        margin-bottom: 0.5rem;
         letter-spacing: -0.03em;
-        text-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        animation: titleGlow 3s ease-in-out infinite alternate;
+        position: relative;
+        display: inline-block;
+    }
+
+    .welcome-title::after {
+        content: '';
+        position: absolute;
+        bottom: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 120px;
+        height: 4px;
+        background: var(--gradient-primary);
+        border-radius: 2px;
+        animation: expandWidth 1.2s ease-out 0.5s both;
     }
 
     .user-info {
-        font-size: 1.4rem;
+        font-size: 1.3rem;
         color: var(--text-secondary);
         margin-bottom: 1.5rem;
         font-weight: 500;
-        opacity: 0;
-        animation: fadeIn 0.8s ease-out 0.3s forwards;
     }
 
     .role-indicator {
@@ -114,60 +117,51 @@
         align-items: center;
         gap: 0.75rem;
         padding: 1rem 2rem;
-        background: var(--pure-white);
-        border: 2px solid var(--pure-black);
+        background: var(--card-bg);
+        border: 2px solid var(--border-light);
         border-radius: 50px;
         font-weight: 700;
-        font-size: 1rem;
+        font-size: 0.9rem;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 1px;
         position: relative;
         overflow: hidden;
-        box-shadow: var(--shadow-black);
-        transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        animation: slideInUp 0.6s ease-out 0.4s both;
+        backdrop-filter: blur(10px);
+        box-shadow: var(--card-shadow);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .role-indicator:hover {
         transform: translateY(-2px);
-        box-shadow: var(--shadow-heavy);
+        box-shadow: var(--card-shadow-hover);
+        border-color: var(--primary-dark);
     }
 
     .role-indicator::before {
         content: '';
         position: absolute;
         top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(211, 255, 97, 0.4), transparent);
-        transition: left 0.6s ease;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--gradient-primary);
     }
 
-    .role-indicator:hover::before {
-        left: 100%;
-    }
-
-    .role-top-management,
-    .role-business-head,
-    .role-rm-head,
-    .role-relationship-manager {
-        color: var(--text-primary);
-        background: var(--pure-white);
+    .role-top-management {
+        color: var(--accent-black);
+        animation: glow 2s ease-in-out infinite alternate;
     }
 
     .header-actions {
         display: flex;
         justify-content: center;
-        gap: 1.5rem;
+        gap: 1rem;
         margin-top: 2rem;
         flex-wrap: wrap;
-        animation: slideInUp 0.6s ease-out 0.6s both;
     }
 
-    /* Main Content */
     .dashboard-content {
-        animation: slideUpStagger 0.6s ease-out 0.4s both;
+        animation: slideUpStagger 0.8s ease-out 0.4s both;
     }
 
     .rm-grid {
@@ -178,25 +172,16 @@
     }
 
     .rm-card {
-        background: var(--pure-white);
-        border: 2px solid var(--pure-black);
+        background: var(--card-bg);
+        border: 1px solid var(--border-light);
         border-radius: 20px;
         padding: 2.5rem;
         position: relative;
         overflow: hidden;
-        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        box-shadow: var(--shadow-black);
-        animation: cardSlideIn 0.6s ease-out both;
-    }
-
-    .rm-card:nth-child(1) { animation-delay: 0.1s; }
-    .rm-card:nth-child(2) { animation-delay: 0.2s; }
-    .rm-card:nth-child(3) { animation-delay: 0.3s; }
-
-    .rm-card:hover {
-        transform: translateY(-8px) scale(1.02);
-        box-shadow: var(--shadow-heavy);
-        border-color: var(--primary-lime-dark);
+        backdrop-filter: blur(20px);
+        box-shadow: var(--card-shadow);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
     }
 
     .rm-card::before {
@@ -205,8 +190,20 @@
         top: 0;
         left: 0;
         right: 0;
-        height: 5px;
-        background: var(--gradient-lime);
+        height: 1px;
+        background: var(--gradient-primary);
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+    }
+
+    .rm-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: var(--card-shadow-hover);
+        border-color: var(--primary-dark);
+    }
+
+    .rm-card:hover::before {
+        transform: scaleX(1);
     }
 
     .rm-card-header {
@@ -224,23 +221,26 @@
         justify-content: center;
         font-size: 1.8rem;
         margin-right: 1.5rem;
-        background: var(--gradient-lime);
-        color: var(--pure-black);
+        background: var(--gradient-primary);
+        color: var(--accent-black);
         font-weight: bold;
-        box-shadow: var(--shadow-lime);
-        transition: all 0.3s ease;
+        box-shadow: 0 4px 20px rgba(211, 255, 97, 0.3);
+        animation: float 3s ease-in-out infinite;
     }
 
-    .rm-card:hover .rm-card-icon {
-        transform: rotate(5deg) scale(1.1);
+    .rm-card:nth-child(2) .rm-card-icon {
+        animation-delay: 0.5s;
+    }
+
+    .rm-card:nth-child(3) .rm-card-icon {
+        animation-delay: 1s;
     }
 
     .rm-card-title {
-        font-size: 1.3rem;
+        font-size: 1.2rem;
         font-weight: 700;
         color: var(--text-primary);
-        margin-bottom: 0.5rem;
-        letter-spacing: -0.01em;
+        margin-bottom: 0.25rem;
     }
 
     .rm-card-subtitle {
@@ -252,25 +252,21 @@
     .rm-card-value {
         font-size: 3rem;
         font-weight: 900;
-        color: var(--pure-black);
+        color: var(--accent-black);
         margin-bottom: 1rem;
-        letter-spacing: -0.02em;
-        background: var(--gradient-dark);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        font-feature-settings: 'tnum';
+        animation: countUp 1.5s ease-out;
     }
 
     .rm-card-description {
-        font-size: 1rem;
+        font-size: 0.95rem;
         color: var(--text-secondary);
         line-height: 1.6;
         margin-bottom: 1.5rem;
-        font-weight: 500;
     }
 
     .rm-progress-container {
-        margin-top: 2rem;
+        margin-top: 1.5rem;
     }
 
     .rm-progress-label {
@@ -284,7 +280,7 @@
 
     .rm-progress-bar {
         height: 8px;
-        background: var(--light-gray);
+        background: rgba(0, 0, 0, 0.1);
         border-radius: 4px;
         overflow: hidden;
         position: relative;
@@ -292,7 +288,7 @@
 
     .rm-progress-fill {
         height: 100%;
-        background: var(--gradient-lime);
+        background: var(--gradient-primary);
         border-radius: 4px;
         width: 75%;
         animation: fillProgress 2s ease-out forwards;
@@ -304,17 +300,16 @@
         content: '';
         position: absolute;
         top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-        animation: progressShine 2s ease-out 1s;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        animation: shimmer 2s infinite;
     }
 
-    /* Quick Actions */
     .quick-actions {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         gap: 1.5rem;
         margin-bottom: 3rem;
     }
@@ -325,17 +320,17 @@
         justify-content: center;
         gap: 0.75rem;
         padding: 1.25rem 1.5rem;
-        background: var(--pure-white);
-        border: 2px solid var(--pure-black);
+        background: var(--card-bg);
+        border: 2px solid var(--border-light);
         border-radius: 16px;
         color: var(--text-primary);
         text-decoration: none;
         font-weight: 600;
-        font-size: 1rem;
-        transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        box-shadow: var(--shadow-black);
+        font-size: 0.95rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         position: relative;
         overflow: hidden;
+        backdrop-filter: blur(10px);
     }
 
     .action-btn::before {
@@ -345,70 +340,60 @@
         left: -100%;
         width: 100%;
         height: 100%;
-        background: var(--gradient-lime);
-        transition: left 0.3s ease;
-        z-index: -1;
-    }
-
-    .action-btn:hover {
-        transform: translateY(-3px);
-        box-shadow: var(--shadow-heavy);
-        color: var(--pure-black);
+        background: linear-gradient(90deg, transparent, rgba(211, 255, 97, 0.2), transparent);
+        transition: left 0.5s;
     }
 
     .action-btn:hover::before {
-        left: 0;
+        left: 100%;
+    }
+
+    .action-btn:hover {
+        background: var(--gradient-primary);
+        border-color: var(--primary-dark);
+        transform: translateY(-3px);
+        box-shadow: var(--card-shadow-hover);
+        color: var(--accent-black);
     }
 
     .action-btn.primary {
-        background: var(--gradient-lime);
-        border-color: var(--primary-lime-dark);
-        color: var(--pure-black);
-        font-weight: 700;
-    }
-
-    .action-btn.primary::before {
         background: var(--gradient-dark);
+        border-color: var(--accent-black);
+        color: var(--accent-white);
     }
 
     .action-btn.primary:hover {
-        color: var(--pure-white);
+        background: var(--accent-black);
+        transform: translateY(-3px) scale(1.05);
     }
 
     .btn-hrms {
-        background: var(--gradient-dark);
-        color: var(--pure-white);
-        border-color: var(--pure-black);
-    }
-
-    .btn-hrms::before {
-        background: var(--gradient-lime);
+        background: var(--gradient-primary);
+        color: var(--accent-black);
+        border-color: var(--primary-dark);
+        font-weight: 700;
     }
 
     .btn-hrms:hover {
-        color: var(--pure-black);
+        background: var(--primary-dark);
+        transform: translateY(-3px) scale(1.05);
+        box-shadow: 0 15px 40px rgba(211, 255, 97, 0.4);
     }
 
-    /* Client Portfolio */
     .client-portfolio {
-        background: var(--pure-white);
-        border: 2px solid var(--pure-black);
-        border-radius: 20px;
+        background: var(--card-bg);
+        border: 1px solid var(--border-light);
+        border-radius: 24px;
         padding: 2.5rem;
         margin-bottom: 2rem;
-        box-shadow: var(--shadow-black);
-        position: relative;
-        overflow: hidden;
+        backdrop-filter: blur(20px);
+        box-shadow: var(--card-shadow);
+        transition: all 0.3s ease;
     }
 
-    .client-portfolio::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 5px;
-        background: var(--gradient-lime);
+    .client-portfolio:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--card-shadow-hover);
     }
 
     .portfolio-header {
@@ -422,9 +407,9 @@
 
     .portfolio-title {
         font-size: 1.8rem;
-        font-weight: 700;
+        font-weight: 800;
         color: var(--text-primary);
-        letter-spacing: -0.01em;
+        margin: 0;
     }
 
     .portfolio-stats {
@@ -435,41 +420,35 @@
 
     .stat-badge {
         padding: 0.75rem 1.5rem;
-        background: var(--primary-lime);
-        color: var(--pure-black);
+        background: var(--gradient-primary);
         border-radius: 25px;
         font-size: 0.9rem;
-        font-weight: 600;
-        border: 2px solid var(--pure-black);
+        font-weight: 700;
+        color: var(--accent-black);
+        white-space: nowrap;
+        box-shadow: 0 4px 15px rgba(211, 255, 97, 0.3);
         transition: all 0.3s ease;
     }
 
     .stat-badge:hover {
         transform: translateY(-2px);
-        box-shadow: var(--shadow-lime);
+        box-shadow: 0 8px 25px rgba(211, 255, 97, 0.4);
     }
 
     .portfolio-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 2rem;
+        gap: 1.5rem;
     }
 
     .portfolio-item {
-        background: var(--light-gray);
-        border: 2px solid var(--medium-gray);
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid var(--border-light);
         border-radius: 16px;
         padding: 2rem;
-        transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         position: relative;
         overflow: hidden;
-    }
-
-    .portfolio-item:hover {
-        transform: translateY(-5px);
-        box-shadow: var(--shadow-heavy);
-        border-color: var(--primary-lime-dark);
-        background: var(--pure-white);
     }
 
     .portfolio-item::before {
@@ -477,11 +456,17 @@
         position: absolute;
         top: 0;
         left: 0;
-        width: 100%;
+        right: 0;
         height: 3px;
-        background: var(--gradient-lime);
+        background: var(--gradient-primary);
         transform: scaleX(0);
         transition: transform 0.3s ease;
+    }
+
+    .portfolio-item:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
+        border-color: var(--primary-dark);
     }
 
     .portfolio-item:hover::before {
@@ -490,8 +475,8 @@
 
     .client-name {
         font-weight: 700;
-        font-size: 1.2rem;
-        margin-bottom: 0.75rem;
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
         color: var(--text-primary);
     }
 
@@ -506,8 +491,8 @@
         font-size: 1.8rem;
         font-weight: 800;
         margin-bottom: 0.75rem;
-        color: var(--pure-black);
-        letter-spacing: -0.01em;
+        color: var(--accent-black);
+        font-feature-settings: 'tnum';
     }
 
     .client-growth {
@@ -518,17 +503,11 @@
     }
 
     .growth-positive {
-        color: #2D5A2D;
-        background: rgba(45, 90, 45, 0.1);
-        padding: 0.25rem 0.75rem;
-        border-radius: 12px;
+        color: var(--success-color);
     }
 
     .growth-negative {
-        color: #8B0000;
-        background: rgba(139, 0, 0, 0.1);
-        padding: 0.25rem 0.75rem;
-        border-radius: 12px;
+        color: var(--error-color);
     }
 
     /* Animations */
@@ -554,67 +533,46 @@
         }
     }
 
-    @keyframes slideInUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    @keyframes cardSlideIn {
-        from {
-            opacity: 0;
-            transform: translateY(30px) scale(0.95);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
-    }
-
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
-
     @keyframes expandWidth {
         from { width: 0; }
         to { width: 120px; }
     }
 
     @keyframes fillProgress {
-        from { width: 0; }
-        to { width: 75%; }
+        from { transform: scaleX(0); }
+        to { transform: scaleX(1); }
     }
 
-    @keyframes progressShine {
-        from { left: -100%; }
-        to { left: 100%; }
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
     }
 
-    @keyframes titleGlow {
-        from { text-shadow: 0 0 20px rgba(0, 0, 0, 0.1); }
-        to { text-shadow: 0 0 40px rgba(0, 0, 0, 0.2); }
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-5px); }
     }
 
-    @keyframes subtleFloat {
-        0%, 100% { transform: translateY(0px) rotate(0deg); }
-        50% { transform: translateY(-10px) rotate(1deg); }
+    @keyframes glow {
+        from { box-shadow: 0 0 20px rgba(211, 255, 97, 0.3); }
+        to { box-shadow: 0 0 30px rgba(211, 255, 97, 0.6); }
+    }
+
+    @keyframes countUp {
+        from { 
+            transform: scale(0.8);
+            opacity: 0;
+        }
+        to { 
+            transform: scale(1);
+            opacity: 1;
+        }
     }
 
     /* Responsive Design */
     @media (max-width: 1024px) {
         .rm-grid, .portfolio-grid {
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        }
-        
-        .portfolio-header {
-            flex-direction: column;
-            align-items: flex-start;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
         }
     }
 
@@ -632,12 +590,18 @@
         }
 
         .quick-actions {
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         }
 
-        .header-actions {
+        .portfolio-header {
             flex-direction: column;
-            align-items: center;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .portfolio-stats {
+            width: 100%;
+            justify-content: flex-start;
         }
     }
 
@@ -654,6 +618,10 @@
             font-size: 1.1rem;
         }
 
+        .rm-card {
+            padding: 1.5rem;
+        }
+
         .rm-card-value, .client-value {
             font-size: 2rem;
         }
@@ -662,25 +630,9 @@
             grid-template-columns: 1fr;
         }
 
-        .rm-grid {
-            grid-template-columns: 1fr;
+        .action-btn {
+            padding: 1rem;
         }
-
-        .portfolio-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-
-    /* Enhanced focus states for accessibility */
-    .action-btn:focus,
-    .rm-card:focus {
-        outline: 3px solid var(--primary-lime);
-        outline-offset: 2px;
-    }
-
-    /* Smooth scrolling */
-    html {
-        scroll-behavior: smooth;
     }
 
     /* Custom scrollbar */
@@ -689,16 +641,16 @@
     }
 
     ::-webkit-scrollbar-track {
-        background: var(--light-gray);
+        background: rgba(0, 0, 0, 0.1);
     }
 
     ::-webkit-scrollbar-thumb {
-        background: var(--gradient-lime);
+        background: var(--gradient-primary);
         border-radius: 4px;
     }
 
     ::-webkit-scrollbar-thumb:hover {
-        background: var(--primary-lime-dark);
+        background: var(--primary-dark);
     }
 </style>
 {% endblock %}
@@ -727,7 +679,7 @@
         </div>
     </div>
 
-    <!-- Main Dashboard Content -->
+    <!-- Dashboard Content -->
     <div class="dashboard-content">
         <div class="rm-grid">
             <div class="rm-card">
@@ -739,14 +691,14 @@
                     </div>
                 </div>
                 <div class="rm-card-value">{{ leads.count|default:"24" }}</div>
-                <div class="rm-card-description">Leads in your pipeline requiring follow-up and conversion</div>
+                <div class="rm-card-description">Leads in your pipeline requiring follow-up and strategic attention</div>
                 <div class="rm-progress-container">
                     <div class="rm-progress-label">
                         <span>Conversion Rate</span>
                         <span>75%</span>
                     </div>
                     <div class="rm-progress-bar">
-                        <div class="rm-progress-fill"></div>
+                        <div class="rm-progress-fill" style="width: 75%;"></div>
                     </div>
                 </div>
             </div>
@@ -760,14 +712,14 @@
                     </div>
                 </div>
                 <div class="rm-card-value">{{ tasks.count|default:"12" }}</div>
-                <div class="rm-card-description">Critical tasks to complete this week for optimal performance</div>
+                <div class="rm-card-description">Critical tasks and deliverables to complete this week</div>
                 <div class="rm-progress-container">
                     <div class="rm-progress-label">
                         <span>Completion Rate</span>
                         <span>65%</span>
                     </div>
                     <div class="rm-progress-bar">
-                        <div class="rm-progress-fill" style="width: 65%; background: var(--gradient-dark);"></div>
+                        <div class="rm-progress-fill" style="width: 65%; background: linear-gradient(135deg, #3B82F6, #1D4ED8);"></div>
                     </div>
                 </div>
             </div>
@@ -781,14 +733,14 @@
                     </div>
                 </div>
                 <div class="rm-card-value">{{ service_requests.count|default:"8" }}</div>
-                <div class="rm-card-description">Client service requests awaiting resolution and follow-up</div>
+                <div class="rm-card-description">Client service requests awaiting resolution and support</div>
                 <div class="rm-progress-container">
                     <div class="rm-progress-label">
                         <span>Resolution Rate</span>
                         <span>92%</span>
                     </div>
                     <div class="rm-progress-bar">
-                        <div class="rm-progress-fill" style="width: 92%; background: linear-gradient(135deg, #2D5A2D 0%, #4A7C4A 100%);"></div>
+                        <div class="rm-progress-fill" style="width: 92%; background: linear-gradient(135deg, #10B981, #059669);"></div>
                     </div>
                 </div>
             </div>
@@ -819,7 +771,7 @@
                 <h3 class="portfolio-title">Top Client Portfolios</h3>
                 <div class="portfolio-stats">
                     <div class="stat-badge">Total: {{ clients.count|default:"42" }}</div>
-                    <div class="stat-badge" style="background: linear-gradient(135deg, #2D5A2D 0%, #4A7C4A 100%); color: var(--pure-white);">
+                    <div class="stat-badge" style="background: linear-gradient(135deg, #10B981, #059669); color: white;">
                         Active: {{ active_clients.count|default:"36" }}
                     </div>
                 </div>
@@ -836,11 +788,11 @@
                 </div>
                 {% empty %}
                 <div class="portfolio-item">
-                    <div class="client-name">No clients found</div>
-                    <div class="client-meta">Add clients to see portfolio data</div>
-                    <div class="client-value">--</div>
+                    <div class="client-name">Premium Portfolio Available</div>
+                    <div class="client-meta">Add clients to see comprehensive portfolio data</div>
+                    <div class="client-value">$0</div>
                     <div class="client-growth">
-                        <span style="color: var(--text-muted);">Start building your portfolio</span>
+                        <span style="color: var(--text-muted);">Ready to grow</span>
                     </div>
                 </div>
                 {% endfor %}
@@ -852,29 +804,37 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Enhanced card animation sequence
+    // Enhanced card animation on load
     const cards = document.querySelectorAll('.rm-card');
     cards.forEach((card, index) => {
         card.style.opacity = '0';
         card.style.transform = 'translateY(30px) scale(0.95)';
+        card.style.transition = 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
         card.style.transitionDelay = `${index * 0.15}s`;
         
         setTimeout(() => {
             card.style.opacity = '1';
             card.style.transform = 'translateY(0) scale(1)';
-        }, 150 + (index * 100));
+        }, 100);
     });
 
-    // Enhanced portfolio item interactions
+    // Enhanced portfolio item animations
     const portfolioItems = document.querySelectorAll('.portfolio-item');
     portfolioItems.forEach((item, index) => {
-        // Staggered animation
-        item.style.animationDelay = `${0.6 + (index * 0.1)}s`;
+        item.style.opacity = '0';
+        item.style.transform = 'translateY(20px)';
+        item.style.transition = 'all 0.5s ease';
+        item.style.transitionDelay = `${(index * 0.1) + 0.8}s`;
         
+        setTimeout(() => {
+            item.style.opacity = '1';
+            item.style.transform = 'translateY(0)';
+        }, 100);
+
         // Enhanced hover effects
         item.addEventListener('mouseenter', () => {
             item.style.transform = 'translateY(-8px) scale(1.02)';
-            item.style.boxShadow = '0 15px 35px rgba(0, 0, 0, 0.2)';
+            item.style.boxShadow = '0 20px 60px rgba(0,0,0,0.15)';
         });
         
         item.addEventListener('mouseleave', () => {
@@ -883,41 +843,45 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Progress bar animation
-    const progressBars = document.querySelectorAll('.rm-progress-fill');
-    const observerOptions = {
-        threshold: 0.5,
-        rootMargin: '0px 0px -50px 0px'
-    };
+    // Animated counter effect for card values
+    function animateCounter(element, target, duration = 2000) {
+        const start = 0;
+        const increment = target / (duration / 16);
+        let current = start;
+        
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= target) {
+                current = target;
+                clearInterval(timer);
+            }
+            element.textContent = Math.floor(current);
+        }, 16);
+    }
 
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const progressBar = entry.target.querySelector('.rm-progress-fill');
-                if (progressBar) {
-                    progressBar.style.animation = 'fillProgress 2s ease-out forwards';
-                }
+    // Apply counter animation to card values
+    setTimeout(() => {
+        const valueElements = document.querySelectorAll('.rm-card-value');
+        valueElements.forEach(element => {
+            const targetValue = parseInt(element.textContent) || 0;
+            if (targetValue > 0) {
+                animateCounter(element, targetValue, 1500);
             }
         });
-    }, observerOptions);
+    }, 500);
 
-    // Observe progress containers
-    document.querySelectorAll('.rm-progress-container').forEach(container => {
-        observer.observe(container);
-    });
-
-    // Enhanced action button interactions
-    const actionBtns = document.querySelectorAll('.action-btn');
-    actionBtns.forEach(btn => {
+    // Enhanced button interactions
+    const actionButtons = document.querySelectorAll('.action-btn');
+    actionButtons.forEach(btn => {
         btn.addEventListener('mouseenter', () => {
-            btn.style.transform = 'translateY(-4px) scale(1.02)';
+            btn.style.transform = 'translateY(-3px) scale(1.02)';
         });
         
         btn.addEventListener('mouseleave', () => {
             btn.style.transform = 'translateY(0) scale(1)';
         });
 
-        // Add ripple effect on click
+        // Click ripple effect
         btn.addEventListener('click', function(e) {
             const ripple = document.createElement('span');
             const rect = this.getBoundingClientRect();
@@ -931,16 +895,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 height: ${size}px;
                 left: ${x}px;
                 top: ${y}px;
-                background: rgba(211, 255, 97, 0.4);
+                background: rgba(255, 255, 255, 0.3);
                 border-radius: 50%;
                 transform: scale(0);
-                animation: ripple 0.6s linear;
+                animation: ripple 0.6s ease-out;
                 pointer-events: none;
-                z-index: 0;
             `;
             
-            this.style.position = 'relative';
-            this.style.overflow = 'hidden';
             this.appendChild(ripple);
             
             setTimeout(() => {
@@ -949,76 +910,103 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Smooth scroll for internal links
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-            e.preventDefault();
-            const target = document.querySelector(this.getAttribute('href'));
-            if (target) {
-                target.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            }
-        });
+    // Progress bar animation enhancement
+    const progressBars = document.querySelectorAll('.rm-progress-fill');
+    progressBars.forEach((bar, index) => {
+        bar.style.transform = 'scaleX(0)';
+        bar.style.transformOrigin = 'left';
+        
+        setTimeout(() => {
+            bar.style.transition = 'transform 2s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+            bar.style.transform = 'scaleX(1)';
+        }, 1000 + (index * 200));
     });
 
-    // Dynamic stats counter animation
-    const animateValue = (element, start, end, duration) => {
-        let startTimestamp = null;
-        const step = (timestamp) => {
-            if (!startTimestamp) startTimestamp = timestamp;
-            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-            const currentValue = Math.floor(progress * (end - start) + start);
-            element.textContent = currentValue;
-            if (progress < 1) {
-                window.requestAnimationFrame(step);
-            }
-        };
-        window.requestAnimationFrame(step);
+    // Add floating animation to role indicator
+    const roleIndicator = document.querySelector('.role-indicator');
+    if (roleIndicator) {
+        setInterval(() => {
+            roleIndicator.style.transform = 'translateY(-2px)';
+            setTimeout(() => {
+                roleIndicator.style.transform = 'translateY(0)';
+            }, 1000);
+        }, 3000);
+    }
+
+    // Parallax scroll effect for background
+    let ticking = false;
+    
+    function updateParallax() {
+        const scrolled = window.pageYOffset;
+        const parallax = document.body;
+        const speed = scrolled * 0.5;
+        
+        parallax.style.backgroundPosition = `center ${speed}px`;
+        ticking = false;
+    }
+    
+    function requestTick() {
+        if (!ticking) {
+            requestAnimationFrame(updateParallax);
+            ticking = true;
+        }
+    }
+    
+    window.addEventListener('scroll', requestTick);
+
+    // Add intersection observer for scroll animations
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
     };
 
-    // Animate card values when they come into view
-    const valueObserver = new IntersectionObserver((entries) => {
+    const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
-                const valueElement = entry.target;
-                const finalValue = parseInt(valueElement.textContent) || 0;
-                if (finalValue > 0) {
-                    animateValue(valueElement, 0, finalValue, 2000);
-                }
-                valueObserver.unobserve(entry.target);
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
             }
         });
-    }, { threshold: 0.5 });
+    }, observerOptions);
 
-    document.querySelectorAll('.rm-card-value').forEach(valueEl => {
-        valueObserver.observe(valueEl);
+    // Observe elements for scroll animations
+    const animateOnScroll = document.querySelectorAll('.client-portfolio, .quick-actions');
+    animateOnScroll.forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(30px)';
+        el.style.transition = 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+        observer.observe(el);
     });
 
-    // Enhanced keyboard navigation
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Tab') {
-            document.body.classList.add('keyboard-navigation');
+    // Add loading state simulation
+    const cards = document.querySelectorAll('.rm-card');
+    cards.forEach(card => {
+        const value = card.querySelector('.rm-card-value');
+        if (value) {
+            // Add loading dots animation
+            value.style.opacity = '0.5';
+            setTimeout(() => {
+                value.style.opacity = '1';
+            }, 800);
         }
     });
 
-    document.addEventListener('mousedown', function() {
-        document.body.classList.remove('keyboard-navigation');
-    });
-
-    // Performance optimization: Reduce animations on low-end devices
-    if (navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4) {
-        document.documentElement.style.setProperty('--animation-duration', '0.3s');
+    // Dynamic time-based greeting
+    const hour = new Date().getHours();
+    const userInfo = document.querySelector('.user-info');
+    if (userInfo && userInfo.textContent.includes('Welcome back')) {
+        let greeting = 'Welcome back';
+        
+        if (hour < 12) {
+            greeting = 'Good morning';
+        } else if (hour < 17) {
+            greeting = 'Good afternoon';
+        } else {
+            greeting = 'Good evening';
+        }
+        
+        userInfo.textContent = userInfo.textContent.replace('Welcome back', greeting);
     }
-
-    // Add loading state management
-    window.addEventListener('beforeunload', function() {
-        document.body.style.opacity = '0.7';
-        document.body.style.transition = 'opacity 0.3s ease';
-    });
-
-    console.log('🚀 Dashboard enhanced and ready!');
 });
 
 // Add CSS for ripple animation
@@ -1026,14 +1014,34 @@ const style = document.createElement('style');
 style.textContent = `
     @keyframes ripple {
         to {
-            transform: scale(4);
+            transform: scale(2);
             opacity: 0;
         }
     }
     
-    .keyboard-navigation *:focus {
-        outline: 3px solid var(--primary-lime) !important;
-        outline-offset: 2px !important;
+    .action-btn {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .rm-card-value {
+        transition: all 0.3s ease;
+    }
+    
+    /* Enhanced focus states for accessibility */
+    .action-btn:focus,
+    .rm-card:focus {
+        outline: 3px solid var(--primary-bg);
+        outline-offset: 2px;
+    }
+    
+    /* Reduced motion for accessibility */
+    @media (prefers-reduced-motion: reduce) {
+        * {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
     }
 `;
 document.head.appendChild(style);
