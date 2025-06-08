@@ -1,96 +1,133 @@
 {% extends "hrm/base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2>Attendance Tracking</h2>
-    
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-body text-center">
-                    {% if today_attendance %}
-                        <h5>Today's Status</h5>
-                        <p>Logged in at: {{ today_attendance.login_time|time }}</p>
-                        {% if today_attendance.is_remote %}
-                            <p class="text-warning">Remote Login</p>
-                        {% endif %}
-                        {% if today_attendance.is_late %}
-                            <p class="text-danger">Late Arrival</p>
-                        {% endif %}
-                        
-                        {% if not today_attendance.logout_time %}
-                            <form method="post" class="mt-3">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="logout">
-                                <button type="submit" class="btn btn-danger">Logout</button>
-                            </form>
-                        {% else %}
-                            <p>Logged out at: {{ today_attendance.logout_time|time }}</p>
-                        {% endif %}
-                    {% else %}
-                        <h5>Today's Status</h5>
-                        <p>Not logged in yet</p>
-                        <form method="post">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="login">
-                            <input type="hidden" name="location" id="location" value="">
-                            <button type="submit" class="btn btn-success">Login</button>
-                        </form>
+<div class="container">
+    <div class="header">
+        <h1><i class="fas fa-clock"></i> Attendance Dashboard</h1>
+        <p>Track your daily attendance with precision and style</p>
+    </div>
+
+    <div class="dashboard-grid">
+        <!-- Today's Status Card -->
+        <div class="card status-card">
+            <div class="status-icon {% if today_attendance %}{% if today_attendance.logout_time %}status-logged-out{% else %}status-logged-in{% endif %}{% else %}status-logged-out{% endif %}">
+                <i class="fas {% if today_attendance and not today_attendance.logout_time %}fa-user-check{% else %}fa-user{% endif %}"></i>
+            </div>
+            <h3 class="status-title">Today's Status</h3>
+            <div class="status-info">
+                {% if today_attendance %}
+                    <p>Logged in at: 
+                        <span class="time-display">{{ today_attendance.login_time|time }}</span>
+                    </p>
+                    {% if today_attendance.is_remote %}
+                        <div class="status-badge badge-warning">
+                            <i class="fas fa-home"></i> Remote Login
+                        </div>
                     {% endif %}
-                </div>
+                    {% if today_attendance.is_late %}
+                        <div class="status-badge badge-danger">
+                            <i class="fas fa-exclamation-triangle"></i> Late Arrival
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <p>Not logged in yet</p>
+                {% endif %}
             </div>
+
+            <form method="post" style="margin-top: 1.5rem;">
+                {% csrf_token %}
+                {% if today_attendance and not today_attendance.logout_time %}
+                    <input type="hidden" name="action" value="logout">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                {% else %}
+                    <input type="hidden" name="action" value="login">
+                    <input type="hidden" name="location" id="location" value="">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </button>
+                {% endif %}
+            </form>
         </div>
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">This Month's Summary</h5>
-                    <p>Total Working Days: {{ monthly_attendance|length }}</p>
-                    <p>Remote Days: {{ monthly_attendance|length|default:0 }}</p>
-                    <p>Late Days: {{ monthly_attendance|length|default:0 }}</p>
-                    <a href="{% url 'monthly_report' %}" class="btn btn-sm btn-primary">View Full Report</a>
+
+        <!-- Monthly Summary Card -->
+        <div class="card summary-card">
+            <h3 class="status-title" style="color: white; margin-bottom: 1.5rem;">
+                <i class="fas fa-chart-bar"></i> This Month's Summary
+            </h3>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <span class="summary-number">{{ monthly_attendance|length }}</span>
+                    <div class="summary-label">Working Days</div>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-number">
+                        {{ monthly_attendance|dictsort:"is_remote"|length }}
+                    </span>
+                    <div class="summary-label">Remote Days</div>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-number">
+                        {{ monthly_attendance|dictsort:"is_late"|length }}
+                    </span>
+                    <div class="summary-label">Late Days</div>
                 </div>
             </div>
+            <a href="{% url 'monthly_report' %}" class="btn btn-primary">
+                <i class="fas fa-file-alt"></i> View Full Report
+            </a>
         </div>
     </div>
-    
-    <div class="card">
-        <div class="card-header">
-            <h5>Recent Attendance</h5>
+
+    <!-- Attendance Table -->
+    <div class="attendance-table">
+        <div class="table-header">
+            <h3 class="table-title">
+                <i class="fas fa-history"></i>
+                Recent Attendance
+            </h3>
         </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Login Time</th>
-                            <th>Logout Time</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for att in monthly_attendance %}
-                        <tr>
-                            <td>{{ att.date }}</td>
-                            <td>{{ att.login_time|time }}</td>
-                            <td>{{ att.logout_time|time|default:"-" }}</td>
-                            <td>
-                                {% if att.is_remote %}
-                                    <span class="badge badge-warning">Remote</span>
-                                {% endif %}
-                                {% if att.is_late %}
-                                    <span class="badge badge-danger">Late</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4" class="text-center">No attendance records found</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th><i class="fas fa-calendar-day"></i> Date</th>
+                        <th><i class="fas fa-clock"></i> Login Time</th>
+                        <th><i class="fas fa-clock"></i> Logout Time</th>
+                        <th><i class="fas fa-info-circle"></i> Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for att in monthly_attendance %}
+                    <tr>
+                        <td>{{ att.date }}</td>
+                        <td><span class="time-display">{{ att.login_time|time }}</span></td>
+                        <td>
+                            {% if att.logout_time %}
+                                <span class="time-display">{{ att.logout_time|time }}</span>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td>
+                            {% if att.is_remote %}
+                                <span class="status-badge badge-warning">
+                                    <i class="fas fa-home"></i> Remote
+                                </span>
+                            {% endif %}
+                            {% if att.is_late %}
+                                <span class="status-badge badge-danger">
+                                    <i class="fas fa-exclamation-triangle"></i> Late
+                                </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center">No attendance records found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -104,4 +141,386 @@ if (navigator.geolocation && document.getElementById('location')) {
     });
 }
 </script>
+<style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #D3FF61 0%, #c8f550 100%);
+            min-height: 100vh;
+            color: #1a1a1a;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #000;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #333;
+            opacity: 0.8;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #D3FF61, #000);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .status-card {
+            text-align: center;
+        }
+
+        .status-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        .status-logged-in {
+            background: linear-gradient(135deg, #10B981, #059669);
+        }
+
+        .status-logged-out {
+            background: linear-gradient(135deg, #6B7280, #4B5563);
+        }
+
+        .status-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #000;
+        }
+
+        .status-info {
+            margin-bottom: 1.5rem;
+        }
+
+        .status-info p {
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+            color: #333;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin: 0.2rem;
+        }
+
+        .badge-warning {
+            background: #FEF3C7;
+            color: #D97706;
+            border: 1px solid #FCD34D;
+        }
+
+        .badge-danger {
+            background: #FEE2E2;
+            color: #DC2626;
+            border: 1px solid #FCA5A5;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.8rem 2rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #10B981, #059669);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #EF4444, #DC2626);
+            color: white;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3B82F6, #2563EB);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.9) 100%);
+            color: white;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .summary-item {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .summary-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #D3FF61;
+            display: block;
+        }
+
+        .summary-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 0.5rem;
+        }
+
+        .attendance-table {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            animation: fadeInUp 0.8s ease-out 0.3s both;
+        }
+
+        .table-header {
+            background: linear-gradient(135deg, #000 0%, #333 100%);
+            color: white;
+            padding: 1.5rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .table-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 1rem 1.5rem;
+            text-align: left;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        th {
+            background: #F9FAFB;
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        td {
+            color: #1F2937;
+            font-size: 0.95rem;
+        }
+
+        tr:hover {
+            background: #F3F4F6;
+            transition: background-color 0.2s ease;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: #6B7280;
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .card {
+                padding: 1.5rem;
+            }
+
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            th, td {
+                padding: 0.75rem 1rem;
+                font-size: 0.9rem;
+            }
+        }
+
+        .time-display {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            color: #059669;
+            background: rgba(16, 185, 129, 0.1);
+            padding: 0.3rem 0.8rem;
+            border-radius: 8px;
+            display: inline-block;
+        }  
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.6);
+            transform: scale(0);
+            animation: ripple 0.6s linear;
+            pointer-events: none;
+        }
+
+        @keyframes ripple {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        } 
+    </style>
 {% endblock %}
