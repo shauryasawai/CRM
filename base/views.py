@@ -11,8 +11,9 @@ from django.db.models import Sum, Avg, F, Q
 from django.db.models.functions import Extract
 from django.utils import timezone
 
-from .models import User, Lead, Client, Task, ServiceRequest, BusinessTracker, InvestmentPlanReview, Team
+from .models import User, Lead, Client, Task, ServiceRequest, BusinessTracker, InvestmentPlanReview, Team,ProductDiscussion
 from .forms import LeadForm, ClientForm, TaskForm, ServiceRequestForm, InvestmentPlanReviewForm
+from .models import Lead, ProductDiscussion, LeadInteraction, LeadStatusChange
 
 # Helper functions for role checks
 def is_top_management(user):
@@ -229,34 +230,105 @@ def dashboard(request):
 
     return render(request, template_name, context)
 
-# Lead Views with Hierarchy
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.db.models import Q
+from django.core.exceptions import PermissionDenied
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.utils import timezone
+
+from .models import Lead, LeadInteraction, ProductDiscussion, LeadStatusChange
+from .forms import (
+    LeadForm, 
+    LeadInteractionForm, 
+    ProductDiscussionForm,
+    LeadConversionForm,
+    LeadStatusChangeForm,
+    LeadReassignmentForm
+)
+from .models import User
+
 @login_required
 def lead_list(request):
     user = request.user
     leads = get_user_accessible_data(user, Lead, 'assigned_to')
     
-    # Add filtering options
+    # Filtering options
     status_filter = request.GET.get('status')
     if status_filter:
         leads = leads.filter(status=status_filter)
     
-    # Add search functionality
+    # Search functionality
     search_query = request.GET.get('search')
     if search_query:
         leads = leads.filter(
             Q(name__icontains=search_query) | 
             Q(contact_info__icontains=search_query) |
-            Q(source__icontains=search_query)
+            Q(source__icontains=search_query) |
+            Q(lead_id__icontains=search_query)
         )
+
+    # Filter by conversion status
+    converted_filter = request.GET.get('converted')
+    if converted_filter == 'true':
+        leads = leads.filter(converted=True)
+    elif converted_filter == 'false':
+        leads = leads.filter(converted=False)
 
     context = {
         'leads': leads.order_by('-created_at'),
         'status_choices': Lead.STATUS_CHOICES,
         'current_status': status_filter,
         'search_query': search_query,
+        'converted_filter': converted_filter,
     }
     
     return render(request, 'base/leads.html', context)
+
+@login_required
+def lead_detail(request, pk):
+    lead = get_object_or_404(Lead, pk=pk)
+    
+    # Check permissions
+    if not request.user.can_access_user_data(lead.assigned_to):
+        raise PermissionDenied("You don't have permission to view this lead.")
+    
+    interactions = lead.interactions.all().order_by('-interaction_date')
+    product_discussions = lead.product_discussions.all()
+    status_changes = lead.status_changes.all().order_by('-changed_at')
+    
+    # Forms for interaction and status change
+    interaction_form = LeadInteractionForm()
+    status_change_form = LeadStatusChangeForm()
+    product_discussion_form = ProductDiscussionForm()
+    
+    # Conversion form (only for managers)
+    conversion_form = None
+    if request.user.role in ['rm_head', 'business_head', 'top_management'] and not lead.converted:
+        conversion_form = LeadConversionForm()
+    
+    # Reassignment form (only for managers)
+    reassignment_form = None
+    if request.user.role in ['rm_head', 'business_head', 'top_management']:
+        reassignment_form = LeadReassignmentForm(user=request.user)
+    
+    product_choices = ProductDiscussion.PRODUCT_CHOICES
+    context = {
+        'lead': lead,
+        'interactions': interactions,
+        'product_choices': product_choices,
+        'product_discussions': product_discussions,
+        'status_changes': status_changes,
+        'interaction_form': interaction_form,
+        'status_change_form': status_change_form,
+        'product_discussion_form': product_discussion_form,
+        'conversion_form': conversion_form,
+        'reassignment_form': reassignment_form,
+    }
+    
+    return render(request, 'base/lead_detail.html', context)
 
 @login_required
 def lead_create(request):
@@ -269,9 +341,21 @@ def lead_create(request):
         if form.is_valid():
             lead = form.save(commit=False)
             lead.created_by = request.user
+            lead.status = 'new'  # Default status
+            lead.lead_id = generate_lead_id()  # Custom function to generate ID
             lead.save()
+            
+            # Create initial status change record
+            LeadStatusChange.objects.create(
+                lead=lead,
+                changed_by=request.user,
+                old_status='',
+                new_status='new',
+                notes='Lead created'
+            )
+            
             messages.success(request, "Lead created successfully.")
-            return redirect('lead_list')
+            return redirect('lead_detail', pk=lead.pk)
     else:
         form = LeadForm()
         
@@ -296,9 +380,21 @@ def lead_update(request, pk):
     if request.method == 'POST':
         form = LeadForm(request.POST, instance=lead)
         if form.is_valid():
-            form.save()
+            old_status = lead.status
+            lead = form.save()
+            
+            # Record status change if it was modified
+            if old_status != lead.status:
+                LeadStatusChange.objects.create(
+                    lead=lead,
+                    changed_by=request.user,
+                    old_status=old_status,
+                    new_status=lead.status,
+                    notes='Status updated via lead edit'
+                )
+                
             messages.success(request, "Lead updated successfully.")
-            return redirect('lead_list')
+            return redirect('lead_detail', pk=lead.pk)
     else:
         form = LeadForm(instance=lead)
         
@@ -326,6 +422,348 @@ def lead_delete(request, pk):
         return redirect('lead_list')
     
     return render(request, 'base/lead_confirm_delete.html', {'lead': lead})
+
+@login_required
+@require_POST
+def add_interaction(request, pk):
+    
+    lead = get_object_or_404(Lead, pk=pk)
+    
+    # Check permissions
+    if not request.user.can_access_user_data(lead.assigned_to):
+        raise PermissionDenied("You don't have permission to add interactions for this lead.")
+    
+    form = LeadInteractionForm(request.POST)
+    if form.is_valid():
+        interaction = form.save(commit=False)
+        interaction.lead = lead
+        interaction.interacted_by = request.user
+        
+        # If this is the first interaction, record it on the lead
+        if not lead.first_interaction_date:
+            lead.first_interaction_date = timezone.now()
+            lead.save()
+            
+            # Record status change
+            LeadStatusChange.objects.create(
+                lead=lead,
+                changed_by=request.user,
+                old_status=lead.status,
+                new_status='contacted',
+                notes='First interaction completed'
+            )
+            lead.status = 'contacted'
+            lead.save()
+        
+        interaction.save()
+        
+        messages.success(request, "Interaction added successfully.")
+    else:
+        messages.error(request, "Error adding interaction.")
+    
+    # Fix: Use 'pk' instead of 'lead_id' to match the URL pattern
+    return redirect('lead_detail', pk=pk)
+
+@login_required
+@require_POST
+def add_product_discussion(request, pk):
+    lead = get_object_or_404(Lead, pk=pk)
+    
+    # Check permissions
+    if not request.user.can_access_user_data(lead.assigned_to):
+        raise PermissionDenied("You don't have permission to add product discussions for this lead.")
+    
+    # Check if this is the first interaction
+    if not lead.interactions.exists():
+        messages.error(request, "You must have at least one interaction before adding product discussions.")
+        return redirect('lead_detail', pk=lead.pk)
+    
+    form = ProductDiscussionForm(request.POST)
+    if form.is_valid():
+        discussion = form.save(commit=False)
+        discussion.lead = lead
+        discussion.discussed_by = request.user
+        discussion.save()
+        messages.success(request, "Product discussion added successfully.")
+    else:
+        messages.error(request, "Error adding product discussion.")
+    
+    return redirect('lead_detail', pk=lead.pk)
+
+@login_required
+@require_POST
+def change_lead_status(request, pk):
+    lead = get_object_or_404(Lead, pk=pk)
+    
+    # Check permissions
+    if not request.user.can_access_user_data(lead.assigned_to):
+        raise PermissionDenied("You don't have permission to change status for this lead.")
+    
+    form = LeadStatusChangeForm(request.POST)
+    if form.is_valid():
+        new_status = form.cleaned_data['new_status']
+        notes = form.cleaned_data['notes']
+        
+        # Record status change
+        LeadStatusChange.objects.create(
+            lead=lead,
+            changed_by=request.user,
+            old_status=lead.status,
+            new_status=new_status,
+            notes=notes
+        )
+        
+        # Update lead status
+        lead.status = new_status
+        lead.save()
+        
+        messages.success(request, f"Lead status changed to {new_status}.")
+    else:
+        messages.error(request, "Error changing lead status.")
+    
+    return redirect('lead_detail', pk=lead.pk)
+
+@login_required
+@require_POST
+def request_conversion(request, pk):
+    lead = get_object_or_404(Lead, pk=pk)
+    
+    # Check permissions
+    if not request.user.can_access_user_data(lead.assigned_to):
+        raise PermissionDenied("You don't have permission to request conversion for this lead.")
+    
+    if lead.converted:
+        messages.error(request, "This lead is already converted.")
+        return redirect('lead_detail', pk=lead.pk)
+    
+    # Find the line manager (RM Head)
+    line_manager = lead.assigned_to.get_line_manager()
+    if not line_manager:
+        messages.error(request, "No line manager found to send the conversion request.")
+        return redirect('lead_detail', pk=lead.pk)
+    
+    # Create a status change record as conversion request
+    LeadStatusChange.objects.create(
+        lead=lead,
+        changed_by=request.user,
+        old_status=lead.status,
+        new_status='conversion_requested',
+        notes='Conversion requested - pending approval',
+        needs_approval=True,
+        approval_by=line_manager
+    )
+    
+    # Update lead status
+    lead.status = 'conversion_requested'
+    lead.save()
+    
+    # TODO: Send notification to line manager
+    
+    messages.success(request, "Conversion request sent to your line manager.")
+    return redirect('lead_detail', pk=lead.pk)
+
+@login_required
+@require_POST
+def convert_lead(request, pk):
+    if not request.user.role in ['rm_head', 'business_head', 'top_management']:
+        messages.error(request, "You don't have permission to convert leads.")
+        return redirect('lead_detail', pk=pk)
+    
+    lead = get_object_or_404(Lead, pk=pk)
+    form = LeadConversionForm(request.POST)
+    
+    if form.is_valid():
+        # Update lead as converted
+        lead.converted = True
+        lead.converted_at = timezone.now()
+        lead.converted_by = request.user
+        lead.client_id = generate_client_id()  # Custom function
+        lead.save()
+        
+        # Record status change
+        LeadStatusChange.objects.create(
+            lead=lead,
+            changed_by=request.user,
+            old_status=lead.status,
+            new_status='converted',
+            notes=f"Lead converted to client {lead.client_id}"
+        )
+        
+        messages.success(request, f"Lead successfully converted to client {lead.client_id}.")
+    else:
+        messages.error(request, "Error converting lead.")
+    
+    return redirect('lead_detail', pk=lead.pk)
+
+@login_required
+@require_POST
+def reassign_lead(request, pk):
+    if not request.user.role in ['rm_head', 'business_head', 'top_management']:
+        messages.error(request, "You don't have permission to reassign leads.")
+        return redirect('lead_detail', pk=pk)
+    
+    lead = get_object_or_404(Lead, pk=pk)
+    form = LeadReassignmentForm(request.user, request.POST)
+    
+    if form.is_valid():
+        new_rm = form.cleaned_data['assigned_to']
+        old_rm = lead.assigned_to
+        
+        # Record reassignment
+        LeadStatusChange.objects.create(
+            lead=lead,
+            changed_by=request.user,
+            old_status=f"assigned_to:{old_rm.id}",
+            new_status=f"assigned_to:{new_rm.id}",
+            notes=f"Lead reassigned from {old_rm.get_full_name()} to {new_rm.get_full_name()}"
+        )
+        
+        # Update lead
+        lead.assigned_to = new_rm
+        lead.save()
+        
+        # TODO: Send notification to new RM
+        
+        messages.success(request, f"Lead successfully reassigned to {new_rm.get_full_name()}.")
+    else:
+        messages.error(request, "Error reassigning lead.")
+    
+    return redirect('lead_detail', pk=lead.pk)
+
+# Helper functions
+def generate_lead_id():
+    """Generate a unique lead ID"""
+    from datetime import datetime
+    prefix = "LD"
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    return f"{prefix}{timestamp}"
+
+def generate_client_id():
+    """Generate a unique client ID"""
+    from datetime import datetime
+    prefix = "CL"
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    return f"{prefix}{timestamp}"
+
+@login_required
+@require_POST
+def delete_interaction(request, interaction_id):
+    interaction = get_object_or_404(LeadInteraction, pk=interaction_id)
+    lead_pk = interaction.lead.pk
+    
+    # Check permissions
+    if not (request.user == interaction.interacted_by or 
+            request.user.can_access_user_data(interaction.lead.assigned_to)):
+        raise PermissionDenied("You don't have permission to delete this interaction.")
+    
+    interaction.delete()
+    messages.success(request, "Interaction deleted successfully.")
+    return redirect('leads:lead_detail', pk=lead_pk)
+
+@login_required
+@require_POST
+def request_reassignment(request, pk):
+    lead = get_object_or_404(Lead, pk=pk)
+    
+    # Check permissions
+    if not request.user.can_access_user_data(lead.assigned_to):
+        raise PermissionDenied("You don't have permission to request reassignment for this lead.")
+    
+    new_rm_id = request.POST.get('new_rm')
+    try:
+        new_rm = User.objects.get(pk=new_rm_id, role__in=['rm', 'rm_head'])
+    except User.DoesNotExist:
+        messages.error(request, "Invalid RM selected.")
+        return redirect('leads:lead_detail', pk=pk)
+    
+    if lead.assigned_to == new_rm:
+        messages.warning(request, "Lead is already assigned to this RM.")
+        return redirect('leads:lead_detail', pk=pk)
+    
+    # Request reassignment
+    lead.needs_reassignment_approval = True
+    lead.reassignment_requested_to = request.user.get_line_manager()
+    lead.save()
+    
+    # Create status change record
+    LeadStatusChange.objects.create(
+        lead=lead,
+        changed_by=request.user,
+        old_status=f"assigned_to:{lead.assigned_to.id}",
+        new_status=f"assigned_to:{new_rm.id}",
+        notes=f"Reassignment requested to {new_rm.get_full_name()}",
+        needs_approval=True,
+        approval_by=request.user.get_line_manager()
+    )
+    
+    messages.success(request, "Reassignment request sent to your manager.")
+    return redirect('leads:lead_detail', pk=pk)
+
+@login_required
+@require_POST
+def approve_reassignment(request, pk):
+    lead = get_object_or_404(Lead, pk=pk)
+    
+    # Check if current user is the approver
+    if request.user != lead.reassignment_requested_to:
+        raise PermissionDenied("You don't have permission to approve this reassignment.")
+    
+    # Get the latest reassignment request
+    status_change = lead.status_changes.filter(needs_approval=True).latest('changed_at')
+    
+    # Extract new RM ID from status change
+    new_rm_id = status_change.new_status.split(':')[-1]
+    try:
+        new_rm = User.objects.get(pk=new_rm_id)
+    except User.DoesNotExist:
+        messages.error(request, "The requested RM no longer exists.")
+        return redirect('leads:lead_detail', pk=pk)
+    
+    # Approve the reassignment
+    lead.assigned_to = new_rm
+    lead.needs_reassignment_approval = False
+    lead.reassignment_requested_to = None
+    lead.save()
+    
+    # Update status change record
+    status_change.approved = True
+    status_change.approved_by = request.user
+    status_change.approved_at = timezone.now()
+    status_change.save()
+    
+    messages.success(request, f"Lead successfully reassigned to {new_rm.get_full_name()}.")
+    return redirect('leads:lead_detail', pk=pk)
+
+@login_required
+def get_reference_clients(request):
+    """AJAX view to get reference clients for autocomplete"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Not authenticated'}, status=403)
+    
+    query = request.GET.get('q', '')
+    clients = Lead.objects.filter(
+        Q(converted=True),
+        Q(name__icontains=query) | Q(client_id__icontains=query)
+    ).values('id', 'name', 'client_id')[:10]
+    
+    return JsonResponse(list(clients), safe=False)
+
+@login_required
+def get_accessible_users(request):
+    """AJAX view to get accessible users for current user"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Not authenticated'}, status=403)
+    
+    query = request.GET.get('q', '')
+    accessible_users = request.user.get_accessible_users()
+    
+    users = User.objects.filter(
+        Q(id__in=[u.id for u in accessible_users]),
+        Q(first_name__icontains=query) | Q(last_name__icontains=query) | Q(email__icontains=query)
+    ).values('id', 'first_name', 'last_name', 'email', 'role')[:10]
+    
+    return JsonResponse(list(users), safe=False)
+
 
 # Client Views with Hierarchy
 @login_required

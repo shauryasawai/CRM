@@ -84,43 +84,129 @@ class TeamAdmin(admin.ModelAdmin):
     member_count.short_description = 'Members'
 
 
+from django.contrib import admin
+from django.contrib.admin import TabularInline
+from .models import Lead, LeadInteraction, ProductDiscussion, LeadStatusChange
+from django.db.models import Q
+
+class ProductDiscussionInline(TabularInline):
+    model = ProductDiscussion
+    extra = 0
+    fields = ('product', 'interest_level', 'discussed_on', 'discussed_by')
+    readonly_fields = ('discussed_on',)
+    autocomplete_fields = ('discussed_by',)
+
+class LeadInteractionInline(TabularInline):
+    model = LeadInteraction
+    extra = 0
+    fields = ('interaction_type', 'interaction_date', 'notes', 'interacted_by')
+    readonly_fields = ('interaction_date',)
+    autocomplete_fields = ('interacted_by',)
+
+class LeadStatusChangeInline(TabularInline):
+    model = LeadStatusChange
+    extra = 0
+    fields = ('changed_at', 'changed_by', 'old_status', 'new_status', 'notes', 'approved')
+    readonly_fields = ('changed_at',)
+
 class LeadAdmin(admin.ModelAdmin):
-    """Lead Admin with hierarchy filters"""
-    
     list_display = (
-        'name', 'status', 'assigned_to_link', 'contact_info', 
-        'source', 'created_by_link', 'created_at'
+        'lead_id', 'name', 'email', 'mobile', 'status', 
+        'assigned_to', 'created_at', 'converted'
     )
-    list_filter = ('status', 'source', 'created_at', 'assigned_to__role')
-    search_fields = ('name', 'contact_info', 'source')
-    ordering = ('-created_at',)
-    
+    list_filter = (
+        'status', 'source', 'converted', 
+        'assigned_to', 'created_by', 'created_at'
+    )
+    search_fields = (
+        'lead_id', 'name', 'email', 'mobile', 
+        'client_id', 'source_details'
+    )
+    readonly_fields = (
+        'lead_id', 'client_id', 'created_at', 'updated_at', 
+        'first_interaction_date', 'converted_at'
+    )
     fieldsets = (
         ('Lead Information', {
-            'fields': ('name', 'contact_info', 'source', 'status')
+            'fields': (
+                'lead_id', 'name', 'email', 'mobile', 
+                'status', 'probability', 'client_id'
+            )
+        }),
+        ('Source Information', {
+            'fields': (
+                'source', 'source_details', 'reference_client'
+            )
         }),
         ('Assignment', {
-            'fields': ('assigned_to', 'created_by')
+            'fields': (
+                'assigned_to', 'created_by'
+            )
+        }),
+        ('Dates', {
+            'fields': (
+                'created_at', 'updated_at', 
+                'first_interaction_date', 'next_interaction_date',
+                'converted_at'
+            )
+        }),
+        ('Conversion', {
+            'fields': (
+                'converted', 'converted_by'
+            )
         }),
         ('Additional Info', {
             'fields': ('notes',)
         }),
     )
+    autocomplete_fields = (
+        'assigned_to', 'created_by', 'reference_client', 'converted_by'
+    )
+    inlines = [LeadInteractionInline, ProductDiscussionInline, LeadStatusChangeInline]
+    actions = ['mark_as_converted', 'export_leads']
     
-    def assigned_to_link(self, obj):
-        if obj.assigned_to:
-            url = reverse('admin:base_user_change', args=[obj.assigned_to.pk])
-            return format_html('<a href="{}">{} ({})</a>', 
-                             url, obj.assigned_to.username, obj.assigned_to.get_role_display())
-        return '-'
-    assigned_to_link.short_description = 'Assigned To'
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(
+            Q(assigned_to=request.user) | 
+            Q(created_by=request.user) |
+            Q(assigned_to__manager=request.user)
+        ).distinct()
     
-    def created_by_link(self, obj):
-        if obj.created_by:
-            url = reverse('admin:base_user_change', args=[obj.created_by.pk])
-            return format_html('<a href="{}">{}</a>', url, obj.created_by.username)
-        return '-'
-    created_by_link.short_description = 'Created By'
+    def mark_as_converted(self, request, queryset):
+        updated = queryset.update(converted=True)
+        self.message_user(request, f"{updated} leads marked as converted")
+    mark_as_converted.short_description = "Mark selected leads as converted"
+    
+    def export_leads(self, request, queryset):
+        # Implement export functionality
+        pass
+    export_leads.short_description = "Export selected leads"
+
+class LeadInteractionAdmin(admin.ModelAdmin):
+    list_display = ('lead', 'interaction_type', 'interaction_date', 'interacted_by')
+    list_filter = ('interaction_type', 'interaction_date')
+    search_fields = ('lead__name', 'lead__lead_id', 'notes')
+    autocomplete_fields = ('lead', 'interacted_by')
+
+class ProductDiscussionAdmin(admin.ModelAdmin):
+    list_display = ('lead', 'product', 'interest_level', 'discussed_on')
+    list_filter = ('product', 'discussed_on')
+    search_fields = ('lead__name', 'lead__lead_id')
+    autocomplete_fields = ('lead', 'discussed_by')
+
+class LeadStatusChangeAdmin(admin.ModelAdmin):
+    list_display = ('lead', 'changed_at', 'changed_by', 'old_status', 'new_status')
+    list_filter = ('changed_at', 'new_status')
+    search_fields = ('lead__name', 'lead__lead_id', 'notes')
+    autocomplete_fields = ('lead', 'changed_by', 'approved_by')
+
+
+admin.site.register(LeadInteraction, LeadInteractionAdmin)
+admin.site.register(ProductDiscussion, ProductDiscussionAdmin)
+admin.site.register(LeadStatusChange, LeadStatusChangeAdmin)
 
 
 class ClientAdmin(admin.ModelAdmin):

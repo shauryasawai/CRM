@@ -114,44 +114,266 @@ class Team(models.Model):
         return self.name
 
 
+from django.db import models
+from django.utils import timezone
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.conf import settings
+
+
 class Lead(models.Model):
     STATUS_CHOICES = (
-        ('new', 'New'),
+        ('new', 'New Lead'),
+        ('cold', 'Cold Lead'),
+        ('warm', 'Warm Lead'),
+        ('hot', 'Hot Lead'),
         ('contacted', 'Contacted'),
-        ('converted', 'Converted'),
-        ('lost', 'Lost'),
-        ('pending', 'Pending'),
         ('follow_up', 'Follow Up'),
+        ('conversion_requested', 'Conversion Requested'),
+        ('converted', 'Converted to Client'),
+        ('lost', 'Lost Lead'),
     )
     
+    SOURCE_CHOICES = (
+        ('existing_client', 'Existing Client'),
+        ('own_circle', 'Own Circle'),
+        ('social_media', 'Social Media'),
+        ('referral', 'Referral'),
+        ('other', 'Other'),
+    )
+    
+    # Lead Identification
+    lead_id = models.CharField(max_length=20, unique=True, editable=False, null=True, blank=True)
+    client_id = models.CharField(max_length=20, blank=True, null=True, unique=True)
+    
+    # Basic Information
+    name = models.CharField(max_length=255)
+    email = models.EmailField(blank=True, null=True)
+    mobile = models.CharField(max_length=15, null=True, blank=True)
+    
+    # Lead Source
+    source = models.CharField(max_length=50, choices=SOURCE_CHOICES,null=True, blank=True)
+    source_details = models.CharField(max_length=255, blank=True, null=True)
+    reference_client = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        limit_choices_to={'converted': True},
+        help_text="If source is Existing Client"
+    )
+    
+    # Assignment and Tracking
     assigned_to = models.ForeignKey(
-        'base.User',
+        settings.AUTH_USER_MODEL,
         limit_choices_to={'role__in': ['rm', 'rm_head', 'business_head']},
         on_delete=models.SET_NULL,
         null=True,
-        blank=True,
         related_name='leads'
     )
-    
-    # Track who created the lead for audit purposes
     created_by = models.ForeignKey(
-        'base.User',
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
-        blank=True,
         related_name='created_leads'
     )
     
-    name = models.CharField(max_length=255)
-    contact_info = models.CharField(max_length=255, default='N/A')
-    source = models.CharField(max_length=255, blank=True, null=True)
+    # Status and Dates
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='new')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    first_interaction_date = models.DateTimeField(blank=True, null=True)
+    next_interaction_date = models.DateField(blank=True, null=True)
+    converted_at = models.DateTimeField(blank=True, null=True)
+    converted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='converted_leads'
+    )
+    
+    # Flags
+    converted = models.BooleanField(default=False)
+    needs_reassignment_approval = models.BooleanField(default=False)
+    reassignment_requested_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reassignment_requests'
+    )
+    
+    # Additional Information
     notes = models.TextField(blank=True, null=True)
+    probability = models.PositiveIntegerField(
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Probability of conversion (0-100)%"
+    )
+    
+    class Meta:
+        ordering = ['-created_at']
+        permissions = [
+            ('can_convert_lead', 'Can convert lead to client'),
+            ('can_reassign_lead', 'Can reassign lead to another RM'),
+        ]
+    
+    def __str__(self):
+        return f"{self.lead_id} - {self.name} ({self.get_status_display()})"
+    
+    def save(self, *args, **kwargs):
+        if not self.lead_id:
+            self.lead_id = self.generate_lead_id()
+        super().save(*args, **kwargs)
+    
+    def generate_lead_id(self):
+        """Generate a unique lead ID in format LDYYYYMMDDXXXX"""
+        from datetime import datetime
+        date_part = datetime.now().strftime("%Y%m%d")
+        last_lead = Lead.objects.filter(lead_id__startswith=f"LD{date_part}").order_by('-lead_id').first()
+        
+        if last_lead:
+            last_num = int(last_lead.lead_id[-4:])
+            new_num = last_num + 1
+        else:
+            new_num = 1
+            
+        return f"LD{date_part}{new_num:04d}"
+    
+    def generate_client_id(self):
+        """Generate a unique client ID when lead is converted"""
+        from datetime import datetime
+        date_part = datetime.now().strftime("%Y%m%d")
+        last_client = Lead.objects.filter(client_id__startswith=f"CL{date_part}").order_by('-client_id').first()
+        
+        if last_client:
+            last_num = int(last_client.client_id[-4:])
+            new_num = last_num + 1
+        else:
+            new_num = 1
+            
+        return f"CL{date_part}{new_num:04d}"
+    
+    def days_to_first_interaction(self):
+        """Calculate days from creation to first interaction"""
+        if self.first_interaction_date:
+            delta = self.first_interaction_date - self.created_at
+            return delta.days
+        return None
+    
+    def request_reassignment(self, new_rm, requested_by):
+        """Request lead reassignment to another RM"""
+        if self.assigned_to == new_rm:
+            return False
+        
+        line_manager = self.assigned_to.get_line_manager()
+        if not line_manager:
+            return False
+        
+        self.needs_reassignment_approval = True
+        self.reassignment_requested_to = line_manager
+        self.save()
+        
+        # Create status change record
+        LeadStatusChange.objects.create(
+            lead=self,
+            changed_by=requested_by,
+            old_status=f"assigned_to:{self.assigned_to.id}",
+            new_status=f"assigned_to:{new_rm.id}",
+            notes=f"Reassignment requested from {self.assigned_to.get_full_name()} to {new_rm.get_full_name()}",
+            needs_approval=True,
+            approval_by=line_manager
+        )
+        
+        # TODO: Send notification to line manager
+        return True
+
+
+class LeadInteraction(models.Model):
+    INTERACTION_CHOICES = [
+        ('call', 'Phone Call'),
+        ('meeting', 'In-Person Meeting'),
+        ('email', 'Email'),
+        ('message', 'Message'),
+        ('other', 'Other')
+    ]
+    
+    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name='interactions')
+    interaction_type = models.CharField(max_length=50, choices=INTERACTION_CHOICES)
+    interaction_date = models.DateTimeField(default=timezone.now)
+    notes = models.TextField()
+    next_step = models.TextField(blank=True, null=True)
+    next_date = models.DateField(blank=True, null=True)
+    interacted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    
+    class Meta:
+        ordering = ['-interaction_date']
+        verbose_name = 'Lead Interaction'
+        verbose_name_plural = 'Lead Interactions'
+    
+    def __str__(self):
+        return f"{self.get_interaction_type_display()} on {self.interaction_date.strftime('%Y-%m-%d')}"
+
+
+class ProductDiscussion(models.Model):
+    PRODUCT_CHOICES = [
+        ('mf_sip', 'Mutual Fund SIP'),
+        ('mf_lumpsum', 'Mutual Fund Lumpsum'),
+        ('equity', 'Equity'),
+        ('ai_portfolio', 'AI Portfolio'),
+        ('loans', 'Loans'),
+        ('insurance', 'Insurance'),
+        ('pms', 'Portfolio Management Services'),
+        ('aif', 'Alternative Investment Funds'),
+        ('other', 'Other')
+    ]
+    
+    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name='product_discussions')
+    product = models.CharField(max_length=50, choices=PRODUCT_CHOICES)
+    interest_level = models.PositiveIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        help_text="Interest level (1-10)"
+    )
+    notes = models.TextField(blank=True, null=True)
+    discussed_on = models.DateTimeField(default=timezone.now)
+    discussed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    
+    class Meta:
+        ordering = ['-discussed_on']
+        verbose_name = 'Product Discussion'
+        verbose_name_plural = 'Product Discussions'
+    
+    def __str__(self):
+        return f"{self.get_product_display()} (Interest: {self.interest_level}/10)"
+
+
+class LeadStatusChange(models.Model):
+    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name='status_changes')
+    changed_at = models.DateTimeField(default=timezone.now)
+    changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='status_changes_made', on_delete=models.SET_NULL, null=True)
+    old_status = models.CharField(max_length=255)
+    new_status = models.CharField(max_length=255)
+    notes = models.TextField(blank=True, null=True)
+    needs_approval = models.BooleanField(default=False)
+    approved = models.BooleanField(default=False)
+    approval_by = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='approvals_to_make', on_delete=models.SET_NULL, null=True, blank=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_status_changes'
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-changed_at']
+        verbose_name = 'Status Change'
+        verbose_name_plural = 'Status Changes'
 
     def __str__(self):
-        return f"{self.name} - {self.get_status_display()}"
+        return f"LeadStatusChange for Lead {self.lead.id} by {self.changed_by}"
 
 
 class Client(models.Model):
