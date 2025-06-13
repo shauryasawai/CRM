@@ -10,7 +10,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models import Sum, Avg, F, Q
 from django.db.models.functions import Extract
 from django.utils import timezone
-
+from django.db import transaction
 from .models import User, Lead, Client, Task, ServiceRequest, BusinessTracker, InvestmentPlanReview, Team,ProductDiscussion
 from .forms import LeadForm, ClientForm, TaskForm, ServiceRequestForm, InvestmentPlanReviewForm
 from .models import Lead, ProductDiscussion, LeadInteraction, LeadStatusChange
@@ -426,7 +426,6 @@ def lead_delete(request, pk):
 @login_required
 @require_POST
 def add_interaction(request, pk):
-    
     lead = get_object_or_404(Lead, pk=pk)
     
     # Check permissions
@@ -434,34 +433,43 @@ def add_interaction(request, pk):
         raise PermissionDenied("You don't have permission to add interactions for this lead.")
     
     form = LeadInteractionForm(request.POST)
-    if form.is_valid():
-        interaction = form.save(commit=False)
-        interaction.lead = lead
-        interaction.interacted_by = request.user
-        
-        # If this is the first interaction, record it on the lead
-        if not lead.first_interaction_date:
-            lead.first_interaction_date = timezone.now()
-            lead.save()
-            
-            # Record status change
-            LeadStatusChange.objects.create(
-                lead=lead,
-                changed_by=request.user,
-                old_status=lead.status,
-                new_status='contacted',
-                notes='First interaction completed'
-            )
-            lead.status = 'contacted'
-            lead.save()
-        
-        interaction.save()
-        
-        messages.success(request, "Interaction added successfully.")
-    else:
-        messages.error(request, "Error adding interaction.")
     
-    # Fix: Use 'pk' instead of 'lead_id' to match the URL pattern
+    if not form.is_valid():
+        # Collect all form errors for display
+        error_list = []
+        for field, errors in form.errors.items():
+            field_name = form.fields[field].label or field
+            error_list.append(f"{field_name}: {' '.join(errors)}")
+        
+        messages.error(request, "Please correct the errors below: " + ", ".join(error_list))
+        return redirect('lead_detail', pk=pk)
+    
+    try:
+        with transaction.atomic():
+            interaction = form.save(commit=False)
+            interaction.lead = lead
+            interaction.interacted_by = request.user
+            interaction.save()
+            
+            # Handle first interaction logic
+            if not lead.first_interaction_date:
+                lead.first_interaction_date = interaction.interaction_date
+                lead.status = 'contacted'
+                lead.save()
+                
+                LeadStatusChange.objects.create(
+                    lead=lead,
+                    changed_by=request.user,
+                    old_status=lead.status,
+                    new_status='contacted',
+                    notes='First interaction completed'
+                )
+            
+            messages.success(request, f"{interaction.get_interaction_type_display()} interaction added successfully.")
+    
+    except Exception as e:
+        messages.error(request, f"Failed to save interaction: {str(e)}")
+    
     return redirect('lead_detail', pk=pk)
 
 @login_required
@@ -536,10 +544,19 @@ def request_conversion(request, pk):
         messages.error(request, "This lead is already converted.")
         return redirect('lead_detail', pk=lead.pk)
     
-    # Find the line manager (RM Head)
-    line_manager = lead.assigned_to.get_line_manager()
-    if not line_manager:
-        messages.error(request, "No line manager found to send the conversion request.")
+    # Check if conversion is already requested
+    if lead.status == 'conversion_requested':
+        messages.warning(request, "Conversion request is already pending approval.")
+        return redirect('lead_detail', pk=lead.pk)
+    
+    # Find the appropriate manager for approval
+    approval_manager = lead.assigned_to.get_approval_manager()  # Use the new method
+    
+    if not approval_manager:
+        messages.error(request, 
+            f"No manager found to approve conversion for {lead.assigned_to.get_full_name()}. "
+            "Please contact your administrator to set up the reporting hierarchy."
+        )
         return redirect('lead_detail', pk=lead.pk)
     
     # Create a status change record as conversion request
@@ -548,18 +565,21 @@ def request_conversion(request, pk):
         changed_by=request.user,
         old_status=lead.status,
         new_status='conversion_requested',
-        notes='Conversion requested - pending approval',
+        notes=f'Conversion requested by {request.user.get_full_name()} - pending approval from {approval_manager.get_full_name()}',
         needs_approval=True,
-        approval_by=line_manager
+        approval_by=approval_manager
     )
     
     # Update lead status
     lead.status = 'conversion_requested'
     lead.save()
     
-    # TODO: Send notification to line manager
+    # TODO: Send notification to approval manager
+    # You might want to add notification logic here
     
-    messages.success(request, "Conversion request sent to your line manager.")
+    messages.success(request, 
+        f"Conversion request sent to {approval_manager.get_full_name()} for approval."
+    )
     return redirect('lead_detail', pk=lead.pk)
 
 @login_required
@@ -629,6 +649,95 @@ def reassign_lead(request, pk):
         messages.error(request, "Error reassigning lead.")
     
     return redirect('lead_detail', pk=lead.pk)
+
+@login_required
+@require_POST
+def approve_conversion(request, pk):
+    if not request.user.role in ['rm_head', 'business_head', 'top_management']:
+        messages.error(request, "You don't have permission to approve conversions.")
+        return redirect('rm_head_dashboard')
+    
+    lead = get_object_or_404(Lead, pk=pk)
+    approval_id = request.POST.get('approval_id')
+    
+    try:
+        approval = LeadStatusChange.objects.get(id=approval_id, lead=lead, needs_approval=True)
+    except LeadStatusChange.DoesNotExist:
+        messages.error(request, "Approval request not found or already processed.")
+        return redirect('rm_head_dashboard')
+    
+    # Update the approval record
+    approval.approved = True
+    approval.approved_at = timezone.now()
+    approval.approved_by = request.user
+    approval.needs_approval = False
+    approval.save()
+    
+    # Convert the lead
+    lead.converted = True
+    lead.converted_at = timezone.now()
+    lead.converted_by = request.user
+    lead.client_id = generate_client_id()
+    lead.status = 'converted'
+    lead.save()
+    
+    # Create a new status change record for the conversion
+    LeadStatusChange.objects.create(
+        lead=lead,
+        changed_by=request.user,
+        old_status=approval.new_status,
+        new_status='converted',
+        notes=f"Conversion approved by {request.user.get_full_name()}",
+        approved=True,
+        approved_by=request.user,
+        approved_at=timezone.now()
+    )
+    
+    messages.success(request, f"Lead successfully converted to client {lead.client_id}.")
+    return redirect('rm_head_dashboard')
+
+@login_required
+@require_POST
+def reject_conversion(request, pk):
+    if not request.user.role in ['rm_head', 'business_head', 'top_management']:
+        messages.error(request, "You don't have permission to reject conversions.")
+        return redirect('rm_head_dashboard')
+    
+    lead = get_object_or_404(Lead, pk=pk)
+    approval_id = request.POST.get('approval_id')
+    
+    try:
+        approval = LeadStatusChange.objects.get(id=approval_id, lead=lead, needs_approval=True)
+    except LeadStatusChange.DoesNotExist:
+        messages.error(request, "Approval request not found or already processed.")
+        return redirect('rm_head_dashboard')
+    
+    # Update the approval record
+    approval.approved = False
+    approval.approved_at = timezone.now()
+    approval.approved_by = request.user
+    approval.needs_approval = False
+    approval.notes = f"Conversion rejected by {request.user.get_full_name()}. " + (request.POST.get('rejection_reason', '') or "No reason provided")
+    approval.save()
+    
+    # Revert lead status to previous status
+    lead.status = approval.old_status
+    lead.save()
+    
+    # Create a new status change record for the rejection
+    LeadStatusChange.objects.create(
+        lead=lead,
+        changed_by=request.user,
+        old_status='conversion_requested',
+        new_status=approval.old_status,
+        notes=f"Conversion rejected by {request.user.get_full_name()}",
+        approved=False,
+        approved_by=request.user,
+        approved_at=timezone.now()
+    )
+    
+    messages.warning(request, "Conversion request has been rejected.")
+    return redirect('rm_head_dashboard')
 
 # Helper functions
 def generate_lead_id():

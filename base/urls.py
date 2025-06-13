@@ -7,34 +7,38 @@ urlpatterns = [
     
     path('', views.user_login, name='login'),
     path('logout/', views.user_logout, name='logout'),
-
-
+    
     # Lead URLs
-    path('leads/', views.lead_list, name='lead_list'),
-    path('leads/create/', views.lead_create, name='lead_create'),
-    path('leads/<int:pk>/', views.lead_detail, name='lead_detail'),
-    path('leads/<int:pk>/update/', views.lead_update, name='lead_update'),
-    path('leads/<int:pk>/delete/', views.lead_delete, name='lead_delete'),
-    # Lead Interaction URLs
-    path('leads/<int:pk>/add-interaction/', views.add_interaction, name='add_interaction'),
-    path('leads/interaction/<int:pk>/delete/', views.delete_interaction, name='delete_interaction'),
-    
-    # Product Discussion URLs
-    path('leads/<int:pk>/add-product-discussion/', views.add_product_discussion, name='add_product_discussion'),
-    
-    # Status Management URLs
-    path('leads/<int:pk>/change-status/', views.change_lead_status, name='change_lead_status'),
-    path('leads/<int:pk>/request-conversion/', views.request_conversion, name='request_conversion'),
-    path('leads/<int:pk>/convert/', views.convert_lead, name='convert_lead'),
-    
-    # Reassignment URLs
-    path('leads/<int:pk>/request-reassignment/', views.request_reassignment, name='request_reassignment'),
-    path('leads/<int:pk>/approve-reassignment/', views.approve_reassignment, name='approve_reassignment'),
-    path('leads/<int:pk>/reassign/', views.reassign_lead, name='reassign_lead'),
-    
-    # AJAX/API URLs
-    path('leads/get-reference-clients/', views.get_reference_clients, name='get_reference_clients'),
-    path('leads/get-accessible-users/', views.get_accessible_users, name='get_accessible_users'),
+path('leads/', views.lead_list, name='lead_list'),
+path('leads/create/', views.lead_create, name='lead_create'),
+path('leads/<int:pk>/', views.lead_detail, name='lead_detail'),
+path('leads/<int:pk>/update/', views.lead_update, name='lead_update'),
+path('leads/<int:pk>/delete/', views.lead_delete, name='lead_delete'),
+
+# Lead Interaction URLs
+path('leads/<int:pk>/add-interaction/', views.add_interaction, name='add_interaction'),
+path('leads/interaction/<int:pk>/delete/', views.delete_interaction, name='delete_interaction'),
+
+# Product Discussion URLs
+path('leads/<int:pk>/add-product-discussion/', views.add_product_discussion, name='add_product_discussion'),
+
+# Status Management URLs
+path('leads/<int:pk>/change-status/', views.change_lead_status, name='change_lead_status'),
+path('leads/<int:pk>/request-conversion/', views.request_conversion, name='request_conversion'),
+path('leads/<int:pk>/convert/', views.convert_lead, name='convert_lead'),
+
+# Conversion Approval URLs (NEW)
+path('leads/<int:pk>/approve-conversion/', views.approve_conversion, name='approve_conversion'),
+path('leads/<int:pk>/reject-conversion/', views.reject_conversion, name='reject_conversion'),
+
+# Reassignment URLs
+path('leads/<int:pk>/request-reassignment/', views.request_reassignment, name='request_reassignment'),
+path('leads/<int:pk>/approve-reassignment/', views.approve_reassignment, name='approve_reassignment'),
+path('leads/<int:pk>/reassign/', views.reassign_lead, name='reassign_lead'),
+
+# AJAX/API URLs
+path('leads/get-reference-clients/', views.get_reference_clients, name='get_reference_clients'),
+path('leads/get-accessible-users/', views.get_accessible_users, name='get_accessible_users'),
 
     # Client URLs
     path('clients/', views.client_list, name='client_list'),

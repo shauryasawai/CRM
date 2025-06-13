@@ -49,6 +49,42 @@ class User(AbstractUser):
         if self.role == 'rm' and self.manager and self.manager.role not in ['rm_head', 'business_head']:
             raise ValidationError("RM can only report to RM Head or Business Head")
 
+    def get_line_manager(self):
+        """Get the direct line manager for this user"""
+        return self.manager
+    
+    def get_approval_manager(self):
+        """Get the appropriate manager for approval requests based on role hierarchy"""
+        if self.role == 'rm':
+            # RM should get approval from RM Head
+            if self.manager and self.manager.role == 'rm_head':
+                return self.manager
+            # If direct manager is not RM Head, find the RM Head in the hierarchy
+            current = self.manager
+            while current:
+                if current.role == 'rm_head':
+                    return current
+                current = current.manager
+        
+        # For other roles, return direct manager
+        return self.manager
+    
+    def can_approve_conversion(self, user):
+        """Check if this user can approve conversion requests for the given user"""
+        # Direct manager can approve
+        if user.manager == self:
+            return True
+            
+        # RM Head can approve for RMs in their hierarchy
+        if self.role == 'rm_head' and user.role == 'rm':
+            current = user
+            while current:
+                if current.manager == self:
+                    return True
+                current = current.manager
+                
+        return False
+
     def get_team_members(self):
         """Get all team members for RM Heads"""
         if self.role == 'rm_head':
