@@ -2,7 +2,13 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
-from .models import User, Lead, Client, Task, ServiceRequest, InvestmentPlanReview, Team, BusinessTracker
+from django.utils import timezone
+from django.db.models import Q
+from .models import (
+    User, Lead, Client, Task, ServiceRequest, InvestmentPlanReview, 
+    Team, BusinessTracker, LeadInteraction, ProductDiscussion, 
+    LeadStatusChange, TeamMembership, Reminder
+)
 
 
 class CustomUserCreationForm(UserCreationForm):
@@ -71,27 +77,270 @@ class TeamForm(forms.ModelForm):
     
     class Meta:
         model = Team
-        fields = ('name', 'head', 'description')
+        fields = ['name', 'description', 'leader']
         widgets = {
-            'description': forms.Textarea(attrs={'rows': 3}),
+            'description': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'leader': forms.Select(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Only RM Heads can be team leaders
+        self.fields['leader'].queryset = User.objects.filter(role='rm_head', is_active=True)
+        self.fields['leader'].empty_label = "Select Team Leader"
+
+
+class TeamMembershipForm(forms.ModelForm):
+    """Form for managing team memberships"""
+    
+    class Meta:
+        model = TeamMembership
+        fields = ['user', 'team', 'is_active']
+        widgets = {
+            'user': forms.Select(attrs={'class': 'form-control'}),
+            'team': forms.Select(attrs={'class': 'form-control'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        current_user = kwargs.pop('current_user', None)
+        super().__init__(*args, **kwargs)
+        
+        # Limit team choices based on user role
+        if current_user and current_user.role == 'rm_head':
+            self.fields['team'].queryset = Team.objects.filter(leader=current_user)
+        else:
+            self.fields['team'].queryset = Team.objects.all()
+        
+        # Limit user choices to RMs
+        self.fields['user'].queryset = User.objects.filter(role='rm', is_active=True)
+
+
+class UserEditForm(forms.ModelForm):
+    """Form for editing user profiles"""
+    
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email', 'role', 'manager']
+        widgets = {
+            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'role': forms.Select(attrs={'class': 'form-control'}),
+            'manager': forms.Select(attrs={'class': 'form-control'}),
+        }
+        
+    def __init__(self, *args, **kwargs):
+        current_user = kwargs.pop('current_user', None)
+        super().__init__(*args, **kwargs)
+        
+        # Configure manager choices based on role
+        if self.instance and self.instance.role:
+            if self.instance.role == 'top_management':
+                self.fields['manager'].queryset = User.objects.none()
+            elif self.instance.role == 'business_head':
+                self.fields['manager'].queryset = User.objects.filter(role='top_management')
+            elif self.instance.role == 'rm_head':
+                self.fields['manager'].queryset = User.objects.filter(role__in=['business_head', 'top_management'])
+            elif self.instance.role == 'rm':
+                self.fields['manager'].queryset = User.objects.filter(role__in=['rm_head', 'business_head'])
+
+
+class LeadForm(forms.ModelForm):
+    """Form for creating/editing leads with enhanced features"""
+    
+    assigned_to = forms.ModelChoiceField(
+        queryset=User.objects.filter(is_active=True).order_by('first_name', 'last_name'),
+        empty_label="Select a user...",
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label="Assigned To"
+    )
+    
+    # Source radio buttons with conditional field
+    source = forms.ChoiceField(
+        choices=Lead.SOURCE_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'source-radio'}),
+        initial='other'
+    )
+    reference_client = forms.ModelChoiceField(
+        queryset=Lead.objects.filter(converted=True),
+        required=False,
+        label="Existing Client Name",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    source_details = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Please specify source details',
+            'class': 'form-control'
+        })
+    )
+    
+    class Meta:
+        model = Lead
+        fields = [
+            'name', 'email', 'mobile', 'source', 'source_details', 'reference_client',
+            'assigned_to', 'probability', 'notes', 'next_interaction_date'
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'placeholder': 'Full Name',
+                'class': 'form-control'
+            }),
+            'email': forms.EmailInput(attrs={
+                'placeholder': 'Email Address',
+                'class': 'form-control'
+            }),
+            'mobile': forms.TextInput(attrs={
+                'placeholder': 'Mobile Number',
+                'pattern': '[0-9]{10}',
+                'title': '10 digit mobile number',
+                'class': 'form-control'
+            }),
+            'notes': forms.Textarea(attrs={
+                'rows': 4,
+                'placeholder': 'Additional notes about the lead...',
+                'class': 'form-control'
+            }),
+            'probability': forms.NumberInput(attrs={
+                'min': 0,
+                'max': 100,
+                'step': 5,
+                'class': 'form-control'
+            }),
+            'next_interaction_date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'form-control'
+            }),
+        }
+        labels = {
+            'probability': 'Conversion Probability (%)',
+            'next_interaction_date': 'Next Follow-up Date'
         }
     
     def __init__(self, *args, **kwargs):
+        self.current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
-        # Only RM Heads can be team heads
-        self.fields['head'].queryset = User.objects.filter(role='rm_head')
-
-
-from django import forms
-from django.db.models import Q
-from .models import Lead, User
-
-from django import forms
-from django.contrib.auth import get_user_model
-from django.utils import timezone
-from .models import Lead, LeadInteraction, ProductDiscussion, LeadStatusChange
-
-User = get_user_model()
+        
+        # Configure assigned_to field based on user role
+        self.configure_assignment_field()
+        
+        # Set initial status to 'new' for new leads
+        if not self.instance.pk:
+            self.instance.status = 'new'
+        
+        # Configure source fields
+        self.configure_source_fields()
+        
+        # Customize the display of users in dropdown
+        self.fields['assigned_to'].label_from_instance = lambda obj: f"{obj.get_full_name()} ({obj.username})" if obj.get_full_name() else obj.username
+    
+    def configure_assignment_field(self):
+        """Configure the assigned_to field based on user role"""
+        try:
+            if not self.current_user:
+                # If no current user, show all active users with relevant roles
+                self.fields['assigned_to'].queryset = User.objects.filter(
+                    role__in=['rm', 'rm_head', 'business_head'],
+                    is_active=True
+                ).order_by('first_name', 'last_name')
+                return
+            
+            if self.current_user.role in ['top_management', 'business_head']:
+                # Can assign to any RM or RM Head
+                self.fields['assigned_to'].queryset = User.objects.filter(
+                    role__in=['rm', 'rm_head', 'business_head'],
+                    is_active=True
+                ).order_by('first_name', 'last_name')
+            elif self.current_user.role == 'rm_head':
+                # Can assign to team members or self
+                accessible_users = self.current_user.get_accessible_users()
+                self.fields['assigned_to'].queryset = accessible_users.filter(
+                    role__in=['rm', 'rm_head']
+                ).order_by('first_name', 'last_name')
+            elif self.current_user.role == 'rm':
+                # Can only assign to self
+                self.fields['assigned_to'].queryset = User.objects.filter(id=self.current_user.id)
+                self.fields['assigned_to'].initial = self.current_user
+                self.fields['assigned_to'].widget.attrs['disabled'] = True
+            else:
+                # Default: show all users with relevant roles
+                self.fields['assigned_to'].queryset = User.objects.filter(
+                    role__in=['rm', 'rm_head', 'business_head'],
+                    is_active=True
+                ).order_by('first_name', 'last_name')
+                
+        except Exception as e:
+            # Fallback: show all active users with relevant roles
+            print(f"Error configuring assignment field: {e}")
+            self.fields['assigned_to'].queryset = User.objects.filter(
+                role__in=['rm', 'rm_head', 'business_head'],
+                is_active=True
+            ).order_by('first_name', 'last_name')
+        
+        # Ensure queryset is not empty
+        if not self.fields['assigned_to'].queryset.exists():
+            self.fields['assigned_to'].queryset = User.objects.filter(
+                is_active=True
+            ).order_by('first_name', 'last_name')
+    
+    def configure_source_fields(self):
+        """Configure source-related fields and their requirements"""
+        if 'source' in self.data:  # Form was submitted
+            source = self.data.get('source')
+        elif self.instance.pk:  # Editing existing lead
+            source = self.instance.source
+        else:  # New form
+            source = self.fields['source'].initial
+        
+        # Show/hide and require fields based on source selection
+        if source == 'existing_client':
+            self.fields['reference_client'].required = True
+            self.fields['source_details'].required = False
+        elif source == 'other':
+            self.fields['source_details'].required = True
+            self.fields['reference_client'].required = False
+        else:
+            self.fields['source_details'].required = False
+            self.fields['reference_client'].required = False
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        source = cleaned_data.get('source')
+        
+        # Validate source-specific fields
+        if source == 'existing_client' and not cleaned_data.get('reference_client'):
+            self.add_error('reference_client', 'Please select an existing client')
+        elif source == 'other' and not cleaned_data.get('source_details'):
+            self.add_error('source_details', 'Please specify the source details')
+        
+        # Validate probability range
+        probability = cleaned_data.get('probability', 0)
+        if probability < 0 or probability > 100:
+            self.add_error('probability', 'Probability must be between 0 and 100')
+        
+        return cleaned_data
+    
+    def save(self, commit=True):
+        lead = super().save(commit=False)
+        
+        # Set created_by for new leads
+        if not lead.pk and self.current_user:
+            lead.created_by = self.current_user
+        
+        # Handle source data
+        if lead.source == 'existing_client' and lead.reference_client:
+            lead.source_details = f"Existing Client: {lead.reference_client.name}"
+        elif lead.source == 'other':
+            lead.source_details = self.cleaned_data.get('source_details', '')
+        
+        if commit:
+            lead.save()
+            if hasattr(self, 'save_m2m'):
+                self.save_m2m()
+        
+        return lead
 
 
 class LeadInteractionForm(forms.ModelForm):
@@ -246,13 +495,43 @@ class LeadConversionForm(forms.Form):
         label="Conversion Notes"
     )
     
-    products_subscribed = forms.MultipleChoiceField(
-        choices=ProductDiscussion.PRODUCT_CHOICES,
+    # Client details for conversion
+    client_name = forms.CharField(
+        max_length=255,
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+        label="Client Name"
+    )
+    
+    contact_info = forms.CharField(
+        max_length=255,
         required=False,
-        widget=forms.CheckboxSelectMultiple(
-            attrs={'class': 'form-check-input'}
-        ),
-        label="Products Client Subscribed To"
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+        label="Contact Information"
+    )
+    
+    initial_aum = forms.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        required=False,
+        initial=0.00,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        label="Initial AUM"
+    )
+    
+    initial_sip = forms.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        required=False,
+        initial=0.00,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        label="Initial SIP Amount"
+    )
+    
+    demat_count = forms.IntegerField(
+        required=False,
+        initial=0,
+        widget=forms.NumberInput(attrs={'class': 'form-control'}),
+        label="Number of Demat Accounts"
     )
 
     def __init__(self, *args, **kwargs):
@@ -261,9 +540,9 @@ class LeadConversionForm(forms.Form):
         super().__init__(*args, **kwargs)
         
         if self.lead:
-            # Pre-populate with discussed products
-            discussed_products = self.lead.product_discussions.values_list('product', flat=True)
-            self.fields['products_subscribed'].initial = list(discussed_products)
+            # Pre-populate client name with lead name
+            self.fields['client_name'].initial = self.lead.name
+            self.fields['contact_info'].initial = f"{self.lead.email or ''} {self.lead.mobile or ''}".strip()
 
     def save(self):
         if self.lead and self.cleaned_data['confirm_conversion']:
@@ -275,6 +554,17 @@ class LeadConversionForm(forms.Form):
             self.lead.converted_by = self.user
             self.lead.save()
             
+            # Create client record
+            client = Client.objects.create(
+                name=self.cleaned_data['client_name'],
+                contact_info=self.cleaned_data.get('contact_info', 'N/A'),
+                aum=self.cleaned_data.get('initial_aum', 0.00),
+                sip_amount=self.cleaned_data.get('initial_sip', 0.00),
+                demat_count=self.cleaned_data.get('demat_count', 0),
+                user=self.lead.assigned_to,
+                lead=self.lead
+            )
+            
             # Create status change record
             LeadStatusChange.objects.create(
                 lead=self.lead,
@@ -284,8 +574,8 @@ class LeadConversionForm(forms.Form):
                 notes=f"Lead converted to client. {self.cleaned_data.get('conversion_notes', '')}"
             )
             
-            return self.lead
-        return None
+            return self.lead, client
+        return None, None
 
 
 class LeadStatusChangeForm(forms.ModelForm):
@@ -340,12 +630,12 @@ class LeadStatusChangeForm(forms.ModelForm):
         # Check if status change needs approval
         critical_status_changes = ['converted', 'lost']
         if status_change.new_status in critical_status_changes:
-            # Get line manager for approval
+            # Get approval manager
             if self.lead.assigned_to:
-                line_manager = getattr(self.lead.assigned_to, 'get_line_manager', lambda: None)()
-                if line_manager:
+                approval_manager = self.lead.assigned_to.get_approval_manager()
+                if approval_manager:
                     status_change.needs_approval = True
-                    status_change.approval_by = line_manager
+                    status_change.approval_by = approval_manager
         
         if commit:
             status_change.save()
@@ -431,259 +721,6 @@ class LeadReassignmentForm(forms.Form):
         return False
 
 
-# Additional utility form for bulk operations
-class BulkLeadActionForm(forms.Form):
-    """Form for bulk actions on leads"""
-    
-    ACTION_CHOICES = [
-        ('', 'Select Action...'),
-        ('reassign', 'Reassign Selected Leads'),
-        ('status_change', 'Change Status'),
-        ('export', 'Export Selected Leads'),
-    ]
-    
-    action = forms.ChoiceField(
-        choices=ACTION_CHOICES,
-        widget=forms.Select(attrs={'class': 'form-control'}),
-        label="Bulk Action"
-    )
-    
-    new_assigned_to = forms.ModelChoiceField(
-        queryset=None,
-        required=False,
-        empty_label="Select RM...",
-        widget=forms.Select(attrs={'class': 'form-control'}),
-        label="Assign To"
-    )
-    
-    new_status = forms.ChoiceField(
-        choices=[('', 'Select Status...')] + list(Lead.STATUS_CHOICES),
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control'}),
-        label="New Status"
-    )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        
-        # Set queryset for RMs
-        rm_roles = ['rm', 'rm_head', 'business_head']
-        self.fields['new_assigned_to'].queryset = User.objects.filter(
-            role__in=rm_roles, 
-            is_active=True
-        )
-
-class LeadForm(forms.ModelForm):
-    """Form for creating/editing leads with enhanced features"""
-    
-    assigned_to = forms.ModelChoiceField(
-        queryset=User.objects.filter(is_active=True).order_by('first_name', 'last_name'),
-        empty_label="Select a user...",
-        widget=forms.Select(attrs={'class': 'form-select'}),
-        label="Assigned To"
-    )
-    
-    # Source radio buttons with conditional field
-    SOURCE_CHOICES = Lead.SOURCE_CHOICES
-    source = forms.ChoiceField(
-        choices=SOURCE_CHOICES,
-        widget=forms.RadioSelect(attrs={'class': 'source-radio'}),
-        initial='other'
-    )
-    reference_client = forms.ModelChoiceField(
-        queryset=Lead.objects.filter(converted=True),
-        required=False,
-        label="Existing Client Name",
-        widget=forms.Select(attrs={'class': 'form-select'})
-    )
-    source_details = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'placeholder': 'Please specify source details',
-            'class': 'form-control'
-        })
-    )
-    
-    class Meta:
-        model = Lead
-        fields = [
-            'name', 'email', 'mobile', 'source', 'source_details', 'reference_client',
-            'assigned_to', 'probability', 'notes'
-        ]
-        widgets = {
-            'name': forms.TextInput(attrs={
-                'placeholder': 'Full Name',
-                'class': 'form-control'
-            }),
-            'email': forms.EmailInput(attrs={
-                'placeholder': 'Email Address',
-                'class': 'form-control'
-            }),
-            'mobile': forms.TextInput(attrs={
-                'placeholder': 'Mobile Number',
-                'pattern': '[0-9]{10}',
-                'title': '10 digit mobile number',
-                'class': 'form-control'
-            }),
-            'notes': forms.Textarea(attrs={
-                'rows': 4,
-                'placeholder': 'Additional notes about the lead...',
-                'class': 'form-control'
-            }),
-            'probability': forms.NumberInput(attrs={
-                'min': 0,
-                'max': 100,
-                'step': 5,
-                'class': 'form-control'
-            }),
-        }
-        labels = {
-            'probability': 'Conversion Probability (%)'
-        }
-    
-    def __init__(self, *args, **kwargs):
-        self.current_user = kwargs.pop('current_user', None)
-        super().__init__(*args, **kwargs)
-        
-        # Set initial lead ID if editing
-        if self.instance and self.instance.pk:
-            self.fields['lead_id'] = forms.CharField(
-                initial=self.instance.lead_id,
-                disabled=True,
-                label="Lead ID",
-                widget=forms.TextInput(attrs={'class': 'form-control'})
-            )
-        
-        # Configure assigned_to field based on user role
-        self.configure_assignment_field()
-        
-        # Set initial status to 'new' for new leads
-        if not self.instance.pk:
-            self.instance.status = 'new'
-        
-        # Conditionally require source details based on source selection
-        self.configure_source_fields()
-        
-        # Customize the display of users in dropdown
-        self.fields['assigned_to'].label_from_instance = lambda obj: f"{obj.get_full_name()} ({obj.username})" if obj.get_full_name() else obj.username
-    
-    def configure_assignment_field(self):
-        """Configure the assigned_to field based on user role"""
-        try:
-            if not self.current_user:
-                # If no current user, show all active users
-                self.fields['assigned_to'].queryset = User.objects.filter(is_active=True).order_by('first_name', 'last_name')
-                return
-            
-            # Check if User model has role field
-            if hasattr(User, 'role') and hasattr(self.current_user, 'role'):
-                if self.current_user.role in ['top_management', 'business_head']:
-                    # Can assign to any RM or RM Head
-                    self.fields['assigned_to'].queryset = User.objects.filter(
-                        role__in=['rm', 'rm_head', 'business_head'],
-                        is_active=True
-                    ).order_by('first_name', 'last_name')
-                elif self.current_user.role == 'rm_head':
-                    # Can assign to team members or self
-                    if hasattr(self.current_user, 'get_accessible_users'):
-                        accessible_users = self.current_user.get_accessible_users()
-                        accessible_ids = [u.id for u in accessible_users] + [self.current_user.id]
-                        self.fields['assigned_to'].queryset = User.objects.filter(
-                            id__in=accessible_ids,
-                            role__in=['rm', 'rm_head'],
-                            is_active=True
-                        ).order_by('first_name', 'last_name')
-                    else:
-                        # Fallback: show all RMs and RM heads
-                        self.fields['assigned_to'].queryset = User.objects.filter(
-                            role__in=['rm', 'rm_head'],
-                            is_active=True
-                        ).order_by('first_name', 'last_name')
-                elif self.current_user.role == 'rm':
-                    # Can only assign to self
-                    self.fields['assigned_to'].queryset = User.objects.filter(id=self.current_user.id)
-                    self.fields['assigned_to'].initial = self.current_user
-                    self.fields['assigned_to'].widget.attrs['disabled'] = True
-                else:
-                    # Default: show all users with relevant roles
-                    self.fields['assigned_to'].queryset = User.objects.filter(
-                        is_active=True
-                    ).order_by('first_name', 'last_name')
-            else:
-                # If no role field exists, show all active users
-                self.fields['assigned_to'].queryset = User.objects.filter(is_active=True).order_by('first_name', 'last_name')
-                
-        except Exception as e:
-            # Fallback: show all active users if there's any error
-            print(f"Error configuring assignment field: {e}")
-            self.fields['assigned_to'].queryset = User.objects.filter(is_active=True).order_by('first_name', 'last_name')
-        
-        # Ensure queryset is not empty
-        if not self.fields['assigned_to'].queryset.exists():
-            self.fields['assigned_to'].queryset = User.objects.filter(is_active=True).order_by('first_name', 'last_name')
-    
-    def configure_source_fields(self):
-        """Configure source-related fields and their requirements"""
-        if 'source' in self.data:  # Form was submitted
-            source = self.data.get('source')
-        elif self.instance.pk:  # Editing existing lead
-            source = self.instance.source
-        else:  # New form
-            source = self.fields['source'].initial
-        
-        # Show/hide and require fields based on source selection
-        if source == 'existing_client':
-            self.fields['reference_client'].required = True
-            self.fields['source_details'].required = False
-        elif source == 'other':
-            self.fields['source_details'].required = True
-            self.fields['reference_client'].required = False
-        else:
-            self.fields['source_details'].required = False
-            self.fields['reference_client'].required = False
-    
-    def clean(self):
-        cleaned_data = super().clean()
-        source = cleaned_data.get('source')
-        
-        # Validate source-specific fields
-        if source == 'existing_client' and not cleaned_data.get('reference_client'):
-            self.add_error('reference_client', 'Please select an existing client')
-        elif source == 'other' and not cleaned_data.get('source_details'):
-            self.add_error('source_details', 'Please specify the source details')
-        
-        # Validate probability range
-        probability = cleaned_data.get('probability', 0)
-        if probability < 0 or probability > 100:
-            self.add_error('probability', 'Probability must be between 0 and 100')
-        
-        return cleaned_data
-    
-    def save(self, commit=True):
-        lead = super().save(commit=False)
-        
-        # Set created_by for new leads
-        if not lead.pk and self.current_user:
-            lead.created_by = self.current_user
-        
-        # Generate lead ID for new leads
-        if not lead.pk and hasattr(lead, 'generate_lead_id'):
-            lead.lead_id = lead.generate_lead_id()
-        
-        # Handle source data
-        if lead.source == 'existing_client' and lead.reference_client:
-            lead.source_details = f"Existing Client: {lead.reference_client.name}"
-        elif lead.source == 'other':
-            lead.source_details = self.cleaned_data.get('source_details', '')
-        
-        if commit:
-            lead.save()
-            if hasattr(self, 'save_m2m'):
-                self.save_m2m()
-        
-        return lead
-
-
 class ClientForm(forms.ModelForm):
     """Form for creating/editing clients"""
     
@@ -691,10 +728,13 @@ class ClientForm(forms.ModelForm):
         model = Client
         fields = ('name', 'contact_info', 'user', 'lead', 'aum', 'sip_amount', 'demat_count')
         widgets = {
-            'contact_info': forms.TextInput(attrs={'placeholder': 'Phone/Email'}),
-            'aum': forms.NumberInput(attrs={'step': '0.01', 'min': '0'}),
-            'sip_amount': forms.NumberInput(attrs={'step': '0.01', 'min': '0'}),
-            'demat_count': forms.NumberInput(attrs={'min': '0'}),
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'contact_info': forms.TextInput(attrs={'placeholder': 'Phone/Email', 'class': 'form-control'}),
+            'user': forms.Select(attrs={'class': 'form-control'}),
+            'lead': forms.Select(attrs={'class': 'form-control'}),
+            'aum': forms.NumberInput(attrs={'step': '0.01', 'min': '0', 'class': 'form-control'}),
+            'sip_amount': forms.NumberInput(attrs={'step': '0.01', 'min': '0', 'class': 'form-control'}),
+            'demat_count': forms.NumberInput(attrs={'min': '0', 'class': 'form-control'}),
         }
     
     def __init__(self, *args, **kwargs):

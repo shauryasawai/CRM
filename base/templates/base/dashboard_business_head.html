@@ -168,6 +168,9 @@
     .stat-card.green::before { 
         background: linear-gradient(135deg, #10B981 0%, #059669 100%); 
     }
+    .stat-card.orange::before { 
+        background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); 
+    }
 
     .stat-icon {
         width: 64px;
@@ -339,6 +342,26 @@
         color: var(--text-primary);
     }
 
+    .metric-legend {
+        display: flex;
+        gap: 2rem;
+        font-size: 0.9rem;
+        flex-wrap: wrap;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--text-secondary);
+    }
+
+    .legend-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+    }
+
     .chart-placeholder {
         height: 300px;
         background: linear-gradient(135deg, rgba(211, 255, 97, 0.05) 0%, rgba(0, 0, 0, 0.1) 100%);
@@ -354,6 +377,62 @@
     .chart-placeholder:hover {
         border-color: var(--primary-accent);
         background: linear-gradient(135deg, rgba(211, 255, 97, 0.08) 0%, rgba(0, 0, 0, 0.1) 100%);
+    }
+
+    /* Metrics Overview */
+    .metrics-overview {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 3rem;
+    }
+
+    .metric-card {
+        background: var(--gradient-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 2rem;
+        text-align: center;
+        transition: var(--transition-smooth);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--gradient-primary);
+        transform: scaleX(0);
+        transition: transform 0.5s ease;
+    }
+
+    .metric-card:hover {
+        border-color: var(--primary-accent);
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .metric-card:hover::before {
+        transform: scaleX(1);
+    }
+
+    .metric-number {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: var(--primary-accent);
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-label {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 1px;
     }
 
     /* Table Styles */
@@ -461,6 +540,12 @@
         background: rgba(139, 92, 246, 0.15); 
         color: #8B5CF6; 
         border-color: rgba(139, 92, 246, 0.3);
+    }
+
+    .badge.rms {
+        background: rgba(16, 185, 129, 0.15);
+        color: #10B981;
+        border-color: rgba(16, 185, 129, 0.3);
     }
 
     .badge:hover {
@@ -586,6 +671,34 @@
         font-weight: 600;
     }
 
+    /* Status indicators */
+    .status-indicator {
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .status-excellent {
+        background: rgba(16, 185, 129, 0.2);
+        color: #10B981;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .status-good {
+        background: rgba(211, 255, 97, 0.2);
+        color: var(--primary-accent-dark);
+        border: 1px solid rgba(211, 255, 97, 0.3);
+    }
+
+    .status-average {
+        background: rgba(245, 158, 11, 0.2);
+        color: #F59E0B;
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
     /* Animations */
     @keyframes fadeInUp {
         from {
@@ -636,6 +749,10 @@
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 1.5rem;
         }
+
+        .metrics-overview {
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        }
     }
 
     @media (max-width: 768px) {
@@ -675,6 +792,14 @@
             flex-direction: column;
             align-items: center;
         }
+
+        .metrics-overview {
+            grid-template-columns: 1fr;
+        }
+
+        .metric-legend {
+            justify-content: center;
+        }
     }
 
     @media (max-width: 480px) {
@@ -694,34 +819,14 @@
         .table td {
             padding: 1rem;
         }
-    }
 
-    /* Additional Interactive Elements */
-    .tooltip {
-        position: relative;
-        cursor: help;
-    }
+        .metric-card {
+            padding: 1.5rem;
+        }
 
-    .tooltip::after {
-        content: attr(data-tooltip);
-        position: absolute;
-        bottom: 125%;
-        left: 50%;
-        transform: translateX(-50%);
-        background: var(--bg-secondary);
-        color: var(--text-primary);
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        font-size: 0.8rem;
-        white-space: nowrap;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s;
-        border: 1px solid var(--border-color);
-    }
-
-    .tooltip:hover::after {
-        opacity: 1;
+        .metric-number {
+            font-size: 2rem;
+        }
     }
 
     /* Scrollbar Styling */
@@ -759,93 +864,131 @@
         </div>
     </div>
 
-    <!-- Statistics Cards -->
+    <!-- Key Performance Statistics -->
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-icon">👥</div>
-            <div class="stat-title">Total RM Heads</div>
-            <div class="stat-value">{{ rm_heads_count }}</div>
+            <div class="stat-title">RM Heads</div>
+            <div class="stat-value">{{ rm_heads.count }}</div>
             <div class="stat-trend">
-                <span>↗️</span> Active Teams
+                <span>👑</span> Regional Managers
             </div>
             <div class="progress-bar">
-                <div class="progress-fill" style="width: 85%;"></div>
+                <div class="progress-fill" style="width: {% if rm_heads.count > 0 %}{{ rm_heads.count|add:0|floatformat:0|default:10 }}{% else %}10{% endif %}%;"></div>
             </div>
         </div>
 
         <div class="stat-card purple">
             <div class="stat-icon">🎯</div>
             <div class="stat-title">Total Leads</div>
-            <div class="stat-value">{{ leads_count }}</div>
+            <div class="stat-value">{{ total_leads }}</div>
             <div class="stat-trend">
-                <span>📈</span> Pipeline Growing
+                <span>📈</span> System-wide
             </div>
             <div class="progress-bar">
-                <div class="progress-fill" style="width: 72%;"></div>
+                <div class="progress-fill" style="width: {% if total_leads > 0 %}{% widthratio total_leads 100 100 %}{% else %}5{% endif %}%;"></div>
             </div>
         </div>
 
         <div class="stat-card blue">
-            <div class="stat-icon">🛠️</div>
-            <div class="stat-title">Service Requests</div>
-            <div class="stat-value">{{ service_requests_count }}</div>
+            <div class="stat-icon">✅</div>
+            <div class="stat-title">Converted Leads</div>
+            <div class="stat-value">{{ converted_leads }}</div>
             <div class="stat-trend">
-                <span>⚡</span> Processing
+                <span>⚡</span> {{ lead_conversion_rate }}% Rate
             </div>
             <div class="progress-bar">
-                <div class="progress-fill" style="width: 63%;"></div>
+                <div class="progress-fill" style="width: {{ lead_conversion_rate }}%;"></div>
             </div>
         </div>
 
         <div class="stat-card green">
-            <div class="stat-icon">⚡</div>
-            <div class="stat-title">Performance</div>
-            <div class="stat-value">94%</div>
+            <div class="stat-icon">🛠️</div>
+            <div class="stat-title">Open Requests</div>
+            <div class="stat-value">{{ open_service_requests.count }}</div>
             <div class="stat-trend">
-                <span>🚀</span> Excellent
+                <span>🔄</span> Pending
             </div>
             <div class="progress-bar">
-                <div class="progress-fill" style="width: 94%;"></div>
+                <div class="progress-fill" style="width: {% if open_service_requests.count > 0 %}{% widthratio open_service_requests.count 50 100 %}{% else %}0{% endif %}%;"></div>
             </div>
         </div>
     </div>
 
-    <!-- Team Overview Chart -->
+    <!-- Performance Metrics Overview -->
+    <div class="metrics-overview">
+        <div class="metric-card">
+            <div class="metric-number">{{ lead_conversion_rate }}%</div>
+            <div class="metric-label">Lead Conversion Rate</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-number">{{ avg_response_time }}</div>
+            <div class="metric-label">Avg Response (Days)</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-number">{{ all_rms.count }}</div>
+            <div class="metric-label">Total RMs</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-number">{% if total_leads > 0 %}{% widthratio converted_leads total_leads 100 %}{% else %}0{% endif %}%</div>
+            <div class="metric-label">Success Rate</div>
+        </div>
+    </div>
+
+    <!-- Performance Overview Chart -->
     <div class="chart-container">
         <div class="chart-header">
-            <h3 class="chart-title">📊 Team Performance Overview</h3>
-            <div style="display: flex; gap: 2rem; font-size: 0.9rem; flex-wrap: wrap;">
-                <span style="color: #3B82F6; display: flex; align-items: center; gap: 0.5rem;">
-                    <span style="width: 12px; height: 12px; background: #3B82F6; border-radius: 50%;"></span>
-                    Leads
-                </span>
-                <span style="color: #8B5CF6; display: flex; align-items: center; gap: 0.5rem;">
-                    <span style="width: 12px; height: 12px; background: #8B5CF6; border-radius: 50%;"></span>
-                    Tasks
-                </span>
-                <span style="color: var(--primary-accent); display: flex; align-items: center; gap: 0.5rem;">
-                    <span style="width: 12px; height: 12px; background: var(--primary-accent); border-radius: 50%;"></span>
-                    Success Rate
-                </span>
+            <h3 class="chart-title">📊 System Performance Overview</h3>
+            <div class="metric-legend">
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #3B82F6;"></div>
+                    <span>Total Leads ({{ total_leads }})</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #10B981;"></div>
+                    <span>Converted ({{ converted_leads }})</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: var(--primary-accent);"></div>
+                    <span>Conversion Rate ({{ lead_conversion_rate }}%)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot" style="background: #F59E0B;"></div>
+                    <span>Avg Response ({{ avg_response_time }}d)</span>
+                </div>
             </div>
         </div>
         <div class="chart-placeholder">
             <div style="text-align: center;">
                 <div style="font-size: 3rem; margin-bottom: 1rem;">📈</div>
-                <div style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem;">Interactive Charts Coming Soon</div>
-                <div style="font-size: 0.9rem; opacity: 0.7;">Integrate with Chart.js, D3.js, or similar libraries</div>
+                <div style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem;">System Analytics Dashboard</div>
+                <div style="font-size: 0.9rem; opacity: 0.7;">Real-time performance metrics and trends</div>
+                <div style="margin-top: 1rem; display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: 700; color: #3B82F6;">{{ total_leads }}</div>
+                        <div style="font-size: 0.8rem; opacity: 0.8;">Total Leads</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: 700; color: #10B981;">{{ converted_leads }}</div>
+                        <div style="font-size: 0.8rem; opacity: 0.8;">Converted</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary-accent);">{{ lead_conversion_rate }}%</div>
+                        <div style="font-size: 0.8rem; opacity: 0.8;">Success Rate</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- RM Heads Table -->
+    <!-- RM Heads Performance Table -->
     <div class="section-header">
         <h2 class="section-title">
             <div class="section-icon">👑</div>
-            Regional Managers
+            Regional Manager Performance
         </h2>
         <div style="color: var(--text-secondary); font-size: 1rem; font-weight: 500;">
-            {{ rm_heads.count }} Active Managers
+            {{ rm_heads.count }} Active RM Head{{ rm_heads.count|pluralize }}
         </div>
     </div>
 
@@ -853,11 +996,12 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th>👤 Manager</th>
+                    <th>👤 RM Head</th>
                     <th>📧 Contact</th>
-                    <th>🎯 Leads</th>
-                    <th>📋 Tasks</th>
+                    <th>👥 Team Size</th>
+                    <th>🎯 Leads Managed</th>
                     <th>📊 Performance</th>
+                    <th>⏱️ Status</th>
                 </tr>
             </thead>
             <tbody>
@@ -865,30 +1009,51 @@
                 <tr>
                     <td>
                         <div class="employee-name">{{ rm_head.get_full_name|default:rm_head.username }}</div>
-                    </td>
-                    <td>{{ rm_head.email }}</td>
-                    <td>
-                        <span class="badge leads">{{ rm_head.leads_count }} Leads</span>
-                    </td>
-                    <td>
-                        <span class="badge tasks">{{ rm_head.tasks_count }} Tasks</span>
+                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
+                            ID: #{{ rm_head.id }}
+                        </div>
                     </td>
                     <td>
+                        <div>{{ rm_head.email }}</div>
+                        {% if rm_head.phone %}
+                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
+                            📱 {{ rm_head.phone }}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge rms">{{ rm_head.subordinates.count|default:0 }} RM{{ rm_head.subordinates.count|pluralize }}</span>
+                    </td>
+                    <td>
+                        <span class="badge leads">{{ rm_head.leads_managed.count|default:0 }} Lead{{ rm_head.leads_managed.count|pluralize }}</span>
+                    </td>
+                    <td>
+                        {% with conversion_rate=rm_head.leads_managed.count|default:1 %}
                         <div class="performance-indicator">
                             <div class="performance-bar">
-                                <div class="performance-fill" style="width: {% widthratio rm_head.leads_count 20 100 %}%;"></div>
+                                <div class="performance-fill" style="width: {% widthratio conversion_rate 10 100 %}%;"></div>
                             </div>
-                            <span class="performance-text">{% widthratio rm_head.leads_count 20 100 %}%</span>
+                            <span class="performance-text">{% widthratio conversion_rate 10 100 %}%</span>
                         </div>
+                        {% endwith %}
+                    </td>
+                    <td>
+                        {% if rm_head.leads_managed.count >= 15 %}
+                            <span class="status-indicator status-excellent">Excellent</span>
+                        {% elif rm_head.leads_managed.count >= 8 %}
+                            <span class="status-indicator status-good">Good</span>
+                        {% else %}
+                            <span class="status-indicator status-average">Average</span>
+                        {% endif %}
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="5">
+                    <td colspan="6">
                         <div class="empty-state">
-                            <div class="empty-icon">😴</div>
+                            <div class="empty-icon">👥</div>
                             <div style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem;">No RM Heads Found</div>
-                            <div style="font-size: 1rem;">Start by adding team members to see performance data here</div>
+                            <div style="font-size: 1rem;">Start by assigning RM Head roles to see performance data here</div>
                         </div>
                     </td>
                 </tr>
@@ -897,25 +1062,290 @@
         </table>
     </div>
 
-    <!-- Action Buttons -->
+    <!-- Regional Managers Overview -->
+    {% if all_rms.exists %}
+    <div class="section-header">
+        <h2 class="section-title">
+            <div class="section-icon">🌍</div>
+            All Regional Managers
+        </h2>
+        <div style="color: var(--text-secondary); font-size: 1rem; font-weight: 500;">
+            {{ all_rms.count }} Active RM{{ all_rms.count|pluralize }}
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>👤 Regional Manager</th>
+                    <th>📧 Contact</th>
+                    <th>👑 Reports To</th>
+                    <th>🎯 Individual Leads</th>
+                    <th>📋 Tasks</th>
+                    <th>📊 Activity</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rm in all_rms %}
+                <tr>
+                    <td>
+                        <div class="employee-name">{{ rm.get_full_name|default:rm.username }}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
+                            RM ID: #{{ rm.id }}
+                        </div>
+                    </td>
+                    <td>
+                        <div>{{ rm.email }}</div>
+                        {% if rm.phone %}
+                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
+                            📱 {{ rm.phone }}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if rm.supervisor %}
+                            <div style="color: var(--primary-accent); font-weight: 600;">
+                                {{ rm.supervisor.get_full_name|default:rm.supervisor.username }}
+                            </div>
+                        {% else %}
+                            <span style="color: var(--text-muted); font-style: italic;">Direct Report</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge leads">{{ rm.assigned_leads.count|default:0 }} Lead{{ rm.assigned_leads.count|pluralize }}</span>
+                    </td>
+                    <td>
+                        <span class="badge tasks">{{ rm.assigned_tasks.count|default:0 }} Task{{ rm.assigned_tasks.count|pluralize }}</span>
+                    </td>
+                    <td>
+                        {% with total_activity=rm.assigned_leads.count|add:rm.assigned_tasks.count %}
+                        {% if total_activity >= 10 %}
+                            <span class="status-indicator status-excellent">High</span>
+                        {% elif total_activity >= 5 %}
+                            <span class="status-indicator status-good">Medium</span>
+                        {% else %}
+                            <span class="status-indicator status-average">Low</span>
+                        {% endif %}
+                        {% endwith %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- System Insights -->
+    <div class="chart-container">
+        <div class="chart-header">
+            <h3 class="chart-title">💡 System Insights & Recommendations</h3>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+            <div style="background: rgba(59, 130, 246, 0.1); padding: 2rem; border-radius: 16px; border: 1px solid rgba(59, 130, 246, 0.2);">
+                <h4 style="color: #3B82F6; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                    📊 Lead Conversion Analysis
+                </h4>
+                <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 1rem;">
+                    Current conversion rate is {{ lead_conversion_rate }}%. 
+                    {% if lead_conversion_rate < 20 %}
+                        Consider implementing lead qualification improvements and follow-up strategies.
+                    {% elif lead_conversion_rate < 50 %}
+                        Good performance. Focus on nurturing qualified leads for better conversion.
+                    {% else %}
+                        Excellent conversion rate! Maintain current strategies and scale successful approaches.
+                    {% endif %}
+                </p>
+                <div style="display: flex; align-items: center; gap: 1rem; margin-top: 1rem;">
+                    <div style="flex: 1; height: 8px; background: var(--bg-secondary); border-radius: 4px; overflow: hidden;">
+                        <div style="height: 100%; background: #3B82F6; width: {{ lead_conversion_rate }}%; border-radius: 4px;"></div>
+                    </div>
+                    <span style="color: #3B82F6; font-weight: 600;">{{ lead_conversion_rate }}%</span>
+                </div>
+            </div>
+
+            <div style="background: rgba(16, 185, 129, 0.1); padding: 2rem; border-radius: 16px; border: 1px solid rgba(16, 185, 129, 0.2);">
+                <h4 style="color: #10B981; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                    ⚡ Response Time Optimization
+                </h4>
+                <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 1rem;">
+                    Average response time: {{ avg_response_time }} days.
+                    {% if avg_response_time > 5 %}
+                        Consider improving response workflows and task automation.
+                    {% elif avg_response_time > 2 %}
+                        Reasonable response time. Monitor for consistency across teams.
+                    {% else %}
+                        Excellent response time! Your team is highly efficient.
+                    {% endif %}
+                </p>
+                <div style="display: flex; align-items: center; gap: 1rem; margin-top: 1rem;">
+                    <div style="flex: 1; height: 8px; background: var(--bg-secondary); border-radius: 4px; overflow: hidden;">
+                        <div style="height: 100%; background: #10B981; width: {% if avg_response_time <= 1 %}100{% elif avg_response_time <= 3 %}70{% elif avg_response_time <= 7 %}40{% else %}20{% endif %}%; border-radius: 4px;"></div>
+                    </div>
+                    <span style="color: #10B981; font-weight: 600;">{{ avg_response_time }}d</span>
+                </div>
+            </div>
+
+            <div style="background: rgba(211, 255, 97, 0.1); padding: 2rem; border-radius: 16px; border: 1px solid rgba(211, 255, 97, 0.2);">
+                <h4 style="color: var(--primary-accent-dark); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                    📈 Growth Opportunities
+                </h4>
+                <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 1rem;">
+                    {% if open_service_requests.count > 10 %}
+                        High volume of open requests detected. Consider resource allocation review.
+                    {% elif open_service_requests.count > 5 %}
+                        Moderate service request volume. Monitor for bottlenecks.
+                    {% else %}
+                        Service requests are well managed. Focus on proactive customer engagement.
+                    {% endif %}
+                </p>
+                <div style="display: flex; align-items: center; gap: 1rem; margin-top: 1rem;">
+                    <div style="flex: 1; height: 8px; background: var(--bg-secondary); border-radius: 4px; overflow: hidden;">
+                        <div style="height: 100%; background: var(--primary-accent); width: {% if open_service_requests.count == 0 %}100{% else %}{% widthratio open_service_requests.count 20 100 %}{% endif %}%; border-radius: 4px;"></div>
+                    </div>
+                    <span style="color: var(--primary-accent-dark); font-weight: 600;">{{ open_service_requests.count }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
     <div class="action-buttons">
         <a href="{% url 'lead_list' %}" class="btn btn-primary">
-            <span>🎯</span> View All Leads
+            <span>🎯</span> View All Leads ({{ total_leads }})
         </a>
         <a href="{% url 'service_request_list' %}" class="btn btn-secondary">
-            <span>🛠️</span> Service Requests
+            <span>🛠️</span> Service Requests ({{ open_service_requests.count }})
         </a>
         <a href="{% url 'task_list' %}" class="btn btn-accent">
-            <span>📋</span> Manage Tasks
+            <span>📋</span> Task Management
         </a>
         <a href="{% url 'hrm_dashboard' %}" class="btn btn-secondary">
             <span>👥</span> HRMS Portal
         </a>
     </div>
 </div>
-{% endblock %}
 
 <script>
 // Enhanced interactive functionality
 document.addEventListener('DOMContentLoaded', function() {
     // Animate stat cards on load with staggered effect
+    const statCards = document.querySelectorAll('.stat-card');
+    statCards.forEach((card, index) => {
+        card.style.animationDelay = `${index * 0.1}s`;
+    });
+
+    // Animate progress bars
+    const progressBars = document.querySelectorAll('.progress-fill');
+    setTimeout(() => {
+        progressBars.forEach(bar => {
+            const width = bar.style.width;
+            bar.style.width = '0%';
+            setTimeout(() => {
+                bar.style.width = width;
+            }, 100);
+        });
+    }, 500);
+
+    // Add hover effects to metric cards
+    const metricCards = document.querySelectorAll('.metric-card');
+    metricCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-8px) scale(1.02)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+        });
+    });
+
+    // Animate performance indicators
+    const performanceFills = document.querySelectorAll('.performance-fill');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const fill = entry.target;
+                const width = fill.style.width;
+                fill.style.width = '0%';
+                setTimeout(() => {
+                    fill.style.width = width;
+                }, 200);
+            }
+        });
+    });
+
+    performanceFills.forEach(fill => {
+        observer.observe(fill);
+    });
+
+    // Add click animations to buttons
+    const buttons = document.querySelectorAll('.btn');
+    buttons.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            // Create ripple effect
+            const ripple = document.createElement('span');
+            const rect = this.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = e.clientX - rect.left - size / 2;
+            const y = e.clientY - rect.top - size / 2;
+            
+            ripple.style.cssText = `
+                position: absolute;
+                border-radius: 50%;
+                transform: scale(0);
+                animation: ripple 0.6s linear;
+                background-color: rgba(255, 255, 255, 0.3);
+                width: ${size}px;
+                height: ${size}px;
+                left: ${x}px;
+                top: ${y}px;
+            `;
+            
+            this.appendChild(ripple);
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
+        });
+    });
+
+    // Real-time data updates (simulate)
+    function updateMetrics() {
+        const metricNumbers = document.querySelectorAll('.metric-number');
+        metricNumbers.forEach(number => {
+            number.style.animation = 'pulse 0.5s ease-in-out';
+            setTimeout(() => {
+                number.style.animation = '';
+            }, 500);
+        });
+    }
+
+    // Update metrics every 30 seconds (for demo)
+    setInterval(updateMetrics, 30000);
+
+    // Add loading states
+    const tableRows = document.querySelectorAll('.table tbody tr');
+    tableRows.forEach((row, index) => {
+        row.style.opacity = '0';
+        row.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            row.style.transition = 'all 0.5s ease';
+            row.style.opacity = '1';
+            row.style.transform = 'translateY(0)';
+        }, 100 * index);
+    });
+});
+
+// Add ripple animation keyframes
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes ripple {
+        to {
+            transform: scale(4);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

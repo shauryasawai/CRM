@@ -1,630 +1,670 @@
 {% extends 'base/base.html' %}
 {% block title %}Clients{% endblock %}
 {% block content %}
-<style>
-    :root {
-        --primary-green: #D3FF61;
-        --primary-black: #000000;
-        --primary-white: #FFFFFF;
-        --gray-50: #FAFAFA;
-        --gray-100: #F5F5F5;
-        --gray-200: #E5E5E5;
-        --gray-300: #D4D4D4;
-        --gray-400: #A3A3A3;
-        --gray-500: #737373;
-        --gray-600: #525252;
-        --gray-700: #404040;
-        --gray-800: #262626;
-        --gray-900: #171717;
-        --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-        --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-        --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-        --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-        --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-    }
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clients</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-green: #D3FF61;
+            --primary-black: #000000;
+            --primary-white: #FFFFFF;
+            --gray-50: #FAFAFA;
+            --gray-100: #F5F5F5;
+            --gray-200: #E5E5E5;
+            --gray-300: #D4D4D4;
+            --gray-400: #A3A3A3;
+            --gray-500: #737373;
+            --gray-600: #525252;
+            --gray-700: #404040;
+            --gray-800: #262626;
+            --gray-900: #171717;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+        }
 
-    * {
-        box-sizing: border-box;
-    }
+        * {
+            box-sizing: border-box;
+        }
 
-    body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        background: linear-gradient(135deg, var(--primary-green) 0%, #B8E642 100%);
-        min-height: 100vh;
-        margin: 0;
-        padding: 0;
-        color: var(--primary-black);
-    }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--primary-green) 0%, #B8E642 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            color: var(--primary-black);
+        }
 
-    .clients-container {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 2rem;
-        min-height: 100vh;
-        animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .clients-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 3rem;
-        flex-wrap: wrap;
-        gap: 1.5rem;
-        background: var(--primary-white);
-        padding: 2rem;
-        border-radius: 20px;
-        box-shadow: var(--shadow-xl);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-
-    .clients-title {
-        font-size: 3rem;
-        font-weight: 800;
-        background: linear-gradient(135deg, var(--primary-black) 0%, var(--gray-700) 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        margin: 0;
-        letter-spacing: -0.025em;
-        line-height: 1.1;
-    }
-
-    .add-client-btn {
-        background: linear-gradient(135deg, var(--primary-black) 0%, var(--gray-800) 100%);
-        color: var(--primary-white);
-        border: none;
-        padding: 1rem 2rem;
-        border-radius: 12px;
-        font-weight: 600;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.75rem;
-        box-shadow: var(--shadow-lg);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .add-client-btn::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-        transition: left 0.5s ease;
-    }
-
-    .add-client-btn:hover {
-        transform: translateY(-3px) scale(1.02);
-        box-shadow: var(--shadow-2xl);
-        background: linear-gradient(135deg, var(--gray-700) 0%, var(--primary-black) 100%);
-    }
-
-    .add-client-btn:hover::before {
-        left: 100%;
-    }
-
-    .add-client-btn:active {
-        transform: translateY(-1px) scale(1.01);
-    }
-
-    .client-stats {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 3rem;
-    }
-
-    .stat-card {
-        background: var(--primary-white);
-        padding: 2rem;
-        border-radius: 16px;
-        box-shadow: var(--shadow-lg);
-        text-align: center;
-        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .stat-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 4px;
-        background: linear-gradient(90deg, var(--primary-green), #B8E642);
-    }
-
-    .stat-card:hover {
-        transform: translateY(-8px) scale(1.02);
-        box-shadow: var(--shadow-2xl);
-    }
-
-    .stat-value {
-        font-size: 2.5rem;
-        font-weight: 800;
-        color: var(--primary-black);
-        margin-bottom: 0.5rem;
-        line-height: 1.1;
-    }
-
-    .stat-label {
-        color: var(--gray-600);
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        font-weight: 600;
-    }
-
-    .table-container {
-        background: var(--primary-white);
-        border-radius: 20px;
-        overflow: hidden;
-        box-shadow: var(--shadow-xl);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-
-    .clients-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-        background: transparent;
-    }
-
-    .clients-table thead {
-        background: linear-gradient(135deg, var(--primary-black) 0%, var(--gray-800) 100%);
-    }
-
-    .clients-table th {
-        padding: 1.5rem 2rem;
-        text-align: left;
-        color: var(--primary-white);
-        font-weight: 700;
-        text-transform: uppercase;
-        font-size: 0.8rem;
-        letter-spacing: 0.1em;
-        position: relative;
-    }
-
-    .clients-table th::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        height: 2px;
-        background: linear-gradient(90deg, var(--primary-green), #B8E642);
-    }
-
-    .clients-table td {
-        padding: 1.5rem 2rem;
-        border-bottom: 1px solid var(--gray-200);
-        color: var(--gray-700);
-        font-weight: 500;
-        font-size: 0.95rem;
-        transition: all 0.2s ease;
-    }
-
-    .clients-table tbody tr:last-child td {
-        border-bottom: none;
-    }
-
-    .clients-table tbody tr {
-        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        position: relative;
-    }
-
-    .clients-table tbody tr::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 0;
-        height: 100%;
-        background: linear-gradient(90deg, var(--primary-green), rgba(211, 255, 97, 0.1));
-        transition: width 0.3s ease;
-        z-index: 1;
-    }
-
-    .clients-table tbody tr:hover {
-        background: rgba(211, 255, 97, 0.05);
-        transform: translateX(4px);
-        box-shadow: var(--shadow-md);
-    }
-
-    .clients-table tbody tr:hover::before {
-        width: 4px;
-    }
-
-    .clients-table tbody tr:hover td {
-        color: var(--primary-black);
-    }
-
-    .action-links {
-        display: flex;
-        gap: 1rem;
-        align-items: center;
-    }
-
-    .action-link {
-        color: var(--gray-600);
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 0.9rem;
-        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        border: 1px solid transparent;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .action-link::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-        transition: left 0.4s ease;
-    }
-
-    .action-link:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--shadow-md);
-        border-color: currentColor;
-    }
-
-    .action-link:hover::before {
-        left: 100%;
-    }
-
-    .action-link.delete {
-        color: #DC2626;
-        border-color: rgba(220, 38, 38, 0.2);
-    }
-
-    .action-link.delete:hover {
-        background: rgba(220, 38, 38, 0.1);
-        color: #B91C1C;
-    }
-
-    .action-link.view {
-        color: #059669;
-        border-color: rgba(5, 150, 105, 0.2);
-    }
-
-    .action-link.view:hover {
-        background: rgba(5, 150, 105, 0.1);
-        color: #047857;
-    }
-
-    .empty-message {
-        text-align: center;
-        padding: 4rem 2rem;
-        color: var(--gray-500);
-        font-size: 1.1rem;
-    }
-
-    .empty-message i {
-        font-size: 4rem;
-        margin-bottom: 1.5rem;
-        opacity: 0.3;
-        display: block;
-    }
-
-    .empty-message a {
-        color: var(--primary-black);
-        font-weight: 600;
-        text-decoration: none;
-        border-bottom: 2px solid var(--primary-green);
-        padding-bottom: 2px;
-        transition: all 0.3s ease;
-    }
-
-    .empty-message a:hover {
-        color: var(--gray-700);
-        border-bottom-color: #B8E642;
-    }
-
-    .currency-amount {
-        font-weight: 700;
-        color: #059669;
-        font-size: 1rem;
-    }
-
-    .lead-badge {
-        background: linear-gradient(135deg, var(--primary-black), var(--gray-700));
-        color: var(--primary-white);
-        padding: 0.4rem 1rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        display: inline-block;
-        box-shadow: var(--shadow-sm);
-    }
-
-    .fade-in-row {
-        animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
-    }
-
-    /* Responsive Design */
-    @media (max-width: 768px) {
         .clients-container {
-            padding: 1rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            min-height: 100vh;
+            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .clients-header {
-            flex-direction: column;
-            text-align: center;
-            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            background: var(--primary-white);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: var(--shadow-xl);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .clients-title {
-            font-size: 2rem;
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary-black) 0%, var(--gray-700) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 0;
+            letter-spacing: -0.025em;
+            line-height: 1.1;
         }
 
-        .table-container {
-            overflow-x: auto;
+        .add-client-btn {
+            background: linear-gradient(135deg, var(--primary-black) 0%, var(--gray-800) 100%);
+            color: var(--primary-white);
+            border: none;
+            padding: 1rem 2rem;
             border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
         }
 
-        .clients-table th,
-        .clients-table td {
-            padding: 1rem;
-            font-size: 0.85rem;
+        .add-client-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
         }
 
-        .action-links {
-            flex-direction: column;
-            gap: 0.5rem;
+        .add-client-btn:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: var(--shadow-2xl);
+            background: linear-gradient(135deg, var(--gray-700) 0%, var(--primary-black) 100%);
+        }
+
+        .add-client-btn:hover::before {
+            left: 100%;
+        }
+
+        .add-client-btn:active {
+            transform: translateY(-1px) scale(1.01);
+        }
+
+        .add-client-btn.loading {
+            opacity: 0.7;
+            pointer-events: none;
         }
 
         .client-stats {
-            grid-template-columns: 1fr;
-            gap: 1rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
         }
 
         .stat-card {
-            padding: 1.5rem;
+            background: var(--primary-white);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: var(--shadow-lg);
+            text-align: center;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-green), #B8E642);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: var(--shadow-2xl);
         }
 
         .stat-value {
-            font-size: 2rem;
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--primary-black);
+            margin-bottom: 0.5rem;
+            line-height: 1.1;
         }
-    }
 
-    @media (max-width: 480px) {
+        .stat-label {
+            color: var(--gray-600);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 600;
+        }
+
+        .table-container {
+            background: var(--primary-white);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: var(--shadow-xl);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
         .clients-table {
-            font-size: 0.8rem;
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: transparent;
         }
 
-        .clients-table th,
+        .clients-table thead {
+            background: linear-gradient(135deg, var(--primary-black) 0%, var(--gray-800) 100%);
+        }
+
+        .clients-table th {
+            padding: 1.5rem 2rem;
+            text-align: left;
+            color: var(--primary-white);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.1em;
+            position: relative;
+        }
+
+        .clients-table th::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary-green), #B8E642);
+        }
+
         .clients-table td {
-            padding: 0.75rem;
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--gray-200);
+            color: var(--gray-700);
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+
+        .clients-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .clients-table tbody tr {
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+        }
+
+        .clients-table tbody tr::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 0;
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-green), rgba(211, 255, 97, 0.1));
+            transition: width 0.3s ease;
+            z-index: 1;
+        }
+
+        .clients-table tbody tr:hover {
+            background: rgba(211, 255, 97, 0.05);
+            transform: translateX(4px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .clients-table tbody tr:hover::before {
+            width: 4px;
+        }
+
+        .clients-table tbody tr:hover td {
+            color: var(--primary-black);
+        }
+
+        .action-links {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
         }
 
         .action-link {
-            padding: 0.4rem 0.8rem;
-            font-size: 0.8rem;
+            color: var(--gray-600);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            position: relative;
+            overflow: hidden;
         }
-    }
 
-    /* Animations */
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(40px);
+        .action-link::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.4s ease;
         }
-        to {
-            opacity: 1;
-            transform: translateY(0);
+
+        .action-link:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            border-color: currentColor;
         }
-    }
 
-    @keyframes pulse {
-        0%, 100% {
-            opacity: 1;
+        .action-link:hover::before {
+            left: 100%;
         }
-        50% {
-            opacity: 0.8;
+
+        .action-link.delete {
+            color: #DC2626;
+            border-color: rgba(220, 38, 38, 0.2);
         }
-    }
 
-    /* Loading states */
-    .loading {
-        animation: pulse 2s infinite;
-    }
+        .action-link.delete:hover {
+            background: rgba(220, 38, 38, 0.1);
+            color: #B91C1C;
+        }
 
-    /* Focus states for accessibility */
-    .add-client-btn:focus,
-    .action-link:focus {
-        outline: 3px solid var(--primary-green);
-        outline-offset: 2px;
-    }
+        .action-link.view {
+            color: #059669;
+            border-color: rgba(5, 150, 105, 0.2);
+        }
 
-    /* Enhanced hover effects for better UX */
-    .stat-card:hover .stat-value {
-        color: var(--gray-800);
-        transform: scale(1.05);
-        transition: all 0.3s ease;
-    }
+        .action-link.view:hover {
+            background: rgba(5, 150, 105, 0.1);
+            color: #047857;
+        }
 
-    /* Gradient text effects */
-    .gradient-text {
-        background: linear-gradient(135deg, var(--primary-black), var(--gray-600));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-</style>
+        .empty-message {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--gray-500);
+            font-size: 1.1rem;
+        }
 
-<div class="clients-container">
-    <div class="clients-header">
-        <h1 class="clients-title">Clients</h1>
-        <a href="{% url 'client_create' %}" class="add-client-btn">
-            <i class="fas fa-plus"></i> Add New Client
-        </a>
+        .empty-message i {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+            opacity: 0.3;
+            display: block;
+        }
+
+        .empty-message a {
+            color: var(--primary-black);
+            font-weight: 600;
+            text-decoration: none;
+            border-bottom: 2px solid var(--primary-green);
+            padding-bottom: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .empty-message a:hover {
+            color: var(--gray-700);
+            border-bottom-color: #B8E642;
+        }
+
+        .currency-amount {
+            font-weight: 700;
+            color: #059669;
+            font-size: 1rem;
+        }
+
+        .lead-badge {
+            background: linear-gradient(135deg, var(--primary-black), var(--gray-700));
+            color: var(--primary-white);
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: inline-block;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .fade-in-row {
+            animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .clients-container {
+                padding: 1rem;
+            }
+
+            .clients-header {
+                flex-direction: column;
+                text-align: center;
+                padding: 1.5rem;
+            }
+
+            .clients-title {
+                font-size: 2rem;
+            }
+
+            .table-container {
+                overflow-x: auto;
+                border-radius: 12px;
+            }
+
+            .clients-table th,
+            .clients-table td {
+                padding: 1rem;
+                font-size: 0.85rem;
+            }
+
+            .action-links {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .client-stats {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .stat-card {
+                padding: 1.5rem;
+            }
+
+            .stat-value {
+                font-size: 2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .clients-table {
+                font-size: 0.8rem;
+            }
+
+            .clients-table th,
+            .clients-table td {
+                padding: 0.75rem;
+            }
+
+            .action-link {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.8rem;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.8;
+            }
+        }
+
+        /* Loading states */
+        .loading {
+            animation: pulse 2s infinite;
+        }
+
+        /* Focus states for accessibility */
+        .add-client-btn:focus,
+        .action-link:focus {
+            outline: 3px solid var(--primary-green);
+            outline-offset: 2px;
+        }
+
+        /* Enhanced hover effects for better UX */
+        .stat-card:hover .stat-value {
+            color: var(--gray-800);
+            transform: scale(1.05);
+            transition: all 0.3s ease;
+        }
+
+        /* Gradient text effects */
+        .gradient-text {
+            background: linear-gradient(135deg, var(--primary-black), var(--gray-600));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+    </head>
+<body>
+    <div class="clients-container">
+        <div class="clients-header">
+            <h1 class="clients-title">Clients</h1>
+            <a href="#" class="add-client-btn" onclick="addNewClient()">
+                <i class="fas fa-plus"></i> Add New Client
+            </a>
+        </div>
+
+        <!-- Client Statistics -->
+        <div class="client-stats" id="clientStats">
+            <div class="stat-card">
+                <div class="stat-value" id="totalClients">0</div>
+                <div class="stat-label">Total Clients</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalAUM">₹0.00</div>
+                <div class="stat-label">Total AUM</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalSIP">₹0.00</div>
+                <div class="stat-label">Total SIP</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalDemat">0</div>
+                <div class="stat-label">Total Demat Accounts</div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="clients-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Contact Info</th>
+                        <th>Assigned To</th>
+                        <th>Lead Source</th>
+                        <th>AUM</th>
+                        <th>SIP Amount</th>
+                        <th>Demat Accounts</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="clientsTableBody">
+                    <!-- Client data will be populated here -->
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <!-- Client Statistics -->
-    {% if clients %}
-    <div class="client-stats">
-        <div class="stat-card">
-            <div class="stat-value">{{ clients|length }}</div>
-            <div class="stat-label">Total Clients</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value">
-                {% with total_aum=0 %}
-                    {% for client in clients %}
-                        {% with total_aum=total_aum|add:client.aum %}{% endwith %}
-                    {% endfor %}
-                    ₹{{ total_aum|floatformat:2 }}
-                {% endwith %}
-            </div>
-            <div class="stat-label">Total AUM</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value">
-                {% with total_sip=0 %}
-                    {% for client in clients %}
-                        {% with total_sip=total_sip|add:client.sip_amount %}{% endwith %}
-                    {% endfor %}
-                    ₹{{ total_sip|floatformat:2 }}
-                {% endwith %}
-            </div>
-            <div class="stat-label">Total SIP</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value">
-                {% with total_demat=0 %}
-                    {% for client in clients %}
-                        {% with total_demat=total_demat|add:client.demat_count %}{% endwith %}
-                    {% endfor %}
-                    {{ total_demat }}
-                {% endwith %}
-            </div>
-            <div class="stat-label">Total Demat Accounts</div>
-        </div>
-    </div>
-    {% endif %}
+    <script>
+        // Client data from Django context
+        const clients = [
+            {% for client in clients %}
+            {
+                id: {{ client.pk }},
+                name: "{{ client.name|escapejs }}",
+                contact_info: "{{ client.contact_info|default:'N/A'|escapejs }}",
+                user: {% if client.user %}{ 
+                    get_full_name: "{{ client.user.get_full_name|default:client.user.username|escapejs }}",
+                    username: "{{ client.user.username|escapejs }}"
+                }{% else %}null{% endif %},
+                lead: {% if client.lead %}{ 
+                    name: "{{ client.lead.name|escapejs }}"
+                }{% else %}null{% endif %},
+                aum: {{ client.aum|default:0 }},
+                sip_amount: {{ client.sip_amount|default:0 }},
+                demat_count: {{ client.demat_count|default:0 }}
+            }{% if not forloop.last %},{% endif %}
+            {% empty %}
+            {% endfor %}
+        ];
 
-    <div class="table-container">
-        <table class="clients-table">
-            <thead>
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-IN', {
+                style: 'currency',
+                currency: 'INR',
+                minimumFractionDigits: 2
+            }).format(amount);
+        }
+
+        function populateClientData(clients) {
+            const tbody = document.getElementById('clientsTableBody');
+            
+            if (clients.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="empty-message">
+                            <i class="fas fa-users"></i>
+                            <div>
+                                <h3 style="margin: 0 0 1rem 0; color: var(--gray-600);">No clients found</h3>
+                                <p style="margin: 0;">Get started by <a href="#" onclick="addNewClient()">adding your first client</a></p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            // Calculate totals
+            let totalAUM = 0;
+            let totalSIP = 0;
+            let totalDemat = 0;
+
+            clients.forEach(client => {
+                totalAUM += parseFloat(client.aum || 0);
+                totalSIP += parseFloat(client.sip_amount || 0);
+                totalDemat += parseInt(client.demat_count || 0);
+            });
+
+            // Update statistics
+            document.getElementById('totalClients').textContent = clients.length;
+            document.getElementById('totalAUM').textContent = formatCurrency(totalAUM);
+            document.getElementById('totalSIP').textContent = formatCurrency(totalSIP);
+            document.getElementById('totalDemat').textContent = totalDemat;
+
+            // Populate table
+            tbody.innerHTML = clients.map(client => `
                 <tr>
-                    <th>Name</th>
-                    <th>Contact Info</th>
-                    <th>Assigned To</th>
-                    <th>Lead Source</th>
-                    <th>AUM</th>
-                    <th>SIP Amount</th>
-                    <th>Demat Accounts</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for client in clients %}
-                <tr>
-                    <td><strong>{{ client.name }}</strong></td>
-                    <td>{{ client.contact_info|default:"N/A" }}</td>
+                    <td><strong>${client.name}</strong></td>
+                    <td>${client.contact_info || 'N/A'}</td>
                     <td>
-                        {% if client.user %}
-                            {{ client.user.get_full_name|default:client.user.username }}
-                        {% else %}
-                            <span style="color: var(--gray-400);">Unassigned</span>
-                        {% endif %}
+                        ${client.user 
+                            ? (client.user.get_full_name || client.user.username)
+                            : '<span style="color: var(--gray-400);">Unassigned</span>'
+                        }
                     </td>
                     <td>
-                        {% if client.lead %}
-                            <span class="lead-badge">{{ client.lead.name }}</span>
-                        {% else %}
-                            <span style="color: var(--gray-400);">Direct</span>
-                        {% endif %}
+                        ${client.lead 
+                            ? `<span class="lead-badge">${client.lead.name}</span>`
+                            : '<span style="color: var(--gray-400);">Direct</span>'
+                        }
                     </td>
                     <td>
-                        {% if client.aum %}
-                            <span class="currency-amount">₹{{ client.aum|floatformat:2 }}</span>
-                        {% else %}
-                            <span style="color: var(--gray-400);">₹0.00</span>
-                        {% endif %}
+                        ${client.aum 
+                            ? `<span class="currency-amount">${formatCurrency(client.aum)}</span>`
+                            : '<span style="color: var(--gray-400);">₹0.00</span>'
+                        }
                     </td>
                     <td>
-                        {% if client.sip_amount %}
-                            <span class="currency-amount">₹{{ client.sip_amount|floatformat:2 }}</span>
-                        {% else %}
-                            <span style="color: var(--gray-400);">₹0.00</span>
-                        {% endif %}
+                        ${client.sip_amount 
+                            ? `<span class="currency-amount">${formatCurrency(client.sip_amount)}</span>`
+                            : '<span style="color: var(--gray-400);">₹0.00</span>'
+                        }
                     </td>
-                    <td><strong>{{ client.demat_count|default:0 }}</strong></td>
+                    <td><strong>${client.demat_count || 0}</strong></td>
                     <td>
                         <div class="action-links">
-                            <a href="{% url 'client_update' client.pk %}" class="action-link">
+                            <a href="#" class="action-link" onclick="editClient(${client.id})">
                                 <i class="fas fa-edit"></i> Edit
                             </a>
-                            <a href="{% url 'client_delete' client.pk %}" class="action-link delete" 
-                               onclick="return confirm('Are you sure you want to delete this client?')">
+                            <a href="#" class="action-link delete" onclick="deleteClient(${client.id}, '${client.name}')">
                                 <i class="fas fa-trash"></i> Delete
                             </a>
                         </div>
                     </td>
                 </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="8" class="empty-message">
-                        <i class="fas fa-users"></i>
-                        <div>
-                            <h3 style="margin: 0 0 1rem 0; color: var(--gray-600);">No clients found</h3>
-                            <p style="margin: 0;">Get started by <a href="{% url 'client_create' %}">adding your first client</a></p>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+            `).join('');
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Add smooth animations for table rows
-    const tableRows = document.querySelectorAll('.clients-table tbody tr');
-    tableRows.forEach((row, index) => {
-        if (!row.querySelector('.empty-message')) {
-            row.style.animationDelay = `${index * 0.1}s`;
-            row.classList.add('fade-in-row');
+            // Add animations
+            const tableRows = document.querySelectorAll('.clients-table tbody tr');
+            tableRows.forEach((row, index) => {
+                if (!row.querySelector('.empty-message')) {
+                    row.style.animationDelay = `${index * 0.1}s`;
+                    row.classList.add('fade-in-row');
+                }
+            });
         }
-    });
-    
-    // Add loading states
-    const addBtn = document.querySelector('.add-client-btn');
-    if (addBtn) {
-        addBtn.addEventListener('click', function() {
-            this.classList.add('loading');
-            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
-        });
-    }
-    
-    // Enhanced delete confirmation with better UX
-    const deleteLinks = document.querySelectorAll('.action-link.delete');
-    deleteLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            const clientName = this.closest('tr').querySelector('td:first-child').textContent.trim();
+
+        function addNewClient() {
+            const btn = document.querySelector('.add-client-btn');
+            btn.classList.add('loading');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
             
+            // Navigate to client creation - replace with your actual URL
+            window.location.href = "{% url 'client_create' %}";
+        }
+
+        function editClient(clientId) {
+            // Navigate to edit client - replace with your actual URL pattern
+            window.location.href = `/clients/${clientId}/update/`;
+        }
+
+        function deleteClient(clientId, clientName) {
             // Create custom confirmation dialog
             const modal = document.createElement('div');
             modal.style.cssText = `
@@ -689,7 +729,8 @@ document.addEventListener('DOMContentLoaded', function() {
             };
             
             modal.querySelector('#confirmBtn').onclick = () => {
-                window.location.href = this.href;
+                // Navigate to delete client - replace with your actual URL pattern
+                window.location.href = `/clients/${clientId}/delete/`;
             };
             
             modal.onclick = (e) => {
@@ -697,26 +738,29 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.body.removeChild(modal);
                 }
             };
-        });
-    });
-    
-    // Add intersection observer for animations
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.style.opacity = '1';
-                entry.target.style.transform = 'translateY(0)';
-            }
-        });
-    });
-    
-    document.querySelectorAll('.stat-card').forEach(card => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
-        card.style.transition = 'all 0.6s ease';
-        observer.observe(card);
-    });
-});
-</script>
+        }
 
-{% endblock %}
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Populate with actual client data from Django
+            populateClientData(clients);
+            
+            // Add intersection observer for animations
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.stat-card').forEach(card => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                card.style.transition = 'all 0.6s ease';
+                observer.observe(card);
+            });
+        });
+    </script>
+    {% endblock %}

@@ -1,0 +1,81 @@
+{% extends "base/base.html" %}
+
+{% block title %}{{ team.name }} Details{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>{{ team.name }}</h1>
+        <div>
+            {% if user_role in 'business_head top_management' or team.leader == request.user %}
+            <a href="{% url 'edit_team' team.id %}" class="btn btn-outline-secondary">
+                <i class="fas fa-edit"></i> Edit Team
+            </a>
+            {% endif %}
+            <a href="{% url 'team_management' %}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left"></i> Back to Teams
+            </a>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Team Information</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Leader:</strong> {{ team.leader.get_full_name|default:team.leader.username }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Member Count:</strong> {{ team.members.count }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Team Members</h5>
+        </div>
+        <div class="card-body">
+            {% if team.members.all %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for member in team.members.all %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'user_profile' member.id %}">
+                                    {{ member.get_full_name|default:member.username }}
+                                </a>
+                            </td>
+                            <td>{{ member.email }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if member.role == 'rm' %}badge-primary
+                                    {% elif member.role == 'rm_head' %}badge-success
+                                    {% elif member.role == 'business_head' %}badge-warning
+                                    {% else %}badge-dark{% endif %}">
+                                    {{ member.get_role_display }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                No members in this team.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

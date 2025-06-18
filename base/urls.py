@@ -63,4 +63,14 @@ path('leads/get-accessible-users/', views.get_accessible_users, name='get_access
     path('investment-plans/create/', views.investment_plan_review_create, name='investment_plan_review_create'),
     path('investment-plans/<int:pk>/update/', views.investment_plan_review_update, name='investment_plan_review_update'),
     path('investment-plans/<int:pk>/delete/', views.investment_plan_review_delete, name='investment_plan_review_delete'),
+    
+    # Team Management URLs
+    path('teams/', views.team_management, name='team_management'),
+    path('teams/create/', views.create_team, name='create_team'),
+    path('teams/<int:team_id>/', views.team_detail, name='team_detail'),
+    path('teams/<int:team_id>/edit/', views.edit_team, name='edit_team'),
+    
+    # User Management URLs
+    path('users/<int:user_id>/', views.user_profile, name='user_profile'),
+    path('users/<int:user_id>/edit/', views.edit_user, name='edit_user'),
 ]

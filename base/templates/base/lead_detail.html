@@ -135,7 +135,7 @@
                     {% endif %}
 
                     {% if lead.status == 'conversion_requested' and user.role in 'rm_head,business_head,top_management'|split %}
-                    <form method="post" action="{% url 'leads:convert_lead' lead.pk %}" class="mt-3">
+                    <form method="post" action="{% url 'convert_lead' lead.pk %}" class="mt-3">
                         {% csrf_token %}
                         <div class="mb-3">
                             <label for="client_id" class="form-label">Client ID</label>

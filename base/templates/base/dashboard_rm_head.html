@@ -1,978 +1,8 @@
 {% extends "base/base.html" %}
 {% load static %}
+{% load humanize %}
 
 {% block title %}RM Head Dashboard{% endblock %}
-
-{% block extra_css %}
-<style>
-    :root {
-        --bg-primary: #0a0e1a;
-        --bg-secondary: #1a1f2e;
-        --bg-card: #1e2532;
-        --bg-accent: #252b3d;
-        --text-primary: #e8eaed;
-        --text-secondary: #9aa0a6;
-        --accent-blue: #4285f4;
-        --accent-green: #34a853;
-        --accent-orange: #fbbc04;
-        --accent-red: #ea4335;
-        --accent-purple: #9c27b0;
-        --accent-cyan: #00bcd4;
-        --border-color: #2d3748;
-        --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.1);
-        --shadow-md: 0 10px 25px rgba(0, 0, 0, 0.15);
-        --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.2);
-        --gradient-blue: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        --gradient-green: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
-        --gradient-orange: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        --gradient-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        --gradient-cyber: linear-gradient(135deg, #0f4c75 0%, #3282b8 50%, #bbe1fa 100%);
-    }
-
-    * {
-        box-sizing: border-box;
-    }
-
-    body {
-        background: var(--bg-primary);
-        color: var(--text-primary);
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        margin: 0;
-        padding: 0;
-        min-height: 100vh;
-        line-height: 1.6;
-    }
-
-    .dashboard-wrapper {
-        max-width: 1600px;
-        margin: 0 auto;
-        padding: 2rem;
-        animation: slideInFromBottom 0.8s ease-out;
-    }
-
-    .dashboard-header {
-        text-align: center;
-        margin-bottom: 3rem;
-        position: relative;
-    }
-
-    .dashboard-header::before {
-        content: '';
-        position: absolute;
-        top: -50px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 100px;
-        height: 4px;
-        background: var(--gradient-cyber);
-        border-radius: 2px;
-    }
-
-    .main-title {
-        font-size: 3rem;
-        font-weight: 800;
-        background: var(--gradient-cyber);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        margin-bottom: 0.5rem;
-        letter-spacing: -0.02em;
-    }
-
-    .welcome-subtitle {
-        color: var(--text-secondary);
-        font-size: 1.2rem;
-        font-weight: 400;
-        margin-bottom: 0.5rem;
-    }
-
-    .role-badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.5rem 1rem;
-        background: rgba(66, 133, 244, 0.1);
-        color: var(--accent-blue);
-        border: 1px solid rgba(66, 133, 244, 0.3);
-        border-radius: 20px;
-        font-size: 0.9rem;
-        font-weight: 500;
-        letter-spacing: 0.5px;
-    }
-
-    .metrics-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-        gap: 2rem;
-        margin-bottom: 4rem;
-    }
-
-    .metric-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: 20px;
-        padding: 2.5rem;
-        position: relative;
-        overflow: hidden;
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        cursor: pointer;
-    }
-
-    .metric-card:hover {
-        transform: translateY(-8px) scale(1.02);
-        box-shadow: var(--shadow-lg);
-        border-color: transparent;
-    }
-
-    .metric-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 5px;
-        border-radius: 20px 20px 0 0;
-    }
-
-    .metric-card.blue::before { background: var(--gradient-blue); }
-    .metric-card.green::before { background: var(--gradient-green); }
-    .metric-card.orange::before { background: var(--gradient-orange); }
-    .metric-card.purple::before { background: var(--gradient-purple); }
-
-    .metric-card::after {
-        content: '';
-        position: absolute;
-        top: -50%;
-        right: -50%;
-        width: 100%;
-        height: 100%;
-        background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
-        pointer-events: none;
-        transition: opacity 0.3s ease;
-        opacity: 0;
-    }
-
-    .metric-card:hover::after {
-        opacity: 1;
-    }
-
-    .metric-icon {
-        width: 60px;
-        height: 60px;
-        border-radius: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 2rem;
-        margin-bottom: 1.5rem;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .metric-card.blue .metric-icon {
-        background: linear-gradient(135deg, rgba(66, 133, 244, 0.2), rgba(66, 133, 244, 0.1));
-        color: var(--accent-blue);
-    }
-
-    .metric-card.green .metric-icon {
-        background: linear-gradient(135deg, rgba(52, 168, 83, 0.2), rgba(52, 168, 83, 0.1));
-        color: var(--accent-green);
-    }
-
-    .metric-card.orange .metric-icon {
-        background: linear-gradient(135deg, rgba(251, 188, 4, 0.2), rgba(251, 188, 4, 0.1));
-        color: var(--accent-orange);
-    }
-
-    .metric-card.purple .metric-icon {
-        background: linear-gradient(135deg, rgba(156, 39, 176, 0.2), rgba(156, 39, 176, 0.1));
-        color: var(--accent-purple);
-    }
-
-    .metric-label {
-        font-size: 1rem;
-        color: var(--text-secondary);
-        font-weight: 500;
-        margin-bottom: 1rem;
-        text-transform: uppercase;
-        letter-spacing: 0.8px;
-    }
-
-    .metric-value {
-        font-size: 3.5rem;
-        font-weight: 900;
-        color: var(--text-primary);
-        line-height: 1;
-        margin-bottom: 1rem;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .metric-trend {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-size: 0.9rem;
-        font-weight: 500;
-    }
-
-    .trend-positive { color: var(--accent-green); }
-    .trend-neutral { color: var(--accent-orange); }
-    .trend-negative { color: var(--accent-red); }
-
-    .progress-ring {
-        position: absolute;
-        top: 2rem;
-        right: 2rem;
-        width: 60px;
-        height: 60px;
-    }
-
-    .progress-ring circle {
-        fill: transparent;
-        stroke-width: 4;
-        stroke-linecap: round;
-        transform: rotate(-90deg);
-        transform-origin: 50% 50%;
-    }
-
-    .progress-ring .background {
-        stroke: rgba(255,255,255,0.1);
-    }
-
-    .progress-ring .progress {
-        stroke-dasharray: 157;
-        stroke-dashoffset: 157;
-        animation: fillRing 2s ease-out forwards;
-    }
-
-    .metric-card.blue .progress-ring .progress { stroke: var(--accent-blue); }
-    .metric-card.green .progress-ring .progress { stroke: var(--accent-green); }
-    .metric-card.orange .progress-ring .progress { stroke: var(--accent-orange); }
-    .metric-card.purple .progress-ring .progress { stroke: var(--accent-purple); }
-
-    .section-divider {
-        margin: 4rem 0;
-        text-align: center;
-        position: relative;
-    }
-
-    .section-divider::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, var(--border-color), transparent);
-    }
-
-    .section-divider span {
-        background: var(--bg-primary);
-        padding: 0 2rem;
-        color: var(--text-secondary);
-        font-weight: 500;
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-
-    .team-section {
-        margin-bottom: 3rem;
-    }
-
-    .section-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 2rem;
-        padding-bottom: 1rem;
-        border-bottom: 1px solid var(--border-color);
-    }
-
-    .section-title {
-        font-size: 2rem;
-        font-weight: 700;
-        color: var(--text-primary);
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .title-icon {
-        width: 40px;
-        height: 40px;
-        background: var(--gradient-cyber);
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 1.2rem;
-    }
-
-    .team-stats {
-        display: flex;
-        gap: 1rem;
-        font-size: 0.9rem;
-        color: var(--text-secondary);
-    }
-
-    .team-stats span {
-        padding: 0.25rem 0.75rem;
-        background: var(--bg-accent);
-        border-radius: 12px;
-        border: 1px solid var(--border-color);
-    }
-
-    .data-table-container {
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: 20px;
-        overflow: hidden;
-        box-shadow: var(--shadow-md);
-        position: relative;
-    }
-
-    .data-table-container::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: var(--gradient-cyber);
-    }
-
-    .data-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    .data-table thead {
-        background: var(--bg-secondary);
-        position: relative;
-    }
-
-    .data-table thead::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, var(--accent-blue), transparent);
-    }
-
-    .data-table th,
-    .data-table td {
-        padding: 1.5rem 2rem;
-        text-align: left;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-    }
-
-    .data-table th {
-        font-weight: 600;
-        color: var(--text-primary);
-        font-size: 0.95rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        position: relative;
-    }
-
-    .data-table th:first-child {
-        padding-left: 2.5rem;
-    }
-
-    .data-table td {
-        color: var(--text-secondary);
-        font-weight: 400;
-        transition: all 0.3s ease;
-    }
-
-    .data-table td:first-child {
-        padding-left: 2.5rem;
-        font-weight: 600;
-        color: var(--text-primary);
-    }
-
-    .data-table tbody tr {
-        transition: all 0.3s ease;
-        position: relative;
-    }
-
-    .data-table tbody tr:hover {
-        background: rgba(66, 133, 244, 0.05);
-        transform: translateX(5px);
-    }
-
-    .data-table tbody tr:hover::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 4px;
-        background: var(--accent-blue);
-        border-radius: 0 2px 2px 0;
-    }
-
-    .data-table tbody tr:last-child td {
-        border-bottom: none;
-    }
-
-    .metric-badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 50px;
-        padding: 0.5rem 1rem;
-        border-radius: 12px;
-        font-weight: 600;
-        font-size: 0.9rem;
-    }
-
-    .badge-blue {
-        background: rgba(66, 133, 244, 0.15);
-        color: var(--accent-blue);
-        border: 1px solid rgba(66, 133, 244, 0.3);
-    }
-
-    .badge-green {
-        background: rgba(52, 168, 83, 0.15);
-        color: var(--accent-green);
-        border: 1px solid rgba(52, 168, 83, 0.3);
-    }
-
-    .badge-orange {
-        background: rgba(251, 188, 4, 0.15);
-        color: var(--accent-orange);
-        border: 1px solid rgba(251, 188, 4, 0.3);
-    }
-
-    .badge-purple {
-        background: rgba(156, 39, 176, 0.15);
-        color: var(--accent-purple);
-        border: 1px solid rgba(156, 39, 176, 0.3);
-    }
-
-    .badge-red {
-        background: rgba(234, 67, 53, 0.15);
-        color: var(--accent-red);
-        border: 1px solid rgba(234, 67, 53, 0.3);
-    }
-
-    .empty-state {
-        text-align: center;
-        padding: 4rem 2rem;
-        color: var(--text-secondary);
-    }
-
-    .empty-icon {
-        font-size: 4rem;
-        margin-bottom: 1rem;
-        opacity: 0.3;
-    }
-
-    .empty-message {
-        font-size: 1.1rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .empty-submessage {
-        font-size: 0.9rem;
-        opacity: 0.7;
-    }
-
-    .action-panel {
-        margin-top: 3rem;
-        text-align: center;
-    }
-
-    .action-buttons {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1.5rem;
-        justify-content: center;
-    }
-
-    .header-actions {
-        display: flex;
-        justify-content: center;
-        gap: 1.5rem;
-        margin-top: 1.5rem;
-    }
-
-    .action-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 1rem 2rem;
-        border-radius: 16px;
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 1rem;
-        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        border: 2px solid transparent;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .action-btn::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 0;
-        height: 0;
-        background: rgba(255,255,255,0.1);
-        border-radius: 50%;
-        transform: translate(-50%, -50%);
-        transition: all 0.6s ease;
-    }
-
-    .action-btn:hover::before {
-        width: 300px;
-        height: 300px;
-    }
-
-    .btn-primary {
-        background: var(--gradient-blue);
-        color: white;
-        box-shadow: 0 4px 15px rgba(66, 133, 244, 0.3);
-    }
-
-    .btn-secondary {
-        background: var(--bg-card);
-        color: var(--text-primary);
-        border-color: var(--border-color);
-    }
-
-    .btn-accent {
-        background: var(--gradient-cyber);
-        color: white;
-        box-shadow: 0 4px 15px rgba(50, 130, 184, 0.3);
-    }
-
-    .btn-danger {
-        background: var(--gradient-orange);
-        color: white;
-        box-shadow: 0 4px 15px rgba(251, 188, 4, 0.3);
-    }
-
-    .action-btn:hover {
-        transform: translateY(-3px) scale(1.05);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-    }
-
-    .btn-secondary:hover {
-        border-color: var(--accent-blue);
-        box-shadow: 0 10px 30px rgba(66, 133, 244, 0.2);
-    }
-
-    /* Notification Panel */
-    .notification-panel {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        width: 350px;
-        z-index: 1000;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .notification {
-        background: var(--bg-card);
-        border-left: 4px solid var(--accent-blue);
-        border-radius: 8px;
-        padding: 15px;
-        box-shadow: var(--shadow-md);
-        animation: slideInFromRight 0.5s ease-out;
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .notification.success {
-        border-left-color: var(--accent-green);
-    }
-
-    .notification.warning {
-        border-left-color: var(--accent-orange);
-    }
-
-    .notification.error {
-        border-left-color: var(--accent-red);
-    }
-
-    .notification.info {
-        border-left-color: var(--accent-blue);
-    }
-
-    .notification-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-    }
-
-    .notification-title {
-        font-weight: 600;
-        font-size: 1rem;
-        color: var(--text-primary);
-    }
-
-    .notification-time {
-        font-size: 0.75rem;
-        color: var(--text-secondary);
-    }
-
-    .notification-close {
-        background: none;
-        border: none;
-        color: var(--text-secondary);
-        cursor: pointer;
-        font-size: 1rem;
-        padding: 0;
-    }
-
-    .notification-body {
-        font-size: 0.9rem;
-        color: var(--text-secondary);
-        line-height: 1.4;
-    }
-
-    .notification-footer {
-        margin-top: 10px;
-        display: flex;
-        justify-content: flex-end;
-        gap: 10px;
-    }
-
-    .notification-btn {
-        padding: 5px 10px;
-        border-radius: 4px;
-        font-size: 0.8rem;
-        border: none;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .notification-btn-primary {
-        background: var(--accent-blue);
-        color: white;
-    }
-
-    .notification-btn-secondary {
-        background: var(--bg-secondary);
-        color: var(--text-primary);
-        border: 1px solid var(--border-color);
-    }
-
-    .notification-btn:hover {
-        opacity: 0.9;
-        transform: translateY(-1px);
-    }
-
-    /* Approval Request Section */
-    .approval-request {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 15px;
-        background: var(--bg-accent);
-        border-radius: 12px;
-        margin-bottom: 15px;
-        border-left: 4px solid var(--accent-purple);
-    }
-
-    .approval-request-info {
-        flex: 1;
-    }
-
-    .approval-request-title {
-        font-weight: 600;
-        margin-bottom: 5px;
-        color: var(--text-primary);
-    }
-
-    .approval-request-details {
-        font-size: 0.9rem;
-        color: var(--text-secondary);
-    }
-
-    .approval-request-actions {
-        display: flex;
-        gap: 10px;
-    }
-
-    .approval-btn {
-        padding: 8px 16px;
-        border-radius: 8px;
-        border: none;
-        cursor: pointer;
-        font-weight: 500;
-        transition: all 0.2s ease;
-    }
-
-    .approve-btn {
-        background: var(--accent-green);
-        color: white;
-    }
-
-    .reject-btn {
-        background: var(--accent-red);
-        color: white;
-    }
-
-    .approval-btn:hover {
-        opacity: 0.9;
-        transform: translateY(-1px);
-    }
-
-    /* Animations */
-    @keyframes slideInFromBottom {
-        from {
-            opacity: 0;
-            transform: translateY(50px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    @keyframes slideInFromRight {
-        from {
-            opacity: 0;
-            transform: translateX(50px);
-        }
-        to {
-            opacity: 1;
-            transform: translateX(0);
-        }
-    }
-
-    @keyframes fillRing {
-        to {
-            stroke-dashoffset: 0;
-        }
-    }
-
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.7; }
-    }
-
-    .loading { animation: pulse 2s infinite; }
-
-    /* Responsive Design */
-    @media (max-width: 1024px) {
-        .metrics-grid {
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        }
-    }
-
-    @media (max-width: 768px) {
-        .dashboard-wrapper {
-            padding: 1rem;
-        }
-        
-        .main-title {
-            font-size: 2rem;
-        }
-        
-        .metrics-grid {
-            grid-template-columns: 1fr;
-            gap: 1rem;
-        }
-        
-        .metric-card {
-            padding: 2rem;
-        }
-        
-        .metric-value {
-            font-size: 2.5rem;
-        }
-        
-        .section-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 1rem;
-        }
-        
-        .action-buttons {
-            flex-direction: column;
-        }
-        
-        .data-table-container {
-            overflow-x: auto;
-        }
-        
-        .data-table {
-            min-width: 700px;
-        }
-        
-        .data-table th,
-        .data-table td {
-            padding: 1rem;
-        }
-
-        .notification-panel {
-            width: 300px;
-            right: 10px;
-        }
-    }
-
-    @media (max-width: 480px) {
-        .metric-card {
-            padding: 1.5rem;
-        }
-        
-        .data-table th,
-        .data-table td {
-            padding: 0.75rem;
-            font-size: 0.9rem;
-        }
-
-        .notification-panel {
-            width: calc(100% - 20px);
-            right: 10px;
-            left: 10px;
-        }
-    }
-    .approval-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: 20px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-        position: relative;
-        overflow: hidden;
-        transition: all 0.3s ease;
-    }
-
-    .approval-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 4px;
-        height: 100%;
-        background: var(--accent-orange);
-    }
-
-    .approval-card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-        padding-bottom: 1rem;
-        border-bottom: 1px solid var(--border-color);
-    }
-
-    .approval-title {
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: var(--text-primary);
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-
-    .approval-badge {
-        padding: 0.25rem 0.75rem;
-        border-radius: 12px;
-        font-size: 0.8rem;
-        font-weight: 600;
-    }
-
-    .badge-pending {
-        background: rgba(251, 188, 4, 0.15);
-        color: var(--accent-orange);
-        border: 1px solid rgba(251, 188, 4, 0.3);
-    }
-
-    .approval-content {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1.5rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .approval-detail {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .detail-label {
-        font-size: 0.85rem;
-        color: var(--text-secondary);
-        font-weight: 500;
-    }
-
-    .detail-value {
-        font-size: 1rem;
-        color: var(--text-primary);
-        font-weight: 500;
-    }
-
-    .approval-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 1rem;
-        margin-top: 1rem;
-    }
-
-    .btn-approve {
-        background: var(--gradient-green);
-        color: white;
-        padding: 0.75rem 1.5rem;
-        border-radius: 12px;
-        border: none;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-    .btn-reject {
-        background: var(--gradient-orange);
-        color: white;
-        padding: 0.75rem 1.5rem;
-        border-radius: 12px;
-        border: none;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-    .btn-approve:hover, .btn-reject:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    }
-
-    .empty-approvals {
-        text-align: center;
-        padding: 2rem;
-        background: var(--bg-card);
-        border-radius: 20px;
-        border: 1px dashed var(--border-color);
-    }
-
-    .empty-approvals-icon {
-        font-size: 2rem;
-        opacity: 0.5;
-        margin-bottom: 1rem;
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .approval-content {
-            grid-template-columns: 1fr;
-        }
-    }
-</style>
-{% endblock %}
 
 {% block content %}
 <div class="dashboard-wrapper">
@@ -994,122 +24,55 @@
     <div class="metrics-grid">
         <div class="metric-card blue">
             <div class="metric-icon">🎯</div>
-            <div class="metric-label">Total Leads</div>
-            <div class="metric-value">{{ total_leads }}</div>
+            <div class="metric-label">Team Leads</div>
+            <div class="metric-value">{{ team_leads.count }}</div>
             <div class="metric-trend trend-positive">
-                <span>📈</span> Team + Personal
+                <span>📈</span> {{ team_leads.count }} Active
             </div>
             <svg class="progress-ring">
                 <circle class="background" cx="30" cy="30" r="25"></circle>
-                <circle class="progress" cx="30" cy="30" r="25" style="stroke-dashoffset: calc(157 - (157 * 75) / 100);"></circle>
+                <circle class="progress" cx="30" cy="30" r="25" style="stroke-dashoffset: calc(157 - (157 * {{ leads_count_percentage|default:75 }}) / 100);"></circle>
             </svg>
         </div>
 
         <div class="metric-card green">
-            <div class="metric-icon">📋</div>
-            <div class="metric-label">Open Tasks</div>
-            <div class="metric-value">{{ open_tasks }}</div>
+            <div class="metric-icon">💰</div>
+            <div class="metric-label">Team AUM</div>
+            <div class="metric-value">₹{{ team_aum|intcomma }}</div>
             <div class="metric-trend trend-positive">
-                <span>⚡</span> Active Pipeline
+                <span>📊</span> {{ team_clients.count }} Clients
             </div>
             <svg class="progress-ring">
                 <circle class="background" cx="30" cy="30" r="25"></circle>
-                <circle class="progress" cx="30" cy="30" r="25" style="stroke-dashoffset: calc(157 - (157 * 60) / 100);"></circle>
+                <circle class="progress" cx="30" cy="30" r="25" style="stroke-dashoffset: calc(157 - (157 * {{ aum_growth_percentage|default:60 }}) / 100);"></circle>
             </svg>
         </div>
 
         <div class="metric-card orange">
-            <div class="metric-icon">🛠️</div>
-            <div class="metric-label">Pending Approvals</div>
-            <div class="metric-value">{{ pending_approvals.count }}</div>
-            <div class="metric-trend trend-neutral">
-                <span>⏱️</span> Awaiting Response
+            <div class="metric-icon">📋</div>
+            <div class="metric-label">Pending Tasks</div>
+            <div class="metric-value">{{ pending_tasks }}</div>
+            <div class="metric-trend trend-negative">
+                <span>⚠️</span> {{ overdue_tasks }} Overdue
             </div>
             <svg class="progress-ring">
                 <circle class="background" cx="30" cy="30" r="25"></circle>
-                <circle class="progress" cx="30" cy="30" r="25" style="stroke-dashoffset: calc(157 - (157 * 45) / 100);"></circle>
+                <circle class="progress" cx="30" cy="30" r="25" style="stroke-dashoffset: calc(157 - (157 * {{ task_completion_percentage|default:45 }}) / 100);"></circle>
             </svg>
         </div>
-    </div>
 
-    <!-- Approval Requests Section -->
-    <div class="section-divider">
-        <span>Conversion Approval Requests</span>
-    </div>
-
-    <div class="team-section">
-        <div class="section-header">
-            <h2 class="section-title">
-                <div class="title-icon">✅</div>
-                Pending Approvals
-            </h2>
-            <div class="team-stats">
-                <span>{{ pending_approvals.count }} Requests</span>
-                <span>Action Required</span>
+        <div class="metric-card purple">
+            <div class="metric-icon">🔄</div>
+            <div class="metric-label">Team SIP</div>
+            <div class="metric-value">₹{{ team_sip|intcomma }}</div>
+            <div class="metric-trend trend-positive">
+                <span>📈</span> Monthly Recurring
             </div>
+            <svg class="progress-ring">
+                <circle class="background" cx="30" cy="30" r="25"></circle>
+                <circle class="progress" cx="30" cy="30" r="25" style="stroke-dashoffset: calc(157 - (157 * {{ sip_growth_percentage|default:30 }}) / 100);"></circle>
+            </svg>
         </div>
-
-        {% if pending_approvals %}
-            {% for approval in pending_approvals %}
-            <div class="approval-card">
-                <div class="approval-card-header">
-                    <h3 class="approval-title">
-                        <span>📝</span> Lead Conversion Request
-                        <span class="approval-badge badge-pending">Pending Approval</span>
-                    </h3>
-                    <div class="detail-value">
-                        Requested {{ approval.created_at|timesince }} ago
-                    </div>
-                </div>
-                
-                <div class="approval-content">
-                    <div class="approval-detail">
-                        <span class="detail-label">Lead Details</span>
-                        <span class="detail-value">{{ approval.lead.name }} ({{ approval.lead.company }})</span>
-                        <span class="detail-value">Current Status: {{ approval.lead.get_status_display }}</span>
-                    </div>
-                    
-                    <div class="approval-detail">
-                        <span class="detail-label">Requested By</span>
-                        <span class="detail-value">{{ approval.changed_by.get_full_name }}</span>
-                        <span class="detail-value">RM: {{ approval.lead.assigned_to.get_full_name }}</span>
-                    </div>
-                    
-                    <div class="approval-detail">
-                        <span class="detail-label">Notes</span>
-                        <span class="detail-value">{{ approval.notes|default:"No additional notes provided" }}</span>
-                    </div>
-                    
-                    <div class="approval-detail">
-                        <span class="detail-label">Potential Client Value</span>
-                        <span class="detail-value">${{ approval.lead.estimated_value|default:"N/A" }}</span>
-                    </div>
-                </div>
-                
-                <div class="approval-actions">
-                    <form method="post" action="{% url 'approve_conversion' approval.lead.pk %}" style="display: inline;">
-                        {% csrf_token %}
-                        <input type="hidden" name="approval_id" value="{{ approval.id }}">
-                        <button type="submit" class="btn-approve">Approve Conversion</button>
-                    </form>
-                    <form method="post" action="{% url 'reject_conversion' approval.lead.pk %}" style="display: inline;">
-                        {% csrf_token %}
-                        <input type="hidden" name="approval_id" value="{{ approval.id }}">
-                        <button type="submit" class="btn-reject">Reject Request</button>
-                    </form>
-                    <a href="{% url 'lead_detail' pk=approval.lead.pk %}" class="action-btn btn-secondary" style="padding: 0.75rem 1.5rem;">
-                        View Lead Details
-                    </a>
-                </div>
-            </div>
-            {% endfor %}
-        {% else %}
-            <div class="empty-approvals">
-                <div class="empty-approvals-icon">🎉</div>
-                <div class="empty-message">No pending approval requests</div>
-                <div class="empty-submessage">All conversion requests have been processed</div>
-            </div>
-        {% endif %}
     </div>
 
     <!-- Team Performance Section -->
@@ -1118,31 +81,261 @@
     </div>
 
     <div class="team-section">
-        <!-- Previous team performance table remains the same -->
+        <div class="section-header">
+            <h2 class="section-title">
+                <div class="title-icon">👥</div>
+                My Team Members
+            </h2>
+            <div class="team-stats">
+                <span>{{ team_members|length }} Members</span>
+                <span>{{ team_clients.count }} Clients</span>
+                <span>₹{{ team_aum|intcomma }} AUM</span>
+            </div>
+        </div>
+
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Team Member</th>
+                        <th>Leads</th>
+                        <th>Clients</th>
+                        <th>AUM</th>
+                        <th>SIP</th>
+                        <th>Tasks</th>
+                        <th>Performance</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    {% for member_data in team_members_data %}
+<tr>
+    <td>{{ member_data.member.get_full_name }}</td>
+    <td>{{ member_data.lead_count }}</td>
+    <td>{{ member_data.client_count }}</td>
+    <td>₹{{ member_data.aum|intcomma }}</td>
+    <td>₹{{ member_data.sip|intcomma }}</td>
+    <td>
+        <span class="badge {% if member_data.pending_tasks > 5 %}badge-red{% else %}badge-orange{% endif %}">
+            {{ member_data.pending_tasks }} pending
+        </span>
+    </td>
+    <td>{{ member_data.performance_score }}%</td>
+</tr>
+
+    {% empty %}
+    <tr>
+        <td colspan="7" class="empty-state">
+            <div class="empty-icon">👥</div>
+            <div class="empty-message">No team members found</div>
+            <div class="empty-submessage">Your team will appear here once assigned</div>
+        </td>
+    </tr>
+    {% endfor %}
+</tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tasks Overview Section -->
+    <div class="section-divider">
+        <span>Tasks & Service Requests</span>
+    </div>
+
+    <div class="team-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <div class="title-icon">📋</div>
+                Team Tasks Overview
+            </h2>
+            <div class="team-stats">
+                <span>{{ pending_tasks }} Pending</span>
+                <span>{{ overdue_tasks }} Overdue</span>
+                <span>{{ team_tasks.count }} Total</span>
+            </div>
+        </div>
+
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Task</th>
+                        <th>Assigned To</th>
+                        <th>Due Date</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in team_tasks.filter(completed=False).order_by('-due_date')|slice:":5" %}
+                    <tr>
+                        <td>{{ task.title }}</td>
+                        <td>{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</td>
+                        <td {% if task.due_date < timezone.now %}class="text-red-500"{% endif %}>
+                            {{ task.due_date|date:"M d, Y" }}
+                            {% if task.due_date < timezone.now %}(Overdue){% endif %}
+                        </td>
+                        <td>
+                            <span class="metric-badge 
+                                {% if task.priority == 'high' %}badge-red
+                                {% elif task.priority == 'medium' %}badge-orange
+                                {% else %}badge-blue{% endif %}">
+                                {{ task.get_priority_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="metric-badge 
+                                {% if task.completed %}badge-green
+                                {% else %}badge-orange{% endif %}">
+                                {{ task.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{% url 'task_detail' task.id %}" class="action-btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
+                                View
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <div class="empty-icon">✅</div>
+                            <div class="empty-message">No tasks found</div>
+                            <div class="empty-submessage">All tasks are completed</div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="action-panel" style="margin-top: 2rem;">
+            <div class="action-buttons">
+                <a href="{% url 'task_list' %}?assigned_to=&status=pending" class="action-btn btn-secondary">
+                    <span>📋</span> View All Pending Tasks
+                </a>
+                <a href="{% url 'task_list' %}?assigned_to=&status=overdue" class="action-btn btn-danger">
+                    <span>⚠️</span> View Overdue Tasks
+                </a>
+                <a href="{% url 'task_create' %}" class="action-btn btn-primary">
+                    <span>➕</span> Create New Task
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Service Requests Section -->
+    <div class="team-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <div class="title-icon">🛠️</div>
+                Recent Service Requests
+            </h2>
+            <div class="team-stats">
+                <span>{{ team_service_requests.count }} Total</span>
+                <span>{{ team_service_requests.filter(status='open').count }} Open</span>
+                <span>{{ team_service_requests.filter(status='resolved').count }} Resolved</span>
+            </div>
+        </div>
+
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Request</th>
+                        <th>Client</th>
+                        <th>Raised By</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for request in team_service_requests.order_by('-created_at')|slice:":5" %}
+                    <tr>
+                        <td>{{ request.request_type }}</td>
+                        <td>
+                            {% if request.client %}
+                            <a href="{% url 'client_detail' request.client.id %}">
+                                {{ request.client.name }}
+                            </a>
+                            {% else %}
+                            System Request
+                            {% endif %}
+                        </td>
+                        <td>{{ request.raised_by.get_full_name|default:request.raised_by.username }}</td>
+                        <td>
+                            <span class="metric-badge 
+                                {% if request.priority == 'high' %}badge-red
+                                {% elif request.priority == 'medium' %}badge-orange
+                                {% else %}badge-blue{% endif %}">
+                                {{ request.get_priority_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="metric-badge 
+                                {% if request.status == 'resolved' %}badge-green
+                                {% elif request.status == 'in_progress' %}badge-orange
+                                {% else %}badge-red{% endif %}">
+                                {{ request.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{% url 'service_request_detail' request.id %}" class="action-btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
+                                View
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <div class="empty-icon">🛠️</div>
+                            <div class="empty-message">No service requests found</div>
+                            <div class="empty-submessage">All service requests are processed</div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="action-panel" style="margin-top: 2rem;">
+            <div class="action-buttons">
+                <a href="{% url 'service_request_list' %}?status=open" class="action-btn btn-secondary">
+                    <span>🛠️</span> View Open Requests
+                </a>
+                <a href="{% url 'service_request_list' %}?status=resolved" class="action-btn btn-accent">
+                    <span>✅</span> View Resolved Requests
+                </a>
+                <a href="{% url 'service_request_create' %}" class="action-btn btn-primary">
+                    <span>➕</span> Create New Request
+                </a>
+            </div>
+        </div>
     </div>
 
     <!-- Action Panel -->
     <div class="action-panel">
         <div class="action-buttons">
-            <a href="{% url 'hrm_dashboard' %}" class="action-btn btn-accent">
-                <span>📋</span> HRMS Portal
-            </a>
             <a href="{% url 'lead_list' %}" class="action-btn btn-primary">
-                <span>🎯</span>
-                <span>View All Leads</span>
+                <span>🎯</span> View All Leads
             </a>
-            <a href="{% url 'task_list' %}" class="action-btn btn-secondary">
-                <span>📋</span>
-                <span>Manage Tasks</span>
+            <a href="{% url 'client_list' %}" class="action-btn btn-accent">
+                <span>💰</span> View Client Portfolio
             </a>
-            <a href="{% url 'service_request_list' %}" class="action-btn btn-accent">
-                <span>🛠️</span>
-                <span>Service Requests</span>
+            <a href="{% url 'team_performance' %}" class="action-btn btn-secondary">
+                <span>📊</span> Team Performance
+            </a>
+            <a href="{% url 'reports_dashboard' %}" class="action-btn btn-accent">
+                <span>📈</span> Generate Reports
             </a>
         </div>
     </div>
 </div>
 
+<!-- Notification Panel -->
+<div id="notificationPanel" class="notification-panel"></div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -1234,141 +427,151 @@ document.addEventListener('DOMContentLoaded', function() {
         observer.observe(ring);
     });
 
-    // WebSocket for real-time notifications
-    function setupWebSocket() {
-        const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-        const host = window.location.host;
-        const path = '/ws/notifications/';
-        const ws = new WebSocket(protocol + host + path);
-
-        ws.onopen = function() {
-            console.log('WebSocket connection established');
-            showNotification('success', 'Connection Established', 'You are now connected to real-time updates');
-        };
-
-        ws.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-            console.log('Message received:', data);
-            
-            if (data.type === 'lead_conversion_request') {
-                showNotification(
-                    'info', 
-                    'New Conversion Request', 
-                    `${data.requested_by} has requested to convert lead ${data.lead_name}`,
-                    [
-                        {text: 'View Lead', url: `/leads/${data.lead_id}/`},
-                        {text: 'Approve', url: `/leads/convert/${data.lead_id}/`, method: 'POST'}
-                    ]
-                );
+    // Add real-time data refresh for team metrics
+    function refreshTeamMetrics() {
+        fetch('{% url "team_metrics_api" %}')
+            .then(response => response.json())
+            .then(data => {
+                // Update leads count
+                document.querySelector('.metric-card.blue .metric-value').textContent = data.leads_count;
                 
-                // Update pending approvals count
-                const pendingApprovalsElement = document.querySelector('.metric-card.purple .metric-value');
-                if (pendingApprovalsElement) {
-                    const currentCount = parseInt(pendingApprovalsElement.textContent);
-                    pendingApprovalsElement.textContent = currentCount + 1;
-                }
-            }
-            else if (data.type === 'lead_converted') {
-                showNotification(
-                    'success', 
-                    'Lead Converted', 
-                    `${data.converted_by} has converted lead ${data.lead_name} to client ${data.client_id}`
-                );
+                // Update AUM
+                document.querySelector('.metric-card.green .metric-value').textContent = '₹' + new Intl.NumberFormat().format(data.team_aum);
                 
-                // Update pending approvals count
-                const pendingApprovalsElement = document.querySelector('.metric-card.purple .metric-value');
-                if (pendingApprovalsElement) {
-                    const currentCount = parseInt(pendingApprovalsElement.textContent);
-                    if (currentCount > 0) {
-                        pendingApprovalsElement.textContent = currentCount - 1;
-                    }
+                // Update tasks
+                document.querySelector('.metric-card.orange .metric-value').textContent = data.pending_tasks;
+                document.querySelector('.metric-card.orange .metric-trend').innerHTML = 
+                    `<span>⚠️</span> ${data.overdue_tasks} Overdue`;
+                
+                // Update SIP
+                document.querySelector('.metric-card.purple .metric-value').textContent = '₹' + new Intl.NumberFormat().format(data.team_sip);
+                
+                // Update team stats
+                document.querySelectorAll('.team-stats span')[0].textContent = `${data.team_members_count} Members`;
+                document.querySelectorAll('.team-stats span')[1].textContent = `${data.clients_count} Clients`;
+                document.querySelectorAll('.team-stats span')[2].textContent = `₹${new Intl.NumberFormat().format(data.team_aum)} AUM`;
+                
+                // Show notification if data was updated
+                if (data.updated) {
+                    showNotification('info', 'Data Updated', 'Team metrics have been refreshed');
                 }
-            }
-            else if (data.type === 'lead_status_change') {
-                showNotification(
-                    'info', 
-                    'Lead Status Changed', 
-                    `Lead ${data.lead_name} status changed from ${data.old_status} to ${data.new_status}`
-                );
-            }
-        };
-
-        ws.onclose = function() {
-            console.log('WebSocket connection closed');
-            showNotification('warning', 'Connection Lost', 'Reconnecting to real-time updates...');
-            // Attempt to reconnect after 5 seconds
-            setTimeout(setupWebSocket, 5000);
-        };
-
-        ws.onerror = function(error) {
-            console.error('WebSocket error:', error);
-        };
-    }
-
-    // Notification system
-    function showNotification(type, title, message, actions = []) {
-        const notificationPanel = document.getElementById('notificationPanel');
-        const notificationId = 'notification-' + Date.now();
-        
-        const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
-        notification.id = notificationId;
-        
-        let actionsHTML = '';
-        if (actions.length > 0) {
-            actionsHTML = `<div class="notification-footer">`;
-            actions.forEach(action => {
-                if (action.method === 'POST') {
-                    actionsHTML += `
-                        <form method="post" action="${action.url}" style="display: inline;">
-                            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                            <button type="submit" class="notification-btn notification-btn-primary">${action.text}</button>
-                        </form>
-                    `;
-                } else {
-                    actionsHTML += `<a href="${action.url}" class="notification-btn notification-btn-primary">${action.text}</a>`;
-                }
+            })
+            .catch(error => {
+                console.error('Error refreshing metrics:', error);
             });
-            actionsHTML += `</div>`;
-        }
-        
-        notification.innerHTML = `
-            <div class="notification-header">
-                <div class="notification-title">${title}</div>
-                <button class="notification-close" onclick="document.getElementById('${notificationId}').remove()">&times;</button>
-            </div>
-            <div class="notification-body">${message}</div>
-            ${actionsHTML}
-        `;
-        
-        notificationPanel.appendChild(notification);
-        
-        // Auto-remove notification after 10 seconds
-        setTimeout(() => {
-            if (document.getElementById(notificationId)) {
-                notification.style.opacity = '0';
-                notification.style.transform = 'translateX(50px)';
-                setTimeout(() => {
-                    notification.remove();
-                }, 500);
-            }
-        }, 10000);
     }
-
+    
+    // Refresh every 2 minutes
+    setInterval(refreshTeamMetrics, 120000);
+    
     // Initialize WebSocket connection
     setupWebSocket();
-
-    // Show any initial messages from Django
-    {% if messages %}
-        {% for message in messages %}
-            showNotification(
-                '{{ message.tags }}', 
-                '{{ message|capfirst }}', 
-                '{{ message }}'
-            );
-        {% endfor %}
-    {% endif %}
 });
+
+// WebSocket for real-time notifications
+function setupWebSocket() {
+    const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+    const host = window.location.host;
+    const path = '/ws/notifications/';
+    const ws = new WebSocket(protocol + host + path);
+
+    ws.onopen = function() {
+        console.log('WebSocket connection established');
+        showNotification('success', 'Connection Established', 'You are now connected to real-time updates');
+    };
+
+    ws.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        console.log('Message received:', data);
+        
+        if (data.type === 'lead_conversion_request') {
+            showNotification(
+                'info', 
+                'New Conversion Request', 
+                `${data.requested_by} has requested to convert lead ${data.lead_name}`,
+                [
+                    {text: 'View Lead', url: `/leads/${data.lead_id}/`},
+                    {text: 'Approve', url: `/leads/convert/${data.lead_id}/`, method: 'POST'}
+                ]
+            );
+        }
+        else if (data.type === 'lead_converted') {
+            showNotification(
+                'success', 
+                'Lead Converted', 
+                `${data.converted_by} has converted lead ${data.lead_name} to client ${data.client_id}`
+            );
+        }
+        else if (data.type === 'lead_status_change') {
+            showNotification(
+                'info', 
+                'Lead Status Changed', 
+                `Lead ${data.lead_name} status changed from ${data.old_status} to ${data.new_status}`
+            );
+        }
+    };
+
+    ws.onclose = function() {
+        console.log('WebSocket connection closed');
+        showNotification('warning', 'Connection Lost', 'Reconnecting to real-time updates...');
+        // Attempt to reconnect after 5 seconds
+        setTimeout(setupWebSocket, 5000);
+    };
+
+    ws.onerror = function(error) {
+        console.error('WebSocket error:', error);
+    };
+}
+
+// Notification system
+function showNotification(type, title, message, actions = []) {
+    const notificationPanel = document.getElementById('notificationPanel');
+    const notificationId = 'notification-' + Date.now();
+    
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.id = notificationId;
+    
+    let actionsHTML = '';
+    if (actions.length > 0) {
+        actionsHTML = `<div class="notification-footer">`;
+        actions.forEach(action => {
+            if (action.method === 'POST') {
+                actionsHTML += `
+                    <form method="post" action="${action.url}" style="display: inline;">
+                        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                        <button type="submit" class="notification-btn notification-btn-primary">${action.text}</button>
+                    </form>
+                `;
+            } else {
+                actionsHTML += `<a href="${action.url}" class="notification-btn notification-btn-primary">${action.text}</a>`;
+            }
+        });
+        actionsHTML += `</div>`;
+    }
+    
+    notification.innerHTML = `
+        <div class="notification-header">
+            <div class="notification-title">${title}</div>
+            <button class="notification-close" onclick="document.getElementById('${notificationId}').remove()">&times;</button>
+        </div>
+        <div class="notification-body">${message}</div>
+        ${actionsHTML}
+    `;
+    
+    notificationPanel.appendChild(notification);
+    
+    // Auto-remove notification after 10 seconds
+    setTimeout(() => {
+        if (document.getElementById(notificationId)) {
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateX(50px)';
+            setTimeout(() => {
+                notification.remove();
+            }, 500);
+        }
+    }, 10000);
+}
 
 // Add CSS for ripple animation
 const style = document.createElement('style');

@@ -1,0 +1,77 @@
+{% extends "base/base.html" %}
+
+{% block title %}{{ profile_user.get_full_name|default:profile_user.username }} Profile{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="mb-0">{{ profile_user.get_full_name|default:profile_user.username }}</h1>
+                {% if user_role in 'business_head top_management' %}
+                <a href="{% url 'edit_user' profile_user.id %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-edit"></i> Edit Profile
+                </a>
+                {% endif %}
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Email:</strong> {{ profile_user.email }}</p>
+                    <p><strong>Role:</strong> 
+                        <span class="badge 
+                            {% if profile_user.role == 'rm' %}badge-primary
+                            {% elif profile_user.role == 'rm_head' %}badge-success
+                            {% elif profile_user.role == 'business_head' %}badge-warning
+                            {% else %}badge-dark{% endif %}">
+                            {{ profile_user.get_role_display }}
+                        </span>
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Date Joined:</strong> {{ profile_user.date_joined|date:"F j, Y" }}</p>
+                    <p><strong>Last Login:</strong> {{ profile_user.last_login|date:"F j, Y H:i"|default:"Never" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Team Memberships</h5>
+        </div>
+        <div class="card-body">
+            {% if profile_user.teams.all %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Team Name</th>
+                            <th>Leader</th>
+                            <th>Member Since</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for team in profile_user.teams.all %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'team_detail' team.id %}">
+                                    {{ team.name }}
+                                </a>
+                            </td>
+                            <td>{{ team.leader.get_full_name|default:team.leader.username }}</td>
+                            <td>{{ team.created_at|date:"F j, Y" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                This user is not part of any teams.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

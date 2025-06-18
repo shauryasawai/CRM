@@ -177,6 +177,24 @@ def dashboard(request):
         
         team_aum = team_clients.aggregate(total=Sum('aum'))['total'] or 0
         team_sip = team_clients.aggregate(total=Sum('sip_amount'))['total'] or 0
+        
+        # Prepare detailed member statistics
+    team_members_data = []
+    for member in team_members:
+        member_leads = team_leads.filter(assigned_to=member)
+        member_clients = team_clients.filter(user=member)
+        member_tasks = team_tasks.filter(assigned_to=member)
+        
+        team_members_data.append({
+            'member': member,
+            'lead_count': member_leads.count(),
+            'client_count': member_clients.count(),
+            'aum': member_clients.aggregate(total=Sum('aum'))['total'] or 0,
+            'sip': member_clients.aggregate(total=Sum('sip_amount'))['total'] or 0,
+            'pending_tasks': member_tasks.filter(completed=False).count(),
+            'overdue_tasks': member_tasks.filter(completed=False, due_date__lt=timezone.now()).count(),
+            'performance_score': getattr(member, 'performance_score', 0)  # Safe getattr with default
+        })
 
         context.update({
             'team_members': team_members,
@@ -1347,6 +1365,134 @@ def team_management(request):
     }
     
     return render(request, 'base/team_management.html', context)
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib import messages
+from .models import Team, User
+from .forms import TeamForm, UserEditForm
+
+@login_required
+@user_passes_test(lambda u: u.role in ['rm_head', 'business_head', 'top_management'])
+def team_management(request):
+    user = request.user
+    
+    if user.role == 'top_management':
+        teams = Team.objects.all()
+        all_users = User.objects.all()
+    elif user.role == 'business_head':
+        teams = Team.objects.all()
+        all_users = User.objects.all()
+    else:  # rm_head
+        teams = user.led_teams.all()
+        all_users = user.get_accessible_users()
+    
+    context = {
+        'teams': teams,
+        'all_users': all_users,
+        'user_role': user.role,
+    }
+    return render(request, 'base/team_management.html', context)
+
+@login_required
+@user_passes_test(lambda u: u.role in ['business_head', 'top_management'])
+def create_team(request):
+    if request.method == 'POST':
+        form = TeamForm(request.POST)
+        if form.is_valid():
+            team = form.save()
+            messages.success(request, f"Team '{team.name}' created successfully.")
+            return redirect('team_detail', team_id=team.id)
+    else:
+        form = TeamForm(initial={'leader': request.user})
+    
+    context = {
+        'form': form,
+        'action': 'Create',
+    }
+    return render(request, 'base/team_form.html', context)
+
+@login_required
+@user_passes_test(lambda u: u.role in ['rm_head', 'business_head', 'top_management'])
+def team_detail(request, team_id):
+    team = get_object_or_404(Team, id=team_id)
+    
+    # Check if user has permission to view this team
+    if (request.user.role not in ['business_head', 'top_management'] and 
+        request.user not in team.members.all() and 
+        request.user != team.leader):
+        messages.error(request, "You don't have permission to view this team.")
+        return redirect('team_management')
+    
+    context = {
+        'team': team,
+        'members': team.members.all(),
+    }
+    return render(request, 'base/team_detail.html', context)
+
+@login_required
+def edit_team(request, team_id):
+    team = get_object_or_404(Team, id=team_id)
+    
+    # Check permissions - business_head/top_management or team leader
+    if (request.user.role not in ['business_head', 'top_management'] and 
+        request.user != team.leader):
+        messages.error(request, "You don't have permission to edit this team.")
+        return redirect('team_management')
+    
+    if request.method == 'POST':
+        form = TeamForm(request.POST, instance=team)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Team '{team.name}' updated successfully.")
+            return redirect('team_detail', team_id=team.id)
+    else:
+        form = TeamForm(instance=team)
+    
+    context = {
+        'form': form,
+        'team': team,
+        'action': 'Edit',
+    }
+    return render(request, 'base/team_form.html', context)
+
+@login_required
+def user_profile(request, user_id):
+    user = get_object_or_404(User, id=user_id)
+    
+    # Check if current user has permission to view this profile
+    if (request.user.role not in ['business_head', 'top_management'] and 
+        request.user != user and 
+        not request.user.led_teams.filter(members=user).exists()):
+        messages.error(request, "You don't have permission to view this profile.")
+        return redirect('team_management')
+    
+    context = {
+        'profile_user': user,
+        'teams': user.teams.all(),
+    }
+    return render(request, 'base/user_profile.html', context)
+
+@login_required
+@user_passes_test(lambda u: u.role in ['business_head', 'top_management'])
+def edit_user(request, user_id):
+    user = get_object_or_404(User, id=user_id)
+    
+    if request.method == 'POST':
+        form = UserEditForm(request.POST, instance=user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"User {user.get_full_name()} updated successfully.")
+            return redirect('user_profile', user_id=user.id)
+    else:
+        form = UserEditForm(instance=user)
+    
+    context = {
+        'form': form,
+        'profile_user': user,
+    }
+    return render(request, 'base/user_form.html', context)
+
 
 # Analytics and Reports (role-based access)
 @login_required

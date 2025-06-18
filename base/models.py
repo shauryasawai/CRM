@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, Group
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.utils import timezone
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 # Define User roles as constants
 ROLE_CHOICES = (
@@ -10,6 +12,15 @@ ROLE_CHOICES = (
     ('rm_head', 'RM Head'),
     ('rm', 'Relationship Manager'),
 )
+
+class Team(models.Model):
+    """Represents a team structure for better organization"""
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
 
 class User(AbstractUser):
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
@@ -25,12 +36,26 @@ class User(AbstractUser):
     )
     
     # For RM Heads to manage teams through Django Groups
-    managed_teams = models.ManyToManyField(
+    managed_groups = models.ManyToManyField(
         Group,
         blank=True,
-        related_name='team_leaders',
-        help_text="Teams managed by this RM Head"
+        related_name='group_leaders',
+        help_text="Groups managed by this RM Head"
     )
+
+    # Teams this user belongs to
+    teams = models.ManyToManyField(
+        Team,
+        through='TeamMembership',
+        related_name='members',
+        blank=True,
+        help_text="Teams this user belongs to"
+    )
+
+    class Meta:
+        verbose_name = 'User'
+        verbose_name_plural = 'Users'
+        ordering = ['role', 'username']
 
     def clean(self):
         """Validate hierarchy rules"""
@@ -49,6 +74,31 @@ class User(AbstractUser):
         if self.role == 'rm' and self.manager and self.manager.role not in ['rm_head', 'business_head']:
             raise ValidationError("RM can only report to RM Head or Business Head")
 
+    def get_team_members(self):
+        """Get all team members for this user (if they're a team leader)"""
+        if self.role == 'rm_head':
+            # Get users in the same groups as this RM Head
+            return User.objects.filter(
+                role='rm',
+                groups__in=self.managed_groups.all()
+            ).distinct()
+        return User.objects.none()
+
+    def get_teams_display(self):
+        """Display teams this user belongs to"""
+        return ", ".join([team.name for team in self.teams.all()]) or "No teams"
+    get_teams_display.short_description = 'Teams'
+
+    def get_managed_teams_display(self):
+        """Display teams this user manages (for RM Heads)"""
+        if self.role == 'rm_head':
+            return ", ".join([team.name for team in Team.objects.filter(leader=self)]) or "No teams managed"
+        return "N/A"
+    get_managed_teams_display.short_description = 'Managed Teams'
+
+    def __str__(self):
+        return f"{self.username} ({self.get_role_display()})"
+    
     def get_line_manager(self):
         """Get the direct line manager for this user"""
         return self.manager
@@ -85,16 +135,6 @@ class User(AbstractUser):
                 
         return False
 
-    def get_team_members(self):
-        """Get all team members for RM Heads"""
-        if self.role == 'rm_head':
-            # Get RMs in the same groups as this RM Head
-            return User.objects.filter(
-                role='rm',
-                groups__in=self.groups.all()
-            ).distinct()
-        return User.objects.none()
-
     def get_subordinates_recursive(self):
         """Get all subordinates in the hierarchy tree"""
         subordinates = list(self.subordinates.all())
@@ -128,33 +168,30 @@ class User(AbstractUser):
         else:  # RM
             return User.objects.filter(id=self.id)
 
+# Add leader relationship to Team after User is defined
+Team.add_to_class('leader', models.ForeignKey(
+    User,
+    on_delete=models.SET_NULL,
+    null=True,
+    blank=True,
+    limit_choices_to={'role': 'rm_head'},
+    related_name='led_teams'
+))
+
+class TeamMembership(models.Model):
+    """Intermediate model for team membership with additional fields"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    team = models.ForeignKey(Team, on_delete=models.CASCADE)
+    date_joined = models.DateField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ('user', 'team')
+        verbose_name = 'Team Membership'
+        verbose_name_plural = 'Team Memberships'
+
     def __str__(self):
-        return f"{self.username} ({self.get_role_display()})"
-
-
-class Team(models.Model):
-    """Represents a team structure for better organization"""
-    name = models.CharField(max_length=100, unique=True)
-    head = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        limit_choices_to={'role': 'rm_head'},
-        related_name='led_teams'
-    )
-    description = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    def __str__(self):
-        return self.name
-
-
-from django.db import models
-from django.utils import timezone
-from django.core.validators import MinValueValidator, MaxValueValidator
-from django.conf import settings
-
+        return f"{self.user} in {self.team}"
 
 class Lead(models.Model):
     STATUS_CHOICES = (
@@ -187,7 +224,7 @@ class Lead(models.Model):
     mobile = models.CharField(max_length=15, null=True, blank=True)
     
     # Lead Source
-    source = models.CharField(max_length=50, choices=SOURCE_CHOICES,null=True, blank=True)
+    source = models.CharField(max_length=50, choices=SOURCE_CHOICES, null=True, blank=True)
     source_details = models.CharField(max_length=255, blank=True, null=True)
     reference_client = models.ForeignKey(
         'self',
@@ -321,9 +358,7 @@ class Lead(models.Model):
             approval_by=line_manager
         )
         
-        # TODO: Send notification to line manager
         return True
-
 
 class LeadInteraction(models.Model):
     INTERACTION_CHOICES = [
@@ -349,7 +384,6 @@ class LeadInteraction(models.Model):
     
     def __str__(self):
         return f"{self.get_interaction_type_display()} on {self.interaction_date.strftime('%Y-%m-%d')}"
-
 
 class ProductDiscussion(models.Model):
     PRODUCT_CHOICES = [
@@ -382,7 +416,6 @@ class ProductDiscussion(models.Model):
     def __str__(self):
         return f"{self.get_product_display()} (Interest: {self.interest_level}/10)"
 
-
 class LeadStatusChange(models.Model):
     lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name='status_changes')
     changed_at = models.DateTimeField(default=timezone.now)
@@ -411,7 +444,6 @@ class LeadStatusChange(models.Model):
     def __str__(self):
         return f"LeadStatusChange for Lead {self.lead.id} by {self.changed_by}"
 
-
 class Client(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -437,7 +469,6 @@ class Client(models.Model):
 
     def __str__(self):
         return self.name
-
 
 class Task(models.Model):
     PRIORITY_CHOICES = (
@@ -473,7 +504,6 @@ class Task(models.Model):
     def __str__(self):
         return f"{self.title} ({'Done' if self.completed else 'Pending'})"
 
-
 class Reminder(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -487,7 +517,6 @@ class Reminder(models.Model):
 
     def __str__(self):
         return f"Reminder for {self.user.username}: {self.message}"
-
 
 class ServiceRequest(models.Model):
     STATUS_CHOICES = (
@@ -526,7 +555,6 @@ class ServiceRequest(models.Model):
     def __str__(self):
         return f"ServiceRequest ({self.status}) for {self.client.name}"
 
-
 class BusinessTracker(models.Model):
     month = models.DateField()
     total_sip = models.DecimalField(max_digits=15, decimal_places=2, default=0)
@@ -555,7 +583,6 @@ class BusinessTracker(models.Model):
     def __str__(self):
         user_str = f" - {self.user.username}" if self.user else ""
         return f"{self.month.strftime('%B %Y')}{user_str}"
-
 
 class InvestmentPlanReview(models.Model):
     client = models.ForeignKey(
