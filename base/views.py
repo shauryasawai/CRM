@@ -156,9 +156,9 @@ def dashboard(request):
         template_name = 'base/dashboard_business_head.html'
 
     elif user.role == 'rm_head':
-        # Manage team and monitor performance
         team_members = user.get_team_members()
         accessible_users = user.get_accessible_users()
+        
         
         # Team metrics
         team_leads = Lead.objects.filter(assigned_to__in=accessible_users)
@@ -179,22 +179,22 @@ def dashboard(request):
         team_sip = team_clients.aggregate(total=Sum('sip_amount'))['total'] or 0
         
         # Prepare detailed member statistics
-    team_members_data = []
-    for member in team_members:
-        member_leads = team_leads.filter(assigned_to=member)
-        member_clients = team_clients.filter(user=member)
-        member_tasks = team_tasks.filter(assigned_to=member)
-        
-        team_members_data.append({
-            'member': member,
-            'lead_count': member_leads.count(),
-            'client_count': member_clients.count(),
-            'aum': member_clients.aggregate(total=Sum('aum'))['total'] or 0,
-            'sip': member_clients.aggregate(total=Sum('sip_amount'))['total'] or 0,
-            'pending_tasks': member_tasks.filter(completed=False).count(),
-            'overdue_tasks': member_tasks.filter(completed=False, due_date__lt=timezone.now()).count(),
-            'performance_score': getattr(member, 'performance_score', 0)  # Safe getattr with default
-        })
+        team_members_data = []
+        for member in team_members:
+            member_leads = team_leads.filter(assigned_to=member)
+            member_clients = team_clients.filter(user=member)
+            member_tasks = team_tasks.filter(assigned_to=member)
+            
+            team_members_data.append({
+                'member': member,
+                'lead_count': member_leads.count(),
+                'client_count': member_clients.count(),
+                'aum': member_clients.aggregate(total=Sum('aum'))['total'] or 0,
+                'sip': member_clients.aggregate(total=Sum('sip_amount'))['total'] or 0,
+                'pending_tasks': member_tasks.filter(completed=False).count(),
+                'overdue_tasks': member_tasks.filter(completed=False, due_date__lt=timezone.now()).count(),
+                'performance_score': getattr(member, 'performance_score', 0)  # Safe getattr with default
+            })
 
         context.update({
             'team_members': team_members,
@@ -208,6 +208,7 @@ def dashboard(request):
             'team_sip': team_sip,
             'leads_count': team_leads.count(),
             'clients_count': team_clients.count(),
+            'team_members_data': team_members_data,  # Add this to context
         })
         template_name = 'base/dashboard_rm_head.html'
 
@@ -896,9 +897,19 @@ def get_accessible_users(request):
 @login_required
 def client_list(request):
     user = request.user
-    clients = get_user_accessible_data(user, Client, 'user')
     
-    # Add search functionality
+    # Get clients based on user role
+    if user.role in ['top_management', 'business_head']:
+        clients = Client.objects.all()
+    elif user.role == 'rm_head':
+        accessible_users = user.get_accessible_users()
+        clients = Client.objects.filter(
+            Q(user__in=accessible_users) | 
+            Q(created_by=user))
+    else:  # RM
+        clients = Client.objects.filter(user=user)
+    
+    # Search functionality
     search_query = request.GET.get('search')
     if search_query:
         clients = clients.filter(
@@ -906,13 +917,27 @@ def client_list(request):
             Q(contact_info__icontains=search_query)
         )
 
+    from django.db.models import Sum, Count, IntegerField
+    from django.db.models.functions import Coalesce
+
+    stats = clients.aggregate(
+        total_aum=Coalesce(Sum('aum', output_field=IntegerField()), 0),
+        total_sip=Coalesce(Sum('sip_amount', output_field=IntegerField()), 0),
+        total_demat=Coalesce(Sum('demat_count', output_field=IntegerField()), 0),
+        client_count=Count('id')
+    )
+
     context = {
         'clients': clients.order_by('-created_at'),
         'search_query': search_query,
+        'clients_count': stats['client_count'],
+        'total_aum': stats['total_aum'],
+        'total_sip': stats['total_sip'],
+        'total_demat': stats['total_demat'],
     }
     
     return render(request, 'base/clients.html', context)
-
+    
 @login_required
 def client_create(request):
     if not request.user.role in ['rm', 'rm_head']:
@@ -1340,32 +1365,6 @@ def investment_plan_review_delete(request, pk):
     return render(request, 'base/investment_plan_confirm_delete.html', {'review': review})
 
 # Team Management Views (for RM Heads and above)
-@login_required
-@user_passes_test(lambda u: u.role in ['rm_head', 'business_head', 'top_management'])
-def team_management(request):
-    user = request.user
-    
-    if user.role == 'top_management':
-        # Can see all teams and users
-        teams = Team.objects.all()
-        all_users = User.objects.all()
-    elif user.role == 'business_head':
-        # Can see all teams and users
-        teams = Team.objects.all()
-        all_users = User.objects.all()
-    else:  # rm_head
-        # Can see their own teams
-        teams = user.led_teams.all()
-        all_users = user.get_accessible_users()
-    
-    context = {
-        'teams': teams,
-        'all_users': all_users,
-        'user_role': user.role,
-    }
-    
-    return render(request, 'base/team_management.html', context)
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages

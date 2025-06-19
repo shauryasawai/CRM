@@ -4,6 +4,704 @@
 
 {% block title %}RM Head Dashboard{% endblock %}
 
+{% block extra_css %}
+<style>
+/* Dashboard Wrapper */
+.dashboard-wrapper {
+    padding: 2rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Header Section */
+.dashboard-header {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.dashboard-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea, #764ba2, #f093fb, #f5576c);
+    background-size: 300% 100%;
+    animation: gradient-shift 3s ease-in-out infinite;
+}
+
+@keyframes gradient-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+.main-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.5rem;
+    text-align: center;
+}
+
+.welcome-subtitle {
+    font-size: 1.2rem;
+    color: #6b7280;
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #f093fb, #f5576c);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 1rem;
+    box-shadow: 0 10px 20px rgba(240, 147, 251, 0.3);
+    margin: 1rem auto;
+    display: block;
+    width: fit-content;
+}
+
+.header-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+/* Metrics Grid */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+}
+
+.metric-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    transition: all 0.3s ease;
+}
+
+.metric-card.blue::before {
+    background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+}
+
+.metric-card.green::before {
+    background: linear-gradient(90deg, #10b981, #059669);
+}
+
+.metric-card.orange::before {
+    background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.metric-card.purple::before {
+    background: linear-gradient(90deg, #8b5cf6, #7c3aed);
+}
+
+.metric-card:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+}
+
+.metric-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.metric-label {
+    font-size: 0.9rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.metric-value {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #1f2937;
+    margin-bottom: 1rem;
+    line-height: 1;
+}
+
+.metric-trend {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.trend-positive {
+    color: #10b981;
+}
+
+.trend-negative {
+    color: #ef4444;
+}
+
+.progress-ring {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    width: 60px;
+    height: 60px;
+    transform: rotate(-90deg);
+}
+
+.progress-ring .background {
+    fill: none;
+    stroke: #e5e7eb;
+    stroke-width: 3;
+}
+
+.progress-ring .progress {
+    fill: none;
+    stroke: #3b82f6;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-dasharray: 157;
+    animation: progress-animation 2s ease-out;
+}
+
+@keyframes progress-animation {
+    from { stroke-dashoffset: 157; }
+}
+
+/* Team Cards */
+.team-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.team-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+}
+
+.team-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+}
+
+.team-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.team-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0;
+}
+
+.team-leader {
+    font-size: 0.9rem;
+    color: #6b7280;
+}
+
+.team-stats {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.team-stat {
+    flex: 1;
+    text-align: center;
+    padding: 0.5rem;
+    background: rgba(241, 245, 249, 0.5);
+    border-radius: 10px;
+}
+
+.team-stat-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.team-stat-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.team-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+/* Section Divider */
+.section-divider {
+    text-align: center;
+    margin: 3rem 0 2rem;
+    position: relative;
+}
+
+.section-divider span {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 1rem 2rem;
+    border-radius: 50px;
+    font-weight: 600;
+    color: #374151;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Team Section */
+.team-section {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0;
+}
+
+.title-icon {
+    font-size: 1.8rem;
+}
+
+.team-stats-header {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.team-stats-header span {
+    background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #374151;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Data Table */
+.data-table-container {
+    overflow-x: auto;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+.data-table thead {
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+}
+
+.data-table th {
+    padding: 1rem 1.5rem;
+    text-align: left;
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.data-table td {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+
+.data-table tbody tr {
+    transition: all 0.3s ease;
+}
+
+.data-table tbody tr:hover {
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    transform: scale(1.01);
+}
+
+.data-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Badges */
+.badge, .metric-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.75rem;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-blue, .metric-badge.badge-blue {
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    color: #1d4ed8;
+}
+
+.badge-green, .metric-badge.badge-green {
+    background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+    color: #166534;
+}
+
+.badge-orange, .metric-badge.badge-orange {
+    background: linear-gradient(135deg, #fed7aa, #fdba74);
+    color: #c2410c;
+}
+
+.badge-red, .metric-badge.badge-red {
+    background: linear-gradient(135deg, #fecaca, #fca5a5);
+    color: #dc2626;
+}
+
+.badge-purple, .metric-badge.badge-purple {
+    background: linear-gradient(135deg, #e9d5ff, #d8b4fe);
+    color: #7c2d12;
+}
+
+/* Action Buttons */
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.6);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #6b7280, #4b5563);
+    color: white;
+    box-shadow: 0 5px 15px rgba(107, 114, 128, 0.4);
+}
+
+.btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(107, 114, 128, 0.6);
+}
+
+.btn-accent {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+}
+
+.btn-accent:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(16, 185, 129, 0.6);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+}
+
+.btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(239, 68, 68, 0.6);
+}
+
+/* Action Panel */
+.action-panel {
+    margin-top: 3rem;
+    padding: 2rem;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: #6b7280;
+}
+
+.empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-message {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.empty-submessage {
+    font-size: 0.9rem;
+    opacity: 0.7;
+}
+
+/* Performance Indicator */
+.performance-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.performance-score {
+    font-weight: 700;
+    color: #1f2937;
+    font-size: 0.9rem;
+}
+
+.performance-bar {
+    width: 60px;
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+}
+
+.performance-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ef4444 0%, #f59e0b 25%, #10b981 50%, #059669 100%);
+    transition: width 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border-radius: 3px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .dashboard-wrapper {
+        padding: 1rem;
+    }
+    
+    .main-title {
+        font-size: 2rem;
+    }
+    
+    .metrics-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .metric-card {
+        padding: 1.5rem;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .team-stats-header {
+        gap: 0.5rem;
+    }
+    
+    .team-stats-header span {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.8rem;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .action-btn {
+        width: 100%;
+        justify-content: center;
+        max-width: 300px;
+    }
+    
+    .data-table {
+        font-size: 0.85rem;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 0.75rem 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-wrapper {
+        padding: 0.5rem;
+    }
+    
+    .dashboard-header {
+        padding: 1.5rem;
+    }
+    
+    .main-title {
+        font-size: 1.75rem;
+    }
+    
+    .welcome-subtitle {
+        font-size: 1rem;
+    }
+    
+    .team-section {
+        padding: 1.5rem;
+    }
+    
+    .action-panel {
+        padding: 1.5rem;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .dashboard-wrapper {
+        background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+    }
+    
+    .dashboard-header,
+    .team-section,
+    .action-panel {
+        background: rgba(31, 41, 55, 0.95);
+        border: 1px solid rgba(75, 85, 99, 0.3);
+    }
+    
+    .main-title {
+        color: #f9fafb;
+    }
+    
+    .welcome-subtitle {
+        color: #d1d5db;
+    }
+    
+    .section-title {
+        color: #f9fafb;
+    }
+    
+    .data-table {
+        background: #374151;
+        color: #f9fafb;
+    }
+    
+    .data-table thead {
+        background: linear-gradient(135deg, #4b5563, #374151);
+    }
+    
+    .data-table th {
+        color: #e5e7eb;
+        border-bottom-color: #4b5563;
+    }
+    
+    .data-table td {
+        border-bottom-color: #4b5563;
+    }
+    
+    .data-table tbody tr:hover {
+        background: linear-gradient(135deg, #4b5563, #374151);
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="dashboard-wrapper">
     <!-- Header Section -->
@@ -17,6 +715,9 @@
             <a href="{% url 'hrm_dashboard' %}" class="action-btn btn-accent">
                 <span>👥</span> HRMS Portal
             </a>
+            <a href="{% url 'team_management' %}" class="action-btn btn-primary">
+                <span>🏛️</span> Team Management
+            </a>
         </div>
     </div>
 
@@ -25,9 +726,9 @@
         <div class="metric-card blue">
             <div class="metric-icon">🎯</div>
             <div class="metric-label">Team Leads</div>
-            <div class="metric-value">{{ team_leads.count }}</div>
+            <div class="metric-value">{{ leads_count }}</div>
             <div class="metric-trend trend-positive">
-                <span>📈</span> {{ team_leads.count }} Active
+                <span>📈</span> {{ leads_count }} Active
             </div>
             <svg class="progress-ring">
                 <circle class="background" cx="30" cy="30" r="25"></circle>
@@ -40,7 +741,7 @@
             <div class="metric-label">Team AUM</div>
             <div class="metric-value">₹{{ team_aum|intcomma }}</div>
             <div class="metric-trend trend-positive">
-                <span>📊</span> {{ team_clients.count }} Clients
+                <span>📊</span> {{ clients_count }} Clients
             </div>
             <svg class="progress-ring">
                 <circle class="background" cx="30" cy="30" r="25"></circle>
@@ -75,6 +776,73 @@
         </div>
     </div>
 
+    <!-- Team Leadership Section -->
+    <div class="section-divider">
+        <span>My Leadership Teams</span>
+    </div>
+
+    <div class="team-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <div class="title-icon">🏛️</div>
+                Teams Under My Leadership
+            </h2>
+            <div class="team-stats-header">
+                <span>{{ user.led_teams.count }} Teams</span>
+                <span>{{ team_members|length }} Members</span>
+                <span>₹{{ team_aum|intcomma }} Total AUM</span>
+            </div>
+        </div>
+
+        <div class="row">
+            {% for team in user.led_teams.all %}
+            <div class="col-md-6">
+                <div class="team-card">
+                    <div class="team-card-header">
+                        <h3 class="team-name">{{ team.name }}</h3>
+                        <span class="badge badge-blue">{{ team.members.count }} members</span>
+                    </div>
+                    <div class="team-leader">
+                        Leader: {{ team.leader.get_full_name|default:team.leader.username }}
+                    </div>
+                    
+                    <div class="team-stats">
+                        <div class="team-stat">
+                            <div class="team-stat-value">{{ team.members.count }}</div>
+                            <div class="team-stat-label">Members</div>
+                        </div>
+                        <div class="team-stat">
+                            <div class="team-stat-value">₹{{ team.get_team_aum|intcomma }}</div>
+                            <div class="team-stat-label">AUM</div>
+                        </div>
+                        <div class="team-stat">
+                            <div class="team-stat-value">{{ team.get_active_tasks.count }}</div>
+                            <div class="team-stat-label">Tasks</div>
+                        </div>
+                    </div>
+                    
+                    <div class="team-actions">
+                        <a href="{% url 'team_detail' team.id %}" class="action-btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
+                            View Team
+                        </a>
+                        <a href="{% url 'edit_team' team.id %}" class="action-btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
+                            Manage
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="empty-state">
+                    <div class="empty-icon">🏛️</div>
+                    <div class="empty-message">No teams under your leadership</div>
+                    <div class="empty-submessage">Teams you lead will appear here</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
     <!-- Team Performance Section -->
     <div class="section-divider">
         <span>Team Performance Analytics</span>
@@ -86,9 +854,9 @@
                 <div class="title-icon">👥</div>
                 My Team Members
             </h2>
-            <div class="team-stats">
+            <div class="team-stats-header">
                 <span>{{ team_members|length }} Members</span>
-                <span>{{ team_clients.count }} Clients</span>
+                <span>{{ clients_count }} Clients</span>
                 <span>₹{{ team_aum|intcomma }} AUM</span>
             </div>
         </div>
@@ -107,32 +875,53 @@
                     </tr>
                 </thead>
                 <tbody>
-
                     {% for member_data in team_members_data %}
-<tr>
-    <td>{{ member_data.member.get_full_name }}</td>
-    <td>{{ member_data.lead_count }}</td>
-    <td>{{ member_data.client_count }}</td>
-    <td>₹{{ member_data.aum|intcomma }}</td>
-    <td>₹{{ member_data.sip|intcomma }}</td>
-    <td>
-        <span class="badge {% if member_data.pending_tasks > 5 %}badge-red{% else %}badge-orange{% endif %}">
-            {{ member_data.pending_tasks }} pending
-        </span>
-    </td>
-    <td>{{ member_data.performance_score }}%</td>
-</tr>
-
-    {% empty %}
-    <tr>
-        <td colspan="7" class="empty-state">
-            <div class="empty-icon">👥</div>
-            <div class="empty-message">No team members found</div>
-            <div class="empty-submessage">Your team will appear here once assigned</div>
-        </td>
-    </tr>
-    {% endfor %}
-</tbody>
+                    <tr>
+                        <td>
+                            <div class="member-info">
+                                <strong>{{ member_data.member.get_full_name|default:member_data.member.username }}</strong>
+                                <small>{{ member_data.member.email }}</small>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="metric-badge badge-blue">{{ member_data.lead_count }}</span>
+                        </td>
+                        <td>
+                            <span class="metric-badge badge-green">{{ member_data.client_count }}</span>
+                        </td>
+                        <td>₹{{ member_data.aum|intcomma }}</td>
+                        <td>₹{{ member_data.sip|intcomma }}</td>
+                        <td>
+                            <div class="task-summary">
+                                <span class="badge {% if member_data.pending_tasks > 5 %}badge-red{% elif member_data.pending_tasks > 0 %}badge-orange{% else %}badge-green{% endif %}">
+                                    {{ member_data.pending_tasks }} pending
+                                </span>
+                                {% if member_data.overdue_tasks > 0 %}
+                                <span class="badge badge-red" style="margin-left: 5px;">
+                                    {{ member_data.overdue_tasks }} overdue
+                                </span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="performance-indicator">
+                                <span class="performance-score">{{ member_data.performance_score }}%</span>
+                                <div class="performance-bar">
+                                    <div class="performance-fill" style="width: {{ member_data.performance_score }}%"></div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <div class="empty-icon">👥</div>
+                            <div class="empty-message">No team members found</div>
+                            <div class="empty-submessage">Your team will appear here once assigned</div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
             </table>
         </div>
     </div>
@@ -148,7 +937,7 @@
                 <div class="title-icon">📋</div>
                 Team Tasks Overview
             </h2>
-            <div class="team-stats">
+            <div class="team-stats-header">
                 <span>{{ pending_tasks }} Pending</span>
                 <span>{{ overdue_tasks }} Overdue</span>
                 <span>{{ team_tasks.count }} Total</span>
@@ -168,40 +957,53 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for task in team_tasks.filter(completed=False).order_by('-due_date')|slice:":5" %}
-                    <tr>
-                        <td>{{ task.title }}</td>
-                        <td>{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</td>
-                        <td {% if task.due_date < timezone.now %}class="text-red-500"{% endif %}>
-                            {{ task.due_date|date:"M d, Y" }}
-                            {% if task.due_date < timezone.now %}(Overdue){% endif %}
-                        </td>
-                        <td>
-                            <span class="metric-badge 
-                                {% if task.priority == 'high' %}badge-red
-                                {% elif task.priority == 'medium' %}badge-orange
-                                {% else %}badge-blue{% endif %}">
-                                {{ task.get_priority_display }}
-                            </span>
-                        </td>
-                        <td>
-                            <span class="metric-badge 
-                                {% if task.completed %}badge-green
-                                {% else %}badge-orange{% endif %}">
-                                {{ task.get_status_display }}
-                            </span>
-                        </td>
-                        <td>
-                            <a href="{% url 'task_detail' task.id %}" class="action-btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
-                                View
-                            </a>
-                        </td>
-                    </tr>
+                    {% for task in team_tasks %}
+                        {% if not task.completed %}
+                            <tr>
+                                <td>
+                                    <div class="task-info">
+                                        <strong>{{ task.title }}</strong>
+                                        {% if task.description %}
+                                        <small>{{ task.description|truncatechars:50 }}</small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</td>
+                                <td>
+                                    <div class="due-date {% if task.due_date < now %}overdue{% endif %}">
+                                        {{ task.due_date|date:"M d, Y" }}
+                                        {% if task.due_date < now %}
+                                        <span class="overdue-label">(Overdue)</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="metric-badge 
+                                        {% if task.priority == 'high' %}badge-red
+                                        {% elif task.priority == 'medium' %}badge-orange
+                                        {% else %}badge-blue{% endif %}">
+                                        {{ task.get_priority_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="metric-badge 
+                                        {% if task.completed %}badge-green
+                                        {% else %}badge-orange{% endif %}">
+                                        {% if task.completed %}Completed{% else %}Pending{% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{% url 'task_list' %}?task_id={{ task.id }}" class="action-btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
+                                        View
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endif %}
                     {% empty %}
                     <tr>
                         <td colspan="6" class="empty-state">
                             <div class="empty-icon">✅</div>
-                            <div class="empty-message">No tasks found</div>
+                            <div class="empty-message">No pending tasks found</div>
                             <div class="empty-submessage">All tasks are completed</div>
                         </td>
                     </tr>
@@ -212,14 +1014,14 @@
 
         <div class="action-panel" style="margin-top: 2rem;">
             <div class="action-buttons">
-                <a href="{% url 'task_list' %}?assigned_to=&status=pending" class="action-btn btn-secondary">
+                <a href="{% url 'task_list' %}?status=pending" class="action-btn btn-secondary">
                     <span>📋</span> View All Pending Tasks
                 </a>
-                <a href="{% url 'task_list' %}?assigned_to=&status=overdue" class="action-btn btn-danger">
+                <a href="{% url 'task_list' %}?status=overdue" class="action-btn btn-danger">
                     <span>⚠️</span> View Overdue Tasks
                 </a>
-                <a href="{% url 'task_create' %}" class="action-btn btn-primary">
-                    <span>➕</span> Create New Task
+                <a href="{% url 'task_list' %}" class="action-btn btn-primary">
+                    <span>➕</span> Manage Tasks
                 </a>
             </div>
         </div>
@@ -232,10 +1034,10 @@
                 <div class="title-icon">🛠️</div>
                 Recent Service Requests
             </h2>
-            <div class="team-stats">
+            <div class="team-stats-header">
                 <span>{{ team_service_requests.count }} Total</span>
-                <span>{{ team_service_requests.filter(status='open').count }} Open</span>
-                <span>{{ team_service_requests.filter(status='resolved').count }} Resolved</span>
+                <span>{{ team_service_requests|length }} Open</span>
+                <span>{{ team_service_requests.count }} Processed</span>
             </div>
         </div>
 
@@ -252,16 +1054,23 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for request in team_service_requests.order_by('-created_at')|slice:":5" %}
+                    {% for request in team_service_requests|slice:":10" %}
                     <tr>
-                        <td>{{ request.request_type }}</td>
+                        <td>
+                            <div class="request-info">
+                                <strong>{{ request.request_type|default:"Service Request" }}</strong>
+                                {% if request.description %}
+                                <small>{{ request.description|truncatechars:40 }}</small>
+                                {% endif %}
+                            </div>
+                        </td>
                         <td>
                             {% if request.client %}
-                            <a href="{% url 'client_detail' request.client.id %}">
+                            <a href="{% url 'client_list' %}?client_id={{ request.client.id }}">
                                 {{ request.client.name }}
                             </a>
                             {% else %}
-                            System Request
+                            <span class="text-muted">System Request</span>
                             {% endif %}
                         </td>
                         <td>{{ request.raised_by.get_full_name|default:request.raised_by.username }}</td>
@@ -270,7 +1079,7 @@
                                 {% if request.priority == 'high' %}badge-red
                                 {% elif request.priority == 'medium' %}badge-orange
                                 {% else %}badge-blue{% endif %}">
-                                {{ request.get_priority_display }}
+                                {{ request.get_priority_display|default:request.priority|title }}
                             </span>
                         </td>
                         <td>
@@ -278,11 +1087,11 @@
                                 {% if request.status == 'resolved' %}badge-green
                                 {% elif request.status == 'in_progress' %}badge-orange
                                 {% else %}badge-red{% endif %}">
-                                {{ request.get_status_display }}
+                                {{ request.get_status_display|default:request.status|title }}
                             </span>
                         </td>
                         <td>
-                            <a href="{% url 'service_request_detail' request.id %}" class="action-btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
+                            <a href="{% url 'service_request_list' %}?request_id={{ request.id }}" class="action-btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
                                 View
                             </a>
                         </td>
@@ -305,11 +1114,11 @@
                 <a href="{% url 'service_request_list' %}?status=open" class="action-btn btn-secondary">
                     <span>🛠️</span> View Open Requests
                 </a>
-                <a href="{% url 'service_request_list' %}?status=resolved" class="action-btn btn-accent">
-                    <span>✅</span> View Resolved Requests
+                <a href="{% url 'service_request_list' %}" class="action-btn btn-accent">
+                    <span>📋</span> View All Requests
                 </a>
-                <a href="{% url 'service_request_create' %}" class="action-btn btn-primary">
-                    <span>➕</span> Create New Request
+                <a href="{% url 'service_request_list' %}" class="action-btn btn-primary">
+                    <span>➕</span> Manage Requests
                 </a>
             </div>
         </div>
@@ -319,16 +1128,16 @@
     <div class="action-panel">
         <div class="action-buttons">
             <a href="{% url 'lead_list' %}" class="action-btn btn-primary">
-                <span>🎯</span> View All Leads
+                <span>🎯</span> View All Leads ({{ leads_count }})
             </a>
             <a href="{% url 'client_list' %}" class="action-btn btn-accent">
-                <span>💰</span> View Client Portfolio
+                <span>💰</span> View Client Portfolio ({{ clients_count }})
             </a>
-            <a href="{% url 'team_performance' %}" class="action-btn btn-secondary">
-                <span>📊</span> Team Performance
+            <a href="{% url 'task_list' %}" class="action-btn btn-secondary">
+                <span>📋</span> Manage Tasks ({{ team_tasks.count }})
             </a>
-            <a href="{% url 'reports_dashboard' %}" class="action-btn btn-accent">
-                <span>📈</span> Generate Reports
+            <a href="{% url 'dashboard' %}" class="action-btn btn-accent">
+                <span>📈</span> Dashboard Home
             </a>
         </div>
     </div>
@@ -339,6 +1148,9 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Get current time for overdue task checking
+    const now = new Date();
+
     // Animate metric cards on load
     const metricCards = document.querySelectorAll('.metric-card');
     metricCards.forEach((card, index) => {
@@ -363,7 +1175,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Animate table rows
-    const tableRows = document.querySelectorAll('tbody tr');
+    const tableRows = document.querySelectorAll('tbody tr:not(.empty-state)');
     tableRows.forEach((row, index) => {
         row.style.opacity = '0';
         row.style.transform = 'translateX(-20px)';
@@ -400,19 +1212,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Auto-refresh simulation
-    let refreshCounter = 0;
-    setInterval(() => {
-        refreshCounter++;
-        const refreshIndicator = document.querySelector('.team-stats span:last-child');
-        if (refreshIndicator) {
-            refreshIndicator.style.opacity = '0.5';
-            setTimeout(() => {
-                refreshIndicator.style.opacity = '1';
-            }, 300);
-        }
-    }, 30000); // Every 30 seconds
-
     // Progress ring animation
     const progressRings = document.querySelectorAll('.progress-ring .progress');
     const observer = new IntersectionObserver((entries) => {
@@ -427,101 +1226,63 @@ document.addEventListener('DOMContentLoaded', function() {
         observer.observe(ring);
     });
 
-    // Add real-time data refresh for team metrics
+    // Auto-refresh simulation
+    let refreshCounter = 0;
+    setInterval(() => {
+        refreshCounter++;
+        const refreshIndicator = document.querySelector('.team-stats span:last-child');
+        if (refreshIndicator) {
+            refreshIndicator.style.opacity = '0.5';
+            setTimeout(() => {
+                refreshIndicator.style.opacity = '1';
+            }, 300);
+        }
+    }, 30000); // Every 30 seconds
+
+    // Add real-time data refresh for team metrics (if API endpoint exists)
     function refreshTeamMetrics() {
-        fetch('{% url "team_metrics_api" %}')
-            .then(response => response.json())
-            .then(data => {
-                // Update leads count
-                document.querySelector('.metric-card.blue .metric-value').textContent = data.leads_count;
-                
-                // Update AUM
-                document.querySelector('.metric-card.green .metric-value').textContent = '₹' + new Intl.NumberFormat().format(data.team_aum);
-                
-                // Update tasks
-                document.querySelector('.metric-card.orange .metric-value').textContent = data.pending_tasks;
-                document.querySelector('.metric-card.orange .metric-trend').innerHTML = 
-                    `<span>⚠️</span> ${data.overdue_tasks} Overdue`;
-                
-                // Update SIP
-                document.querySelector('.metric-card.purple .metric-value').textContent = '₹' + new Intl.NumberFormat().format(data.team_sip);
-                
-                // Update team stats
-                document.querySelectorAll('.team-stats span')[0].textContent = `${data.team_members_count} Members`;
-                document.querySelectorAll('.team-stats span')[1].textContent = `${data.clients_count} Clients`;
-                document.querySelectorAll('.team-stats span')[2].textContent = `₹${new Intl.NumberFormat().format(data.team_aum)} AUM`;
-                
-                // Show notification if data was updated
-                if (data.updated) {
-                    showNotification('info', 'Data Updated', 'Team metrics have been refreshed');
-                }
-            })
-            .catch(error => {
-                console.error('Error refreshing metrics:', error);
-            });
+        // Only attempt if the API endpoint exists
+        if (typeof window.teamMetricsApiUrl !== 'undefined') {
+            fetch(window.teamMetricsApiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    // Update leads count
+                    const leadsElement = document.querySelector('.metric-card.blue .metric-value');
+                    if (leadsElement) leadsElement.textContent = data.leads_count;
+                    
+                    // Update AUM
+                    const aumElement = document.querySelector('.metric-card.green .metric-value');
+                    if (aumElement) aumElement.textContent = '₹' + new Intl.NumberFormat().format(data.team_aum);
+                    
+                    // Update tasks
+                    const tasksElement = document.querySelector('.metric-card.orange .metric-value');
+                    if (tasksElement) tasksElement.textContent = data.pending_tasks;
+                    
+                    const overdueElement = document.querySelector('.metric-card.orange .metric-trend');
+                    if (overdueElement) {
+                        overdueElement.innerHTML = `<span>⚠️</span> ${data.overdue_tasks} Overdue`;
+                    }
+                    
+                    // Update SIP
+                    const sipElement = document.querySelector('.metric-card.purple .metric-value');
+                    if (sipElement) sipElement.textContent = '₹' + new Intl.NumberFormat().format(data.team_sip);
+                    
+                    // Show notification if data was updated
+                    if (data.updated) {
+                        showNotification('info', 'Data Updated', 'Team metrics have been refreshed');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error refreshing metrics:', error);
+                });
+        }
     }
     
-    // Refresh every 2 minutes
-    setInterval(refreshTeamMetrics, 120000);
-    
-    // Initialize WebSocket connection
-    setupWebSocket();
+    // Refresh every 2 minutes if API is available
+    if (typeof window.teamMetricsApiUrl !== 'undefined') {
+        setInterval(refreshTeamMetrics, 120000);
+    }
 });
-
-// WebSocket for real-time notifications
-function setupWebSocket() {
-    const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-    const host = window.location.host;
-    const path = '/ws/notifications/';
-    const ws = new WebSocket(protocol + host + path);
-
-    ws.onopen = function() {
-        console.log('WebSocket connection established');
-        showNotification('success', 'Connection Established', 'You are now connected to real-time updates');
-    };
-
-    ws.onmessage = function(event) {
-        const data = JSON.parse(event.data);
-        console.log('Message received:', data);
-        
-        if (data.type === 'lead_conversion_request') {
-            showNotification(
-                'info', 
-                'New Conversion Request', 
-                `${data.requested_by} has requested to convert lead ${data.lead_name}`,
-                [
-                    {text: 'View Lead', url: `/leads/${data.lead_id}/`},
-                    {text: 'Approve', url: `/leads/convert/${data.lead_id}/`, method: 'POST'}
-                ]
-            );
-        }
-        else if (data.type === 'lead_converted') {
-            showNotification(
-                'success', 
-                'Lead Converted', 
-                `${data.converted_by} has converted lead ${data.lead_name} to client ${data.client_id}`
-            );
-        }
-        else if (data.type === 'lead_status_change') {
-            showNotification(
-                'info', 
-                'Lead Status Changed', 
-                `Lead ${data.lead_name} status changed from ${data.old_status} to ${data.new_status}`
-            );
-        }
-    };
-
-    ws.onclose = function() {
-        console.log('WebSocket connection closed');
-        showNotification('warning', 'Connection Lost', 'Reconnecting to real-time updates...');
-        // Attempt to reconnect after 5 seconds
-        setTimeout(setupWebSocket, 5000);
-    };
-
-    ws.onerror = function(error) {
-        console.error('WebSocket error:', error);
-    };
-}
 
 // Notification system
 function showNotification(type, title, message, actions = []) {
@@ -573,7 +1334,7 @@ function showNotification(type, title, message, actions = []) {
     }, 10000);
 }
 
-// Add CSS for ripple animation
+// Add CSS for ripple animation and additional styles
 const style = document.createElement('style');
 style.textContent = `
     @keyframes ripple {
@@ -581,6 +1342,74 @@ style.textContent = `
             transform: translate(var(--x), var(--y)) scale(4);
             opacity: 0;
         }
+    }
+    
+    .member-info small {
+        display: block;
+        color: #6b7280;
+        font-size: 0.75rem;
+    }
+    
+    .task-info small {
+        display: block;
+        color: #6b7280;
+        font-size: 0.75rem;
+    }
+    
+    .request-info small {
+        display: block;
+        color: #6b7280;
+        font-size: 0.75rem;
+    }
+    
+    .due-date.overdue {
+        color: #ef4444;
+        font-weight: bold;
+    }
+    
+    .overdue-label {
+        font-size: 0.75rem;
+        background: #ef4444;
+        color: white;
+        padding: 0.125rem 0.375rem;
+        border-radius: 0.25rem;
+        margin-left: 0.5rem;
+    }
+    
+    .performance-indicator {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .performance-score {
+        font-weight: bold;
+        margin-bottom: 0.25rem;
+    }
+    
+    .performance-bar {
+        width: 50px;
+        height: 4px;
+        background: #e5e7eb;
+        border-radius: 2px;
+        overflow: hidden;
+    }
+    
+    .performance-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #ef4444 0%, #f59e0b 50%, #10b981 100%);
+        transition: width 0.3s ease;
+    }
+    
+    .task-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+    
+    .text-muted {
+        color: #6b7280;
+        font-style: italic;
     }
 `;
 document.head.appendChild(style);

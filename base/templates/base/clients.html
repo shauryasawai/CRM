@@ -76,6 +76,82 @@
             line-height: 1.1;
         }
 
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .filter-btn {
+            background: linear-gradient(135deg, var(--gray-100) 0%, var(--gray-200) 100%);
+            color: var(--primary-black);
+            border: 1px solid var(--gray-300);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .filter-btn:hover {
+            background: linear-gradient(135deg, var(--gray-200) 0%, var(--gray-300) 100%);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .filter-dropdown-content {
+            display: none;
+            position: absolute;
+            background: var(--primary-white);
+            min-width: 200px;
+            box-shadow: var(--shadow-xl);
+            border-radius: 12px;
+            z-index: 1000;
+            border: 1px solid var(--gray-200);
+            overflow: hidden;
+            top: 100%;
+            right: 0;
+            margin-top: 0.5rem;
+        }
+
+        .filter-dropdown.active .filter-dropdown-content {
+            display: block;
+            animation: fadeInUp 0.3s ease;
+        }
+
+        .filter-option {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-bottom: 1px solid var(--gray-100);
+            font-weight: 500;
+        }
+
+        .filter-option:last-child {
+            border-bottom: none;
+        }
+
+        .filter-option:hover {
+            background: var(--gray-50);
+        }
+
+        .filter-option.active {
+            background: var(--primary-green);
+            color: var(--primary-black);
+            font-weight: 600;
+        }
+
         .add-client-btn {
             background: linear-gradient(135deg, var(--primary-black) 0%, var(--gray-800) 100%);
             color: var(--primary-white);
@@ -366,6 +442,20 @@
             box-shadow: var(--shadow-sm);
         }
 
+        .creator-badge {
+            background: linear-gradient(135deg, #059669, #047857);
+            color: var(--primary-white);
+            padding: 0.3rem 0.8rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: inline-block;
+            box-shadow: var(--shadow-sm);
+            margin-left: 0.5rem;
+        }
+
         .fade-in-row {
             animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
         }
@@ -380,6 +470,11 @@
                 flex-direction: column;
                 text-align: center;
                 padding: 1.5rem;
+            }
+
+            .header-controls {
+                width: 100%;
+                justify-content: center;
             }
 
             .clients-title {
@@ -413,6 +508,11 @@
 
             .stat-value {
                 font-size: 2rem;
+            }
+
+            .filter-dropdown-content {
+                right: auto;
+                left: 0;
             }
         }
 
@@ -460,7 +560,8 @@
 
         /* Focus states for accessibility */
         .add-client-btn:focus,
-        .action-link:focus {
+        .action-link:focus,
+        .filter-btn:focus {
             outline: 3px solid var(--primary-green);
             outline-offset: 2px;
         }
@@ -480,35 +581,60 @@
             background-clip: text;
         }
     </style>
-    </head>
+</head>
 <body>
     <div class="clients-container">
         <div class="clients-header">
             <h1 class="clients-title">Clients</h1>
-            <a href="#" class="add-client-btn" onclick="addNewClient()">
-                <i class="fas fa-plus"></i> Add New Client
-            </a>
+            <div class="header-controls">
+                {% if user.role == 'rm_head' %}
+                <div class="filter-dropdown">
+                    <button class="filter-btn" onclick="toggleFilter()">
+                        <i class="fas fa-filter"></i>
+                        <span id="filterText">All Clients</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="filter-dropdown-content">
+                        <div class="filter-option active" onclick="filterClients('all')">
+                            <i class="fas fa-users"></i> All Clients
+                        </div>
+                        <div class="filter-option" onclick="filterClients('my_clients')">
+                            <i class="fas fa-user"></i> My Clients
+                        </div>
+                        <div class="filter-option" onclick="filterClients('team_clients')">
+                            <i class="fas fa-user-friends"></i> Team Clients
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if user.role == 'rm' or user.role == 'rm_head' %}
+                <a href="{% url 'client_create' %}" class="add-client-btn">
+                    <i class="fas fa-plus"></i> Add New Client
+                </a>
+                {% endif %}
+            </div>
         </div>
 
-        <!-- Client Statistics -->
-        <div class="client-stats" id="clientStats">
-            <div class="stat-card">
-                <div class="stat-value" id="totalClients">0</div>
-                <div class="stat-label">Total Clients</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="totalAUM">₹0.00</div>
-                <div class="stat-label">Total AUM</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="totalSIP">₹0.00</div>
-                <div class="stat-label">Total SIP</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="totalDemat">0</div>
-                <div class="stat-label">Total Demat Accounts</div>
-            </div>
-        </div>
+       <!-- Client Statistics -->
+<div class="client-stats" id="clientStats">
+    <div class="stat-card">
+        <div class="stat-value" id="totalClients">{{ clients_count }}</div>
+        <div class="stat-label">Total Clients</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="totalAUM">₹{{ total_aum|floatformat:2 }}</div>
+        <div class="stat-label">Total AUM</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="totalSIP">₹{{ total_sip|floatformat:2 }}</div>
+        <div class="stat-label">Total SIP</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="totalDemat">{{ total_demat }}</div>
+        <div class="stat-label">Total Demat Accounts</div>
+    </div>
+</div>
 
         <div class="table-container">
             <table class="clients-table">
@@ -521,231 +647,132 @@
                         <th>AUM</th>
                         <th>SIP Amount</th>
                         <th>Demat Accounts</th>
+                        <th>Created At</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="clientsTableBody">
-                    <!-- Client data will be populated here -->
+                    {% for client in clients %}
+                    <tr>
+                        <td>
+                            <strong>{{ client.name }}</strong>
+                        </td>
+                        <td>{{ client.contact_info|default:"N/A" }}</td>
+                        <td>
+                            {% if client.user %}
+                                {{ client.user.get_full_name|default:client.user.username }}
+                            {% else %}
+                                <span style="color: var(--gray-400);">Unassigned</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if client.lead %}
+                                <span class="lead-badge">{{ client.lead.name }}</span>
+                            {% else %}
+                                <span style="color: var(--gray-400);">Direct</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if client.aum %}
+                                <span class="currency-amount">₹{{ client.aum }}</span>
+                            {% else %}
+                                <span style="color: var(--gray-400);">₹0.00</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if client.sip_amount %}
+                                <span class="currency-amount">₹{{ client.sip_amount }}</span>
+                            {% else %}
+                                <span style="color: var(--gray-400);">₹0.00</span>
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ client.demat_count|default:0 }}</strong></td>
+                        <td>{{ client.created_at|date:"M d, Y" }}</td>
+                        <td>
+                            <div class="action-links">
+                                {% if request.user.can_access_user_data.client.user %}
+                                <a href="{% url 'client_update' client.pk %}" class="action-link">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                <a href="{% url 'client_delete' client.pk %}" class="action-link delete">
+                                    <i class="fas fa-trash"></i> Delete
+                                </a>
+                                {% else %}
+                                <span style="color: var(--gray-400);">No access</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="empty-message">
+                            <i class="fas fa-users"></i>
+                            <div>
+                                <h3 style="margin: 0 0 1rem 0; color: var(--gray-600);">No clients found</h3>
+                                {% if user.role == 'rm' or user.role == 'rm_head' %}
+                                <p style="margin: 0;">Get started by <a href="{% url 'client_create' %}">adding your first client</a></p>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 
     <script>
-        // Client data from Django context
-        const clients = [
-            {% for client in clients %}
-            {
-                id: {{ client.pk }},
-                name: "{{ client.name|escapejs }}",
-                contact_info: "{{ client.contact_info|default:'N/A'|escapejs }}",
-                user: {% if client.user %}{ 
-                    get_full_name: "{{ client.user.get_full_name|default:client.user.username|escapejs }}",
-                    username: "{{ client.user.username|escapejs }}"
-                }{% else %}null{% endif %},
-                lead: {% if client.lead %}{ 
-                    name: "{{ client.lead.name|escapejs }}"
-                }{% else %}null{% endif %},
-                aum: {{ client.aum|default:0 }},
-                sip_amount: {{ client.sip_amount|default:0 }},
-                demat_count: {{ client.demat_count|default:0 }}
-            }{% if not forloop.last %},{% endif %}
-            {% empty %}
-            {% endfor %}
-        ];
+        // Current user information
+        const currentUser = {
+            id: {{ user.pk }},
+            role: "{{ user.role|escapejs }}",
+            username: "{{ user.username|escapejs }}"
+        };
 
-        function formatCurrency(amount) {
-            return new Intl.NumberFormat('en-IN', {
-                style: 'currency',
-                currency: 'INR',
-                minimumFractionDigits: 2
-            }).format(amount);
+        function toggleFilter() {
+            const dropdown = document.querySelector('.filter-dropdown');
+            dropdown.classList.toggle('active');
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(event) {
+                if (!dropdown.contains(event.target)) {
+                    dropdown.classList.remove('active');
+                }
+            });
         }
 
-        function populateClientData(clients) {
-            const tbody = document.getElementById('clientsTableBody');
+        function filterClients(filterType) {
+            const filterText = document.getElementById('filterText');
+            const filterOptions = document.querySelectorAll('.filter-option');
             
-            if (clients.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="8" class="empty-message">
-                            <i class="fas fa-users"></i>
-                            <div>
-                                <h3 style="margin: 0 0 1rem 0; color: var(--gray-600);">No clients found</h3>
-                                <p style="margin: 0;">Get started by <a href="#" onclick="addNewClient()">adding your first client</a></p>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-                return;
+            // Update active filter option
+            filterOptions.forEach(option => option.classList.remove('active'));
+            
+            let url = "{% url 'client_list' %}";
+            
+            switch(filterType) {
+                case 'all':
+                    filterText.textContent = 'All Clients';
+                    filterOptions[0].classList.add('active');
+                    break;
+                case 'my_clients':
+                    url += '?filter=my_clients';
+                    filterText.textContent = 'My Clients';
+                    filterOptions[1].classList.add('active');
+                    break;
+                case 'team_clients':
+                    url += '?filter=team_clients';
+                    filterText.textContent = 'Team Clients';
+                    filterOptions[2].classList.add('active');
+                    break;
             }
-
-            // Calculate totals
-            let totalAUM = 0;
-            let totalSIP = 0;
-            let totalDemat = 0;
-
-            clients.forEach(client => {
-                totalAUM += parseFloat(client.aum || 0);
-                totalSIP += parseFloat(client.sip_amount || 0);
-                totalDemat += parseInt(client.demat_count || 0);
-            });
-
-            // Update statistics
-            document.getElementById('totalClients').textContent = clients.length;
-            document.getElementById('totalAUM').textContent = formatCurrency(totalAUM);
-            document.getElementById('totalSIP').textContent = formatCurrency(totalSIP);
-            document.getElementById('totalDemat').textContent = totalDemat;
-
-            // Populate table
-            tbody.innerHTML = clients.map(client => `
-                <tr>
-                    <td><strong>${client.name}</strong></td>
-                    <td>${client.contact_info || 'N/A'}</td>
-                    <td>
-                        ${client.user 
-                            ? (client.user.get_full_name || client.user.username)
-                            : '<span style="color: var(--gray-400);">Unassigned</span>'
-                        }
-                    </td>
-                    <td>
-                        ${client.lead 
-                            ? `<span class="lead-badge">${client.lead.name}</span>`
-                            : '<span style="color: var(--gray-400);">Direct</span>'
-                        }
-                    </td>
-                    <td>
-                        ${client.aum 
-                            ? `<span class="currency-amount">${formatCurrency(client.aum)}</span>`
-                            : '<span style="color: var(--gray-400);">₹0.00</span>'
-                        }
-                    </td>
-                    <td>
-                        ${client.sip_amount 
-                            ? `<span class="currency-amount">${formatCurrency(client.sip_amount)}</span>`
-                            : '<span style="color: var(--gray-400);">₹0.00</span>'
-                        }
-                    </td>
-                    <td><strong>${client.demat_count || 0}</strong></td>
-                    <td>
-                        <div class="action-links">
-                            <a href="#" class="action-link" onclick="editClient(${client.id})">
-                                <i class="fas fa-edit"></i> Edit
-                            </a>
-                            <a href="#" class="action-link delete" onclick="deleteClient(${client.id}, '${client.name}')">
-                                <i class="fas fa-trash"></i> Delete
-                            </a>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
-
-            // Add animations
-            const tableRows = document.querySelectorAll('.clients-table tbody tr');
-            tableRows.forEach((row, index) => {
-                if (!row.querySelector('.empty-message')) {
-                    row.style.animationDelay = `${index * 0.1}s`;
-                    row.classList.add('fade-in-row');
-                }
-            });
+            
+            window.location.href = url;
+            document.querySelector('.filter-dropdown').classList.remove('active');
         }
 
-        function addNewClient() {
-            const btn = document.querySelector('.add-client-btn');
-            btn.classList.add('loading');
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
-            
-            // Navigate to client creation - replace with your actual URL
-            window.location.href = "{% url 'client_create' %}";
-        }
-
-        function editClient(clientId) {
-            // Navigate to edit client - replace with your actual URL pattern
-            window.location.href = `/clients/${clientId}/update/`;
-        }
-
-        function deleteClient(clientId, clientName) {
-            // Create custom confirmation dialog
-            const modal = document.createElement('div');
-            modal.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.7);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 1000;
-                backdrop-filter: blur(5px);
-            `;
-            
-            modal.innerHTML = `
-                <div style="
-                    background: white;
-                    padding: 2rem;
-                    border-radius: 16px;
-                    box-shadow: var(--shadow-2xl);
-                    max-width: 400px;
-                    text-align: center;
-                    animation: fadeInUp 0.3s ease;
-                ">
-                    <div style="color: #DC2626; font-size: 3rem; margin-bottom: 1rem;">
-                        <i class="fas fa-exclamation-triangle"></i>
-                    </div>
-                    <h3 style="margin: 0 0 1rem 0; color: var(--primary-black);">Delete Client</h3>
-                    <p style="margin: 0 0 2rem 0; color: var(--gray-600);">
-                        Are you sure you want to delete <strong>"${clientName}"</strong>? 
-                        This action cannot be undone.
-                    </p>
-                    <div style="display: flex; gap: 1rem; justify-content: center;">
-                        <button id="cancelBtn" style="
-                            padding: 0.75rem 1.5rem;
-                            background: var(--gray-200);
-                            color: var(--gray-700);
-                            border: none;
-                            border-radius: 8px;
-                            cursor: pointer;
-                            font-weight: 600;
-                        ">Cancel</button>
-                        <button id="confirmBtn" style="
-                            padding: 0.75rem 1.5rem;
-                            background: #DC2626;
-                            color: white;
-                            border: none;
-                            border-radius: 8px;
-                            cursor: pointer;
-                            font-weight: 600;
-                        ">Delete</button>
-                    </div>
-                </div>
-            `;
-            
-            document.body.appendChild(modal);
-            
-            modal.querySelector('#cancelBtn').onclick = () => {
-                document.body.removeChild(modal);
-            };
-            
-            modal.querySelector('#confirmBtn').onclick = () => {
-                // Navigate to delete client - replace with your actual URL pattern
-                window.location.href = `/clients/${clientId}/delete/`;
-            };
-            
-            modal.onclick = (e) => {
-                if (e.target === modal) {
-                    document.body.removeChild(modal);
-                }
-            };
-        }
-
-        // Initialize the page
+        // Add intersection observer for animations
         document.addEventListener('DOMContentLoaded', function() {
-            // Populate with actual client data from Django
-            populateClientData(clients);
-            
-            // Add intersection observer for animations
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
@@ -761,6 +788,64 @@
                 card.style.transition = 'all 0.6s ease';
                 observer.observe(card);
             });
+
+            // Animate stats on load
+            animateValue('totalClients', {{ clients.count }});
+            animateValue('totalDemat', {{ total_demat|default:0 }});
+
+            function animateValue(elementId, endValue, isCurrency = false) {
+                const element = document.getElementById(elementId);
+                const startValue = 0;
+                const duration = 1000;
+                const startTime = performance.now();
+
+                function updateValue(currentTime) {
+                    const elapsed = currentTime - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    
+                    const currentValue = Math.floor(startValue + (endValue - startValue) * progress);
+                    element.textContent = currentValue;
+
+                    if (progress < 1) {
+                        requestAnimationFrame(updateValue);
+                    }
+                }
+
+                requestAnimationFrame(updateValue);
+            }
         });
+        // Animate stats on load
+animateValue('totalClients', {{ clients_count|default:0 }});
+animateValue('totalAUM', {{ total_aum|default:0 }}, true);
+animateValue('totalSIP', {{ total_sip|default:0 }}, true);
+animateValue('totalDemat', {{ total_demat|default:0 }});
+
+function animateValue(elementId, endValue, isCurrency = false) {
+    const element = document.getElementById(elementId);
+    const startValue = 0;
+    const duration = 1000;
+    const startTime = performance.now();
+
+    function updateValue(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        let currentValue = Math.floor(startValue + (endValue - startValue) * progress);
+        if (isCurrency) {
+            element.textContent = '₹' + currentValue.toLocaleString('en-IN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        } else {
+            element.textContent = currentValue;
+        }
+
+        if (progress < 1) {
+            requestAnimationFrame(updateValue);
+        }
+    }
+
+    requestAnimationFrame(updateValue);
+}
     </script>
-    {% endblock %}
+{% endblock %}

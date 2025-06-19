@@ -461,6 +461,7 @@ class Client(models.Model):
         related_name='client'
     )
     name = models.CharField(max_length=255)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_clients')
     contact_info = models.CharField(max_length=255, default='N/A')
     aum = models.DecimalField(max_digits=15, decimal_places=2, default=0.00)
     sip_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0.00)
