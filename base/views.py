@@ -12,7 +12,7 @@ from django.db.models.functions import Extract
 from django.utils import timezone
 from django.db import transaction
 from .models import User, Lead, Client, Task, ServiceRequest, BusinessTracker, InvestmentPlanReview, Team,ProductDiscussion
-from .forms import LeadForm, ClientForm, TaskForm, ServiceRequestForm, InvestmentPlanReviewForm
+from .forms import LeadForm, TaskForm, ServiceRequestForm, InvestmentPlanReviewForm,ClientProfileForm
 from .models import Lead, ProductDiscussion, LeadInteraction, LeadStatusChange
 
 # Helper functions for role checks
@@ -894,122 +894,411 @@ def get_accessible_users(request):
 
 
 # Client Views with Hierarchy
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.core.exceptions import PermissionDenied
+from django.db.models import Q, Sum, Count, IntegerField
+from django.db.models.functions import Coalesce
+from django.forms import ModelForm
+from django import forms
+from .models import ClientProfile, User, MFUCANAccount, MotilalDematAccount, PrabhudasDematAccount
+from .forms import ClientProfileForm  # Import the form
+
+# Client Profile Form
 @login_required
-def client_list(request):
+def client_profile_list(request):
+    """List client profiles with hierarchy-based access control"""
     user = request.user
     
-    # Get clients based on user role
+    # Get client profiles based on user role
     if user.role in ['top_management', 'business_head']:
-        clients = Client.objects.all()
+        client_profiles = ClientProfile.objects.all()
     elif user.role == 'rm_head':
+        # RM Head can see profiles of RMs in their team
         accessible_users = user.get_accessible_users()
-        clients = Client.objects.filter(
-            Q(user__in=accessible_users) | 
-            Q(created_by=user))
-    else:  # RM
-        clients = Client.objects.filter(user=user)
+        client_profiles = ClientProfile.objects.filter(
+            Q(mapped_rm__in=accessible_users) | 
+            Q(created_by=user)
+        )
+    elif user.role == 'rm':
+        # RMs can only see their own client profiles
+        client_profiles = ClientProfile.objects.filter(mapped_rm=user)
+    elif user.role in ['ops_team_lead', 'ops_exec']:
+        # Operations team can see all profiles for their work
+        client_profiles = ClientProfile.objects.all()
+    else:
+        client_profiles = ClientProfile.objects.none()
     
     # Search functionality
     search_query = request.GET.get('search')
     if search_query:
-        clients = clients.filter(
-            Q(name__icontains=search_query) | 
-            Q(contact_info__icontains=search_query)
+        client_profiles = client_profiles.filter(
+            Q(client_full_name__icontains=search_query) | 
+            Q(email__icontains=search_query) |
+            Q(mobile_number__icontains=search_query) |
+            Q(pan_number__icontains=search_query)
         )
 
-    from django.db.models import Sum, Count, IntegerField
-    from django.db.models.functions import Coalesce
+    # Filter by status
+    status_filter = request.GET.get('status')
+    if status_filter:
+        client_profiles = client_profiles.filter(status=status_filter)
 
-    stats = clients.aggregate(
-        total_aum=Coalesce(Sum('aum', output_field=IntegerField()), 0),
-        total_sip=Coalesce(Sum('sip_amount', output_field=IntegerField()), 0),
-        total_demat=Coalesce(Sum('demat_count', output_field=IntegerField()), 0),
-        client_count=Count('id')
+    # Filter by RM (for managers)
+    rm_filter = request.GET.get('rm')
+    if rm_filter and user.role in ['rm_head', 'business_head', 'top_management']:
+        client_profiles = client_profiles.filter(mapped_rm_id=rm_filter)
+
+    # Get statistics
+    stats = client_profiles.aggregate(
+        total_clients=Count('id'),
+        active_clients=Count('id', filter=Q(status='active')),
+        muted_clients=Count('id', filter=Q(status='muted')),
     )
 
-    context = {
-        'clients': clients.order_by('-created_at'),
-        'search_query': search_query,
-        'clients_count': stats['client_count'],
-        'total_aum': stats['total_aum'],
-        'total_sip': stats['total_sip'],
-        'total_demat': stats['total_demat'],
-    }
-    
-    return render(request, 'base/clients.html', context)
-    
-@login_required
-def client_create(request):
-    if not request.user.role in ['rm', 'rm_head']:
-        messages.error(request, "You don't have permission to create clients.")
-        return redirect('client_list')
-        
-    if request.method == 'POST':
-        form = ClientForm(request.POST)
-        if form.is_valid():
-            client = form.save()
-            messages.success(request, "Client created successfully.")
-            return redirect('client_list')
-    else:
-        form = ClientForm()
-        
-        # Limit user choices for RM Head
-        if request.user.role == 'rm_head':
-            accessible_users = request.user.get_accessible_users()
-            form.fields['user'].queryset = User.objects.filter(
+    # Get RM list for filter dropdown
+    if user.role in ['rm_head', 'business_head', 'top_management']:
+        if user.role == 'rm_head':
+            accessible_users = user.get_accessible_users()
+            rm_list = User.objects.filter(
                 id__in=[u.id for u in accessible_users],
                 role='rm'
             )
-        elif request.user.role == 'rm':
-            # RMs can only assign to themselves
-            form.fields['user'].queryset = User.objects.filter(id=request.user.id)
-            form.fields['user'].initial = request.user
+        else:
+            rm_list = User.objects.filter(role='rm')
+    else:
+        rm_list = None
+
+    context = {
+        'client_profiles': client_profiles.select_related('mapped_rm', 'mapped_ops_exec').order_by('-created_at'),
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'rm_filter': rm_filter,
+        'stats': stats,
+        'rm_list': rm_list,
+        'can_create': user.role in ['rm', 'rm_head', 'business_head', 'top_management'],
+        'can_modify': user.can_modify_client_profile(),
+    }
     
-    return render(request, 'base/client_form.html', {'form': form, 'action': 'Create'})
+    return render(request, 'base/client_profiles.html', context)
+
+@login_required
+def client_profile_create(request):
+    """Create a new client profile"""
+    if not request.user.role in ['rm', 'rm_head', 'business_head', 'top_management']:
+        messages.error(request, "You don't have permission to create client profiles.")
+        return redirect('client_profile_list')
+        
+    if request.method == 'POST':
+        form = ClientProfileForm(request.POST, current_user=request.user)
+        if form.is_valid():
+            client_profile = form.save(commit=False)
+            client_profile.created_by = request.user
+            
+            # Auto-assign RM if user is an RM and no RM is mapped
+            if request.user.role == 'rm' and not client_profile.mapped_rm:
+                client_profile.mapped_rm = request.user
+                
+            client_profile.save()
+            messages.success(request, "Client profile created successfully.")
+            return redirect('client_profile_list')
+        else:
+            messages.error(request, "Please correct the errors below.")
+    else:
+        form = ClientProfileForm(current_user=request.user)
+    
+    return render(request, 'base/client_profile_form.html', {
+        'form': form, 
+        'action': 'Create',
+        'title': 'Create Client Profile'
+    })
+
+@login_required
+def client_profile_detail(request, pk):
+    """View client profile details"""
+    client_profile = get_object_or_404(ClientProfile, pk=pk)
+    
+    # Check permissions
+    if not request.user.can_view_client_profile():
+        raise PermissionDenied("You don't have permission to view client profiles.")
+    
+    # Check if user can access this specific client's data
+    if not request.user.can_access_user_data(client_profile.mapped_rm):
+        raise PermissionDenied("You don't have permission to view this client's profile.")
+    
+    # Get related accounts using the correct related names from your models
+    mfu_accounts = client_profile.mfu_accounts.all()
+    motilal_accounts = client_profile.motilal_accounts.all()
+    prabhudas_accounts = client_profile.prabhudas_accounts.all()
+    
+    # Get modification history if available
+    try:
+        modifications = client_profile.modifications.select_related('requested_by', 'approved_by').order_by('-requested_at')[:10]
+    except AttributeError:
+        modifications = []
+    
+    context = {
+        'client_profile': client_profile,
+        'mfu_accounts': mfu_accounts,
+        'motilal_accounts': motilal_accounts,
+        'prabhudas_accounts': prabhudas_accounts,
+        'modifications': modifications,
+        'can_modify': request.user.can_modify_client_profile(),
+        'can_mute': request.user.role in ['business_head', 'top_management', 'ops_team_lead'],
+    }
+    
+    return render(request, 'base/client_profile_detail.html', context)
+
+@login_required
+def client_profile_update(request, pk):
+    """Update client profile"""
+    client_profile = get_object_or_404(ClientProfile, pk=pk)
+    
+    # Check permissions
+    if not request.user.can_modify_client_profile():
+        messages.error(request, "You don't have permission to modify client profiles.")
+        return redirect('client_profile_detail', pk=pk)
+    
+    # Check if user can access this specific client's data
+    if not request.user.can_access_user_data(client_profile.mapped_rm):
+        raise PermissionDenied("You don't have permission to edit this client's profile.")
+    
+    if request.method == 'POST':
+        # FIXED: Use current_user instead of user
+        form = ClientProfileForm(request.POST, instance=client_profile, current_user=request.user)
+        if form.is_valid():
+            # For critical fields, create modification request instead of direct update
+            critical_fields = ['pan_number', 'client_full_name', 'date_of_birth']
+            has_critical_changes = any(
+                form.cleaned_data.get(field) != getattr(client_profile, field) 
+                for field in critical_fields if field in form.cleaned_data
+            )
+            
+            if has_critical_changes and request.user.role not in ['top_management']:
+                # Create modification request
+                try:
+                    from .models import ClientProfileModification
+                    import json
+                    
+                    modification_data = {}
+                    for field in critical_fields:
+                        if field in form.cleaned_data and form.cleaned_data.get(field) != getattr(client_profile, field):
+                            modification_data[field] = form.cleaned_data.get(field)
+                    
+                    ClientProfileModification.objects.create(
+                        client=client_profile,
+                        requested_by=request.user,
+                        modification_data=modification_data,
+                        reason=request.POST.get('modification_reason', 'Profile update'),
+                        requires_top_management=True
+                    )
+                    
+                    messages.info(request, "Critical field changes require approval. Modification request submitted.")
+                    return redirect('client_profile_detail', pk=pk)
+                except ImportError:
+                    # If ClientProfileModification model doesn't exist, proceed with direct update
+                    form.save()
+                    messages.success(request, "Client profile updated successfully.")
+                    return redirect('client_profile_detail', pk=pk)
+            else:
+                form.save()
+                messages.success(request, "Client profile updated successfully.")
+                return redirect('client_profile_detail', pk=pk)
+        else:
+            messages.error(request, "Please correct the errors below.")
+    else:
+        # FIXED: Use current_user instead of user
+        form = ClientProfileForm(instance=client_profile, current_user=request.user)
+    
+    return render(request, 'base/client_profile_form.html', {
+        'form': form, 
+        'action': 'Update',
+        'title': 'Update Client Profile',
+        'client_profile': client_profile
+    })
+
+@login_required
+def client_profile_mute(request, pk):
+    """Mute/Unmute client profile"""
+    client_profile = get_object_or_404(ClientProfile, pk=pk)
+    
+    # Check permissions
+    if not request.user.role in ['business_head', 'top_management', 'ops_team_lead']:
+        messages.error(request, "You don't have permission to mute/unmute clients.")
+        return redirect('client_profile_detail', pk=pk)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'mute' and client_profile.status == 'active':
+            reason = request.POST.get('mute_reason')
+            if not reason:
+                messages.error(request, "Mute reason is required.")
+                return redirect('client_profile_detail', pk=pk)
+            
+            try:
+                client_profile.mute_client(reason, request.user)
+                messages.success(request, "Client has been muted successfully.")
+            except AttributeError:
+                # If mute_client method doesn't exist, update status directly
+                client_profile.status = 'muted'
+                client_profile.save()
+                messages.success(request, "Client has been muted successfully.")
+            
+        elif action == 'unmute' and client_profile.status == 'muted':
+            try:
+                client_profile.unmute_client(request.user)
+                messages.success(request, "Client has been unmuted successfully.")
+            except AttributeError:
+                # If unmute_client method doesn't exist, update status directly
+                client_profile.status = 'active'
+                client_profile.save()
+                messages.success(request, "Client has been unmuted successfully.")
+        
+        return redirect('client_profile_detail', pk=pk)
+    
+    return render(request, 'base/client_profile_mute.html', {
+        'client_profile': client_profile
+    })
+
+@login_required
+def client_profile_delete(request, pk):
+    """Delete client profile (restricted to top management)"""
+    client_profile = get_object_or_404(ClientProfile, pk=pk)
+    
+    # Only top management can delete client profiles
+    if request.user.role != 'top_management':
+        messages.error(request, "You don't have permission to delete client profiles.")
+        return redirect('client_profile_detail', pk=pk)
+    
+    if request.method == 'POST':
+        client_name = client_profile.client_full_name
+        client_profile.delete()
+        messages.success(request, f"Client profile for {client_name} has been deleted.")
+        return redirect('client_profile_list')
+    
+    return render(request, 'base/client_profile_confirm_delete.html', {
+        'client_profile': client_profile
+    })
+
+@login_required
+def modification_requests(request):
+    """View pending modification requests"""
+    if not request.user.role in ['top_management', 'business_head']:
+        messages.error(request, "You don't have permission to view modification requests.")
+        return redirect('client_profile_list')
+    
+    try:
+        from .models import ClientProfileModification
+        
+        # Get pending modifications
+        pending_modifications = ClientProfileModification.objects.filter(
+            status='pending'
+        ).select_related('client', 'requested_by').order_by('-requested_at')
+        
+        # Get recent approved/rejected modifications
+        recent_modifications = ClientProfileModification.objects.filter(
+            status__in=['approved', 'rejected']
+        ).select_related('client', 'requested_by', 'approved_by').order_by('-approved_at')[:20]
+        
+        context = {
+            'pending_modifications': pending_modifications,
+            'recent_modifications': recent_modifications,
+        }
+        
+        return render(request, 'base/client_modification_requests.html', context)
+    except ImportError:
+        messages.error(request, "Modification requests feature is not available.")
+        return redirect('client_profile_list')
+
+@login_required
+def approve_modification(request, pk):
+    """Approve or reject modification request"""
+    if not request.user.role in ['top_management', 'business_head']:
+        messages.error(request, "You don't have permission to approve modifications.")
+        return redirect('client_profile_list')
+    
+    try:
+        from .models import ClientProfileModification
+        modification = get_object_or_404(ClientProfileModification, pk=pk)
+        
+        if request.method == 'POST':
+            action = request.POST.get('action')
+            
+            if action == 'approve':
+                if modification.approve(request.user):
+                    messages.success(request, "Modification approved and applied successfully.")
+                else:
+                    messages.error(request, "Failed to approve modification.")
+            elif action == 'reject':
+                if modification.reject(request.user):
+                    messages.success(request, "Modification rejected.")
+                else:
+                    messages.error(request, "Failed to reject modification.")
+            
+            return redirect('modification_requests')
+        
+        return render(request, 'base/client_approve_modification.html', {
+            'modification': modification
+        })
+    except ImportError:
+        messages.error(request, "Modification requests feature is not available.")
+        return redirect('client_profile_list')
+
+# Legacy Client Views (for backward compatibility)
+@login_required
+def client_list(request):
+    """Legacy client list view - redirects to new client profile list"""
+    messages.info(request, "Redirected to new Client Profile system.")
+    return redirect('client_profile_list')
+
+@login_required
+def client_create(request):
+    """Legacy client create view - redirects to new client profile create"""
+    messages.info(request, "Redirected to new Client Profile system.")
+    return redirect('client_profile_create')
 
 @login_required
 def client_update(request, pk):
-    client = get_object_or_404(Client, pk=pk)
-    
-    # Check permissions
-    if not request.user.can_access_user_data(client.user):
-        raise PermissionDenied("You don't have permission to edit this client.")
-    
-    if request.method == 'POST':
-        form = ClientForm(request.POST, instance=client)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Client updated successfully.")
-            return redirect('client_list')
-    else:
-        form = ClientForm(instance=client)
-        
-        # Limit user choices based on role
-        if request.user.role == 'rm_head':
-            accessible_users = request.user.get_accessible_users()
-            form.fields['user'].queryset = User.objects.filter(
-                id__in=[u.id for u in accessible_users],
-                role='rm'
-            )
-        elif request.user.role == 'rm':
-            form.fields['user'].queryset = User.objects.filter(id=request.user.id)
-    
-    return render(request, 'base/client_form.html', {'form': form, 'action': 'Update', 'client': client})
+    """Legacy client update view"""
+    # Try to find corresponding client profile
+    try:
+        from .models import Client
+        client = get_object_or_404(Client, pk=pk)
+        if hasattr(client, 'client_profile') and client.client_profile:
+            return redirect('client_profile_update', pk=client.client_profile.pk)
+        else:
+            messages.error(request, "No corresponding client profile found.")
+            return redirect('client_profile_list')
+    except ImportError:
+        messages.error(request, "Legacy client system is not available.")
+        return redirect('client_profile_list')
 
 @login_required
 def client_delete(request, pk):
-    client = get_object_or_404(Client, pk=pk)
-    
-    # Check permissions
-    if not request.user.can_access_user_data(client.user):
-        raise PermissionDenied("You don't have permission to delete this client.")
-    
-    if request.method == 'POST':
-        client.delete()
-        messages.success(request, "Client deleted successfully.")
-        return redirect('client_list')
-    
-    return render(request, 'base/client_confirm_delete.html', {'client': client})
+    """Legacy client delete view"""
+    try:
+        from .models import Client
+        client = get_object_or_404(Client, pk=pk)
+        if hasattr(client, 'client_profile') and client.client_profile:
+            return redirect('client_profile_delete', pk=client.client_profile.pk)
+        else:
+            # Handle legacy client without profile
+            if request.user.role != 'top_management':
+                messages.error(request, "You don't have permission to delete clients.")
+                return redirect('client_profile_list')
+            
+            if request.method == 'POST':
+                client_name = client.name
+                client.delete()
+                messages.success(request, f"Legacy client {client_name} has been deleted.")
+                return redirect('client_profile_list')
+            
+            return render(request, 'base/client_confirm_delete.html', {'client': client})
+    except ImportError:
+        messages.error(request, "Legacy client system is not available.")
+        return redirect('client_profile_list')
 
 # Task Views with Hierarchy
 @login_required

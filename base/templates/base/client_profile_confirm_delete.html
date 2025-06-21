@@ -1,0 +1,200 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}
+Delete Client Profile - {{ client_profile.client_full_name }}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card shadow border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-trash-alt me-2"></i>
+                        Delete Client Profile
+                    </h4>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Warning Alert -->
+                    <div class="alert alert-danger">
+                        <h5><i class="fas fa-exclamation-triangle me-2"></i>Dangerous Action</h5>
+                        <p class="mb-0">
+                            <strong>This action cannot be undone!</strong> Deleting this client profile will permanently 
+                            remove all associated data including accounts, transactions, and modification history.
+                        </p>
+                    </div>
+
+                    <!-- Client Information -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Client Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-2">
+                                        <strong>Full Name:</strong> 
+                                        <span class="text-primary">{{ client_profile.client_full_name }}</span>
+                                    </p>
+                                    <p class="mb-2">
+                                        <strong>Email:</strong> {{ client_profile.email|default:"Not provided" }}
+                                    </p>
+                                    <p class="mb-2">
+                                        <strong>Mobile:</strong> {{ client_profile.mobile_number|default:"Not provided" }}
+                                    </p>
+                                    <p class="mb-2">
+                                        <strong>PAN Number:</strong> {{ client_profile.pan_number|default:"Not provided" }}
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-2">
+                                        <strong>Status:</strong> 
+                                        <span class="badge bg-{% if client_profile.status == 'active' %}success{% else %}warning{% endif %}">
+                                            {{ client_profile.status|title }}
+                                        </span>
+                                    </p>
+                                    <p class="mb-2">
+                                        <strong>Mapped RM:</strong> {{ client_profile.mapped_rm.get_full_name|default:"Not assigned" }}
+                                    </p>
+                                    <p class="mb-2">
+                                        <strong>Ops Executive:</strong> {{ client_profile.mapped_ops_exec.get_full_name|default:"Not assigned" }}
+                                    </p>
+                                    <p class="mb-2">
+                                        <strong>Created:</strong> {{ client_profile.created_at|date:"M d, Y" }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Related Data Warning -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h6 class="mb-0">
+                                <i class="fas fa-database me-2"></i>
+                                Related Data That Will Be Deleted
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="text-center">
+                                        <div class="display-6 text-danger">
+                                            {{ client_profile.accounts.count }}
+                                        </div>
+                                        <small class="text-muted">Account(s)</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-center">
+                                        <div class="display-6 text-danger">
+                                            {{ client_profile.modifications.count }}
+                                        </div>
+                                        <small class="text-muted">Modification Record(s)</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-center">
+                                        <div class="display-6 text-danger">
+                                            {{ client_profile.created_at|timesince }}
+                                        </div>
+                                        <small class="text-muted">Age of Profile</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Confirmation Checkbox -->
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="checkbox" id="confirmDelete" required>
+                        <label class="form-check-label text-danger" for="confirmDelete">
+                            <strong>I understand that this action is permanent and cannot be undone</strong>
+                        </label>
+                    </div>
+
+                    <!-- Type client name confirmation -->
+                    <div class="mb-4">
+                        <label for="confirmName" class="form-label">
+                            <strong>Type the client's full name to confirm deletion:</strong>
+                        </label>
+                        <input 
+                            type="text" 
+                            class="form-control" 
+                            id="confirmName" 
+                            placeholder="Enter: {{ client_profile.client_full_name }}"
+                            data-expected="{{ client_profile.client_full_name }}"
+                        >
+                        <div class="form-text text-danger">
+                            Expected: <strong>{{ client_profile.client_full_name }}</strong>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'client_profile_detail' client_profile.pk %}" class="btn btn-secondary btn-lg">
+                            <i class="fas fa-arrow-left me-2"></i>Cancel
+                        </a>
+                        
+                        <form method="post" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-lg" id="deleteButton" disabled>
+                                <i class="fas fa-trash-alt me-2"></i>Delete Profile Permanently
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="card-footer bg-light">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Only Top Management personnel can delete client profiles. This action is logged for audit purposes.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmCheckbox = document.getElementById('confirmDelete');
+    const confirmNameInput = document.getElementById('confirmName');
+    const deleteButton = document.getElementById('deleteButton');
+    const expectedName = confirmNameInput.dataset.expected;
+    
+    function checkFormValidity() {
+        const isChecked = confirmCheckbox.checked;
+        const nameMatches = confirmNameInput.value.trim() === expectedName;
+        
+        deleteButton.disabled = !(isChecked && nameMatches);
+        
+        // Visual feedback for name input
+        if (confirmNameInput.value.trim() === '') {
+            confirmNameInput.classList.remove('is-valid', 'is-invalid');
+        } else if (nameMatches) {
+            confirmNameInput.classList.remove('is-invalid');
+            confirmNameInput.classList.add('is-valid');
+        } else {
+            confirmNameInput.classList.remove('is-valid');
+            confirmNameInput.classList.add('is-invalid');
+        }
+    }
+    
+    confirmCheckbox.addEventListener('change', checkFormValidity);
+    confirmNameInput.addEventListener('input', checkFormValidity);
+    
+    // Final confirmation before submit
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const clientName = "{{ client_profile.client_full_name|escapejs }}";
+        
+        if (!confirm(`FINAL CONFIRMATION: Are you absolutely sure you want to permanently delete the profile for ${clientName}? This action CANNOT be undone!`)) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}

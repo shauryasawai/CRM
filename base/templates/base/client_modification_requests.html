@@ -1,0 +1,268 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}
+Client Profile Modification Requests
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="fas fa-edit me-2"></i>
+                Modification Requests
+            </h2>
+            <p class="text-muted mb-0">Review and approve client profile modification requests</p>
+        </div>
+        <div>
+            <a href="{% url 'client_profile_list' %}" class="btn btn-outline-primary">
+                <i class="fas fa-users me-2"></i>Back to Clients
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">{{ pending_modifications.count }}</h3>
+                            <p class="mb-0">Pending Requests</p>
+                        </div>
+                        <div class="ms-3">
+                            <i class="fas fa-clock fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h3 class="mb-0">{{ recent_modifications|length }}</h3>
+                            <p class="mb-0">Recent Actions</p>
+                        </div>
+                        <div class="ms-3">
+                            <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h5 class="mb-1">Your Role: {{ user.get_role_display }}</h5>
+                            <p class="mb-0">
+                                <i class="fas fa-shield-alt me-1"></i>
+                                Authorized to review modification requests
+                            </p>
+                        </div>
+                        <div class="ms-3">
+                            <i class="fas fa-user-shield fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Modifications -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">
+                <i class="fas fa-clock me-2"></i>
+                Pending Modification Requests
+                {% if pending_modifications.count > 0 %}
+                    <span class="badge bg-dark ms-2">{{ pending_modifications.count }}</span>
+                {% endif %}
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if pending_modifications %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Client</th>
+                                <th>Requested By</th>
+                                <th>Request Date</th>
+                                <th>Fields to Modify</th>
+                                <th>Priority</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for modification in pending_modifications %}
+                            <tr>
+                                <td>
+                                    <div>
+                                        <strong>{{ modification.client.client_full_name }}</strong>
+                                        <br>
+                                        <small class="text-muted">
+                                            {{ modification.client.email|default:"No email" }}
+                                        </small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong>{{ modification.requested_by.get_full_name }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ modification.requested_by.get_role_display }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong>{{ modification.requested_at|date:"M d, Y" }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ modification.requested_at|time:"H:i" }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        {% for field, value in modification.modification_data.items %}
+                                            <span class="badge bg-secondary me-1 mb-1">{{ field|title }}</span>
+                                        {% endfor %}
+                                    </div>
+                                    {% if modification.reason %}
+                                        <small class="text-muted d-block mt-1">
+                                            <i class="fas fa-comment me-1"></i>{{ modification.reason|truncatechars:50 }}
+                                        </small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if modification.requires_top_management %}
+                                        <span class="badge bg-danger">High Priority</span>
+                                    {% else %}
+                                        <span class="badge bg-info">Standard</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="{% url 'approve_modification' modification.pk %}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye me-1"></i>Review
+                                        </a>
+                                        <a href="{% url 'client_profile_detail' modification.client.pk %}" 
+                                           class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-user me-1"></i>Client
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                    <h5 class="text-muted">No Pending Requests</h5>
+                    <p class="text-muted">All modification requests have been processed.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Recent Modifications -->
+    <div class="card shadow">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">
+                <i class="fas fa-history me-2"></i>
+                Recent Modification History
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if recent_modifications %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Client</th>
+                                <th>Requested By</th>
+                                <th>Approved/Rejected By</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for modification in recent_modifications %}
+                            <tr>
+                                <td>
+                                    <strong>{{ modification.client.client_full_name }}</strong>
+                                </td>
+                                <td>
+                                    {{ modification.requested_by.get_full_name }}
+                                    <br>
+                                    <small class="text-muted">{{ modification.requested_at|date:"M d" }}</small>
+                                </td>
+                                <td>
+                                    {% if modification.approved_by %}
+                                        {{ modification.approved_by.get_full_name }}
+                                        <br>
+                                        <small class="text-muted">{{ modification.approved_at|date:"M d" }}</small>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ modification.approved_at|date:"M d, Y H:i"|default:"-" }}
+                                </td>
+                                <td>
+                                    {% if modification.status == 'approved' %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i>Approved
+                                        </span>
+                                    {% elif modification.status == 'rejected' %}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-times me-1"></i>Rejected
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-clock me-1"></i>Pending
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'client_profile_detail' modification.client.pk %}" 
+                                       class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-eye me-1"></i>View
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-history fa-2x text-muted mb-3"></i>
+                    <p class="text-muted mb-0">No recent modification history available.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh page every 5 minutes to show new requests
+setTimeout(function() {
+    location.reload();
+}, 300000);
+
+// Add tooltips
+var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+});
+</script>
+{% endblock %}

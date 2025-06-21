@@ -9,38 +9,50 @@ urlpatterns = [
     path('logout/', views.user_logout, name='logout'),
     
     # Lead URLs
-path('leads/', views.lead_list, name='lead_list'),
-path('leads/create/', views.lead_create, name='lead_create'),
-path('leads/<int:pk>/', views.lead_detail, name='lead_detail'),
-path('leads/<int:pk>/update/', views.lead_update, name='lead_update'),
-path('leads/<int:pk>/delete/', views.lead_delete, name='lead_delete'),
+    path('leads/', views.lead_list, name='lead_list'),
+    path('leads/create/', views.lead_create, name='lead_create'),
+    path('leads/<int:pk>/', views.lead_detail, name='lead_detail'),
+    path('leads/<int:pk>/update/', views.lead_update, name='lead_update'),
+    path('leads/<int:pk>/delete/', views.lead_delete, name='lead_delete'),
 
-# Lead Interaction URLs
-path('leads/<int:pk>/add-interaction/', views.add_interaction, name='add_interaction'),
-path('leads/interaction/<int:pk>/delete/', views.delete_interaction, name='delete_interaction'),
+    # Lead Interaction URLs
+    path('leads/<int:pk>/add-interaction/', views.add_interaction, name='add_interaction'),
+    path('leads/interaction/<int:pk>/delete/', views.delete_interaction, name='delete_interaction'),
 
-# Product Discussion URLs
-path('leads/<int:pk>/add-product-discussion/', views.add_product_discussion, name='add_product_discussion'),
+    # Product Discussion URLs
+    path('leads/<int:pk>/add-product-discussion/', views.add_product_discussion, name='add_product_discussion'),
 
-# Status Management URLs
-path('leads/<int:pk>/change-status/', views.change_lead_status, name='change_lead_status'),
-path('leads/<int:pk>/request-conversion/', views.request_conversion, name='request_conversion'),
-path('leads/<int:pk>/convert/', views.convert_lead, name='convert_lead'),
+    # Status Management URLs
+    path('leads/<int:pk>/change-status/', views.change_lead_status, name='change_lead_status'),
+    path('leads/<int:pk>/request-conversion/', views.request_conversion, name='request_conversion'),
+    path('leads/<int:pk>/convert/', views.convert_lead, name='convert_lead'),
 
-# Conversion Approval URLs (NEW)
-path('leads/<int:pk>/approve-conversion/', views.approve_conversion, name='approve_conversion'),
-path('leads/<int:pk>/reject-conversion/', views.reject_conversion, name='reject_conversion'),
+    # Conversion Approval URLs
+    path('leads/<int:pk>/approve-conversion/', views.approve_conversion, name='approve_conversion'),
+    path('leads/<int:pk>/reject-conversion/', views.reject_conversion, name='reject_conversion'),
 
-# Reassignment URLs
-path('leads/<int:pk>/request-reassignment/', views.request_reassignment, name='request_reassignment'),
-path('leads/<int:pk>/approve-reassignment/', views.approve_reassignment, name='approve_reassignment'),
-path('leads/<int:pk>/reassign/', views.reassign_lead, name='reassign_lead'),
+    # Reassignment URLs
+    path('leads/<int:pk>/request-reassignment/', views.request_reassignment, name='request_reassignment'),
+    path('leads/<int:pk>/approve-reassignment/', views.approve_reassignment, name='approve_reassignment'),
+    path('leads/<int:pk>/reassign/', views.reassign_lead, name='reassign_lead'),
 
-# AJAX/API URLs
-path('leads/get-reference-clients/', views.get_reference_clients, name='get_reference_clients'),
-path('leads/get-accessible-users/', views.get_accessible_users, name='get_accessible_users'),
+    # AJAX/API URLs
+    path('leads/get-reference-clients/', views.get_reference_clients, name='get_reference_clients'),
+    path('leads/get-accessible-users/', views.get_accessible_users, name='get_accessible_users'),
 
-    # Client URLs
+    # Client Profile URLs (New System)
+    path('client-profiles/', views.client_profile_list, name='client_profile_list'),
+    path('client-profiles/create/', views.client_profile_create, name='client_profile_create'),
+    path('client-profiles/<int:pk>/', views.client_profile_detail, name='client_profile_detail'),
+    path('client-profiles/<int:pk>/update/', views.client_profile_update, name='client_profile_update'),
+    path('client-profiles/<int:pk>/mute/', views.client_profile_mute, name='client_profile_mute'),
+    path('client-profiles/<int:pk>/delete/', views.client_profile_delete, name='client_profile_delete'),
+    
+    # Client Profile Modification URLs
+    path('client-profiles/modification-requests/', views.modification_requests, name='modification_requests'),
+    path('client-profiles/modifications/<int:pk>/approve/', views.approve_modification, name='approve_modification'),
+
+    # Legacy Client URLs (for backward compatibility)
     path('clients/', views.client_list, name='client_list'),
     path('clients/create/', views.client_create, name='client_create'),
     path('clients/<int:pk>/update/', views.client_update, name='client_update'),

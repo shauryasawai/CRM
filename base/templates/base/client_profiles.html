@@ -1,0 +1,191 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Client Profiles{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title">Client Profiles</h3>
+                    {% if can_create %}
+                        <a href="{% url 'client_profile_create' %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Add New Client
+                        </a>
+                    {% endif %}
+                </div>
+                
+                <!-- Statistics Cards -->
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-info"><i class="fas fa-users"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Total Clients</span>
+                                    <span class="info-box-number">{{ stats.total_clients }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-success"><i class="fas fa-check-circle"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Active Clients</span>
+                                    <span class="info-box-number">{{ stats.active_clients }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-warning"><i class="fas fa-volume-mute"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Muted Clients</span>
+                                    <span class="info-box-number">{{ stats.muted_clients }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Search and Filter Form -->
+                    <form method="GET" class="mb-4">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>Search</label>
+                                    <input type="text" class="form-control" name="search" 
+                                           value="{{ search_query|default:'' }}" 
+                                           placeholder="Search by name, email, mobile, or PAN">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Status</label>
+                                    <select class="form-control" name="status">
+                                        <option value="">All Status</option>
+                                        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                                        <option value="muted" {% if status_filter == 'muted' %}selected{% endif %}>Muted</option>
+                                    </select>
+                                </div>
+                            </div>
+                            {% if rm_list %}
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Relationship Manager</label>
+                                    <select class="form-control" name="rm">
+                                        <option value="">All RMs</option>
+                                        {% for rm in rm_list %}
+                                            <option value="{{ rm.id }}" {% if rm_filter == rm.id|stringformat:"s" %}selected{% endif %}>
+                                                {{ rm.get_full_name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            {% endif %}
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label>&nbsp;</label>
+                                    <div class="d-flex">
+                                        <button type="submit" class="btn btn-primary mr-2">
+                                            <i class="fas fa-search"></i> Search
+                                        </button>
+                                        <a href="{% url 'client_profile_list' %}" class="btn btn-secondary">
+                                            <i class="fas fa-times"></i> Clear
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Client Profiles Table -->
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Client Name</th>
+                                    <th>Email</th>
+                                    <th>Mobile</th>
+                                    <th>PAN</th>
+                                    <th>RM</th>
+                                    <th>Ops Executive</th>
+                                    <th>Status</th>
+                                    <th>Created Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for profile in client_profiles %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ profile.client_full_name }}</strong>
+                                        {% if profile.family_head_name %}
+                                            <br><small class="text-muted">Family Head: {{ profile.family_head_name }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ profile.email|default:'-' }}</td>
+                                    <td>{{ profile.mobile_number|default:'-' }}</td>
+                                    <td>{{ profile.pan_number|default:'-' }}</td>
+                                    <td>
+                                        {% if profile.mapped_rm %}
+                                            {{ profile.mapped_rm.get_full_name }}
+                                        {% else %}
+                                            <span class="text-muted">Not Assigned</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if profile.mapped_ops_exec %}
+                                            {{ profile.mapped_ops_exec.get_full_name }}
+                                        {% else %}
+                                            <span class="text-muted">Not Assigned</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if profile.status == 'active' %}
+                                            <span class="badge badge-success">Active</span>
+                                        {% elif profile.status == 'muted' %}
+                                            <span class="badge badge-warning">Muted</span>
+                                        {% else %}
+                                            <span class="badge badge-secondary">{{ profile.status|title }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ profile.created_at|date:"M d, Y" }}</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'client_profile_detail' profile.pk %}" 
+                                               class="btn btn-sm btn-info" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if can_modify %}
+                                                <a href="{% url 'client_profile_update' profile.pk %}" 
+                                                   class="btn btn-sm btn-warning" title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="9" class="text-center">
+                                        <p class="mb-0">No client profiles found.</p>
+                                        {% if can_create %}
+                                            <a href="{% url 'client_profile_create' %}" class="btn btn-primary mt-2">
+                                                <i class="fas fa-plus"></i> Create First Client Profile
+                                            </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

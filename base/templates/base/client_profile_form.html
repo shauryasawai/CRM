@@ -1,0 +1,217 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">{{ title }}</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Client Information Section -->
+                        <div class="row">
+                            <div class="col-12">
+                                <h5 class="mb-3">Client Information</h5>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.client_full_name.id_for_label }}">
+                                        Client Full Name <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.client_full_name }}
+                                    {% if form.client_full_name.errors %}
+                                        <div class="text-danger">{{ form.client_full_name.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.family_head_name.id_for_label }}">Family Head Name</label>
+                                    {{ form.family_head_name }}
+                                    {% if form.family_head_name.errors %}
+                                        <div class="text-danger">{{ form.family_head_name.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.date_of_birth.id_for_label }}">Date of Birth</label>
+                                    {{ form.date_of_birth }}
+                                    {% if form.date_of_birth.errors %}
+                                        <div class="text-danger">{{ form.date_of_birth.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.pan_number.id_for_label }}">PAN Number</label>
+                                    {{ form.pan_number }}
+                                    {% if form.pan_number.errors %}
+                                        <div class="text-danger">{{ form.pan_number.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <label for="{{ form.address_kyc.id_for_label }}">KYC Address</label>
+                                    {{ form.address_kyc }}
+                                    {% if form.address_kyc.errors %}
+                                        <div class="text-danger">{{ form.address_kyc.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contact Information Section -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h5 class="mb-3">Contact Information</h5>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.email.id_for_label }}">Email</label>
+                                    {{ form.email }}
+                                    {% if form.email.errors %}
+                                        <div class="text-danger">{{ form.email.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.mobile_number.id_for_label }}">Mobile Number</label>
+                                    {{ form.mobile_number }}
+                                    {% if form.mobile_number.errors %}
+                                        <div class="text-danger">{{ form.mobile_number.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Assignment Section -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h5 class="mb-3">Assignment Information</h5>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="{{ form.mapped_rm.id_for_label }}">
+                                        Relationship Manager <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.mapped_rm }}
+                                    {% if form.mapped_rm.errors %}
+                                        <div class="text-danger">{{ form.mapped_rm.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="{{ form.mapped_ops_exec.id_for_label }}">Operations Executive</label>
+                                    {{ form.mapped_ops_exec }}
+                                    {% if form.mapped_ops_exec.errors %}
+                                        <div class="text-danger">{{ form.mapped_ops_exec.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="{{ form.first_investment_date.id_for_label }}">First Investment Date</label>
+                                    {{ form.first_investment_date }}
+                                    {% if form.first_investment_date.errors %}
+                                        <div class="text-danger">{{ form.first_investment_date.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.status.id_for_label }}">Status</label>
+                                    {{ form.status }}
+                                    {% if form.status.errors %}
+                                        <div class="text-danger">{{ form.status.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if client_profile and action == 'Update' %}
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <label for="modification_reason">Reason for Modification</label>
+                                    <textarea class="form-control" name="modification_reason" rows="2" 
+                                              placeholder="Provide reason for this modification (required for critical field changes)"></textarea>
+                                    <small class="form-text text-muted">
+                                        Changes to critical fields (Name, PAN, DOB) may require approval from top management.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> {{ action }} Client Profile
+                                </button>
+                                <a href="{% url 'client_profile_list' %}" class="btn btn-secondary ml-2">
+                                    <i class="fas fa-times"></i> Cancel
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Add form-control class to all form fields
+    $('form input, form select, form textarea').addClass('form-control');
+    
+    // Handle PAN number formatting
+    $('#id_pan_number').on('input', function() {
+        this.value = this.value.toUpperCase();
+    });
+    
+    // Validate PAN format
+    $('#id_pan_number').on('blur', function() {
+        var panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+        if (this.value && !panRegex.test(this.value)) {
+            $(this).addClass('is-invalid');
+            $(this).after('<div class="invalid-feedback">Invalid PAN format. Should be like ABCDE1234F</div>');
+        } else {
+            $(this).removeClass('is-invalid');
+            $(this).next('.invalid-feedback').remove();
+        }
+    });
+});
+</script>
+{% endblock %}

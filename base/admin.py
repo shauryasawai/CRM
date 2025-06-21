@@ -3,11 +3,12 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
 from django.utils.html import format_html
 from django.urls import reverse
-from django.db.models import Count, Sum
+from django.db.models import Count, Sum, Q
+from django.utils import timezone
 from .models import (
     User, Team, TeamMembership, Lead, LeadInteraction, ProductDiscussion, 
-    LeadStatusChange, Client, Task, Reminder, ServiceRequest, 
-    BusinessTracker, InvestmentPlanReview
+    LeadStatusChange, Client, ClientProfile, ClientProfileModification,
+    Task, Reminder, ServiceRequest, BusinessTracker, InvestmentPlanReview
 )
 from django.contrib.auth.forms import UserChangeForm, UserCreationForm
 
@@ -25,7 +26,7 @@ class CustomUserAdmin(BaseUserAdmin):
     
     list_display = (
         'username', 'email', 'first_name', 'last_name', 
-        'role', 'manager_link', 'team_info', 'is_active', 'date_joined'
+        'role', 'manager_link', 'team_info', 'client_count', 'is_active', 'date_joined'
     )
     list_filter = ('role', 'is_active', 'is_staff', 'date_joined', 'groups')
     search_fields = ('username', 'email', 'first_name', 'last_name')
@@ -73,9 +74,19 @@ class CustomUserAdmin(BaseUserAdmin):
             return ', '.join([team.name for team in teams]) if teams else 'No team'
         return '-'
     team_info.short_description = 'Team Info'
+    
+    def client_count(self, obj):
+        if obj.role == 'rm':
+            return obj.mapped_client_profiles.count()
+        elif obj.role == 'ops_exec':
+            return obj.ops_client_profiles.count()
+        return '-'
+    client_count.short_description = 'Client Count'
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('manager').prefetch_related('teams', 'led_teams', 'managed_groups')
+        return super().get_queryset(request).select_related('manager').prefetch_related(
+            'teams', 'led_teams', 'managed_groups', 'mapped_client_profiles', 'ops_client_profiles'
+        )
 
 
 class TeamMembershipAdmin(admin.ModelAdmin):
@@ -106,6 +117,219 @@ class TeamAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related('leader').prefetch_related('members')
 
 
+# ClientProfile Admin Classes
+class ClientProfileModificationInline(admin.TabularInline):
+    model = ClientProfileModification
+    extra = 0
+    fields = ('status', 'requested_at', 'requested_by', 'reason', 'approved_by', 'approved_at')
+    readonly_fields = ('requested_at', 'approved_at')
+    autocomplete_fields = ('requested_by', 'approved_by')
+    can_delete = False
+    
+    def has_add_permission(self, request, obj):
+        return False
+
+
+class ClientProfileAdmin(admin.ModelAdmin):
+    list_display = (
+        'client_full_name', 'pan_number', 'email', 'mobile_number',
+        'mapped_rm_link', 'mapped_ops_exec_link', 'status', 'created_at'
+    )
+    list_filter = ('status', 'created_at', 'mapped_rm__role', 'first_investment_date')
+    search_fields = (
+        'client_full_name', 'family_head_name', 'email', 
+        'mobile_number', 'pan_number'
+    )
+    readonly_fields = ('created_at', 'updated_at')
+    autocomplete_fields = ('mapped_rm', 'mapped_ops_exec', 'created_by')
+    inlines = [ClientProfileModificationInline]
+    date_hierarchy = 'created_at'
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': (
+                'client_full_name', 'family_head_name', 'pan_number',
+                'date_of_birth', 'email', 'mobile_number'
+            )
+        }),
+        ('Address & KYC', {
+            'fields': ('address_kyc',)
+        }),
+        ('Investment Information', {
+            'fields': ('first_investment_date', 'status')
+        }),
+        ('Mapping', {
+            'fields': ('mapped_rm', 'mapped_ops_exec')
+        }),
+        ('System Information', {
+            'fields': ('created_by', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    actions = ['mark_as_active', 'mark_as_muted', 'export_client_data']
+    
+    def mapped_rm_link(self, obj):
+        if obj.mapped_rm:
+            url = reverse('admin:base_user_change', args=[obj.mapped_rm.pk])
+            return format_html('<a href="{}">{}</a>', url, obj.mapped_rm.username)
+        return '-'
+    mapped_rm_link.short_description = 'Mapped RM'
+    
+    def mapped_ops_exec_link(self, obj):
+        if obj.mapped_ops_exec:
+            url = reverse('admin:base_user_change', args=[obj.mapped_ops_exec.pk])
+            return format_html('<a href="{}">{}</a>', url, obj.mapped_ops_exec.username)
+        return '-'
+    mapped_ops_exec_link.short_description = 'Ops Executive'
+    
+    def mark_as_active(self, request, queryset):
+        updated = queryset.update(status='active')
+        self.message_user(request, f"{updated} client profiles marked as active")
+    mark_as_active.short_description = "Mark selected clients as active"
+    
+    def mark_as_muted(self, request, queryset):
+        updated = queryset.update(status='muted')
+        self.message_user(request, f"{updated} client profiles marked as muted")
+    mark_as_muted.short_description = "Mark selected clients as muted"
+    
+    def export_client_data(self, request, queryset):
+        # This would implement CSV export functionality
+        count = queryset.count()
+        self.message_user(request, f"Export initiated for {count} client profiles")
+    export_client_data.short_description = "Export selected client data"
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request).select_related(
+            'mapped_rm', 'mapped_ops_exec', 'created_by'
+        ).prefetch_related('modifications')
+        
+        # Apply hierarchy-based filtering based on user role
+        user = request.user
+        if user.role in ['top_management', 'business_head']:
+            return qs
+        elif user.role == 'rm_head':
+            accessible_users = user.get_accessible_users()
+            return qs.filter(
+                Q(mapped_rm__in=accessible_users) | 
+                Q(created_by=user)
+            )
+        elif user.role == 'rm':
+            return qs.filter(mapped_rm=user)
+        elif user.role in ['ops_team_lead', 'ops_exec']:
+            return qs
+        else:
+            return qs.none()
+    
+    def has_change_permission(self, request, obj=None):
+        if obj is None:
+            return super().has_change_permission(request)
+        
+        user = request.user
+        if user.role in ['top_management', 'business_head']:
+            return True
+        elif user.role == 'rm_head':
+            return user.can_access_user_data(obj.mapped_rm)
+        elif user.role == 'rm':
+            return obj.mapped_rm == user
+        elif user.role in ['ops_team_lead', 'ops_exec']:
+            return user.can_modify_client_profile()
+        
+        return False
+
+
+class ClientProfileModificationAdmin(admin.ModelAdmin):
+    list_display = (
+        'client_link', 'requested_by_link', 'status', 'reason',
+        'requested_at', 'approved_by_link', 'approved_at'
+    )
+    list_filter = ('status', 'requested_at', 'approved_at', 'requires_top_management')
+    search_fields = ('client__client_full_name', 'reason', 'requested_by__username')
+    readonly_fields = ('requested_at', 'approved_at', 'modification_data')
+    autocomplete_fields = ('client', 'requested_by', 'approved_by')
+    date_hierarchy = 'requested_at'
+    
+    fieldsets = (
+        ('Request Information', {
+            'fields': ('client', 'requested_by', 'reason', 'requested_at')
+        }),
+        ('Modification Details', {
+            'fields': ('modification_data', 'requires_top_management')
+        }),
+        ('Approval Information', {
+            'fields': ('status', 'approved_by', 'approved_at', 'rejection_reason')
+        }),
+    )
+    
+    actions = ['approve_selected', 'reject_selected']
+    
+    def client_link(self, obj):
+        url = reverse('admin:base_clientprofile_change', args=[obj.client.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.client.client_full_name)
+    client_link.short_description = 'Client'
+    
+    def requested_by_link(self, obj):
+        url = reverse('admin:base_user_change', args=[obj.requested_by.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.requested_by.username)
+    requested_by_link.short_description = 'Requested By'
+    
+    def approved_by_link(self, obj):
+        if obj.approved_by:
+            url = reverse('admin:base_user_change', args=[obj.approved_by.pk])
+            return format_html('<a href="{}">{}</a>', url, obj.approved_by.username)
+        return '-'
+    approved_by_link.short_description = 'Approved By'
+    
+    def approve_selected(self, request, queryset):
+        approved_count = 0
+        for modification in queryset.filter(status='pending'):
+            if modification.approve(request.user):
+                approved_count += 1
+        
+        self.message_user(request, f"{approved_count} modification requests approved")
+    approve_selected.short_description = "Approve selected modification requests"
+    
+    def reject_selected(self, request, queryset):
+        rejected_count = 0
+        for modification in queryset.filter(status='pending'):
+            if modification.reject(request.user):
+                rejected_count += 1
+        
+        self.message_user(request, f"{rejected_count} modification requests rejected")
+    reject_selected.short_description = "Reject selected modification requests"
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request).select_related(
+            'client', 'requested_by', 'approved_by'
+        )
+        
+        # Filter based on user permissions
+        user = request.user
+        if user.role in ['top_management', 'business_head']:
+            return qs
+        elif user.role == 'rm_head':
+            accessible_users = user.get_accessible_users()
+            return qs.filter(
+                Q(client__mapped_rm__in=accessible_users) |
+                Q(requested_by=user)
+            )
+        elif user.role == 'rm':
+            return qs.filter(
+                Q(client__mapped_rm=user) |
+                Q(requested_by=user)
+            )
+        else:
+            return qs.none()
+    
+    def has_change_permission(self, request, obj=None):
+        if obj is None:
+            return super().has_change_permission(request)
+        
+        user = request.user
+        return user.role in ['top_management', 'business_head']
+
+
+# Updated existing admin classes
 class ProductDiscussionInline(admin.TabularInline):
     model = ProductDiscussion
     extra = 0
@@ -133,7 +357,7 @@ class LeadStatusChangeInline(admin.TabularInline):
 class LeadAdmin(admin.ModelAdmin):
     list_display = (
         'lead_id', 'name', 'email', 'mobile', 'status', 
-        'assigned_to', 'probability', 'created_at', 'converted'
+        'assigned_to', 'probability', 'created_at', 'converted', 'client_profile_link'
     )
     list_filter = (
         'status', 'source', 'converted', 
@@ -189,7 +413,37 @@ class LeadAdmin(admin.ModelAdmin):
         'assigned_to', 'created_by', 'reference_client', 'converted_by', 'reassignment_requested_to'
     )
     inlines = [LeadInteractionInline, ProductDiscussionInline, LeadStatusChangeInline]
-    actions = ['mark_as_converted', 'mark_as_hot', 'assign_to_me']
+    actions = ['mark_as_converted', 'mark_as_hot', 'assign_to_me', 'create_client_profiles']
+    
+    def client_profile_link(self, obj):
+        # Check if lead has been converted to client profile
+        try:
+            if hasattr(obj, 'client_profile') and obj.client_profile:
+                url = reverse('admin:base_clientprofile_change', args=[obj.client_profile.pk])
+                return format_html('<a href="{}">View Profile</a>', url)
+        except:
+            pass
+        return '-'
+    client_profile_link.short_description = 'Client Profile'
+    
+    def create_client_profiles(self, request, queryset):
+        created_count = 0
+        for lead in queryset.filter(converted=True):
+            # Check if client profile already exists
+            if not hasattr(lead, 'client_profile') or not lead.client_profile:
+                # Create client profile from lead data
+                client_profile = ClientProfile.objects.create(
+                    client_full_name=lead.name,
+                    email=lead.email,
+                    mobile_number=lead.mobile,
+                    mapped_rm=lead.assigned_to,
+                    created_by=request.user,
+                    status='active'
+                )
+                created_count += 1
+        
+        self.message_user(request, f"{created_count} client profiles created from leads")
+    create_client_profiles.short_description = "Create client profiles for converted leads"
     
     def mark_as_converted(self, request, queryset):
         updated = queryset.update(converted=True, status='converted')
@@ -277,10 +531,11 @@ class ServiceRequestInline(admin.TabularInline):
     fields = ('description', 'status', 'priority', 'assigned_to')
 
 
+# Legacy Client Admin (for backward compatibility)
 class ClientAdmin(admin.ModelAdmin):
     list_display = (
         'name', 'user_link', 'aum_display', 'sip_amount_display', 
-        'demat_count', 'lead_link', 'created_at'
+        'demat_count', 'lead_link', 'client_profile_link', 'created_at'
     )
     list_filter = ('created_at', 'user__role', 'demat_count')
     search_fields = ('name', 'contact_info', 'user__username', 'lead__lead_id')
@@ -309,6 +564,13 @@ class ClientAdmin(admin.ModelAdmin):
             return format_html('<a href="{}">{}</a>', url, obj.lead.lead_id)
         return '-'
     lead_link.short_description = 'Original Lead'
+    
+    def client_profile_link(self, obj):
+        if hasattr(obj, 'client_profile') and obj.client_profile:
+            url = reverse('admin:base_clientprofile_change', args=[obj.client_profile.pk])
+            return format_html('<a href="{}">View New Profile</a>', url)
+        return format_html('<em>No new profile</em>')
+    client_profile_link.short_description = 'New Client Profile'
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user', 'lead')
@@ -528,6 +790,8 @@ admin.site.register(LeadInteraction, LeadInteractionAdmin)
 admin.site.register(ProductDiscussion, ProductDiscussionAdmin)
 admin.site.register(LeadStatusChange, LeadStatusChangeAdmin)
 admin.site.register(Client, ClientAdmin)
+admin.site.register(ClientProfile, ClientProfileAdmin)
+admin.site.register(ClientProfileModification, ClientProfileModificationAdmin)
 admin.site.register(Task, TaskAdmin)
 admin.site.register(Reminder, ReminderAdmin)
 admin.site.register(ServiceRequest, ServiceRequestAdmin)

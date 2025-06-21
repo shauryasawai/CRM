@@ -1,0 +1,268 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}{{ client_profile.client_full_name }} - Client Profile{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Profile Header -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title">
+                        {{ client_profile.client_full_name }}
+                        {% if client_profile.status == 'active' %}
+                            <span class="badge badge-success ml-2">Active</span>
+                        {% elif client_profile.status == 'muted' %}
+                            <span class="badge badge-warning ml-2">Muted</span>
+                        {% endif %}
+                    </h3>
+                    <div class="btn-group">
+                        {% if can_modify %}
+                            <a href="{% url 'client_profile_update' client_profile.pk %}" class="btn btn-warning">
+                                <i class="fas fa-edit"></i> Edit Profile
+                            </a>
+                        {% endif %}
+                        {% if can_mute %}
+                            <a href="{% url 'client_profile_mute' client_profile.pk %}" class="btn btn-secondary">
+                                <i class="fas fa-volume-mute"></i> 
+                                {% if client_profile.status == 'muted' %}Unmute{% else %}Mute{% endif %}
+                            </a>
+                        {% endif %}
+                        <a href="{% url 'client_profile_list' %}" class="btn btn-primary">
+                            <i class="fas fa-arrow-left"></i> Back to List
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Client Information -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4 class="card-title">Personal Information</h4>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Full Name:</strong></td>
+                                    <td>{{ client_profile.client_full_name }}</td>
+                                </tr>
+                                {% if client_profile.family_head_name %}
+                                <tr>
+                                    <td><strong>Family Head:</strong></td>
+                                    <td>{{ client_profile.family_head_name }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if client_profile.date_of_birth %}
+                                <tr>
+                                    <td><strong>Date of Birth:</strong></td>
+                                    <td>{{ client_profile.date_of_birth|date:"F d, Y" }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if client_profile.pan_number %}
+                                <tr>
+                                    <td><strong>PAN Number:</strong></td>
+                                    <td>{{ client_profile.pan_number }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if client_profile.address_kyc %}
+                                <tr>
+                                    <td><strong>KYC Address:</strong></td>
+                                    <td>{{ client_profile.address_kyc|linebreaks }}</td>
+                                </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact & Assignment Information -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4 class="card-title">Contact & Assignment</h4>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-borderless">
+                                {% if client_profile.email %}
+                                <tr>
+                                    <td><strong>Email:</strong></td>
+                                    <td>
+                                        <a href="mailto:{{ client_profile.email }}">{{ client_profile.email }}</a>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% if client_profile.mobile_number %}
+                                <tr>
+                                    <td><strong>Mobile:</strong></td>
+                                    <td>
+                                        <a href="tel:{{ client_profile.mobile_number }}">{{ client_profile.mobile_number }}</a>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <td><strong>Relationship Manager:</strong></td>
+                                    <td>
+                                        {% if client_profile.mapped_rm %}
+                                            {{ client_profile.mapped_rm.get_full_name }}
+                                        {% else %}
+                                            <span class="text-muted">Not Assigned</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Operations Executive:</strong></td>
+                                    <td>
+                                        {% if client_profile.mapped_ops_exec %}
+                                            {{ client_profile.mapped_ops_exec.get_full_name }}
+                                        {% else %}
+                                            <span class="text-muted">Not Assigned</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% if client_profile.first_investment_date %}
+                                <tr>
+                                    <td><strong>First Investment:</strong></td>
+                                    <td>{{ client_profile.first_investment_date|date:"F d, Y" }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <td><strong>Created:</strong></td>
+                                    <td>{{ client_profile.created_at|date:"F d, Y H:i" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Accounts Information -->
+            <div class="row">
+                {% if mfu_accounts %}
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4 class="card-title">MFU Accounts</h4>
+                        </div>
+                        <div class="card-body">
+                            {% for account in mfu_accounts %}
+                            <div class="mb-2">
+                                <strong>{{ account.account_number }}</strong>
+                                {% if account.status %}
+                                    <span class="badge badge-success">{{ account.status|title }}</span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if motilal_accounts %}
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4 class="card-title">Motilal Accounts</h4>
+                        </div>
+                        <div class="card-body">
+                            {% for account in motilal_accounts %}
+                            <div class="mb-2">
+                                <strong>{{ account.account_number }}</strong>
+                                {% if account.status %}
+                                    <span class="badge badge-success">{{ account.status|title }}</span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if prabhudas_accounts %}
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4 class="card-title">Prabhudas Accounts</h4>
+                        </div>
+                        <div class="card-body">
+                            {% for account in prabhudas_accounts %}
+                            <div class="mb-2">
+                                <strong>{{ account.account_number }}</strong>
+                                {% if account.status %}
+                                    <span class="badge badge-success">{{ account.status|title }}</span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Modification History -->
+            {% if modifications %}
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4 class="card-title">Recent Modifications</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Requested By</th>
+                                            <th>Modification Type</th>
+                                            <th>Status</th>
+                                            <th>Requested Date</th>
+                                            <th>Approved By</th>
+                                            <th>Approved Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for modification in modifications %}
+                                        <tr>
+                                            <td>{{ modification.requested_by.get_full_name }}</td>
+                                            <td>{{ modification.reason }}</td>
+                                            <td>
+                                                {% if modification.status == 'approved' %}
+                                                    <span class="badge badge-success">Approved</span>
+                                                {% elif modification.status == 'rejected' %}
+                                                    <span class="badge badge-danger">Rejected</span>
+                                                {% else %}
+                                                    <span class="badge badge-warning">Pending</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ modification.requested_at|date:"M d, Y H:i" }}</td>
+                                            <td>
+                                                {% if modification.approved_by %}
+                                                    {{ modification.approved_by.get_full_name }}
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if modification.approved_at %}
+                                                    {{ modification.approved_at|date:"M d, Y H:i" }}
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

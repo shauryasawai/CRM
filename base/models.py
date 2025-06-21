@@ -5,12 +5,26 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 
-# Define User roles as constants
+# Define User roles as constants (keep existing)
 ROLE_CHOICES = (
     ('top_management', 'Top Management'),
     ('business_head', 'Business Head'),
     ('rm_head', 'RM Head'),
     ('rm', 'Relationship Manager'),
+    ('ops_team_lead', 'Operations Team Lead'),
+    ('ops_exec', 'Operations Executive'),
+)
+
+# Add these new status choices for client modifications
+CLIENT_STATUS_CHOICES = (
+    ('active', 'Active'),
+    ('muted', 'Muted'),
+)
+
+APPROVAL_STATUS_CHOICES = (
+    ('pending', 'Pending Approval'),
+    ('approved', 'Approved'),
+    ('rejected', 'Rejected'),
 )
 
 class Team(models.Model):
@@ -18,6 +32,7 @@ class Team(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    is_ops_team = models.BooleanField(default=False, help_text="Is this an operations team?")
 
     def __str__(self):
         return self.name
@@ -73,6 +88,24 @@ class User(AbstractUser):
             
         if self.role == 'rm' and self.manager and self.manager.role not in ['rm_head', 'business_head']:
             raise ValidationError("RM can only report to RM Head or Business Head")
+            
+        if self.role == 'ops_team_lead' and self.manager and self.manager.role not in ['business_head', 'top_management']:
+            raise ValidationError("Ops Team Lead can only report to Business Head or Top Management")
+            
+        if self.role == 'ops_exec' and self.manager and self.manager.role != 'ops_team_lead':
+            raise ValidationError("Ops Exec can only report to Ops Team Lead")
+        
+    def is_operations_team(self):
+        """Check if user is in operations team"""
+        return self.teams.filter(is_ops_team=True).exists()
+
+    def can_modify_client_profile(self):
+        """Check if user can modify client profiles"""
+        return self.role in ['ops_team_lead', 'business_head', 'top_management']
+
+    def can_view_client_profile(self):
+        """Check if user can view client profiles"""
+        return self.role in ['rm', 'rm_head', 'business_head', 'top_management', 'ops_team_lead', 'ops_exec']
 
     def get_team_members(self):
         """Get all team members for this user (if they're a team leader)"""
@@ -174,7 +207,7 @@ Team.add_to_class('leader', models.ForeignKey(
     on_delete=models.SET_NULL,
     null=True,
     blank=True,
-    limit_choices_to={'role': 'rm_head'},
+    limit_choices_to={'role__in': ['rm_head', 'ops_team_lead']},
     related_name='led_teams'
 ))
 
@@ -192,7 +225,266 @@ class TeamMembership(models.Model):
 
     def __str__(self):
         return f"{self.user} in {self.team}"
+    
+class ClientProfile(models.Model):
+    """Main client profile model with all required fields"""
+    # Add the missing client_id field
+    client_id = models.CharField(max_length=20, unique=True, editable=False, null=True, blank=True)
+    
+    # Basic Information
+    client_full_name = models.CharField(max_length=255)
+    family_head_name = models.CharField(max_length=255, blank=True, null=True)
+    address_kyc = models.TextField()
+    date_of_birth = models.DateField()
+    pan_number = models.CharField(max_length=10, unique=True)
+    email = models.EmailField()
+    mobile_number = models.CharField(max_length=15)
+    first_investment_date = models.DateField(blank=True, null=True)
+    
+    # Mapped personnel
+    mapped_rm = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        limit_choices_to={'role': 'rm'},
+        related_name='rm_clients'
+    )
+    mapped_ops_exec = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        limit_choices_to={'role': 'ops_exec'},
+        related_name='ops_clients'
+    )
+    
+    # Status and metadata
+    status = models.CharField(max_length=20, choices=CLIENT_STATUS_CHOICES, default='active')
+    muted_reason = models.TextField(blank=True, null=True)
+    muted_date = models.DateTimeField(blank=True, null=True)
+    muted_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='muted_clients'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='created_client_profiles'
+    )
+    
+    class Meta:
+        ordering = ['client_full_name']
+        verbose_name = 'Client Profile'
+        verbose_name_plural = 'Client Profiles'
+        permissions = [
+            ('can_mute_client', 'Can mute/unmute client'),
+            ('can_change_pan', 'Can change PAN number'),
+            ('can_change_name', 'Can change client name'),
+        ]
+    
+    def __str__(self):
+        return f"{self.client_full_name} ({self.pan_number})"
+    
+    def clean(self):
+        """Validate PAN number format"""
+        super().clean()
+        if len(self.pan_number) != 10:
+            raise ValidationError("PAN number must be 10 characters long")
+    
+    def save(self, *args, **kwargs):
+        """Generate client ID if not exists"""
+        if not self.pk and not self.client_id:
+            self.client_id = self.generate_client_id()
+        super().save(*args, **kwargs)
+        
+    def generate_client_id(self):
+        """Generate a unique client ID"""
+        from datetime import datetime
+        date_part = datetime.now().strftime("%Y%m%d")
+        last_client = ClientProfile.objects.filter(client_id__startswith=f"CL{date_part}").order_by('-client_id').first()
+        
+        if last_client:
+            last_num = int(last_client.client_id[-4:])
+            new_num = last_num + 1
+        else:
+            new_num = 1
+            
+        return f"CL{date_part}{new_num:04d}"
+    
+    def mute_client(self, reason, muted_by):
+        """Mute the client"""
+        self.status = 'muted'
+        self.muted_reason = reason
+        self.muted_by = muted_by
+        self.muted_date = timezone.now()
+        self.save()
+    
+    def unmute_client(self, unmuted_by):
+        """Unmute the client"""
+        self.status = 'active'
+        self.muted_reason = None
+        self.muted_by = None
+        self.muted_date = None
+        self.save()
+    
+    def unmute_client(self, unmuted_by):
+        """Unmute the client"""
+        self.status = 'active'
+        self.muted_reason = None
+        self.muted_by = None
+        self.muted_date = None
+        self.save()
+        
+class ClientAccount(models.Model):
+    """Base abstract model for all client account types"""
+    ACCOUNT_TYPE_CHOICES = (
+        ('mfu', 'MFU CAN Account'),
+        ('motilal', 'Motilal Demat'),
+        ('prabhudas', 'Prabhudas Lilladher Demat'),
+    )
+    
+    client = models.ForeignKey(ClientProfile, on_delete=models.CASCADE, related_name='client_accounts')
+    account_type = models.CharField(max_length=20, choices=ACCOUNT_TYPE_CHOICES)
+    account_number = models.CharField(max_length=50, unique=True)
+    is_primary = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        abstract = True
 
+class MFUCANAccount(ClientAccount):
+    """MFU CAN Account details"""
+    folio_number = models.CharField(max_length=50)
+    amc_name = models.CharField(max_length=100)
+    kyc_status = models.BooleanField(default=False)
+    last_transaction_date = models.DateField(null=True, blank=True)
+    
+    # Fix the related_name to be unique
+    client = models.ForeignKey(
+        ClientProfile, 
+        on_delete=models.CASCADE, 
+        related_name='mfu_accounts'
+    )
+    
+    class Meta:
+        verbose_name = 'MFU CAN Account'
+        verbose_name_plural = 'MFU CAN Accounts'
+    
+    def __str__(self):
+        return f"MFU CAN: {self.account_number}"
+
+class DematAccount(ClientAccount):
+    """Base model for Demat accounts"""
+    broker_name = models.CharField(max_length=100)
+    dp_id = models.CharField(max_length=20)
+    kyc_status = models.BooleanField(default=False)
+    last_activity_date = models.DateField(null=True, blank=True)
+    
+    class Meta:
+        abstract = True
+
+class MotilalDematAccount(DematAccount):
+    """Motilal Oswal Demat account details"""
+    trading_enabled = models.BooleanField(default=False)
+    margin_enabled = models.BooleanField(default=False)
+    
+    # Fix the related_name to be unique
+    client = models.ForeignKey(
+        ClientProfile, 
+        on_delete=models.CASCADE, 
+        related_name='motilal_accounts'
+    )
+    
+    class Meta:
+        verbose_name = 'Motilal Demat Account'
+        verbose_name_plural = 'Motilal Demat Accounts'
+    
+    def __str__(self):
+        return f"Motilal Demat: {self.account_number}"
+
+class PrabhudasDematAccount(DematAccount):
+    """Prabhudas Lilladher Demat account details"""
+    commodity_enabled = models.BooleanField(default=False)
+    currency_enabled = models.BooleanField(default=False)
+    
+    # Fix the related_name to be unique
+    client = models.ForeignKey(
+        ClientProfile, 
+        on_delete=models.CASCADE, 
+        related_name='prabhudas_accounts'
+    )
+    
+    class Meta:
+        verbose_name = 'Prabhudas Demat Account'
+        verbose_name_plural = 'Prabhudas Demat Accounts'
+    
+    def __str__(self):
+        return f"Prabhudas Demat: {self.account_number}"
+
+class ClientProfileModification(models.Model):
+    """Track modifications to client profiles"""
+    client = models.ForeignKey(ClientProfile, on_delete=models.CASCADE, related_name='modifications')
+    requested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='requested_modifications')
+    requested_at = models.DateTimeField(auto_now_add=True)
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_modifications'
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=APPROVAL_STATUS_CHOICES, default='pending')
+    modification_data = models.JSONField(help_text="Stores the changed fields and values")
+    reason = models.TextField()
+    requires_top_management = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ['-requested_at']
+        verbose_name = 'Client Profile Modification'
+        verbose_name_plural = 'Client Profile Modifications'
+    
+    def __str__(self):
+        return f"Modification for {self.client} ({self.get_status_display()})"
+    
+    def approve(self, approved_by):
+        """Approve the modification"""
+        if self.status != 'pending':
+            return False
+        
+        self.status = 'approved'
+        self.approved_by = approved_by
+        self.approved_at = timezone.now()
+        self.save()
+        
+        # Apply the changes to the client profile
+        client = self.client
+        for field, value in self.modification_data.items():
+            setattr(client, field, value)
+        client.save()
+        
+        return True
+    
+    def reject(self, rejected_by):
+        """Reject the modification"""
+        if self.status != 'pending':
+            return False
+        
+        self.status = 'rejected'
+        self.approved_by = rejected_by
+        self.approved_at = timezone.now()
+        self.save()
+        return True
+    
+    
 class Lead(models.Model):
     STATUS_CHOICES = (
         ('new', 'New Lead'),
@@ -212,6 +504,15 @@ class Lead(models.Model):
         ('social_media', 'Social Media'),
         ('referral', 'Referral'),
         ('other', 'Other'),
+    )
+    
+    # Fix the related_name to be unique
+    client_profile = models.OneToOneField(
+        ClientProfile,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='lead_profile'
     )
     
     # Lead Identification
@@ -312,20 +613,7 @@ class Lead(models.Model):
             new_num = 1
             
         return f"LD{date_part}{new_num:04d}"
-    
-    def generate_client_id(self):
-        """Generate a unique client ID when lead is converted"""
-        from datetime import datetime
-        date_part = datetime.now().strftime("%Y%m%d")
-        last_client = Lead.objects.filter(client_id__startswith=f"CL{date_part}").order_by('-client_id').first()
-        
-        if last_client:
-            last_num = int(last_client.client_id[-4:])
-            new_num = last_num + 1
-        else:
-            new_num = 1
-            
-        return f"CL{date_part}{new_num:04d}"
+
     
     def days_to_first_interaction(self):
         """Calculate days from creation to first interaction"""
@@ -453,6 +741,13 @@ class Client(models.Model):
         blank=True,
         related_name='clients'
     )
+    client_profile = models.OneToOneField(
+        ClientProfile,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='legacy_client'
+    )
     lead = models.OneToOneField(
         Lead,
         on_delete=models.SET_NULL,
@@ -578,7 +873,7 @@ class BusinessTracker(models.Model):
         related_name='business_metrics'
     )
 
-    class Meta:
+    class Meta: 
         unique_together = ['month', 'user']
 
     def __str__(self):
