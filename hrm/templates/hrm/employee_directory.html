@@ -1,0 +1,120 @@
+{% extends 'hrm/base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header">
+            <h4>Employee Directory</h4>
+        </div>
+        <div class="card-body">
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <form method="get" class="form-inline">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <select name="department" class="form-control">
+                                    <option value="">All Departments</option>
+                                    {% for dept in departments %}
+                                    <option value="{{ dept.id }}" {% if department_id == dept.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ dept.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <select name="hierarchy" class="form-control">
+                                    <option value="">All Levels</option>
+                                    {% for level in hierarchy_choices %}
+                                    <option value="{{ level.0 }}" {% if hierarchy_level == level.0 %}selected{% endif %}>
+                                        {{ level.1 }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <input type="text" name="search" class="form-control" placeholder="Search..." value="{{ search_query|default:'' }}">
+                            </div>
+                            
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-primary w-100">Filter</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Employee ID</th>
+                            <th>Name</th>
+                            <th>Department</th>
+                            <th>Designation</th>
+                            <th>Hierarchy</th>
+                            <th>Manager</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for employee in page_obj %}
+                        <tr>
+                            <td>{{ employee.employee_id }}</td>
+                            <td>{{ employee.user.get_full_name }}</td>
+                            <td>{{ employee.department.name|default:"-" }}</td>
+                            <td>{{ employee.designation }}</td>
+                            <td>{{ employee.get_hierarchy_level_display }}</td>
+                            <td>
+                                {% if employee.reporting_manager %}
+                                {{ employee.reporting_manager.user.get_full_name }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'employee_profile' employee.id %}" class="btn btn-sm btn-outline-primary">View</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">No employees found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1">&laquo; First</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                    </li>
+                    {% endif %}
+                    
+                    <li class="page-item disabled">
+                        <span class="page-link">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+{% endblock %}

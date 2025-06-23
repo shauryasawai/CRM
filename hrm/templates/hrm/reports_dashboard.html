@@ -1,0 +1,124 @@
+{% extends 'hrm/base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header">
+            <h4>Reports Dashboard</h4>
+        </div>
+        <div class="card-body">
+            <form method="get" class="mb-4">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="start_date" class="form-label">Start Date</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="end_date" class="form-label">End Date</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary">Generate Report</button>
+                    </div>
+                </div>
+            </form>
+            
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Leave Statistics</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if leave_data %}
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Leave Type</th>
+                                        <th>Status</th>
+                                        <th>Count</th>
+                                        <th>Days</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for stat in leave_data %}
+                                    <tr>
+                                        <td>{{ stat.leave_type__name }}</td>
+                                        <td>{{ stat.status }}</td>
+                                        <td>{{ stat.count }}</td>
+                                        <td>{{ stat.total_days }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% else %}
+                            <p>No leave data for selected period.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Attendance Statistics</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if attendance_data %}
+                            <ul class="list-group">
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    Total Records
+                                    <span class="badge bg-primary rounded-pill">{{ attendance_data.total_records }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    Remote Work
+                                    <span class="badge bg-warning rounded-pill">{{ attendance_data.remote_count }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    Late Arrivals
+                                    <span class="badge bg-danger rounded-pill">{{ attendance_data.late_count }}</span>
+                                </li>
+                            </ul>
+                            {% else %}
+                            <p>No attendance data for selected period.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Reimbursement Statistics</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if reimbursement_data %}
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Status</th>
+                                        <th>Count</th>
+                                        <th>Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for stat in reimbursement_data %}
+                                    <tr>
+                                        <td>{{ stat.status }}</td>
+                                        <td>{{ stat.count }}</td>
+                                        <td>₹{{ stat.total_amount }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% else %}
+                            <p>No reimbursement data for selected period.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

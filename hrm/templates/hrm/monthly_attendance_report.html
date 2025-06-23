@@ -1,0 +1,64 @@
+{% extends 'hrm/base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4>Monthly Attendance Report - {{ month_name }} {{ current_year }}</h4>
+            <div>
+                <form method="get" class="form-inline">
+                    <select name="month" class="form-control me-2">
+                        {% for m in 1|make_list %}
+                        <option value="{{ forloop.counter }}" {% if forloop.counter == current_month %}selected{% endif %}>
+                            {{ forloop.counter|date:"F" }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <select name="year" class="form-control me-2">
+                        {% for y in 2020|make_list %}
+                        <option value="{{ current_year|add:forloop.counter0 }}" {% if current_year == current_year|add:forloop.counter0 %}selected{% endif %}>
+                            {{ current_year|add:forloop.counter0 }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-primary">Go</button>
+                </form>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Present Days</th>
+                            <th>Remote Days</th>
+                            <th>Late Days</th>
+                            <th>Total Hours</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for emp_data in attendance_data %}
+                        <tr>
+                            <td>{{ emp_data.employee.user.get_full_name }}</td>
+                            <td>{{ emp_data.present_days }}</td>
+                            <td>{{ emp_data.remote_days }}</td>
+                            <td>{{ emp_data.late_days }}</td>
+                            <td>{{ emp_data.total_hours }}</td>
+                            <td>
+                                <a href="#" class="btn btn-sm btn-outline-primary">View Details</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">No attendance data found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

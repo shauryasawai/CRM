@@ -1,747 +1,230 @@
-{% extends "hrm/base.html" %}
+{% extends 'hrm/base.html' %}
 
 {% block content %}
-<!-- Custom Styles from dashboard_demo -->
- <style>
-        :root {
-            --primary-lime: #D3FF61;
-            --primary-black: #000000;
-            --primary-white: #FFFFFF;
-            --secondary-gray: #1a1a1a;
-            --tertiary-gray: #2a2a2a;
-            --light-gray: #f8f9fa;
-            --medium-gray: #6c757d;
-            --dark-gray: #343a40;
-            --shadow-light: rgba(0, 0, 0, 0.1);
-            --shadow-medium: rgba(0, 0, 0, 0.15);
-            --shadow-heavy: rgba(0, 0, 0, 0.25);
-            --lime-transparent: rgba(211, 255, 97, 0.1);
-            --lime-semi: rgba(211, 255, 97, 0.8);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, var(--primary-lime) 0%, #b8e847 100%);
-            min-height: 100vh;
-            color: var(--primary-black);
-            line-height: 1.6;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        .dashboard-header {
-            background: var(--primary-white);
-            border-radius: 24px;
-            padding: 2.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 20px 40px var(--shadow-light);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .dashboard-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary-lime), #b8e847);
-        }
-
-        .dashboard-title {
-            font-size: 3rem;
-            font-weight: 800;
-            color: var(--primary-black);
-            margin-bottom: 0.5rem;
-            letter-spacing: -0.02em;
-        }
-
-        .dashboard-subtitle {
-            color: var(--medium-gray);
-            font-size: 1.2rem;
-            font-weight: 400;
-        }
-
-        .welcome-time {
-            color: var(--primary-lime);
-            font-weight: 600;
-        }
-
-        .status-online {
-            background: var(--primary-black);
-            color: var(--primary-lime);
-            padding: 0.75rem 1.5rem;
-            border-radius: 50px;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
-
-        .stat-card {
-            background: var(--primary-white);
-            border-radius: 20px;
-            padding: 2rem;
-            box-shadow: 0 10px 30px var(--shadow-light);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: var(--primary-lime);
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 25px 50px var(--shadow-medium);
-        }
-
-        .stat-card:hover::before {
-            transform: scaleX(1);
-        }
-
-        .stat-icon {
-            width: 64px;
-            height: 64px;
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 1.5rem;
-            font-size: 1.75rem;
-            color: var(--primary-white);
-            position: relative;
-        }
-
-        .stat-icon.leave {
-            background: linear-gradient(135deg, var(--primary-black), var(--secondary-gray));
-        }
-
-        .stat-icon.approval {
-            background: linear-gradient(135deg, #ff6b35, #f7931e);
-        }
-
-        .stat-icon.status {
-            background: linear-gradient(135deg, #28a745, #20c463);
-        }
-
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: 800;
-            color: var(--primary-black);
-            margin-bottom: 0.5rem;
-            letter-spacing: -0.02em;
-        }
-
-        .stat-label {
-            color: var(--medium-gray);
-            font-size: 1rem;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 1.5rem;
-        }
-
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border-radius: 12px;
-            font-weight: 600;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: all 0.3s ease;
-            border: none;
-            cursor: pointer;
-            font-size: 0.9rem;
-            text-transform: capitalize;
-            letter-spacing: 0.3px;
-        }
-
-        .btn-primary {
-            background: var(--primary-black);
-            color: var(--primary-lime);
-        }
-
-        .btn-primary:hover {
-            background: var(--secondary-gray);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px var(--shadow-medium);
-        }
-
-        .btn-warning {
-            background: #ff6b35;
-            color: var(--primary-white);
-        }
-
-        .btn-warning:hover {
-            background: #e55a2b;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(255, 107, 53, 0.3);
-        }
-
-        .btn-success {
-            background: #28a745;
-            color: var(--primary-white);
-        }
-
-        .btn-success:hover {
-            background: #218838;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(40, 167, 69, 0.3);
-        }
-
-        .btn-danger {
-            background: #dc3545;
-            color: var(--primary-white);
-        }
-
-        .btn-danger:hover {
-            background: #c82333;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(220, 53, 69, 0.3);
-        }
-
-        .btn-outline {
-            background: transparent;
-            color: var(--primary-black);
-            border: 2px solid var(--primary-black);
-        }
-
-        .btn-outline:hover {
-            background: var(--primary-black);
-            color: var(--primary-lime);
-        }
-
-        .main-card {
-            background: var(--primary-white);
-            border-radius: 20px;
-            box-shadow: 0 10px 30px var(--shadow-light);
-            overflow: hidden;
-            margin-bottom: 2rem;
-        }
-
-        .card-header {
-            background: linear-gradient(135deg, var(--primary-black), var(--secondary-gray));
-            color: var(--primary-white);
-            padding: 2rem;
-            display: flex;
-            justify-content: between;
-            align-items: center;
-        }
-
-        .card-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .card-title i {
-            color: var(--primary-lime);
-        }
-
-        .notifications-container {
-            padding: 2rem;
-        }
-
-        .notification-item {
-            background: var(--light-gray);
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-            transition: all 0.3s ease;
-            border-left: 4px solid transparent;
-        }
-
-        .notification-item:hover {
-            background: var(--lime-transparent);
-            transform: translateX(8px);
-        }
-
-        .notification-item.unread {
-            border-left-color: var(--primary-lime);
-            background: var(--lime-transparent);
-        }
-
-        .notification-item.unread::after {
-            content: '';
-            position: absolute;
-            right: 1rem;
-            top: 1rem;
-            width: 10px;
-            height: 10px;
-            background: var(--primary-lime);
-            border-radius: 50%;
-        }
-
-        .table-container {
-            overflow-x: auto;
-        }
-
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-            background: var(--primary-white);
-        }
-
-        .table th {
-            background: var(--light-gray);
-            color: var(--primary-black);
-            font-weight: 600;
-            padding: 1.5rem 1rem;
-            text-align: left;
-            text-transform: uppercase;
-            font-size: 0.85rem;
-            letter-spacing: 0.5px;
-            border-bottom: 2px solid var(--primary-lime);
-        }
-
-        .table td {
-            padding: 1.5rem 1rem;
-            border-bottom: 1px solid #eee;
-            vertical-align: middle;
-        }
-
-        .table tbody tr:hover {
-            background: var(--lime-transparent);
-        }
-
-        .avatar-placeholder {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary-lime), #b8e847);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--primary-black);
-            font-weight: 700;
-            margin-right: 1rem;
-        }
-
-        .status-badge {
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .badge-leave {
-            background: rgba(40, 167, 69, 0.1);
-            color: #28a745;
-        }
-
-        .floating-action {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            width: 64px;
-            height: 64px;
-            border-radius: 50%;
-            background: var(--primary-black);
-            color: var(--primary-lime);
-            border: none;
-            font-size: 1.5rem;
-            box-shadow: 0 10px 30px var(--shadow-medium);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            z-index: 1000;
-        }
-
-        .floating-action:hover {
-            transform: scale(1.1) translateY(-2px);
-            box-shadow: 0 15px 40px var(--shadow-heavy);
-        }
-
-        .no-notifications {
-            text-align: center;
-            padding: 4rem 2rem;
-            color: var(--medium-gray);
-        }
-
-        .no-notifications i {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            opacity: 0.5;
-        }
-
-        .row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .col-md-8 {
-            flex: 2;
-        }
-
-        .col-md-4 {
-            flex: 1;
-            text-align: right;
-        }
-
-        .d-flex {
-            display: flex;
-        }
-
-        .align-items-center {
-            align-items: center;
-        }
-
-        .justify-content-between {
-            justify-content: space-between;
-        }
-
-        .flex-grow-1 {
-            flex-grow: 1;
-        }
-
-        .text-muted {
-            color: var(--medium-gray);
-        }
-
-        .ml-3 {
-            margin-left: 1rem;
-        }
-
-        .mt-3 {
-            margin-top: 1rem;
-        }
-
-        .mb-0 {
-            margin-bottom: 0;
-        }
-
-        .py-4 {
-            padding: 2rem 0;
-        }
-
-        .entrance-animation {
-            opacity: 0;
-            transform: translateY(30px);
-            animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-        }
-
-        @keyframes slideUp {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 1rem;
-            }
-
-            .dashboard-title {
-                font-size: 2.5rem;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr;
-                gap: 1rem;
-            }
-
-            .stat-card {
-                padding: 1.5rem;
-            }
-
-            .row {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .col-md-4 {
-                text-align: center;
-                margin-top: 1rem;
-            }
-
-            .floating-action {
-                bottom: 1rem;
-                right: 1rem;
-                width: 56px;
-                height: 56px;
-                font-size: 1.25rem;
-            }
-
-            .table-container {
-                margin: 0 -1rem;
-            }
-
-            .card-header {
-                flex-direction: column;
-                gap: 1rem;
-                text-align: center;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .dashboard-header {
-                padding: 1.5rem;
-            }
-
-            .dashboard-title {
-                font-size: 2rem;
-            }
-
-            .notifications-container {
-                padding: 1rem;
-            }
-
-            .notification-item {
-                padding: 1rem;
-            }
-        }
-    </style>
-
-<div class="container">
-  <!-- Enhanced Header -->
-  <div class="dashboard-header entrance-animation">
+<div class="container-fluid">
     <div class="row">
-      <div class="col-md-8">
-        <h1 class="dashboard-title">HRM Dashboard</h1>
-        <p class="dashboard-subtitle">Welcome back, {{ employee.user.first_name }}! <span class="welcome-time" id="current-time"></span></p>
-      </div>
-      <div class="col-md-4">
-        <div class="status-online">
-          <i class="fas fa-circle"></i> Online
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Stats -->
-  <div class="stats-grid">
-    <div class="stat-card entrance-animation">
-      <div class="stat-icon leave">
-        <i class="fas fa-calendar-alt"></i>
-      </div>
-      <div class="stat-number">{{ employee.leave_balance }}</div>
-      <div class="stat-label">Days Remaining</div>
-      <div class="mt-3">
-        <a href="{% url 'leave_management' %}" class="btn btn-primary">
-          <i class="fas fa-plus"></i> Request Leave
-        </a>
-      </div>
-    </div>
-
-    <div class="stat-card entrance-animation">
-      <div class="stat-icon approval">
-        <i class="fas fa-clock"></i>
-      </div>
-      <div class="stat-number">{{ pending_leaves }}</div>
-      <div class="stat-label">Pending Approvals</div>
-      <div class="mt-3">
-        <a href="{% url 'leave_management' %}" class="btn btn-warning">
-          <i class="fas fa-eye"></i> Review All
-        </a>
-      </div>
-    </div>
-
-    <div class="stat-card entrance-animation">
-      <div class="stat-icon status">
-        <i class="fas fa-user-check"></i>
-      </div>
-      {% if today_attendance %}
-        <div class="stat-number">{{ today_attendance.login_time|time:"H:i" }}</div>
-        <div class="stat-label">Logged In</div>
-        <div class="mt-3">
-          {% if not today_attendance.logout_time %}
-            <form method="post" action="{% url 'attendance_tracking' %}" style="display:inline">
-              {% csrf_token %}
-              <input type="hidden" name="action" value="logout">
-              <button type="submit" class="btn btn-danger">
-                <i class="fas fa-sign-out-alt"></i> Logout
-              </button>
-            </form>
-          {% else %}
-            <span class="status-badge">Logged Out</span>
-          {% endif %}
-        </div>
-      {% else %}
-        <div class="stat-number">--:--</div>
-        <div class="stat-label">Not Logged In</div>
-        <div class="mt-3">
-          <form method="post" action="{% url 'attendance_tracking' %}" style="display:inline">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="login">
-            <button type="submit" class="btn btn-success">
-              <i class="fas fa-sign-in-alt"></i> Login
-            </button>
-          </form>
-        </div>
-      {% endif %}
-    </div>
-  </div>
-
-  <!-- Notifications -->
-  <div class="main-card entrance-animation">
-    <div class="card-header">
-      <h5 class="card-title">
-        <i class="fas fa-bell"></i> Recent Notifications
-      </h5>
-      <button id="mark-all-read" class="btn btn-outline">
-        <i class="fas fa-check-double"></i> Mark All Read
-      </button>
-    </div>
-    <div class="notifications-container">
-      {% if notifications %}
-        {% for notification in notifications %}
-          <div class="notification-item {% if not notification.is_read %}unread{% endif %}">
-            <div class="d-flex justify-content-between align-items-start">
-              <div class="flex-grow-1">
-                <a href="{% url 'view_notification' notification.id %}" style="color: var(--primary-black); text-decoration: none; font-weight: 500;">
-                  {{ notification.message }}
-                </a>
-              </div>
-              <small class="text-muted ml-3">{{ notification.created_at|timesince }} ago</small>
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <!-- Welcome Card -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="mb-1">Welcome, {{ employee.user.get_full_name }}</h4>
+                            <p class="text-muted mb-0">{{ employee.designation }} | {{ employee.department.name }}</p>
+                        </div>
+                        <div class="avatar avatar-lg">
+                            <img src="https://via.placeholder.com/150" class="rounded-circle" alt="Profile">
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
-        {% endfor %}
-      {% else %}
-        <div class="no-notifications">
-          <i class="fas fa-inbox"></i>
-          <p>No new notifications</p>
+
+            <!-- Stats Cards -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="text-white-50">Pending Leaves</h6>
+                                    <h3>{{ pending_leaves }}</h3>
+                                </div>
+                                <i class="fas fa-calendar-alt fa-3x opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="text-white-50">Pending Reimbursements</h6>
+                                    <h3>{{ pending_reimbursements }}</h3>
+                                </div>
+                                <i class="fas fa-file-invoice-dollar fa-3x opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="text-white-50">Attendance ({{ current_month }})</h6>
+                                    <h3>{{ present_days }}/{{ total_working_days }}</h3>
+                                </div>
+                                <i class="fas fa-user-check fa-3x opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Approval Sections -->
+            <div class="row">
+                <!-- Leaves to Approve -->
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5>Leaves to Approve</h5>
+                            <a href="{% url 'leave_management' %}" class="btn btn-sm btn-outline-primary">View All</a>
+                        </div>
+                        <div class="card-body">
+                            {% if leaves_to_approve %}
+                            <div class="list-group">
+                                {% for leave in leaves_to_approve %}
+                                <a href="{% url 'approve_leave' leave.id %}" class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">{{ leave.employee.user.get_full_name }}</h6>
+                                        <small class="text-{% if leave.status == 'P' %}warning{% else %}primary{% endif %}">
+                                            {{ leave.get_status_display }}
+                                        </small>
+                                    </div>
+                                    <p class="mb-1">{{ leave.leave_type.name }} ({{ leave.total_days }} days)</p>
+                                    <small class="text-muted">
+                                        {{ leave.start_date|date:"M d" }} - {{ leave.end_date|date:"M d, Y" }}
+                                    </small>
+                                </a>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="alert alert-info mb-0">No pending leave requests</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reimbursements to Approve -->
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5>Reimbursements to Approve</h5>
+                            <a href="{% url 'reports_dashboard' %}" class="btn btn-sm btn-outline-primary">View All</a>
+                        </div>
+                        <div class="card-body">
+                            {% if reimbursements_to_approve %}
+                            <div class="list-group">
+                                {% for claim in reimbursements_to_approve %}
+                                <a href="{% url 'approve_reimbursement' claim.id %}" class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">{{ claim.employee.user.get_full_name }}</h6>
+                                        <small class="text-{% if claim.status == 'P' %}warning{% else %}primary{% endif %}">
+                                            {{ claim.get_status_display }}
+                                        </small>
+                                    </div>
+                                    <p class="mb-1">₹{{ claim.total_amount }}</p>
+                                    <small class="text-muted">
+                                        {{ claim.get_month_display }} {{ claim.year }}
+                                    </small>
+                                </a>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="alert alert-info mb-0">No pending reimbursement claims</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-      {% endif %}
-    </div>
-  </div>
 
-  <!-- Leaves to Approve Table -->
-  {% if leaves_to_approve %}
-  <div class="main-card entrance-animation">
-    <div class="card-header">
-      <h5 class="card-title">
-        <i class="fas fa-tasks"></i> Leaves Pending Approval
-      </h5>
-    </div>
-    <div class="table-container">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Employee</th>
-            <th>Leave Type</th>
-            <th>Dates</th>
-            <th>Reason</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for leave in leaves_to_approve %}
-          <tr>
-            <td>
-              <div class="d-flex align-items-center">
-                <div class="avatar-placeholder">
-                  {{ leave.employee.user.first_name|first }}{{ leave.employee.user.last_name|first }}
+        <!-- Sidebar -->
+        <div class="col-lg-3">
+            <!-- Notifications -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>Notifications</h5>
+                    <button id="markAllRead" class="btn btn-sm btn-outline-secondary">Mark All Read</button>
                 </div>
-                <div>
-                  <div style="font-weight: 600;">{{ leave.employee.user.get_full_name }}</div>
-                  <small class="text-muted">{{ leave.employee.designation }}</small>
+                <div class="card-body p-0">
+                    {% if notifications %}
+                    <div class="list-group list-group-flush">
+                        {% for notification in notifications %}
+                        <a href="{% url 'view_notification' notification.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <p class="mb-1">{{ notification.message|truncatechars:50 }}</p>
+                                <small>{{ notification.created_at|timesince }} ago</small>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info m-3 mb-0">No new notifications</div>
+                    {% endif %}
                 </div>
-              </div>
-            </td>
-            <td><span class="status-badge badge-leave">{{ leave.leave_type }}</span></td>
-            <td>
-              <div>{{ leave.start_date|date:"M d" }} - {{ leave.end_date|date:"M d, Y" }}</div>
-              <small class="text-muted">{{ leave.start_date|timeuntil:leave.end_date }}</small>
-            </td>
-            <td><div style="max-width: 200px;">{{ leave.reason|truncatechars:50 }}</div></td>
-            <td>
-              <a href="{% url 'approve_leave' leave.id %}" class="btn btn-primary">
-                <i class="fas fa-search"></i> Review
-              </a>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'apply_leave' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-calendar-plus me-2"></i>Apply Leave
+                        </a>
+                        <a href="{% url 'add_expense' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-receipt me-2"></i>Add Expense
+                        </a>
+                        <a href="{% url 'attendance_tracking' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-user-clock me-2"></i>Mark Attendance
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- My Leave Requests -->
+            <div class="card">
+                <div class="card-header">
+                    <h5>My Recent Leaves</h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if my_leave_requests %}
+                    <div class="list-group list-group-flush">
+                        {% for leave in my_leave_requests %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ leave.leave_type.name }}</h6>
+                                <span class="badge bg-{% if leave.status == 'A' %}success{% elif leave.status == 'P' %}warning{% else %}danger{% endif %}">
+                                    {{ leave.get_status_display }}
+                                </span>
+                            </div>
+                            <small class="text-muted">
+                                {{ leave.start_date|date:"M d" }} - {{ leave.end_date|date:"d, Y" }} ({{ leave.total_days }} days)
+                            </small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info m-3 mb-0">No recent leave requests</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
-  {% endif %}
 </div>
+{% endblock %}
 
-<!-- Floating Action Button -->
-<button class="floating-action" onclick="scrollToTop()" title="Scroll to top">
-  <i class="fas fa-arrow-up"></i>
-</button>
-
+{% block scripts %}
 <script>
-  // Scroll to top
-  function scrollToTop() {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-  
-  // Clock
-  function updateTime() {
-    const now = new Date();
-    const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-    document.getElementById('current-time').textContent = `• ${timeString}`;
-  }
-  setInterval(updateTime, 1000);
-  updateTime();
-
-  // Mark all notifications read
-  document.getElementById('mark-all-read').addEventListener('click', function () {
-    const button = this;
-    const original = button.innerHTML;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-    button.disabled = true;
-    fetch("{% url 'mark_all_notifications_read' %}", {
-      method: 'POST',
-      headers: {
-        'X-CSRFToken': '{{ csrf_token }}',
-        'Content-Type': 'application/json'
-      }
-    }).then(response => response.json()).then(data => {
-      if (data.status === 'success') {
-        button.innerHTML = '<i class="fas fa-check"></i> Done!';
-        document.querySelectorAll('.notification-item.unread').forEach(el => el.classList.remove('unread'));
-        setTimeout(() => { button.innerHTML = original; button.disabled = false; }, 2000);
-      }
-    }).catch(() => {
-      button.innerHTML = original;
-      button.disabled = false;
+$(document).ready(function() {
+    // Mark all notifications as read
+    $('#markAllRead').click(function() {
+        $.ajax({
+            url: "{% url 'mark_all_notifications_read' %}",
+            method: "POST",
+            data: {
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function() {
+                location.reload();
+            }
+        });
     });
-  });
+});
 </script>
 {% endblock %}

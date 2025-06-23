@@ -1,0 +1,185 @@
+{% extends 'hrm/base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Employee Details</h4>
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <img src="https://via.placeholder.com/150" class="rounded-circle" alt="Profile Image">
+                    </div>
+                    
+                    <h4>{{ employee.user.get_full_name }}</h4>
+                    <p class="text-muted">{{ employee.designation }}</p>
+                    
+                    <hr>
+                    
+                    <div class="text-start">
+                        <p><strong>Employee ID:</strong> {{ employee.employee_id }}</p>
+                        <p><strong>Department:</strong> {{ employee.department.name|default:"-" }}</p>
+                        <p><strong>Hierarchy Level:</strong> {{ employee.get_hierarchy_level_display }}</p>
+                        <p><strong>Reporting Manager:</strong> 
+                            {% if employee.reporting_manager %}
+                            <a href="{% url 'employee_profile' employee.reporting_manager.id %}">
+                                {{ employee.reporting_manager.user.get_full_name }}
+                            </a>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </p>
+                        <p><strong>Date of Joining:</strong> {{ employee.date_of_joining|date:"M d, Y" }}</p>
+                        <p><strong>Phone:</strong> {{ employee.phone_number|default:"-" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <ul class="nav nav-tabs card-header-tabs">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#summary">Summary</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#leaves">Leaves</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#attendance">Attendance</a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="summary">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5>Leave Summary ({{ current_year }})</h5>
+                                    <ul class="list-group">
+                                        {% for stat in leave_stats %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            {{ stat.leave_type__name }}
+                                            <span class="badge bg-{% if stat.status == 'A' %}success{% else %}warning{% endif %} rounded-pill">
+                                                {{ stat.total_days }} days ({{ stat.status }})
+                                            </span>
+                                        </li>
+                                        {% empty %}
+                                        <li class="list-group-item">No leave data available</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5>Attendance Summary ({{ current_month }} {{ current_year }})</h5>
+                                    <ul class="list-group">
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            Present Days
+                                            <span class="badge bg-primary rounded-pill">{{ attendance_stats.present_days }}</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            Remote Days
+                                            <span class="badge bg-warning rounded-pill">{{ attendance_stats.remote_days }}</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            Late Days
+                                            <span class="badge bg-danger rounded-pill">{{ attendance_stats.late_days }}</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            Total Working Days
+                                            <span class="badge bg-secondary rounded-pill">{{ attendance_stats.total_days }}</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="tab-pane fade" id="leaves">
+                            <h5>Recent Leave Requests</h5>
+                            {% if recent_leaves %}
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Leave Type</th>
+                                            <th>Dates</th>
+                                            <th>Days</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for leave in recent_leaves %}
+                                        <tr>
+                                            <td>{{ leave.leave_type.name }}</td>
+                                            <td>{{ leave.start_date|date:"M d" }} - {{ leave.end_date|date:"M d, Y" }}</td>
+                                            <td>{{ leave.total_days }}</td>
+                                            <td>
+                                                <span class="badge 
+                                                    {% if leave.status == 'A' %}bg-success
+                                                    {% elif leave.status == 'P' %}bg-warning
+                                                    {% elif leave.status == 'R' %}bg-danger
+                                                    {% else %}bg-secondary{% endif %}">
+                                                    {{ leave.get_status_display }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <p>No leave records found.</p>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="tab-pane fade" id="attendance">
+                            <h5>Recent Attendance</h5>
+                            {% if recent_attendance %}
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Status</th>
+                                            <th>Login</th>
+                                            <th>Logout</th>
+                                            <th>Hours</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for att in recent_attendance %}
+                                        <tr>
+                                            <td>{{ att.date|date:"M d, Y" }}</td>
+                                            <td>
+                                                {% if att.login_time %}
+                                                <span class="badge bg-{% if att.is_remote %}warning{% else %}success{% endif %}">
+                                                    {% if att.is_remote %}Remote{% else %}Present{% endif %}
+                                                </span>
+                                                {% if att.is_late %}
+                                                <span class="badge bg-danger">Late</span>
+                                                {% endif %}
+                                                {% else %}
+                                                <span class="badge bg-secondary">Absent</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ att.login_time|time:"H:i"|default:"-" }}</td>
+                                            <td>{{ att.logout_time|time:"H:i"|default:"-" }}</td>
+                                            <td>{{ att.total_hours|floatformat:2|default:"-" }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <p>No attendance records found.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
