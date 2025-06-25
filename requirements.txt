@@ -1,0 +1,53 @@
+# Core Django framework
+Django>=4.2,<5.0
+
+# Database support
+psycopg2-binary>=2.9.0
+
+# Django utilities
+django-extensions>=3.2.0
+django-crispy-forms>=2.0
+crispy-bootstrap5>=0.7
+
+# Environment and configuration
+python-decouple>=3.8
+
+# Date and time utilities
+pytz>=2023.3
+
+# Financial calculations (for InvestmentPlanReview)
+numpy>=1.24.0
+
+# Geolocation services (for attendance tracking)
+geopy>=2.4.0
+
+# Development and debugging
+django-debug-toolbar>=4.2.0
+
+# File handling
+Pillow>=10.0.0
+whitenoise>=6.5.0
+
+# Excel/CSV export
+openpyxl>=3.1.0
+
+# Data validation
+python-stdnum>=1.19  # PAN number validation
+dotenv
+# Background tasks (for notifications and leave auto-approval)
+celery>=5.3.0
+redis>=4.6.0
+django-celery-beat>=2.5.0
+
+# Email notifications
+django-email-template>=0.1.3
+
+# Pagination and filtering
+django-filter>=23.2
+
+# Deployment and production
+gunicorn>=21.2.0
+dj-database-url>=2.1.0
+
+# Testing
+pytest-django>=4.5.0

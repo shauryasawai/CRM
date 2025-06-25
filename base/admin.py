@@ -19,7 +19,6 @@ class TeamMembershipInline(admin.TabularInline):
     fields = ('team', 'date_joined', 'is_active')
     readonly_fields = ('date_joined',)
 
-
 class CustomUserAdmin(BaseUserAdmin):
     form = UserChangeForm
     add_form = UserCreationForm
@@ -76,16 +75,52 @@ class CustomUserAdmin(BaseUserAdmin):
     team_info.short_description = 'Team Info'
     
     def client_count(self, obj):
-        if obj.role == 'rm':
-            return obj.mapped_client_profiles.count()
-        elif obj.role == 'ops_exec':
-            return obj.ops_client_profiles.count()
+        """
+        Calculate client count based on user role.
+        Since there are no direct client relationships on User model,
+        we need to count through reverse relationships from ClientProfile model.
+        """
+        try:
+            if obj.role == 'rm':
+                # Check if ClientProfile model exists and count clients assigned to this RM
+                try:
+                    from hrm.models import ClientProfile
+                    return ClientProfile.objects.filter(assigned_rm=obj).count()
+                except (ImportError, AttributeError):
+                    # If ClientProfile doesn't exist or doesn't have assigned_rm field
+                    return 'N/A'
+                    
+            elif obj.role == 'ops_exec':
+                # Count clients assigned to this Operations Executive
+                try:
+                    from hrm.models import ClientProfile
+                    return ClientProfile.objects.filter(ops_executive=obj).count()
+                except (ImportError, AttributeError):
+                    # If ClientProfile doesn't exist or doesn't have ops_executive field
+                    return 'N/A'
+        except Exception:
+            return 'Error'
         return '-'
     client_count.short_description = 'Client Count'
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('manager').prefetch_related(
-            'teams', 'led_teams', 'managed_groups', 'mapped_client_profiles', 'ops_client_profiles'
+        """
+        Optimize queryset with only the relationships that exist on User model.
+        Based on your User model, these are the valid relationships:
+        - manager (ForeignKey)
+        - teams (ManyToMany through TeamMembership)
+        - managed_groups (ManyToMany to Group)
+        - subordinates (reverse ForeignKey)
+        - led_teams (reverse relationship from Team model if it exists)
+        """
+        return super().get_queryset(request).select_related(
+            'manager'  # ForeignKey optimization
+        ).prefetch_related(
+            'teams',           # ManyToMany to Team
+            'managed_groups',  # ManyToMany to Group
+            'subordinates',    # Reverse relationship for manager
+            # Only include 'led_teams' if Team model has a leader field pointing to User
+            # 'led_teams',     # Uncomment if this relationship exists in your Team model
         )
 
 

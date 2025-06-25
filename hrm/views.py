@@ -367,6 +367,45 @@ def approve_leave(request, leave_id):
     }
     return render(request, 'hrm/approve_leave.html', context)
 
+import re
+from geopy.distance import geodesic
+
+def parse_coordinate(coord_str):
+    """
+    Parse coordinate string and extract numeric value
+    Examples:
+    '30.7333° N' -> 30.7333
+    '77.1167° E' -> 77.1167 
+    '-30.7333° S' -> -30.7333
+    '30.7333' -> 30.7333
+    """
+    if not coord_str:
+        return None
+    
+    # Remove whitespace
+    coord_str = coord_str.strip()
+    
+    # Extract numeric part using regex
+    # This pattern matches: optional minus, digits, optional decimal point and more digits
+    numeric_match = re.search(r'-?\d+\.?\d*', coord_str)
+    
+    if numeric_match:
+        numeric_value = float(numeric_match.group())
+        
+        # Check for direction indicators to determine sign
+        if 'S' in coord_str.upper() or 'W' in coord_str.upper():
+            # South and West are negative
+            return -abs(numeric_value)
+        else:
+            # North and East are positive (or no direction specified)
+            return numeric_value
+    
+    # If no numeric pattern found, try direct float conversion
+    try:
+        return float(coord_str)
+    except ValueError:
+        return None
+
 @login_required
 def attendance_tracking(request):
     """Attendance tracking with location validation"""
@@ -387,17 +426,44 @@ def attendance_tracking(request):
             else:
                 # Validate location
                 office_location = (28.6139, 77.2090)  # Default office coordinates
+                
                 if hasattr(employee, 'office_location') and employee.office_location:
-                    office_coords = employee.office_location.split(',')
-                    office_location = (float(office_coords[0]), float(office_coords[1]))
+                    try:
+                        office_coords = employee.office_location.split(',')
+                        if len(office_coords) >= 2:
+                            # Parse coordinates with the helper function
+                            office_lat = parse_coordinate(office_coords[0])
+                            office_lng = parse_coordinate(office_coords[1])
+                            
+                            if office_lat is not None and office_lng is not None:
+                                office_location = (office_lat, office_lng)
+                            else:
+                                messages.warning(request, 'Invalid office location format. Using default coordinates.')
+                        else:
+                            messages.warning(request, 'Incomplete office location data. Using default coordinates.')
+                    except Exception as e:
+                        messages.warning(request, f'Error parsing office location: {str(e)}. Using default coordinates.')
                 
                 is_remote = True
                 location_string = f"{latitude},{longitude}" if latitude and longitude else ""
                 
                 if latitude and longitude:
-                    user_location = (float(latitude), float(longitude))
-                    distance = geodesic(office_location, user_location).meters
-                    is_remote = distance > 500
+                    try:
+                        # Parse user coordinates
+                        user_lat = parse_coordinate(latitude)
+                        user_lng = parse_coordinate(longitude)
+                        
+                        if user_lat is not None and user_lng is not None:
+                            user_location = (user_lat, user_lng)
+                            distance = geodesic(office_location, user_location).meters
+                            is_remote = distance > 500
+                        else:
+                            messages.warning(request, 'Invalid user location coordinates received.')
+                            # Assume remote if coordinates are invalid
+                            is_remote = True
+                    except Exception as e:
+                        messages.warning(request, f'Error processing location: {str(e)}')
+                        is_remote = True
                 
                 # Create attendance record
                 attendance = Attendance.objects.create(

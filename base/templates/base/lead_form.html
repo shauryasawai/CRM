@@ -1,94 +1,258 @@
 {% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}{{ action }} Lead{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Modern form styling with CSS variables */
+    :root {
+        --primary-color: #4a6cf7;
+        --secondary-color: #6c757d;
+        --success-color: #28a745;
+        --danger-color: #dc3545;
+        --light-color: #f8f9fa;
+        --dark-color: #343a40;
+        --border-color: #e9ecef;
+        --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        --transition: all 0.3s ease;
+    }
+
+    .lead-form-container {
+        max-width: 900px;
+        margin: 2rem auto;
+    }
+
+    .lead-form-header {
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+
+    .lead-form-header h1 {
+        font-weight: 700;
+        color: var(--dark-color);
+        margin-bottom: 0.5rem;
+    }
+
+    .lead-form-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: var(--card-shadow);
+        overflow: hidden;
+        transition: var(--transition);
+    }
+
+    .lead-form-card:hover {
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    }
+
+    .card-body {
+        padding: 2.5rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    .form-control, .form-select {
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        transition: var(--transition);
+        height: auto;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(74, 108, 247, 0.15);
+    }
+
+    .form-check {
+        margin-bottom: 0.5rem;
+    }
+
+    .form-check-input {
+        width: 1.2em;
+        height: 1.2em;
+        margin-top: 0.15em;
+    }
+
+    .form-check-label {
+        margin-left: 0.5rem;
+    }
+
+    .source-radio {
+        background: var(--light-color);
+        padding: 1rem;
+        border-radius: 8px;
+    }
+
+    .invalid-feedback {
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    .btn {
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: var(--transition);
+    }
+
+    .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+
+    .btn-primary:hover {
+        background-color: #3a5bd9;
+        border-color: #3a5bd9;
+        transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+        background-color: var(--secondary-color);
+        border-color: var(--secondary-color);
+    }
+
+    .btn-secondary:hover {
+        background-color: #5a6268;
+        border-color: #5a6268;
+        transform: translateY(-2px);
+    }
+
+    .spinner-border {
+        vertical-align: middle;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        .lead-form-header h1 {
+            font-size: 1.75rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .card-body {
+            padding: 1.25rem;
+        }
+
+        .btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+
+        .d-flex.justify-content-between {
+            flex-direction: column;
+        }
+    }
+
+    /* Animation for form fields */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .form-field {
+        animation: fadeIn 0.5s ease-out forwards;
+        opacity: 0;
+    }
+
+    /* Create staggered animation delays */
+    .form-field:nth-child(1) { animation-delay: 0.1s; }
+    .form-field:nth-child(2) { animation-delay: 0.2s; }
+    .form-field:nth-child(3) { animation-delay: 0.3s; }
+    .form-field:nth-child(4) { animation-delay: 0.4s; }
+    .form-field:nth-child(5) { animation-delay: 0.5s; }
+    .form-field:nth-child(6) { animation-delay: 0.6s; }
+    .form-field:nth-child(7) { animation-delay: 0.7s; }
+    .form-field:nth-child(8) { animation-delay: 0.8s; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1 class="my-4">{{ action }} Lead</h1>
-    
-    <!-- Debug information -->
-    {% if form.errors %}
-    <div class="alert alert-danger">
-        <h5>Form Errors:</h5>
-        {{ form.errors }}
+<div class="lead-form-container">
+    <div class="lead-form-header">
+        <h1>{{ action }} Lead</h1>
+        <p class="text-muted">Fill in the details below to {{ action|lower }} this lead</p>
     </div>
-    {% endif %}
     
     <!-- Messages -->
     {% if messages %}
-    <div class="messages">
+    <div class="messages mb-4">
         {% for message in messages %}
-        <div class="alert alert-{{ message.tags }}">
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
             {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
         {% endfor %}
     </div>
     {% endif %}
     
-    <div class="card">
+    <div class="card lead-form-card">
         <div class="card-body">
-            <form method="post" id="leadForm" novalidate>
+            <form method="post" id="leadForm" novalidate class="needs-validation">
                 {% csrf_token %}
                 
-                <!-- Debug: Show form method and action -->
-                <div class="alert alert-info" style="display: none;" id="debug-info">
-                    <p>Form Method: POST</p>
-                    <p>CSRF Token: {{ csrf_token }}</p>
-                    <p>Form Action: Current URL</p>
-                </div>
-                
-                <div class="row mb-3">
-                    <div class="col-md-6">
+                <div class="row mb-4">
+                    <div class="col-md-6 form-field">
                         <label for="{{ form.name.id_for_label }}" class="form-label">Name *</label>
                         {{ form.name }}
                         {% if form.name.errors %}
                         <div class="invalid-feedback d-block">
                             {% for error in form.name.errors %}
-                                <div>{{ error }}</div>
+                                {{ error }}
                             {% endfor %}
                         </div>
                         {% endif %}
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-6 form-field">
                         <label for="{{ form.assigned_to.id_for_label }}" class="form-label">Assigned To *</label>
                         {{ form.assigned_to }}
                         {% if form.assigned_to.errors %}
                         <div class="invalid-feedback d-block">
                             {% for error in form.assigned_to.errors %}
-                                <div>{{ error }}</div>
+                                {{ error }}
                             {% endfor %}
                         </div>
                         {% endif %}
-                        <!-- Debug: Show queryset count -->
-                        <small class="text-muted">Available users: {{ form.assigned_to.field.queryset.count }}</small>
                     </div>
                 </div>
 
-                <div class="row mb-3">
-                    <div class="col-md-6">
+                <div class="row mb-4">
+                    <div class="col-md-6 form-field">
                         <label for="{{ form.email.id_for_label }}" class="form-label">Email *</label>
                         {{ form.email }}
                         {% if form.email.errors %}
                         <div class="invalid-feedback d-block">
                             {% for error in form.email.errors %}
-                                <div>{{ error }}</div>
+                                {{ error }}
                             {% endfor %}
                         </div>
                         {% endif %}
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-6 form-field">
                         <label for="{{ form.mobile.id_for_label }}" class="form-label">Mobile</label>
                         {{ form.mobile }}
                         {% if form.mobile.errors %}
                         <div class="invalid-feedback d-block">
                             {% for error in form.mobile.errors %}
-                                <div>{{ error }}</div>
+                                {{ error }}
                             {% endfor %}
                         </div>
                         {% endif %}
                     </div>
                 </div>
 
-                <div class="row mb-3">
-                    <div class="col-md-6">
+                <div class="row mb-4">
+                    <div class="col-md-6 form-field">
                         <label class="form-label">Source *</label>
                         <div class="source-radio">
                             {% for radio in form.source %}
@@ -103,37 +267,37 @@
                         {% if form.source.errors %}
                         <div class="invalid-feedback d-block">
                             {% for error in form.source.errors %}
-                                <div>{{ error }}</div>
+                                {{ error }}
                             {% endfor %}
                         </div>
                         {% endif %}
                     </div>
-                    <div class="col-md-6" id="reference-client-field" style="display: none;">
+                    <div class="col-md-6 form-field" id="reference-client-field" style="display: none;">
                         <label for="{{ form.reference_client.id_for_label }}" class="form-label">Existing Client</label>
                         {{ form.reference_client }}
                         {% if form.reference_client.errors %}
                         <div class="invalid-feedback d-block">
                             {% for error in form.reference_client.errors %}
-                                <div>{{ error }}</div>
+                                {{ error }}
                             {% endfor %}
                         </div>
                         {% endif %}
                     </div>
-                    <div class="col-md-6" id="source-details-field" style="display: none;">
+                    <div class="col-md-6 form-field" id="source-details-field" style="display: none;">
                         <label for="{{ form.source_details.id_for_label }}" class="form-label">Source Details</label>
                         {{ form.source_details }}
                         {% if form.source_details.errors %}
                         <div class="invalid-feedback d-block">
                             {% for error in form.source_details.errors %}
-                                <div>{{ error }}</div>
+                                {{ error }}
                             {% endfor %}
                         </div>
                         {% endif %}
                     </div>
                 </div>
 
-                <div class="row mb-3">
-                    <div class="col-md-6">
+                <div class="row mb-4">
+                    <div class="col-md-6 form-field">
                         <label for="{{ form.probability.id_for_label }}" class="form-label">Conversion Probability</label>
                         <div class="d-flex align-items-center">
                             {{ form.probability }}
@@ -142,26 +306,26 @@
                         {% if form.probability.errors %}
                         <div class="invalid-feedback d-block">
                             {% for error in form.probability.errors %}
-                                <div>{{ error }}</div>
+                                {{ error }}
                             {% endfor %}
                         </div>
                         {% endif %}
                     </div>
                 </div>
 
-                <div class="mb-3">
+                <div class="mb-4 form-field">
                     <label for="{{ form.notes.id_for_label }}" class="form-label">Notes</label>
                     {{ form.notes }}
                     {% if form.notes.errors %}
                     <div class="invalid-feedback d-block">
                         {% for error in form.notes.errors %}
-                            <div>{{ error }}</div>
+                            {{ error }}
                         {% endfor %}
                     </div>
                     {% endif %}
                 </div>
 
-                <div class="d-flex justify-content-between">
+                <div class="d-flex justify-content-between mt-5">
                     <a href="{% if lead %}{% url 'lead_detail' lead.pk %}{% else %}{% url 'lead_list' %}{% endif %}" 
                        class="btn btn-secondary">Cancel</a>
                     <button type="submit" class="btn btn-primary" id="submitBtn">
@@ -173,7 +337,9 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('leadForm');
@@ -191,6 +357,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const selectedValue = checkedRadio.value;
             referenceField.style.display = selectedValue === 'existing_client' ? 'block' : 'none';
             detailsField.style.display = selectedValue === 'other' ? 'block' : 'none';
+            
+            // Add animation when showing fields
+            if (selectedValue === 'existing_client' || selectedValue === 'other') {
+                const fieldToShow = selectedValue === 'existing_client' ? referenceField : detailsField;
+                fieldToShow.style.animation = 'fadeIn 0.5s ease-out forwards';
+                fieldToShow.style.opacity = '0';
+            }
         }
     }
     
@@ -203,78 +376,71 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Form submission handling
     form.addEventListener('submit', function(e) {
-        console.log('Form submit event triggered');
-        
         // Show loading state
         submitBtn.disabled = true;
         spinner.classList.remove('d-none');
+        submitBtn.querySelector('span:not(.spinner-border)').style.display = 'none';
         
         // Basic validation
-        const name = form.querySelector('input[name="name"]').value.trim();
-        const email = form.querySelector('input[name="email"]').value.trim();
-        const assignedTo = form.querySelector('select[name="assigned_to"]').value;
+        const requiredFields = [
+            { element: form.querySelector('input[name="name"]'), message: 'Name is required' },
+            { element: form.querySelector('input[name="email"]'), message: 'Email is required' },
+            { element: form.querySelector('select[name="assigned_to"]'), message: 'Please select who this lead should be assigned to' }
+        ];
         
-        if (!name) {
-            alert('Name is required');
+        let isValid = true;
+        
+        requiredFields.forEach(field => {
+            if (!field.element.value.trim()) {
+                isValid = false;
+                const invalidFeedback = field.element.nextElementSibling;
+                
+                if (invalidFeedback && invalidFeedback.classList.contains('invalid-feedback')) {
+                    invalidFeedback.textContent = field.message;
+                    invalidFeedback.style.display = 'block';
+                } else {
+                    alert(field.message);
+                }
+                
+                field.element.classList.add('is-invalid');
+            } else {
+                field.element.classList.remove('is-invalid');
+                const invalidFeedback = field.element.nextElementSibling;
+                if (invalidFeedback && invalidFeedback.classList.contains('invalid-feedback')) {
+                    invalidFeedback.style.display = 'none';
+                }
+            }
+        });
+        
+        if (!isValid) {
             e.preventDefault();
             resetSubmitButton();
             return;
-        }
-        
-        if (!email) {
-            alert('Email is required');
-            e.preventDefault();
-            resetSubmitButton();
-            return;
-        }
-        
-        if (!assignedTo) {
-            alert('Please select who this lead should be assigned to');
-            e.preventDefault();
-            resetSubmitButton();
-            return;
-        }
-        
-        console.log('Form validation passed, submitting...');
-        
-        // Log form data for debugging
-        const formData = new FormData(form);
-        console.log('Form data:');
-        for (let [key, value] of formData.entries()) {
-            console.log(key + ': ' + value);
         }
     });
     
     function resetSubmitButton() {
         submitBtn.disabled = false;
         spinner.classList.add('d-none');
+        submitBtn.querySelector('span:not(.spinner-border)').style.display = 'inline';
     }
     
     // Reset button state if form submission fails
-    setTimeout(resetSubmitButton, 5000);
+    window.addEventListener('pageshow', resetSubmitButton);
     
-    // Debug toggle
-    const debugInfo = document.getElementById('debug-info');
-    document.addEventListener('keydown', function(e) {
-        if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-            debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
-        }
+    // Add Bootstrap validation classes on blur
+    const formInputs = form.querySelectorAll('input, select, textarea');
+    formInputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            if (this.checkValidity()) {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+            } else {
+                this.classList.remove('is-valid');
+                this.classList.add('is-invalid');
+            }
+        });
     });
 });
 </script>
-
-<!-- Additional debugging styles -->
-<style>
-.form-control:invalid {
-    border-color: #dc3545;
-}
-
-.form-control:valid {
-    border-color: #28a745;
-}
-
-.debug-highlight {
-    border: 2px solid #007bff !important;
-}
-</style>
 {% endblock %}

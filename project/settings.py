@@ -99,14 +99,20 @@ AUTH_USER_MODEL = 'base.User'
 import dj_database_url  # Add this at the top if using connection string
 import os
 
+import os
+import dj_database_url
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 DATABASES = {
     'default': dj_database_url.parse(
-        'postgresql://postgres:Shaurya123..@db.kqskqkvwwhjlwuxbqxcq.supabase.co:5432/postgres',
+        os.getenv('DATABASE_URL'),
         conn_max_age=600,
         ssl_require=True
     )
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
