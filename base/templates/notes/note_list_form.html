@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ action }} Note List</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            --danger-gradient: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            --info-gradient: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            --dark-bg: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --text-light: #e2e8f0;
+            --card-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--dark-bg);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            color: var(--text-light);
+            overflow-x: hidden;
+        }
+
+        /* Animated background particles */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1" fill="rgba(255,255,255,0.08)"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            animation: float 25s ease-in-out infinite;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+
+        .form-container {
+            padding: 2rem 0;
+            min-height: 100vh;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modern-navbar {
+            background: var(--glass-bg) !important;
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            margin-bottom: 3rem;
+        }
+
+        .modern-navbar .navbar-brand {
+            font-weight: 800;
+            font-size: 1.5rem;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .modern-navbar .nav-link {
+            color: var(--text-light) !important;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem !important;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            margin: 0 0.25rem;
+        }
+
+        .modern-navbar .nav-link:hover {
+            background: var(--glass-bg);
+            color: white !important;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .modern-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: var(--card-shadow);
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 2rem;
+            animation: slideInUp 0.8s ease-out;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modern-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 35px 70px rgba(0, 0, 0, 0.3);
+        }
+
+        .form-header {
+            background: var(--primary-gradient);
+            padding: 3rem 2rem 2rem;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .form-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid2" width="15" height="15" patternUnits="userSpaceOnUse"><path d="M 15 0 L 0 0 0 15" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid2)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .form-header h4 {
+            font-size: 2rem;
+            font-weight: 900;
+            margin-bottom: 0.5rem;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .form-header p {
+            font-size: 1.1rem;
+            margin: 0;
+            position: relative;
+            z-index: 1;
+            opacity: 0.9;
+        }
+
+        .modern-card-body {
+            padding: 3rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .modern-form-group {
+            margin-bottom: 2.5rem;
+            position: relative;
+        }
+
+        .modern-form-label {
+            color: white;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            display: block;
+            font-size: 1rem;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .required-asterisk {
+            color: #ff9a9e;
+            font-weight: 800;
+            margin-left: 0.25rem;
+        }
+
+        .icon-input {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .icon-input i {
+            position: absolute;
+            left: 1.25rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #667eea;
+            font-size: 1.1rem;
+            z-index: 2;
+        }
+
+        .modern-input, .modern-textarea {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            color: white;
+            padding: 1rem 1.5rem 1rem 3rem;
+            font-size: 1rem;
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            backdrop-filter: blur(10px);
+            width: 100%;
+            position: relative;
+        }
+
+        .modern-input:focus, .modern-textarea:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.15);
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .modern-input::placeholder, .modern-textarea::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .modern-textarea {
+            min-height: 120px;
+            resize: vertical;
+            font-family: inherit;
+            line-height: 1.6;
+        }
+
+        .character-counter {
+            position: absolute;
+            bottom: -1.5rem;
+            right: 0;
+            background: rgba(0, 0, 0, 0.5);
+            color: rgba(255, 255, 255, 0.8);
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .character-counter.warning {
+            background: var(--warning-gradient);
+            color: white;
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .suggestions {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+            animation: slideInDown 0.5s ease-out;
+        }
+
+        @keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .suggestions h6 {
+            color: white;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .suggestion-item {
+            cursor: pointer;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 0.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .suggestion-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            transform: translateX(5px);
+            border-color: rgba(102, 126, 234, 0.5);
+        }
+
+        .suggestion-item i {
+            color: #4facfe;
+            width: 20px;
+            text-align: center;
+        }
+
+        .invalid-feedback {
+            color: #ff9a9e;
+            font-weight: 600;
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .invalid-feedback::before {
+            content: '\f06a';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+        }
+
+        .modern-btn {
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            border: 2px solid;
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+        }
+
+        .modern-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.6s;
+        }
+
+        .modern-btn:hover::before {
+            left: 100%;
+        }
+
+        .modern-btn:hover {
+            transform: translateY(-3px) scale(1.05);
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            border-color: rgba(102, 126, 234, 0.5);
+            color: white;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 12px 35px rgba(102, 126, 234, 0.6);
+            color: white;
+        }
+
+        .btn-outline-secondary {
+            background: transparent;
+            border-color: rgba(255, 255, 255, 0.3);
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .btn-outline-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.5);
+            color: white;
+            box-shadow: 0 8px 25px rgba(255, 255, 255, 0.2);
+        }
+
+        .tips-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            animation: slideInUp 0.8s ease-out 0.3s both;
+        }
+
+        .tips-header {
+            background: var(--info-gradient);
+            padding: 1.5rem 2rem;
+            color: white;
+            font-weight: 700;
+        }
+
+        .tips-body {
+            padding: 2rem;
+        }
+
+        .tip-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tip-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .tip-item h6 {
+            color: white;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tip-item i {
+            color: #4facfe;
+            font-size: 1.2rem;
+        }
+
+        .tip-item p {
+            color: rgba(255, 255, 255, 0.8);
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .form-container {
+                padding: 1rem 0;
+            }
+
+            .modern-card-body {
+                padding: 2rem 1.5rem;
+            }
+
+            .form-header {
+                padding: 2rem 1.5rem 1.5rem;
+            }
+
+            .form-header h4 {
+                font-size: 1.75rem;
+            }
+
+            .modern-btn {
+                padding: 0.875rem 1.5rem;
+                font-size: 0.875rem;
+                width: 100%;
+                justify-content: center;
+                margin-bottom: 0.75rem;
+            }
+
+            .d-flex.justify-content-between {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .character-counter {
+                position: static;
+                margin-top: 0.5rem;
+                align-self: flex-end;
+            }
+
+            .suggestions {
+                padding: 1rem;
+            }
+
+            .suggestion-item {
+                padding: 0.5rem 0.75rem;
+            }
+        }
+
+        /* Loading animation */
+        .loading-btn {
+            position: relative;
+            pointer-events: none;
+            opacity: 0.8;
+        }
+
+        .loading-btn::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        @keyframes spin {
+            from { transform: translateY(-50%) rotate(0deg); }
+            to { transform: translateY(-50%) rotate(360deg); }
+        }
+
+        /* Focus ring for accessibility */
+        .modern-input:focus-visible,
+        .modern-textarea:focus-visible,
+        .modern-btn:focus-visible {
+            outline: 2px solid #4facfe;
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body class="form-container">
+    <div class="container-fluid">
+        <!-- Modern Header -->
+        <div class="row">
+            <div class="col-12">
+                <nav class="navbar navbar-expand-lg modern-navbar">
+                    <div class="container-fluid">
+                        <a class="navbar-brand" href="{% url 'note_list_management' %}">
+                            <i class="fas fa-folder-plus"></i> {{ action }} Note List
+                        </a>
+                        <div class="navbar-nav ms-auto">
+                            <a class="nav-link" href="{% url 'note_list_management' %}">
+                                <i class="fas fa-arrow-left"></i> Back to Lists
+                            </a>
+                            <a class="nav-link" href="{% url 'notes_dashboard' %}">
+                                <i class="fas fa-home"></i> Notes Dashboard
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Form Content -->
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="modern-card">
+                    <div class="form-header">
+                        <h4>
+                            <i class="fas fa-{% if action == 'Create' %}plus{% else %}edit{% endif %}"></i> 
+                            {{ action }} Note List
+                        </h4>
+                        <p>
+                            {% if action == 'Create' %}
+                                Create a new list to organize your notes by topic or project
+                            {% else %}
+                                Update your note list details and organization
+                            {% endif %}
+                        </p>
+                    </div>
+                    
+                    <div class="modern-card-body">
+                        <form method="post" class="needs-validation" novalidate id="listForm">
+                            {% csrf_token %}
+                            
+                            <!-- List Name -->
+                            <div class="modern-form-group">
+                                <label for="{{ form.name.id_for_label }}" class="modern-form-label">
+                                    List Name <span class="required-asterisk">*</span>
+                                </label>
+                                <div class="icon-input">
+                                    <i class="fas fa-folder"></i>
+                                    <input type="text" 
+                                           id="{{ form.name.id_for_label }}" 
+                                           name="{{ form.name.name }}" 
+                                           class="modern-input" 
+                                           placeholder="Enter a descriptive name for your list..."
+                                           value="{{ form.name.value|default:'' }}"
+                                           maxlength="100" 
+                                           required>
+                                </div>
+                                {% if form.name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.name.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="character-counter" id="nameCounter">0 / 100 characters</div>
+                            </div>
+
+                            <!-- Description -->
+                            <div class="modern-form-group">
+                                <label for="{{ form.description.id_for_label }}" class="modern-form-label">
+                                    Description
+                                </label>
+                                <div class="icon-input">
+                                    <i class="fas fa-align-left"></i>
+                                    <textarea id="{{ form.description.id_for_label }}" 
+                                              name="{{ form.description.name }}" 
+                                              class="modern-textarea" 
+                                              placeholder="Describe what this list will contain and how you'll use it..."
+                                              maxlength="250">{{ form.description.value|default:'' }}</textarea>
+                                </div>
+                                {% if form.description.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.description.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="character-counter" id="descriptionCounter">0 / 250 characters</div>
+                            </div>
+
+                            <!-- Name Suggestions -->
+                            <div class="suggestions" id="nameSuggestions">
+                                <h6><i class="fas fa-lightbulb"></i> Popular List Names</h6>
+                                <div class="suggestion-item" data-suggestion="Meeting Notes">
+                                    <i class="fas fa-users"></i>
+                                    <span>Meeting Notes</span>
+                                </div>
+                                <div class="suggestion-item" data-suggestion="Project Ideas">
+                                    <i class="fas fa-lightbulb"></i>
+                                    <span>Project Ideas</span>
+                                </div>
+                                <div class="suggestion-item" data-suggestion="Daily Tasks">
+                                    <i class="fas fa-tasks"></i>
+                                    <span>Daily Tasks</span>
+                                </div>
+                                <div class="suggestion-item" data-suggestion="Research Notes">
+                                    <i class="fas fa-search"></i>
+                                    <span>Research Notes</span>
+                                </div>
+                                <div class="suggestion-item" data-suggestion="Personal Journal">
+                                    <i class="fas fa-book"></i>
+                                    <span>Personal Journal</span>
+                                </div>
+                                <div class="suggestion-item" data-suggestion="Work Planning">
+                                    <i class="fas fa-briefcase"></i>
+                                    <span>Work Planning</span>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="d-flex justify-content-between align-items-center mt-4">
+                                <a href="{% url 'note_list_management' %}" class="modern-btn btn-outline-secondary">
+                                    <i class="fas fa-arrow-left"></i> Cancel
+                                </a>
+                                
+                                <button type="submit" class="modern-btn btn-primary" id="submitBtn">
+                                    <i class="fas fa-save"></i> {{ action }} List
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Modern Tips -->
+                <div class="tips-card">
+                    <div class="tips-header">
+                        <h6 class="mb-0"><i class="fas fa-lightbulb"></i> List Organization Tips</h6>
+                    </div>
+                    <div class="tips-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="tip-item">
+                                    <h6><i class="fas fa-tags"></i> Naming Strategy</h6>
+                                    <p>Use clear, descriptive names that instantly tell you what the list contains. Avoid generic names like "List 1".</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="tip-item">
+                                    <h6><i class="fas fa-project-diagram"></i> Purpose-Driven</h6>
+                                    <p>Create lists based on specific purposes: projects, topics, or time periods for better organization.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="tip-item">
+                                    <h6><i class="fas fa-layer-group"></i> Keep It Simple</h6>
+                                    <p>Don't create too many lists. Start with 3-5 main categories and expand only when needed.</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="tip-item">
+                                    <h6><i class="fas fa-sync-alt"></i> Review Regularly</h6>
+                                    <p>Periodically review and update your lists. Archive old lists and create new ones as your needs change.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Enhanced animations and interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            // Form fields animation
+            const formGroups = document.querySelectorAll('.modern-form-group');
+            formGroups.forEach((group, index) => {
+                group.style.opacity = '0';
+                group.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    group.style.transition = 'all 0.6s ease';
+                    group.style.opacity = '1';
+                    group.style.transform = 'translateY(0)';
+                }, index * 150);
+            });
+
+            // Enhanced input focus effects
+            const inputs = document.querySelectorAll('.modern-input, .modern-textarea');
+            inputs.forEach(input => {
+                input.addEventListener('focus', function() {
+                    this.parentElement.parentElement.style.transform = 'translateY(-3px)';
+                    this.parentElement.parentElement.style.transition = 'transform 0.3s ease';
+                });
+                
+                input.addEventListener('blur', function() {
+                    this.parentElement.parentElement.style.transform = 'translateY(0)';
+                });
+
+                // Add typing animation
+                input.addEventListener('input', function() {
+                    this.style.borderColor = '#667eea';
+                    setTimeout(() => {
+                        this.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                    }, 300);
+                });
+            });
+
+            // Button hover enhancements
+            const buttons = document.querySelectorAll('.modern-btn');
+            buttons.forEach(btn => {
+                btn.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-3px) scale(1.05)';
+                });
+                
+                btn.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0) scale(1)';
+                });
+
+                // Ripple effect
+                btn.addEventListener('click', function(e) {
+                    const ripple = document.createElement('span');
+                    const rect = this.getBoundingClientRect();
+                    const size = Math.max(rect.width, rect.height);
+                    const x = e.clientX - rect.left - size / 2;
+                    const y = e.clientY - rect.top - size / 2;
+                    
+                    ripple.style.cssText = `
+                        position: absolute;
+                        width: ${size}px;
+                        height: ${size}px;
+                        left: ${x}px;
+                        top: ${y}px;
+                        background: rgba(255, 255, 255, 0.3);
+                        border-radius: 50%;
+                        transform: scale(0);
+                        animation: ripple 0.6s ease-out;
+                        pointer-events: none;
+                    `;
+                    
+                    this.style.position = 'relative';
+                    this.appendChild(ripple);
+                    
+                    setTimeout(() => ripple.remove(), 600);
+                });
+            });
+        });
+
+        // Enhanced Character counters
+        const nameField = document.getElementById('{{ form.name.id_for_label }}');
+        const nameCounter = document.getElementById('nameCounter');
+        const descriptionField = document.getElementById('{{ form.description.id_for_label }}');
+        const descriptionCounter = document.getElementById('descriptionCounter');
+        
+        function updateNameCounter() {
+            const count = nameField.value.length;
+            nameCounter.textContent = `${count} / 100 characters`;
+            
+            if (count > 80) {
+                nameCounter.classList.add('warning');
+            } else {
+                nameCounter.classList.remove('warning');
+            }
+        }
+        
+        function updateDescriptionCounter() {
+            const count = descriptionField.value.length;
+            descriptionCounter.textContent = `${count} / 250 characters`;
+            
+            if (count > 200) {
+                descriptionCounter.classList.add('warning');
+            } else {
+                descriptionCounter.classList.remove('warning');
+            }
+
+            // Auto-resize textarea
+            descriptionField.style.height = 'auto';
+            descriptionField.style.height = Math.max(120, descriptionField.scrollHeight) + 'px';
+        }
+        
+        nameField.addEventListener('input', updateNameCounter);
+        descriptionField.addEventListener('input', updateDescriptionCounter);
+        
+        // Initial count
+        updateNameCounter();
+        updateDescriptionCounter();
+
+        // Suggestion click handlers
+        const suggestionItems = document.querySelectorAll('.suggestion-item');
+        suggestionItems.forEach(item => {
+            item.addEventListener('click', function() {
+                const suggestion = this.getAttribute('data-suggestion');
+                nameField.value = suggestion;
+                updateNameCounter();
+                
+                // Add visual feedback
+                this.style.background = 'rgba(102, 126, 234, 0.3)';
+                this.style.transform = 'translateX(10px) scale(1.02)';
+                
+                setTimeout(() => {
+                    this.style.background = 'rgba(255, 255, 255, 0.05)';
+                    this.style.transform = 'translateX(0) scale(1)';
+                }, 300);
+                
+                // Focus on description field
+                descriptionField.focus();
+            });
+
+            // Enhanced hover effects
+            item.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateX(8px) scale(1.02)';
+                this.style.boxShadow = '0 5px 15px rgba(0, 0, 0, 0.2)';
+            });
+            
+            item.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateX(0) scale(1)';
+                this.style.boxShadow = 'none';
+            });
+        });
+
+        // Enhanced Bootstrap form validation
+        const form = document.getElementById('listForm');
+        const submitBtn = document.getElementById('submitBtn');
+        
+        form.addEventListener('submit', function(event) {
+            if (form.checkValidity() === false) {
+                event.preventDefault();
+                event.stopPropagation();
+                
+                // Shake invalid fields
+                const invalidFields = form.querySelectorAll(':invalid');
+                invalidFields.forEach(field => {
+                    field.style.animation = 'shake 0.5s ease-in-out';
+                    setTimeout(() => {
+                        field.style.animation = '';
+                    }, 500);
+                });
+                
+                // Show error message
+                showNotification('Please fill in all required fields correctly.', 'error');
+            } else {
+                // Add loading state
+                submitBtn.classList.add('loading-btn');
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                submitBtn.disabled = true;
+                
+                // Show success message
+                showNotification('Saving your list...', 'info');
+            }
+            
+            form.classList.add('was-validated');
+        });
+
+        // Smart suggestions based on input
+        nameField.addEventListener('input', function() {
+            const value = this.value.toLowerCase();
+            const suggestions = document.getElementById('nameSuggestions');
+            
+            if (value.length > 0) {
+                // Filter suggestions based on input
+                suggestionItems.forEach(item => {
+                    const suggestion = item.getAttribute('data-suggestion').toLowerCase();
+                    if (suggestion.includes(value)) {
+                        item.style.display = 'flex';
+                        item.style.opacity = '1';
+                    } else {
+                        item.style.display = 'none';
+                        item.style.opacity = '0.5';
+                    }
+                });
+            } else {
+                // Show all suggestions when input is empty
+                suggestionItems.forEach(item => {
+                    item.style.display = 'flex';
+                    item.style.opacity = '1';
+                });
+            }
+        });
+
+        // Auto-suggestions based on common patterns
+        function generateSmartSuggestions() {
+            const currentDate = new Date();
+            const month = currentDate.toLocaleString('default', { month: 'long' });
+            const year = currentDate.getFullYear();
+            
+            const smartSuggestions = [
+                `${month} ${year} Notes`,
+                `Q${Math.ceil((currentDate.getMonth() + 1) / 3)} ${year} Planning`,
+                'Weekly Review',
+                'Important Reminders',
+                'Client Communications'
+            ];
+            
+            return smartSuggestions;
+        }
+
+        // Add smart suggestions on focus
+        nameField.addEventListener('focus', function() {
+            if (this.value === '') {
+                const smartSuggestions = generateSmartSuggestions();
+                const suggestionsContainer = document.getElementById('nameSuggestions');
+                
+                // Add a divider and smart suggestions
+                const divider = document.createElement('div');
+                divider.innerHTML = '<h6 style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);"><i class="fas fa-magic"></i> Smart Suggestions</h6>';
+                divider.id = 'smart-divider';
+                
+                if (!document.getElementById('smart-divider')) {
+                    suggestionsContainer.appendChild(divider);
+                    
+                    smartSuggestions.forEach((suggestion, index) => {
+                        const item = document.createElement('div');
+                        item.className = 'suggestion-item smart-suggestion';
+                        item.setAttribute('data-suggestion', suggestion);
+                        item.innerHTML = `<i class="fas fa-sparkles"></i><span>${suggestion}</span>`;
+                        item.style.animationDelay = `${index * 0.1}s`;
+                        item.style.animation = 'slideInLeft 0.5s ease-out both';
+                        
+                        item.addEventListener('click', function() {
+                            nameField.value = suggestion;
+                            updateNameCounter();
+                            descriptionField.focus();
+                        });
+                        
+                        suggestionsContainer.appendChild(item);
+                    });
+                }
+            }
+        });
+
+        // Notification system
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 2rem;
+                right: 2rem;
+                z-index: 9999;
+                padding: 1rem 2rem;
+                border-radius: 12px;
+                color: white;
+                font-weight: 600;
+                backdrop-filter: blur(20px);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                transform: translateX(100%);
+                transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+                max-width: 400px;
+            `;
+
+            // Set background based on type
+            if (type === 'success') {
+                notification.style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
+                notification.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+            } else if (type === 'error') {
+                notification.style.background = 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)';
+                notification.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
+            } else if (type === 'info') {
+                notification.style.background = 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)';
+                notification.innerHTML = `<i class="fas fa-info-circle"></i> ${message}`;
+            }
+
+            document.body.appendChild(notification);
+
+            // Animate in
+            setTimeout(() => {
+                notification.style.transform = 'translateX(0)';
+            }, 100);
+
+            // Auto remove after 4 seconds
+            setTimeout(() => {
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 4000);
+
+            // Click to dismiss
+            notification.addEventListener('click', () => {
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            });
+        }
+
+        // Enhanced navbar interactions
+        const navLinks = document.querySelectorAll('.nav-link');
+        navLinks.forEach(link => {
+            link.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-2px)';
+            });
+            
+            link.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 's':
+                        e.preventDefault();
+                        form.requestSubmit();
+                        break;
+                    case 'Escape':
+                        window.location.href = '{% url "note_list_management" %}';
+                        break;
+                }
+            }
+        });
+
+        // Add CSS for additional animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes ripple {
+                to {
+                    transform: scale(2);
+                    opacity: 0;
+                }
+            }
+            
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-5px); }
+                75% { transform: translateX(5px); }
+            }
+            
+            @keyframes slideInLeft {
+                from {
+                    opacity: 0;
+                    transform: translateX(-30px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Performance optimization: Debounced input handlers
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Apply debouncing to search functionality
+        const debouncedSearch = debounce((value) => {
+            // Additional search logic can go here
+            console.log('Searching for:', value);
+        }, 300);
+
+        nameField.addEventListener('input', function() {
+            debouncedSearch(this.value);
+        });
+
+        // Auto-save draft functionality (optional)
+        let autoSaveTimer;
+        const formFields = [nameField, descriptionField];
+        
+        formFields.forEach(field => {
+            field.addEventListener('input', function() {
+                clearTimeout(autoSaveTimer);
+                autoSaveTimer = setTimeout(saveDraft, 2000); // Save after 2 seconds of inactivity
+            });
+        });
+        
+        function saveDraft() {
+            const draftData = {
+                name: nameField.value,
+                description: descriptionField.value,
+                timestamp: new Date().toISOString()
+            };
+            
+            if (draftData.name.trim() || draftData.description.trim()) {
+                localStorage.setItem('list_draft', JSON.stringify(draftData));
+                showNotification('Draft saved automatically', 'info');
+            }
+        }
+        
+        // Load draft on page load
+        window.addEventListener('load', function() {
+            const draft = localStorage.getItem('list_draft');
+            if (draft && !{{ note_list|yesno:"true,false" }}) { // Only for new lists
+                const draftData = JSON.parse(draft);
+                const now = new Date();
+                const draftTime = new Date(draftData.timestamp);
+                const hoursDiff = (now - draftTime) / (1000 * 60 * 60);
+                
+                if (hoursDiff < 24 && (draftData.name.trim() || draftData.description.trim())) {
+                    // Show restore draft notification
+                    setTimeout(() => {
+                        if (confirm('We found a saved draft. Would you like to restore it?')) {
+                            nameField.value = draftData.name;
+                            descriptionField.value = draftData.description;
+                            updateNameCounter();
+                            updateDescriptionCounter();
+                            showNotification('Draft restored successfully!', 'success');
+                        } else {
+                            localStorage.removeItem('list_draft');
+                        }
+                    }, 1000);
+                }
+            }
+        });
+
+        // Clear draft on successful submission
+        form.addEventListener('submit', function() {
+            if (form.checkValidity()) {
+                localStorage.removeItem('list_draft');
+            }
+        });
+    </script>
+</body>
+</html>

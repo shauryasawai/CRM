@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ note.heading }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .note-container {
+            background: #f8f9fa;
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+        .note-content {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+        .note-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 10px 10px 0 0;
+        }
+        .note-meta {
+            background: #e9ecef;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+        .attachment-box {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .attachment-box:hover {
+            border-color: #667eea;
+            background: #f0f7ff;
+        }
+        .status-badge {
+            font-size: 1.1rem;
+            padding: 0.5rem 1rem;
+        }
+        .btn-action {
+            min-width: 120px;
+        }
+        .note-stats {
+            background: #fff;
+            border-left: 4px solid #667eea;
+            padding: 1rem;
+        }
+    </style>
+</head>
+<body class="note-container">
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="row">
+            <div class="col-12">
+                <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+                    <div class="container-fluid">
+                        <a class="navbar-brand" href="{% url 'notes_dashboard' %}">
+                            <i class="fas fa-sticky-note"></i> Note Details
+                        </a>
+                        <div class="navbar-nav ms-auto">
+                            <a class="nav-link" href="{% url 'note_list' %}">
+                                <i class="fas fa-list"></i> All Notes
+                            </a>
+                            <a class="nav-link" href="{% url 'notes_dashboard' %}">
+                                <i class="fas fa-home"></i> Notes Dashboard
+                            </a>
+                            <a class="nav-link" href="{% url 'dashboard' %}">
+                                <i class="fas fa-tachometer-alt"></i> Main Dashboard
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Note Content -->
+        <div class="row justify-content-center">
+            <div class="col-md-10 col-lg-8">
+                <div class="card border-0 shadow">
+                    <!-- Note Header -->
+                    <div class="note-header">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h4 class="mb-2">{{ note.heading }}</h4>
+                                <p class="mb-0 opacity-75">
+                                    <i class="fas fa-folder"></i> {{ note.note_list.name }}
+                                </p>
+                            </div>
+                            <div class="text-end">
+                                {% if note.is_completed %}
+                                    <span class="badge bg-success status-badge">
+                                        <i class="fas fa-check-circle"></i> Completed
+                                    </span>
+                                {% elif note.is_overdue %}
+                                    <span class="badge bg-danger status-badge">
+                                        <i class="fas fa-exclamation-triangle"></i> Overdue
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning status-badge">
+                                        <i class="fas fa-clock"></i> Pending
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <!-- Note Content -->
+                        <div class="note-content">
+                            {{ note.content|linebreaks }}
+                        </div>
+
+                        <!-- Note Details -->
+                        <div class="note-meta">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <h6 class="text-muted mb-2">
+                                        <i class="fas fa-calendar-plus text-primary"></i> Creation Date
+                                    </h6>
+                                    <p class="mb-0">{{ note.creation_date|date:"F d, Y" }}</p>
+                                </div>
+                                {% if note.reminder_date %}
+                                <div class="col-md-4">
+                                    <h6 class="text-muted mb-2">
+                                        <i class="fas fa-bell text-warning"></i> Reminder
+                                    </h6>
+                                    <p class="mb-0">
+                                        {{ note.reminder_date|date:"F d, Y H:i" }}
+                                        {% if note.has_reminder_pending %}
+                                            <span class="badge bg-info ms-2">Pending</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                {% endif %}
+                                {% if note.due_date %}
+                                <div class="col-md-4">
+                                    <h6 class="text-muted mb-2">
+                                        <i class="fas fa-calendar-check text-danger"></i> Due Date
+                                    </h6>
+                                    <p class="mb-0">
+                                        {{ note.due_date|date:"F d, Y" }}
+                                        {% if note.is_overdue %}
+                                            <span class="badge bg-danger ms-2">Overdue</span>
+                                        {% elif note.due_date == today %}
+                                            <span class="badge bg-warning ms-2">Due Today</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- File Attachment -->
+                        {% if note.attachment %}
+                        <div class="p-3">
+                            <h6 class="text-muted mb-3">
+                                <i class="fas fa-paperclip text-primary"></i> Attachment
+                            </h6>
+                            <div class="attachment-box">
+                                <div class="d-flex align-items-center justify-content-center">
+                                    <div class="me-3">
+                                        {% with file_ext=note.attachment.name|slice:"-4:" %}
+                                            {% if file_ext == ".pdf" %}
+                                                <i class="fas fa-file-pdf fa-3x text-danger"></i>
+                                            {% elif file_ext == ".doc" or file_ext == "docx" %}
+                                                <i class="fas fa-file-word fa-3x text-primary"></i>
+                                            {% elif file_ext == ".xls" or file_ext == "xlsx" %}
+                                                <i class="fas fa-file-excel fa-3x text-success"></i>
+                                            {% elif file_ext == ".jpg" or file_ext == "jpeg" or file_ext == ".png" %}
+                                                <i class="fas fa-file-image fa-3x text-info"></i>
+                                            {% else %}
+                                                <i class="fas fa-file fa-3x text-secondary"></i>
+                                            {% endif %}
+                                        {% endwith %}
+                                    </div>
+                                    <div class="text-start">
+                                        <h6 class="mb-1">
+                                            <a href="{{ note.attachment.url }}" target="_blank" class="text-decoration-none">
+                                                {{ note.attachment.name|cut:"notes/"|cut:note.user.id|cut:"/" }}
+                                            </a>
+                                        </h6>
+                                        <p class="text-muted mb-0">
+                                            <small>{{ note.attachment.size|filesizeformat }}</small>
+                                        </p>
+                                    </div>
+                                    <div class="ms-auto">
+                                        <a href="{{ note.attachment.url }}" target="_blank" class="btn btn-outline-primary">
+                                            <i class="fas fa-download"></i> Download
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Completion Status -->
+                        {% if note.is_completed and note.completed_at %}
+                        <div class="note-stats mx-3 mb-3">
+                            <h6 class="text-success mb-2">
+                                <i class="fas fa-check-circle"></i> Completion Details
+                            </h6>
+                            <p class="mb-0">
+                                Completed on {{ note.completed_at|date:"F d, Y H:i" }}
+                            </p>
+                        </div>
+                        {% endif %}
+
+                        <!-- Note Statistics -->
+                        <div class="note-stats mx-3 mb-3">
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <h6 class="text-muted mb-1">Created</h6>
+                                    <small>{{ note.created_at|timesince }} ago</small>
+                                </div>
+                                <div class="col-4">
+                                    <h6 class="text-muted mb-1">Updated</h6>
+                                    <small>{{ note.updated_at|timesince }} ago</small>
+                                </div>
+                                <div class="col-4">
+                                    <h6 class="text-muted mb-1">Characters</h6>
+                                    <small>{{ note.content|length }} chars</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="card-footer bg-light">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <a href="{% url 'notes_dashboard' %}" class="btn btn-outline-secondary btn-action">
+                                    <i class="fas fa-arrow-left"></i> Back
+                                </a>
+                            </div>
+                            <div>
+                                {% if can_edit %}
+                                <a href="{% url 'note_update' note.pk %}" class="btn btn-primary btn-action">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                {% endif %}
+                                
+                                <!-- Toggle Complete Button -->
+                                <button type="button" 
+                                        class="btn btn-{% if note.is_completed %}warning{% else %}success{% endif %} btn-action" 
+                                        onclick="toggleComplete({{ note.pk }})"
+                                        id="toggleBtn">
+                                    {% if note.is_completed %}
+                                        <i class="fas fa-undo"></i> Mark Pending
+                                    {% else %}
+                                        <i class="fas fa-check"></i> Mark Complete
+                                    {% endif %}
+                                </button>
+                                
+                                {% if can_delete %}
+                                <a href="{% url 'note_delete' note.pk %}" class="btn btn-danger btn-action">
+                                    <i class="fas fa-trash"></i> Delete
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Related Notes (same list) -->
+                {% if related_notes %}
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-layer-group"></i> 
+                            Other notes in "{{ note.note_list.name }}"
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% for related_note in related_notes %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title">
+                                            <a href="{% url 'note_detail' related_note.pk %}" class="text-decoration-none">
+                                                {{ related_note.heading|truncatechars:40 }}
+                                            </a>
+                                        </h6>
+                                        <p class="card-text small text-muted">
+                                            {{ related_note.content|truncatechars:80 }}
+                                        </p>
+                                        <small class="text-muted">
+                                            {{ related_note.updated_at|timesince }} ago
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleComplete(noteId) {
+            const btn = document.getElementById('toggleBtn');
+            const originalText = btn.innerHTML;
+            
+            // Show loading state
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+            btn.disabled = true;
+            
+            fetch(`/notes/${noteId}/toggle-complete/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reload page to show updated status
+                    location.reload();
+                } else {
+                    alert('Error updating note status');
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error updating note status');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            });
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'e':
+                        e.preventDefault();
+                        {% if can_edit %}
+                        window.location.href = '{% url "note_update" note.pk %}';
+                        {% endif %}
+                        break;
+                    case 'Backspace':
+                        e.preventDefault();
+                        window.location.href = '{% url "notes_dashboard" %}';
+                        break;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -2,16 +2,50 @@
 {% block title %}Tasks{% endblock %}
 {% block content %}
 <style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        --danger-gradient: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+        --dark-bg: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        --glass-bg: rgba(255, 255, 255, 0.1);
+        --glass-border: rgba(255, 255, 255, 0.2);
+        --text-dark: #2d3748;
+        --text-light: #718096;
+        --surface-light: rgba(255, 255, 255, 0.95);
+    }
+
     * {
         box-sizing: border-box;
     }
 
     body {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        background: linear-gradient(135deg, #D3FF61 0%, #B8E84A 100%);
+        background: var(--dark-bg);
         min-height: 100vh;
         margin: 0;
         padding: 0;
+        overflow-x: hidden;
+    }
+
+    /* Animated background particles */
+    body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+        animation: float 20s ease-in-out infinite;
+        pointer-events: none;
+        z-index: -1;
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-20px) rotate(180deg); }
     }
 
     .tasks-container {
@@ -20,6 +54,7 @@
         padding: 2rem;
         min-height: 100vh;
         animation: fadeInUp 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        position: relative;
     }
 
     @keyframes fadeInUp {
@@ -40,43 +75,77 @@
         margin-bottom: 3rem;
         flex-wrap: wrap;
         gap: 1.5rem;
-        background: rgba(255, 255, 255, 0.95);
+        background: var(--glass-bg);
         backdrop-filter: blur(20px);
-        padding: 2rem;
+        padding: 2.5rem;
         border-radius: 24px;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2), 0 8px 16px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--glass-border);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .tasks-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--primary-gradient);
+        opacity: 0.1;
+        z-index: -1;
     }
 
     .tasks-title {
-        font-size: 3rem;
-        font-weight: 800;
-        background: linear-gradient(135deg, #000000 0%, #333333 100%);
+        font-size: 3.5rem;
+        font-weight: 900;
+        background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
         margin: 0;
         letter-spacing: -0.02em;
         line-height: 1.1;
+        text-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        position: relative;
+    }
+
+    .tasks-title::after {
+        content: '';
+        position: absolute;
+        bottom: -10px;
+        left: 0;
+        width: 60px;
+        height: 4px;
+        background: var(--secondary-gradient);
+        border-radius: 2px;
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scaleX(1); }
+        50% { opacity: 0.7; transform: scaleX(1.1); }
     }
 
     .add-task-btn {
-        background: linear-gradient(135deg, #000000 0%, #333333 100%);
+        background: var(--secondary-gradient);
         color: white;
         border: none;
-        padding: 1rem 2rem;
-        border-radius: 16px;
-        font-weight: 600;
+        padding: 1.25rem 2.5rem;
+        border-radius: 50px;
+        font-weight: 700;
         font-size: 1rem;
         cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         text-decoration: none;
         display: inline-flex;
         align-items: center;
         gap: 0.75rem;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 15px 35px rgba(245, 87, 108, 0.4), 0 5px 15px rgba(0, 0, 0, 0.2);
         position: relative;
         overflow: hidden;
+        border: 2px solid rgba(255, 255, 255, 0.2);
     }
 
     .add-task-btn::before {
@@ -86,8 +155,8 @@
         left: -100%;
         width: 100%;
         height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-        transition: left 0.5s;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: left 0.6s;
     }
 
     .add-task-btn:hover::before {
@@ -95,21 +164,46 @@
     }
 
     .add-task-btn:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2), 0 8px 15px rgba(0, 0, 0, 0.15);
+        transform: translateY(-5px) scale(1.05);
+        box-shadow: 0 20px 40px rgba(245, 87, 108, 0.5), 0 10px 20px rgba(0, 0, 0, 0.3);
+        color: white;
+        text-decoration: none;
     }
 
     .add-task-btn:active {
-        transform: translateY(-1px);
+        transform: translateY(-2px) scale(1.02);
+    }
+
+    .add-task-btn i {
+        font-size: 1.2rem;
+        animation: bounce 2s ease-in-out infinite;
+    }
+
+    @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-3px); }
     }
 
     .tasks-table-container {
-        background: rgba(255, 255, 255, 0.95);
+        background: var(--glass-bg);
         backdrop-filter: blur(20px);
         border-radius: 24px;
         overflow: hidden;
-        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.1), 0 8px 16px rgba(0, 0, 0, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2), 0 10px 20px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--glass-border);
+        position: relative;
+        animation: slideInUp 0.8s ease-out 0.2s both;
+    }
+
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(50px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     .tasks-table {
@@ -120,7 +214,7 @@
     }
 
     .tasks-table thead {
-        background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+        background: var(--primary-gradient);
         position: relative;
     }
 
@@ -130,29 +224,47 @@
         bottom: 0;
         left: 0;
         right: 0;
-        height: 2px;
-        background: linear-gradient(90deg, #D3FF61, #B8E84A, #D3FF61);
+        height: 3px;
+        background: var(--secondary-gradient);
+        animation: shimmer 3s ease-in-out infinite;
+    }
+
+    @keyframes shimmer {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
     }
 
     .tasks-table th {
-        padding: 1.5rem 2rem;
+        padding: 2rem;
         text-align: left;
         color: white;
-        font-weight: 700;
+        font-weight: 800;
         text-transform: uppercase;
         font-size: 0.875rem;
-        letter-spacing: 0.1em;
+        letter-spacing: 0.15em;
         position: relative;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .tasks-table th::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: rgba(255, 255, 255, 0.2);
     }
 
     .tasks-table td {
-        padding: 1.5rem 2rem;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-        color: #1a1a1a;
+        padding: 2rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.9);
         font-weight: 500;
         font-size: 0.95rem;
-        line-height: 1.5;
+        line-height: 1.6;
         transition: all 0.3s ease;
+        position: relative;
     }
 
     .tasks-table tbody tr:last-child td {
@@ -160,8 +272,9 @@
     }
 
     .tasks-table tbody tr {
-        transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         position: relative;
+        cursor: pointer;
     }
 
     .tasks-table tbody tr::before {
@@ -171,9 +284,10 @@
         top: 0;
         bottom: 0;
         width: 0;
-        background: linear-gradient(135deg, rgba(211, 255, 97, 0.3), rgba(184, 232, 74, 0.3));
-        transition: width 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        background: var(--success-gradient);
+        transition: width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         z-index: -1;
+        opacity: 0.2;
     }
 
     .tasks-table tbody tr:hover::before {
@@ -181,66 +295,97 @@
     }
 
     .tasks-table tbody tr:hover {
-        transform: translateX(8px);
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        transform: translateX(10px) scale(1.02);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        backdrop-filter: blur(10px);
     }
 
     .status-badge {
         display: inline-flex;
         align-items: center;
-        padding: 0.5rem 1rem;
-        border-radius: 12px;
-        font-size: 0.85rem;
-        font-weight: 600;
+        gap: 0.5rem;
+        padding: 0.75rem 1.25rem;
+        border-radius: 50px;
+        font-size: 0.8rem;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        border: 2px solid;
+        letter-spacing: 0.1em;
         transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        border: 2px solid;
+    }
+
+    .status-badge::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: left 0.5s;
+    }
+
+    .status-badge:hover::before {
+        left: 100%;
     }
 
     .status-pending {
-        background: rgba(255, 193, 7, 0.1);
-        color: #e67e22;
-        border-color: rgba(255, 193, 7, 0.3);
+        background: rgba(255, 193, 7, 0.2);
+        color: #ffc107;
+        border-color: rgba(255, 193, 7, 0.5);
+        box-shadow: 0 4px 15px rgba(255, 193, 7, 0.2);
     }
 
     .status-in-progress {
-        background: rgba(0, 123, 255, 0.1);
-        color: #007bff;
-        border-color: rgba(0, 123, 255, 0.3);
+        background: rgba(0, 123, 255, 0.2);
+        color: #00f2fe;
+        border-color: rgba(0, 123, 255, 0.5);
+        box-shadow: 0 4px 15px rgba(0, 123, 255, 0.2);
     }
 
     .status-completed {
-        background: rgba(40, 167, 69, 0.1);
-        color: #28a745;
-        border-color: rgba(40, 167, 69, 0.3);
+        background: rgba(40, 167, 69, 0.2);
+        color: #00f2fe;
+        border-color: rgba(40, 167, 69, 0.5);
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.2);
     }
 
     .status-overdue {
-        background: rgba(220, 53, 69, 0.1);
-        color: #dc3545;
-        border-color: rgba(220, 53, 69, 0.3);
+        background: rgba(220, 53, 69, 0.2);
+        color: #ff9a9e;
+        border-color: rgba(220, 53, 69, 0.5);
+        box-shadow: 0 4px 15px rgba(220, 53, 69, 0.2);
     }
 
     .action-buttons {
-        display: flex;
-        gap: 0.75rem;
-        align-items: center;
+        display: flex !important;
+        gap: 1rem !important;
+        align-items: center !important;
+        flex-wrap: wrap !important;
+        justify-content: flex-start !important;
+        min-width: 200px !important;
     }
 
     .action-btn {
-        padding: 0.75rem 1.25rem;
-        border-radius: 12px;
-        font-weight: 600;
-        font-size: 0.875rem;
-        transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        border: 2px solid;
-        position: relative;
-        overflow: hidden;
+        padding: 0.875rem 1.5rem !important;
+        border-radius: 50px !important;
+        font-weight: 700 !important;
+        font-size: 0.85rem !important;
+        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+        text-decoration: none !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+        border: 2px solid !important;
+        position: relative !important;
+        overflow: hidden !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+        cursor: pointer !important;
+        background: transparent !important;
+        white-space: nowrap !important;
     }
 
     .action-btn::before {
@@ -251,7 +396,7 @@
         width: 100%;
         height: 100%;
         background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-        transition: left 0.4s;
+        transition: left 0.5s;
     }
 
     .action-btn:hover::before {
@@ -259,51 +404,75 @@
     }
 
     .edit-btn {
-        background: rgba(0, 123, 255, 0.1);
-        color: #007bff;
-        border-color: rgba(0, 123, 255, 0.3);
+        background: rgba(79, 172, 254, 0.2);
+        color: #4facfe;
+        border-color: rgba(79, 172, 254, 0.5);
+        box-shadow: 0 4px 15px rgba(79, 172, 254, 0.2);
     }
 
     .edit-btn:hover {
-        background: #007bff;
+        background: var(--success-gradient);
         color: white;
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(0, 123, 255, 0.3);
+        transform: translateY(-3px) scale(1.05);
+        box-shadow: 0 10px 25px rgba(79, 172, 254, 0.4);
+        text-decoration: none;
     }
 
     .delete-btn {
-        background: rgba(220, 53, 69, 0.1);
-        color: #dc3545;
-        border-color: rgba(220, 53, 69, 0.3);
+        background: rgba(255, 154, 158, 0.2) !important;
+        color: #ff9a9e !important;
+        border-color: rgba(255, 154, 158, 0.5) !important;
+        box-shadow: 0 4px 15px rgba(255, 154, 158, 0.2) !important;
+        border: 2px solid rgba(255, 154, 158, 0.5) !important;
+        cursor: pointer !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
     }
 
     .delete-btn:hover {
-        background: #dc3545;
-        color: white;
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(220, 53, 69, 0.3);
+        background: var(--danger-gradient) !important;
+        color: white !important;
+        transform: translateY(-3px) scale(1.05) !important;
+        box-shadow: 0 10px 25px rgba(255, 154, 158, 0.4) !important;
+        text-decoration: none !important;
     }
 
     .empty-message {
         text-align: center;
-        padding: 4rem 2rem;
-        color: rgba(0, 0, 0, 0.6);
-        font-size: 1.25rem;
-        font-weight: 500;
-        background: rgba(255, 255, 255, 0.95);
+        padding: 6rem 2rem;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 1.5rem;
+        font-weight: 600;
+        background: var(--glass-bg);
         backdrop-filter: blur(20px);
         border-radius: 24px;
         margin-top: 2rem;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--glass-border);
+        position: relative;
+        overflow: hidden;
     }
 
     .empty-message::before {
-        content: '📝';
+        content: '📋';
         display: block;
-        font-size: 4rem;
-        margin-bottom: 1rem;
+        font-size: 5rem;
+        margin-bottom: 2rem;
         opacity: 0.7;
+        animation: float 3s ease-in-out infinite;
+    }
+
+    .empty-message::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--primary-gradient);
+        opacity: 0.05;
+        z-index: -1;
     }
 
     .due-date {
@@ -311,11 +480,13 @@
         align-items: center;
         gap: 0.75rem;
         font-weight: 600;
+        color: rgba(255, 255, 255, 0.9);
     }
 
     .due-date-icon {
-        color: #e67e22;
-        font-size: 1.1rem;
+        color: #fee140;
+        font-size: 1.2rem;
+        animation: pulse 2s ease-in-out infinite;
     }
 
     .description-text {
@@ -324,34 +495,42 @@
         overflow: hidden;
         text-overflow: ellipsis;
         line-height: 1.6;
+        color: rgba(255, 255, 255, 0.8);
+        position: relative;
     }
 
     .task-title {
         font-weight: 700;
-        color: #000000;
-        font-size: 1.05rem;
+        color: #ffffff;
+        font-size: 1.1rem;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        position: relative;
     }
 
     .assigned-user {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.75rem;
         font-weight: 600;
+        color: rgba(255, 255, 255, 0.9);
+        position: relative;
     }
 
     .assigned-user::before {
         content: '👤';
-        opacity: 0.7;
+        font-size: 1.2rem;
+        opacity: 0.8;
+        animation: bounce 3s ease-in-out infinite;
     }
 
-    /* Responsive Design */
+    /* Enhanced mobile responsiveness */
     @media (max-width: 1200px) {
         .tasks-container {
             padding: 1.5rem;
         }
         
         .tasks-title {
-            font-size: 2.5rem;
+            font-size: 2.8rem;
         }
     }
 
@@ -363,12 +542,12 @@
         .tasks-header {
             flex-direction: column;
             text-align: center;
-            gap: 1.5rem;
-            padding: 1.5rem;
+            gap: 2rem;
+            padding: 2rem;
         }
 
         .tasks-title {
-            font-size: 2rem;
+            font-size: 2.2rem;
         }
 
         .tasks-table-container {
@@ -378,18 +557,20 @@
 
         .tasks-table th,
         .tasks-table td {
-            padding: 1rem;
+            padding: 1.5rem 1rem;
             font-size: 0.875rem;
         }
 
         .action-buttons {
             flex-direction: column;
-            gap: 0.5rem;
+            gap: 0.75rem;
         }
 
         .action-btn {
-            padding: 0.5rem 1rem;
+            padding: 0.75rem 1.25rem;
             font-size: 0.8rem;
+            width: 100%;
+            justify-content: center;
         }
 
         .description-text {
@@ -397,44 +578,64 @@
         }
 
         .status-badge {
-            padding: 0.4rem 0.8rem;
+            padding: 0.5rem 1rem;
             font-size: 0.75rem;
         }
     }
 
     @media (max-width: 480px) {
         .tasks-title {
-            font-size: 1.75rem;
+            font-size: 1.8rem;
         }
 
         .add-task-btn {
-            padding: 0.875rem 1.5rem;
+            padding: 1rem 2rem;
             font-size: 0.9rem;
         }
 
         .tasks-table th,
         .tasks-table td {
-            padding: 0.75rem;
+            padding: 1rem 0.75rem;
+        }
+
+        .empty-message {
+            padding: 4rem 1.5rem;
+            font-size: 1.2rem;
         }
     }
 
-    /* Smooth scrolling for mobile tables */
+    /* Custom scrollbar */
     .tasks-table-container::-webkit-scrollbar {
-        height: 8px;
+        height: 10px;
     }
 
     .tasks-table-container::-webkit-scrollbar-track {
-        background: rgba(0, 0, 0, 0.1);
-        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 5px;
     }
 
     .tasks-table-container::-webkit-scrollbar-thumb {
-        background: linear-gradient(135deg, #D3FF61, #B8E84A);
-        border-radius: 4px;
+        background: var(--secondary-gradient);
+        border-radius: 5px;
+        border: 2px solid rgba(255, 255, 255, 0.1);
     }
 
     .tasks-table-container::-webkit-scrollbar-thumb:hover {
-        background: linear-gradient(135deg, #B8E84A, #A5D63D);
+        background: var(--primary-gradient);
+    }
+
+    /* Loading animation for better UX */
+    .loading {
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .fade-in {
+        animation: fadeIn 0.6s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
     }
 </style>
 
@@ -461,12 +662,14 @@
             </thead>
             <tbody>
                 {% for task in tasks %}
-                <tr>
+                <tr class="fade-in" style="animation-delay: {{ forloop.counter0|floatformat:1 }}00ms;">
                     <td>
                         <div class="task-title">{{ task.title }}</div>
                     </td>
                     <td>
-                        <div class="description-text">{{ task.description|truncatechars:50 }}</div>
+                        <div class="description-text" title="{{ task.description }}">
+                            {{ task.description|truncatechars:50 }}
+                        </div>
                     </td>
                     <td>
                         <div class="due-date">
@@ -479,6 +682,15 @@
                     </td>
                     <td>
                         <span class="status-badge status-{{ task.status|lower|slugify }}">
+                            {% if task.status|lower == 'pending' %}
+                                <i class="fas fa-clock"></i>
+                            {% elif task.status|lower == 'in-progress' %}
+                                <i class="fas fa-spinner"></i>
+                            {% elif task.status|lower == 'completed' %}
+                                <i class="fas fa-check-circle"></i>
+                            {% elif task.status|lower == 'overdue' %}
+                                <i class="fas fa-exclamation-triangle"></i>
+                            {% endif %}
                             {{ task.status }}
                         </span>
                     </td>
@@ -487,9 +699,12 @@
                             <a href="{% url 'task_update' task.pk %}" class="action-btn edit-btn">
                                 <i class="fas fa-edit"></i> Edit
                             </a>
-                            <a href="{% url 'task_delete' task.pk %}" class="action-btn delete-btn">
+                            <button type="button" class="action-btn delete-btn" 
+                                    data-task-id="{{ task.pk }}" 
+                                    data-task-title="{{ task.title }}"
+                                    onclick="openDeleteModal(this)">
                                 <i class="fas fa-trash"></i> Delete
-                            </a>
+                            </button>
                         </div>
                     </td>
                 </tr>
@@ -499,8 +714,503 @@
     </div>
     {% else %}
     <div class="empty-message">
-        <p>No tasks found.</p>
+        <p>No tasks found. Ready to get started?</p>
+        <a href="{% url 'task_create' %}" class="add-task-btn" style="margin-top: 2rem;">
+            <i class="fas fa-plus"></i> Create Your First Task
+        </a>
     </div>
     {% endif %}
 </div>
+
+<!-- Modern Delete Confirmation Modal -->
+<div class="delete-modal-overlay" id="deleteModalOverlay">
+    <div class="delete-modal">
+        <div class="delete-modal-header">
+            <div class="delete-icon-container">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 class="delete-modal-title">Delete Task</h3>
+        </div>
+        
+        <div class="delete-modal-body">
+            <p class="delete-confirmation-text">
+                Are you sure you want to delete the task 
+                <strong id="taskTitleToDelete"></strong>?
+            </p>
+            <p class="delete-warning-text">
+                <i class="fas fa-info-circle"></i>
+                This action cannot be undone and will permanently remove the task.
+            </p>
+        </div>
+        
+        <div class="delete-modal-footer">
+            <button type="button" class="modal-btn cancel-btn" onclick="closeDeleteModal()">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+            <form id="deleteTaskForm" method="post" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="_method" value="DELETE">
+                <button type="submit" class="modal-btn confirm-delete-btn">
+                    <i class="fas fa-trash"></i> Delete Task
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .delete-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(10px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    .delete-modal-overlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .delete-modal {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        max-width: 500px;
+        width: 90%;
+        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+        transform: scale(0.8) translateY(20px);
+        transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        overflow: hidden;
+        position: relative;
+    }
+
+    .delete-modal-overlay.active .delete-modal {
+        transform: scale(1) translateY(0);
+    }
+
+    .delete-modal-header {
+        background: var(--danger-gradient);
+        padding: 2rem;
+        text-align: center;
+        position: relative;
+    }
+
+    .delete-modal-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+    }
+
+    .delete-icon-container {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .delete-icon-container i {
+        font-size: 2.5rem;
+        color: white;
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    .delete-modal-title {
+        color: white;
+        font-size: 1.8rem;
+        font-weight: 800;
+        margin: 0;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        position: relative;
+        z-index: 1;
+    }
+
+    .delete-modal-body {
+        padding: 2rem;
+        text-align: center;
+    }
+
+    .delete-confirmation-text {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1.1rem;
+        font-weight: 500;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+
+    .delete-confirmation-text strong {
+        color: #ff9a9e;
+        font-weight: 700;
+    }
+
+    .delete-warning-text {
+        background: rgba(255, 193, 7, 0.2);
+        border: 1px solid rgba(255, 193, 7, 0.4);
+        border-radius: 12px;
+        padding: 1rem;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin: 0;
+    }
+
+    .delete-warning-text i {
+        color: #ffc107;
+        font-size: 1.2rem;
+    }
+
+    .delete-modal-footer {
+        padding: 2rem;
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .modal-btn {
+        padding: 1rem 2rem;
+        border-radius: 50px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        border: 2px solid;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        position: relative;
+        overflow: hidden;
+        min-width: 140px;
+        justify-content: center;
+    }
+
+    .modal-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: left 0.5s;
+    }
+
+    .modal-btn:hover::before {
+        left: 100%;
+    }
+
+    .cancel-btn {
+        background: rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.9);
+        border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .cancel-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(255, 255, 255, 0.1);
+    }
+
+    .confirm-delete-btn {
+        background: var(--danger-gradient);
+        color: white;
+        border-color: rgba(255, 154, 158, 0.5);
+        box-shadow: 0 4px 15px rgba(255, 154, 158, 0.3);
+    }
+
+    .confirm-delete-btn:hover {
+        transform: translateY(-2px) scale(1.05);
+        box-shadow: 0 10px 25px rgba(255, 154, 158, 0.4);
+    }
+
+    .confirm-delete-btn:active {
+        transform: translateY(0) scale(1.02);
+    }
+
+    /* Loading state for delete button */
+    .confirm-delete-btn.loading {
+        opacity: 0.8;
+        pointer-events: none;
+    }
+
+    .confirm-delete-btn.loading i::before {
+        content: '\f110';
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    /* Responsive adjustments for modal */
+    @media (max-width: 768px) {
+        .delete-modal {
+            width: 95%;
+            margin: 1rem;
+        }
+
+        .delete-modal-header,
+        .delete-modal-body,
+        .delete-modal-footer {
+            padding: 1.5rem;
+        }
+
+        .delete-modal-footer {
+            flex-direction: column;
+        }
+
+        .modal-btn {
+            width: 100%;
+        }
+
+        .delete-icon-container {
+            width: 60px;
+            height: 60px;
+        }
+
+        .delete-icon-container i {
+            font-size: 2rem;
+        }
+
+        .delete-modal-title {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add smooth loading animations
+    const tableRows = document.querySelectorAll('.tasks-table tbody tr');
+    tableRows.forEach((row, index) => {
+        row.style.opacity = '0';
+        row.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            row.style.transition = 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+            row.style.opacity = '1';
+            row.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+
+    // Enhanced hover effects for action buttons
+    const actionButtons = document.querySelectorAll('.action-btn');
+    actionButtons.forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-3px) scale(1.05)';
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+        });
+    });
+
+    // Add click feedback to buttons
+    const buttons = document.querySelectorAll('.add-task-btn, .action-btn');
+    buttons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            // Create ripple effect
+            const ripple = document.createElement('span');
+            const rect = this.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = e.clientX - rect.left - size / 2;
+            const y = e.clientY - rect.top - size / 2;
+            
+            ripple.style.cssText = `
+                position: absolute;
+                width: ${size}px;
+                height: ${size}px;
+                left: ${x}px;
+                top: ${y}px;
+                background: rgba(255, 255, 255, 0.3);
+                border-radius: 50%;
+                transform: scale(0);
+                animation: ripple 0.6s ease-out;
+                pointer-events: none;
+            `;
+            
+            this.style.position = 'relative';
+            this.appendChild(ripple);
+            
+            setTimeout(() => ripple.remove(), 600);
+        });
+    });
+
+    // Add CSS for ripple animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes ripple {
+            to {
+                transform: scale(2);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Enhanced table row interactions
+    const tableRows2 = document.querySelectorAll('.tasks-table tbody tr');
+    tableRows2.forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            this.style.cursor = 'pointer';
+        });
+        
+        row.addEventListener('click', function(e) {
+            // Don't trigger if clicking on action buttons
+            if (!e.target.closest('.action-btn')) {
+                // Add a subtle pulse animation
+                this.style.animation = 'pulse 0.3s ease-in-out';
+                setTimeout(() => {
+                    this.style.animation = '';
+                }, 300);
+            }
+        });
+    });
+
+    // Add loading states
+    const addTaskBtn = document.querySelector('.add-task-btn');
+    if (addTaskBtn) {
+        addTaskBtn.addEventListener('click', function() {
+            const icon = this.querySelector('i');
+            const originalClass = icon.className;
+            icon.className = 'fas fa-spinner fa-spin';
+            
+            setTimeout(() => {
+                icon.className = originalClass;
+            }, 1000);
+        });
+    }
+
+    // Intersection Observer for scroll animations
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('fade-in');
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, observerOptions);
+
+    // Observe table container for scroll animations
+    const tableContainer = document.querySelector('.tasks-table-container');
+    if (tableContainer) {
+        tableContainer.style.opacity = '0';
+        tableContainer.style.transform = 'translateY(30px)';
+        tableContainer.style.transition = 'all 0.8s ease';
+        observer.observe(tableContainer);
+    }
+
+    // Delete Task Modal Functions
+    window.openDeleteModal = function(button) {
+        const taskId = button.getAttribute('data-task-id');
+        const taskTitle = button.getAttribute('data-task-title');
+        const modal = document.getElementById('deleteModalOverlay');
+        const form = document.getElementById('deleteTaskForm');
+        const titleElement = document.getElementById('taskTitleToDelete');
+        
+        // Set the task title in the modal
+        titleElement.textContent = taskTitle;
+        
+        // Set the form action URL
+        form.action = `/tasks/${taskId}/delete/`; // Adjust this URL pattern to match your Django URLs
+        
+        // Show the modal with animation
+        modal.classList.add('active');
+        
+        // Prevent body scroll
+        document.body.style.overflow = 'hidden';
+        
+        // Add escape key listener
+        document.addEventListener('keydown', handleEscapeKey);
+    };
+
+    window.closeDeleteModal = function() {
+        const modal = document.getElementById('deleteModalOverlay');
+        
+        // Hide the modal with animation
+        modal.classList.remove('active');
+        
+        // Restore body scroll
+        document.body.style.overflow = '';
+        
+        // Remove escape key listener
+        document.removeEventListener('keydown', handleEscapeKey);
+    };
+
+    function handleEscapeKey(event) {
+        if (event.key === 'Escape') {
+            closeDeleteModal();
+        }
+    }
+
+    // Close modal when clicking overlay
+    document.getElementById('deleteModalOverlay').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeDeleteModal();
+        }
+    });
+
+    // Handle delete form submission
+    document.getElementById('deleteTaskForm').addEventListener('submit', function(e) {
+        const deleteBtn = this.querySelector('.confirm-delete-btn');
+        const icon = deleteBtn.querySelector('i');
+        
+        // Add loading state
+        deleteBtn.classList.add('loading');
+        deleteBtn.disabled = true;
+        icon.className = 'fas fa-spinner fa-spin';
+        
+        // Note: The form will submit normally to Django view
+        // You can add additional loading states or success feedback here
+    });
+
+    // Enhanced delete button hover effects
+    const deleteButtons = document.querySelectorAll('.action-btn.delete-btn');
+    deleteButtons.forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-3px) scale(1.05)';
+            this.style.boxShadow = '0 10px 25px rgba(255, 154, 158, 0.4)';
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+            this.style.boxShadow = '0 4px 15px rgba(255, 154, 158, 0.2)';
+        });
+    });
+});
+</script>
+
 {% endblock %}

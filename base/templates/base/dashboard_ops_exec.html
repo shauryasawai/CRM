@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operations Executive Dashboard</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        :root {
+            --bg-primary: #D3FF61;
+            --bg-secondary: #EFFFAB;
+            --bg-card: #FFFFFF;
+            --bg-accent: #F8FFF0;
+            --bg-overlay: rgba(255, 255, 255, 0.95);
+            --text-primary: #1A1A1A;
+            --text-secondary: #404040;
+            --text-muted: #6B7280;
+            --text-contrast: #FFFFFF;
+            --accent-primary: #000000;
+            --accent-success: #059669;
+            --accent-warning: #D97706;
+            --accent-danger: #DC2626;
+            --accent-purple: #7C3AED;
+            --accent-cyan: #0891B2;
+            --accent-pink: #DB2777;
+            --border-light: #E5E7EB;
+            --border-accent: #D1D5DB;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            --gradient-primary: linear-gradient(135deg, #D3FF61 0%, #EFFFAB 100%);
+            --gradient-dark: linear-gradient(135deg, #1A1A1A 0%, #404040 100%);
+            --gradient-success: linear-gradient(135deg, #059669 0%, #10B981 100%);
+            --gradient-warning: linear-gradient(135deg, #D97706 0%, #F59E0B 100%);
+            --gradient-danger: linear-gradient(135deg, #DC2626 0%, #EF4444 100%);
+            --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            --gradient-mesh: radial-gradient(circle at 20% 20%, rgba(211, 255, 97, 0.3) 0%, transparent 50%),
+                             radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.3) 0%, transparent 50%),
+                             radial-gradient(circle at 40% 40%, rgba(0, 0, 0, 0.1) 0%, transparent 50%);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg-primary);
+            background-image: var(--gradient-mesh);
+            color: var(--text-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .dashboard-container {
+            max-width: 1920px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            animation: fadeInUp 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .dashboard-container::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent 0%, rgba(255, 255, 255, 0.02) 50%, transparent 100%);
+            animation: shimmer 3s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Header Styles */
+        .header-section {
+            background: var(--bg-card);
+            border-radius: 24px;
+            padding: 2rem;
+            margin-bottom: 3rem;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+
+        .header-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: var(--gradient-dark);
+            border-radius: 24px 24px 0 0;
+        }
+
+        .navbar-brand {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .brand-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--gradient-dark);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-contrast);
+            font-size: 1.5rem;
+            box-shadow: var(--shadow-md);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        .nav-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 1.5rem;
+            background: var(--bg-accent);
+            color: var(--text-primary);
+            text-decoration: none;
+            border-radius: 16px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 2px solid var(--border-light);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .nav-link:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--accent-primary);
+            background: var(--accent-primary);
+            color: var(--text-contrast);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 2rem;
+        }
+
+        /* Dashboard Title */
+        .dashboard-title {
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 900;
+            background: var(--gradient-dark);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .role-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            margin-bottom: 2rem;
+        }
+
+        /* KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: 24px;
+            padding: 2.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            box-shadow: var(--shadow-md);
+            backdrop-filter: blur(10px);
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            border-radius: 24px 24px 0 0;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-12px) scale(1.02);
+            box-shadow: var(--shadow-2xl);
+        }
+
+        .kpi-card.primary::before { 
+            background: var(--gradient-primary); 
+        }
+        
+        .kpi-card.success::before { 
+            background: var(--gradient-success); 
+        }
+        
+        .kpi-card.warning::before { 
+            background: var(--gradient-warning); 
+        }
+        
+        .kpi-card.danger::before { 
+            background: var(--gradient-danger); 
+        }
+
+        .kpi-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.05));
+            color: var(--text-primary);
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s ease;
+        }
+
+        .kpi-card:hover .kpi-icon {
+            transform: scale(1.1);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .kpi-card.success .kpi-icon {
+            background: linear-gradient(135deg, rgba(5, 150, 105, 0.2), rgba(16, 185, 129, 0.1));
+            color: var(--accent-success);
+        }
+
+        .kpi-card.warning .kpi-icon {
+            background: linear-gradient(135deg, rgba(217, 119, 6, 0.2), rgba(245, 158, 11, 0.1));
+            color: var(--accent-warning);
+        }
+
+        .kpi-card.danger .kpi-icon {
+            background: linear-gradient(135deg, rgba(220, 38, 38, 0.2), rgba(239, 68, 68, 0.1));
+            color: var(--accent-danger);
+        }
+
+        .kpi-label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .kpi-value {
+            font-size: 2.8rem;
+            font-weight: 900;
+            color: var(--text-primary);
+            line-height: 1;
+            margin-bottom: 0.5rem;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .kpi-subtitle {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .kpi-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .badge-pending {
+            background: rgba(217, 119, 6, 0.1);
+            color: var(--accent-warning);
+            border: 1px solid rgba(217, 119, 6, 0.2);
+        }
+
+        /* Content Sections */
+        .section-title {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 2.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .section-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--gradient-dark);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-contrast);
+            font-size: 1.5rem;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .content-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .content-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-2xl);
+        }
+
+        .card-header {
+            background: var(--bg-accent);
+            padding: 2rem 2rem 1.5rem;
+            border-bottom: 1px solid var(--border-light);
+            position: relative;
+        }
+
+        .card-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--gradient-primary);
+        }
+
+        .card-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .card-body {
+            padding: 2rem;
+        }
+
+        .view-all-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            border: 2px solid var(--border-light);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .view-all-btn:hover {
+            background: var(--accent-primary);
+            color: var(--text-contrast);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* List Items */
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 1.5rem 0;
+            border-bottom: 1px solid var(--border-light);
+            transition: all 0.3s ease;
+        }
+
+        .list-item:hover {
+            background: var(--bg-accent);
+            margin: 0 -2rem;
+            padding: 1.5rem 2rem;
+            border-radius: 12px;
+            border-bottom: 1px solid transparent;
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+
+        .item-content h6 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .item-meta {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+        }
+
+        .item-description {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-completed {
+            background: rgba(5, 150, 105, 0.1);
+            color: var(--accent-success);
+            border: 1px solid rgba(5, 150, 105, 0.2);
+        }
+
+        .badge-overdue {
+            background: rgba(220, 38, 38, 0.1);
+            color: var(--accent-danger);
+            border: 1px solid rgba(220, 38, 38, 0.2);
+        }
+
+        .badge-pending {
+            background: rgba(217, 119, 6, 0.1);
+            color: var(--accent-warning);
+            border: 1px solid rgba(217, 119, 6, 0.2);
+        }
+
+        .badge-open {
+            background: rgba(220, 38, 38, 0.1);
+            color: var(--accent-danger);
+            border: 1px solid rgba(220, 38, 38, 0.2);
+        }
+
+        .badge-in-progress {
+            background: rgba(217, 119, 6, 0.1);
+            color: var(--accent-warning);
+            border: 1px solid rgba(217, 119, 6, 0.2);
+        }
+
+        .badge-closed {
+            background: rgba(5, 150, 105, 0.1);
+            color: var(--accent-success);
+            border: 1px solid rgba(5, 150, 105, 0.2);
+        }
+
+        .badge-active {
+            background: rgba(5, 150, 105, 0.1);
+            color: var(--accent-success);
+            border: 1px solid rgba(5, 150, 105, 0.2);
+        }
+
+        .badge-inactive {
+            background: rgba(107, 114, 128, 0.1);
+            color: var(--text-muted);
+            border: 1px solid rgba(107, 114, 128, 0.2);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: 24px;
+            padding: 2.5rem;
+            margin-top: 2rem;
+            box-shadow: var(--shadow-lg);
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quick-actions::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: var(--gradient-primary);
+            border-radius: 24px 24px 0 0;
+        }
+
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            padding: 2rem;
+            background: var(--bg-accent);
+            color: var(--text-primary);
+            text-decoration: none;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 2px solid var(--border-light);
+            box-shadow: var(--shadow-md);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-8px) scale(1.05);
+            box-shadow: var(--shadow-xl);
+            border-color: var(--accent-primary);
+            background: var(--accent-primary);
+            color: var(--text-contrast);
+        }
+
+        .action-icon {
+            font-size: 2.5rem;
+            opacity: 0.8;
+        }
+
+        .add-note-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 1rem 2rem;
+            background: var(--gradient-primary);
+            color: var(--text-primary);
+            text-decoration: none;
+            border-radius: 16px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 2px solid transparent;
+            box-shadow: var(--shadow-md);
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        .add-note-btn:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl);
+            background: var(--accent-primary);
+            color: var(--text-contrast);
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .floating {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .dashboard-container {
+                padding: 1.5rem;
+            }
+            
+            .kpi-grid,
+            .content-grid {
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 1.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-container {
+                padding: 1rem;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .dashboard-title {
+                font-size: 2rem;
+                text-align: center;
+            }
+            
+            .kpi-grid,
+            .content-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .kpi-card,
+            .content-card {
+                padding: 1.5rem;
+            }
+            
+            .card-header,
+            .card-body {
+                padding: 1.5rem;
+            }
+            
+            .actions-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+        }
+
+        @media (max-width: 480px) {
+            .dashboard-container {
+                padding: 0.75rem;
+            }
+            
+            .kpi-card,
+            .content-card,
+            .quick-actions {
+                padding: 1.25rem;
+            }
+            
+            .card-header,
+            .card-body {
+                padding: 1.25rem;
+            }
+        }
+
+        /* Focus states for accessibility */
+        .nav-link:focus,
+        .view-all-btn:focus,
+        .action-btn:focus,
+        .add-note-btn:focus {
+            outline: 3px solid var(--accent-primary);
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header Section -->
+        <div class="header-section">
+            <div class="header-content">
+                <div>
+                    <a href="{% url 'dashboard' %}" class="navbar-brand">
+                        <div class="brand-icon">⚡</div>
+                        <div>
+                            <div class="dashboard-title">Operations Hub</div>
+                            <div class="role-subtitle">CRM - Operations Executive</div>
+                        </div>
+                    </a>
+                </div>
+                <div class="nav-links">
+                    <a href="{% url 'notes_dashboard' %}" class="nav-link">
+                        📝 Notes
+                    </a>
+                    <a href="{% url 'logout' %}" class="nav-link">
+                        🚪 Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+            <div class="kpi-card primary floating">
+                <div class="kpi-header">
+                    <div class="kpi-icon">📋</div>
+                    <div class="kpi-badge badge-pending">{{ pending_tasks }} pending</div>
+                </div>
+                <div class="kpi-label">My Tasks</div>
+                <div class="kpi-value">{{ my_tasks.count }}</div>
+                <div class="kpi-subtitle">Active assignments</div>
+            </div>
+
+            <div class="kpi-card warning floating">
+                <div class="kpi-header">
+                    <div class="kpi-icon">⚠️</div>
+                    <div class="kpi-badge badge-overdue">Immediate</div>
+                </div>
+                <div class="kpi-label">Overdue</div>
+                <div class="kpi-value">{{ overdue_tasks }}</div>
+                <div class="kpi-subtitle">Tasks past due date</div>
+            </div>
+
+            <div class="kpi-card danger floating">
+                <div class="kpi-header">
+                    <div class="kpi-icon">🎧</div>
+                    <div class="kpi-badge badge-open">Active</div>
+                </div>
+                <div class="kpi-label">Open Requests</div>
+                <div class="kpi-value">{{ open_requests }}</div>
+                <div class="kpi-subtitle">Service requests</div>
+            </div>
+
+            <div class="kpi-card success floating">
+                <div class="kpi-header">
+                    <div class="kpi-icon">👥</div>
+                    <div class="kpi-badge badge-active">Active</div>
+                </div>
+                <div class="kpi-label">My Clients</div>
+                <div class="kpi-value">{{ my_client_profiles.count }}</div>
+                <div class="kpi-subtitle">Client profiles</div>
+            </div>
+        </div>
+
+        <!-- Recent Activities Section -->
+        <h2 class="section-title">
+            <div class="section-icon">📊</div>
+            Recent Activities
+        </h2>
+
+        <div class="content-grid">
+            <!-- Recent Tasks -->
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        ✅ Recent Tasks
+                    </div>
+                    <a href="{% url 'task_list' %}" class="view-all-btn">View All →</a>
+                </div>
+                <div class="card-body">
+                    {% for task in recent_tasks %}
+                    <div class="list-item">
+                        <div class="item-content">
+                            <h6>{{ task.title|truncatechars:40 }}</h6>
+                            <div class="item-meta">Due: {{ task.due_date|date:"M d, Y" }}</div>
+                        </div>
+                        <div>
+                            {% if task.completed %}
+                                <span class="status-badge badge-completed">Completed</span>
+                            {% elif task.due_date < now %}
+                                <span class="status-badge badge-overdue">Overdue</span>
+                            {% else %}
+                                <span class="status-badge badge-pending">Pending</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="empty-state">
+                        <p>No recent tasks</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Recent Service Requests -->
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        🎧 Recent Service Requests
+                    </div>
+                    <a href="{% url 'service_request_list' %}" class="view-all-btn">View All →</a>
+                </div>
+                <div class="card-body">
+                    {% for request in recent_service_requests %}
+                    <div class="list-item">
+                        <div class="item-content">
+                            <h6>{{ request.client.name }}</h6>
+                            <div class="item-description">{{ request.description|truncatechars:50 }}</div>
+                        </div>
+                        <div>
+                            <span class="status-badge badge-{% if request.status == 'open' %}open{% elif request.status == 'in_progress' %}in-progress{% else %}closed{% endif %}">
+                                {{ request.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="empty-state">
+                        <p>No recent service requests</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Client Profiles and Notes Section -->
+        <div class="content-grid">
+            <!-- Recent Client Profiles -->
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        👥 Recent Client Profiles
+                    </div>
+                    <a href="{% url 'client_profile_list' %}" class="view-all-btn">View All →</a>
+                </div>
+                <div class="card-body">
+                    {% for profile in recent_client_profiles %}
+                    <div class="list-item">
+                        <div class="item-content">
+                            <h6>{{ profile.client_full_name }}</h6>
+                            <div class="item-meta">{{ profile.email }}</div>
+                        </div>
+                        <div>
+                            <span class="status-badge badge-{% if profile.status == 'active' %}active{% else %}inactive{% endif %}">
+                                {{ profile.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="empty-state">
+                        <p>No recent client profiles</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Recent Notes -->
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        📝 My Notes
+                    </div>
+                    <a href="{% url 'notes_dashboard' %}" class="view-all-btn">View All →</a>
+                </div>
+                <div class="card-body">
+                    {% for note in recent_notes %}
+                    <div class="list-item">
+                        <div class="item-content">
+                            <h6>{{ note.heading|truncatechars:30 }}</h6>
+                            <div class="item-meta">{{ note.updated_at|timesince }} ago</div>
+                            <div class="item-description">{{ note.content|truncatechars:50 }}</div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="empty-state">
+                        <p>No recent notes</p>
+                    </div>
+                    {% endfor %}
+                    <a href="{% url 'note_create' %}" class="add-note-btn">
+                        ➕ Add Note
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <h2 class="section-title">
+                <div class="section-icon">⚡</div>
+                Quick Actions
+            </h2>
+            
+            <div class="actions-grid">
+                <a href="{% url 'task_list' %}" class="action-btn">
+                    <div class="action-icon">📋</div>
+                    <div>My Tasks</div>
+                </a>
+                <a href="{% url 'service_request_list' %}" class="action-btn">
+                    <div class="action-icon">🎧</div>
+                    <div>Service Requests</div>
+                </a>
+                <a href="{% url 'client_profile_list' %}" class="action-btn">
+                    <div class="action-icon">👥</div>
+                    <div>Client Profiles</div>
+                </a>
+                <a href="{% url 'notes_dashboard' %}" class="action-btn">
+                    <div class="action-icon">📝</div>
+                    <div>Notes</div>
+                </a>
+                <a href="{% url 'note_create' %}" class="action-btn">
+                    <div class="action-icon">➕</div>
+                    <div>Create Note</div>
+                </a>
+                <a href="{% url 'dashboard' %}" class="action-btn">
+                    <div class="action-icon">🏠</div>
+                    <div>Main Dashboard</div>
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

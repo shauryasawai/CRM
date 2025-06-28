@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notes Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            --danger-gradient: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            --info-gradient: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            --dark-bg: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --text-light: #e2e8f0;
+            --card-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--dark-bg);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            color: var(--text-light);
+            overflow-x: hidden;
+        }
+
+        /* Animated background particles */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1.5" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            animation: float 25s ease-in-out infinite;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-30px) rotate(180deg); }
+        }
+
+        .modern-navbar {
+            background: var(--glass-bg) !important;
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .modern-navbar .navbar-brand {
+            font-weight: 800;
+            font-size: 1.5rem;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .modern-navbar .nav-link {
+            color: var(--text-light) !important;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem !important;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            margin: 0 0.25rem;
+        }
+
+        .modern-navbar .nav-link:hover {
+            background: var(--glass-bg);
+            color: white !important;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .dashboard-container {
+            padding: 2rem;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modern-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: var(--card-shadow);
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .modern-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 35px 70px rgba(0, 0, 0, 0.3);
+        }
+
+        .modern-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--gradient);
+            z-index: 1;
+        }
+
+        .stats-card {
+            padding: 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stats-card.total::before { background: var(--info-gradient); }
+        .stats-card.pending::before { background: var(--warning-gradient); }
+        .stats-card.completed::before { background: var(--success-gradient); }
+        .stats-card.overdue::before { background: var(--danger-gradient); }
+
+        .stats-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+            margin: 0 auto 1.5rem;
+            background: var(--gradient);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        .stats-card.total .stats-icon { background: var(--info-gradient); }
+        .stats-card.pending .stats-icon { background: var(--warning-gradient); }
+        .stats-card.completed .stats-icon { background: var(--success-gradient); }
+        .stats-card.overdue .stats-icon { background: var(--danger-gradient); }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .stats-number {
+            font-size: 3rem;
+            font-weight: 900;
+            color: white;
+            margin: 0;
+            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            line-height: 1;
+        }
+
+        .stats-label {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 0.5rem 0 0 0;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .modern-card-header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 2rem;
+            color: white;
+            font-weight: 700;
+            font-size: 1.25rem;
+        }
+
+        .modern-card-body {
+            padding: 2rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .modern-btn {
+            background: var(--gradient);
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .modern-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .modern-btn:hover::before {
+            left: 100%;
+        }
+
+        .modern-btn:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            color: white;
+            text-decoration: none;
+        }
+
+        .btn-primary { --gradient: var(--primary-gradient); }
+        .btn-outline-primary { 
+            background: transparent;
+            border: 2px solid rgba(102, 126, 234, 0.5);
+            color: #667eea;
+            --gradient: var(--primary-gradient);
+        }
+        .btn-outline-primary:hover {
+            background: var(--primary-gradient);
+            border-color: transparent;
+            color: white;
+        }
+        .btn-outline-secondary {
+            background: transparent;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: rgba(255, 255, 255, 0.8);
+            --gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.3));
+        }
+        .btn-outline-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .note-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .note-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 0;
+            background: var(--primary-gradient);
+            transition: width 0.3s ease;
+            opacity: 0.2;
+        }
+
+        .note-item:hover::before {
+            width: 100%;
+        }
+
+        .note-item:hover {
+            transform: translateX(8px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .note-title {
+            color: white;
+            font-weight: 700;
+            font-size: 1.1rem;
+            text-decoration: none;
+            position: relative;
+            z-index: 1;
+        }
+
+        .note-title:hover {
+            color: white;
+            text-decoration: none;
+        }
+
+        .note-content {
+            color: rgba(255, 255, 255, 0.8);
+            margin: 0.75rem 0;
+            line-height: 1.5;
+            position: relative;
+            z-index: 1;
+        }
+
+        .note-meta {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.875rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .modern-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .badge.bg-success {
+            background: var(--success-gradient) !important;
+            color: white;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+        }
+
+        .badge.bg-warning {
+            background: var(--warning-gradient) !important;
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+        }
+
+        .badge.bg-danger {
+            background: var(--danger-gradient) !important;
+            color: white;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: rgba(255, 255, 255, 0.3);
+            margin-bottom: 2rem;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .empty-state h5 {
+            color: white;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .sidebar-card {
+            margin-bottom: 2rem;
+            animation: slideInRight 0.8s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .reminder-item, .due-item, .list-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .reminder-item:hover, .due-item:hover, .list-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .reminder-item h6, .due-item h6, .list-item h6 {
+            color: white;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .reminder-item small, .due-item small {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* Modern Modal Styling */
+        .modal-content {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+            color: white;
+        }
+
+        .modal-header {
+            background: var(--primary-gradient);
+            border-bottom: 1px solid var(--glass-border);
+            border-radius: 24px 24px 0 0;
+            padding: 2rem;
+        }
+
+        .modal-title {
+            color: white;
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+
+        .modal-body {
+            padding: 2rem;
+        }
+
+        .modal-footer {
+            border-top: 1px solid var(--glass-border);
+            padding: 2rem;
+        }
+
+        .form-control {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            color: white;
+            padding: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+            color: white;
+        }
+
+        .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .form-label {
+            color: white;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .btn-close {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            opacity: 1;
+        }
+
+        .btn-secondary {
+            --gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.3));
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .dashboard-container {
+                padding: 1rem;
+            }
+
+            .stats-number {
+                font-size: 2rem;
+            }
+
+            .stats-icon {
+                width: 60px;
+                height: 60px;
+                font-size: 1.5rem;
+            }
+
+            .modern-card-header,
+            .modern-card-body {
+                padding: 1.5rem;
+            }
+
+            .note-item {
+                padding: 1rem;
+            }
+
+            .modern-btn {
+                padding: 0.625rem 1.25rem;
+                font-size: 0.8rem;
+            }
+        }
+
+        /* Animation delays for staggered loading */
+        .stats-card:nth-child(1) { animation-delay: 0.1s; }
+        .stats-card:nth-child(2) { animation-delay: 0.2s; }
+        .stats-card:nth-child(3) { animation-delay: 0.3s; }
+        .stats-card:nth-child(4) { animation-delay: 0.4s; }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-out both;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- Modern Header -->
+        <div class="row">
+            <div class="col-12">
+                <nav class="navbar navbar-expand-lg modern-navbar">
+                    <div class="container-fluid">
+                        <a class="navbar-brand" href="{% url 'dashboard' %}">
+                            <i class="fas fa-sticky-note"></i> My Notes
+                        </a>
+                        <div class="navbar-nav ms-auto">
+                            <a class="nav-link" href="{% url 'dashboard' %}">
+                                <i class="fas fa-home"></i> Dashboard
+                            </a>
+                            <a class="nav-link" href="{% url 'logout' %}">
+                                <i class="fas fa-sign-out-alt"></i> Logout
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+            </div>
+        </div>
+
+        <div class="dashboard-container">
+            <!-- Modern Statistics Cards -->
+            <div class="row mb-5">
+                <div class="col-md-3 mb-4">
+                    <div class="modern-card stats-card total fade-in">
+                        <div class="stats-icon">
+                            <i class="fas fa-sticky-note"></i>
+                        </div>
+                        <h2 class="stats-number">{{ total_notes }}</h2>
+                        <p class="stats-label">Total Notes</p>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <div class="modern-card stats-card pending fade-in">
+                        <div class="stats-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <h2 class="stats-number">{{ pending_notes }}</h2>
+                        <p class="stats-label">Pending</p>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <div class="modern-card stats-card completed fade-in">
+                        <div class="stats-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <h2 class="stats-number">{{ completed_notes }}</h2>
+                        <p class="stats-label">Completed</p>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <div class="modern-card stats-card overdue fade-in">
+                        <div class="stats-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <h2 class="stats-number">{{ overdue_notes }}</h2>
+                        <p class="stats-label">Overdue</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="row">
+                <!-- Recent Notes -->
+                <div class="col-md-8 mb-4">
+                    <div class="modern-card fade-in">
+                        <div class="modern-card-header d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-list"></i> Recent Notes</span>
+                            <div>
+                                <a href="{% url 'note_create' %}" class="modern-btn btn-primary">
+                                    <i class="fas fa-plus"></i> New Note
+                                </a>
+                                <a href="{% url 'note_list' %}" class="modern-btn btn-outline-primary">
+                                    <i class="fas fa-eye"></i> View All
+                                </a>
+                            </div>
+                        </div>
+                        <div class="modern-card-body">
+                            {% for note in recent_notes %}
+                            <div class="note-item">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-2">
+                                            <a href="{% url 'note_detail' note.pk %}" class="note-title">
+                                                {{ note.heading }}
+                                            </a>
+                                        </h6>
+                                        <p class="note-content">{{ note.content|truncatechars:100 }}</p>
+                                        <div class="note-meta">
+                                            <i class="fas fa-folder"></i> {{ note.note_list.name }} • 
+                                            <i class="fas fa-clock"></i> {{ note.updated_at|timesince }} ago
+                                            {% if note.due_date %}
+                                            • <i class="fas fa-calendar"></i> Due: {{ note.due_date|date:"M d" }}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="ms-3">
+                                        {% if note.is_completed %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check"></i> Completed
+                                            </span>
+                                        {% elif note.is_overdue %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-exclamation-triangle"></i> Overdue
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-clock"></i> Pending
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="empty-state">
+                                <i class="fas fa-sticky-note"></i>
+                                <h5>No notes yet</h5>
+                                <p>Create your first note to get started</p>
+                                <a href="{% url 'note_create' %}" class="modern-btn btn-primary">
+                                    <i class="fas fa-plus"></i> Create Note
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="col-md-4">
+                    <!-- Upcoming Reminders -->
+                    <div class="modern-card sidebar-card fade-in">
+                        <div class="modern-card-header">
+                            <i class="fas fa-bell"></i> Upcoming Reminders
+                        </div>
+                        <div class="modern-card-body">
+                            {% for note in upcoming_reminders %}
+                            <div class="reminder-item">
+                                <h6>{{ note.heading|truncatechars:30 }}</h6>
+                                <small>
+                                    <i class="fas fa-bell"></i> {{ note.reminder_date|date:"M d, H:i" }}
+                                </small>
+                            </div>
+                            {% empty %}
+                            <p class="text-muted">No upcoming reminders</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Due Soon -->
+                    <div class="modern-card sidebar-card fade-in">
+                        <div class="modern-card-header">
+                            <i class="fas fa-calendar-alt"></i> Due Soon
+                        </div>
+                        <div class="modern-card-body">
+                            {% for note in due_soon %}
+                            <div class="due-item">
+                                <h6>{{ note.heading|truncatechars:30 }}</h6>
+                                <small>
+                                    <i class="fas fa-calendar"></i> Due: {{ note.due_date|date:"M d" }}
+                                </small>
+                            </div>
+                            {% empty %}
+                            <p class="text-muted">No upcoming due dates</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Note Lists -->
+                    <div class="modern-card sidebar-card fade-in">
+                        <div class="modern-card-header d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-folder"></i> My Lists</span>
+                            <a href="{% url 'note_list_management' %}" class="modern-btn btn-outline-secondary">
+                                <i class="fas fa-cog"></i>
+                            </a>
+                        </div>
+                        <div class="modern-card-body">
+                            {% for list in note_lists %}
+                            <div class="list-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6>{{ list.name }}</h6>
+                                    <small class="text-muted">{{ list.notes.count }} notes</small>
+                                </div>
+                                <a href="{% url 'note_list' %}?list={{ list.id }}" class="modern-btn btn-outline-secondary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </div>
+                            {% empty %}
+                            <p class="text-muted">No note lists yet</p>
+                            <a href="{% url 'note_list_create' %}" class="modern-btn btn-primary">
+                                <i class="fas fa-plus"></i> Create List
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modern Quick Note Modal -->
+        <div class="modal fade" id="quickNoteModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-plus-circle"></i> Quick Note
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="quickNoteForm">
+                            <div class="mb-4">
+                                <label for="quickNoteHeading" class="form-label">Heading</label>
+                                <input type="text" class="form-control" id="quickNoteHeading" 
+                                       placeholder="Enter note heading..." required>
+                            </div>
+                            <div class="mb-4">
+                                <label for="quickNoteContent" class="form-label">Content</label>
+                                <textarea class="form-control" id="quickNoteContent" rows="4" 
+                                          placeholder="Write your note content..."></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="modern-btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                        <button type="button" class="modern-btn btn-primary" onclick="saveQuickNote()">
+                            <i class="fas fa-save"></i> Save Note
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Enhanced animations and interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            // Staggered animation for stats cards
+            const statsCards = document.querySelectorAll('.stats-card');
+            statsCards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(30px)';
+                
+                setTimeout(() => {
+                    card.style.transition = 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 150);
+            });
+
+            // Note items animation
+            const noteItems = document.querySelectorAll('.note-item');
+            noteItems.forEach((item, index) => {
+                item.style.opacity = '0';
+                item.style.transform = 'translateX(-30px)';
+                
+                setTimeout(() => {
+                    item.style.transition = 'all 0.6s ease';
+                    item.style.opacity = '1';
+                    item.style.transform = 'translateX(0)';
+                }, 500 + (index * 100));
+            });
+
+            // Sidebar cards animation
+            const sidebarCards = document.querySelectorAll('.sidebar-card');
+            sidebarCards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateX(30px)';
+                
+                setTimeout(() => {
+                    card.style.transition = 'all 0.6s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateX(0)';
+                }, 800 + (index * 200));
+            });
+
+            // Enhanced hover effects for buttons
+            const modernBtns = document.querySelectorAll('.modern-btn');
+            modernBtns.forEach(btn => {
+                btn.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-3px) scale(1.05)';
+                });
+                
+                btn.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0) scale(1)';
+                });
+
+                // Add click ripple effect
+                btn.addEventListener('click', function(e) {
+                    const ripple = document.createElement('span');
+                    const rect = this.getBoundingClientRect();
+                    const size = Math.max(rect.width, rect.height);
+                    const x = e.clientX - rect.left - size / 2;
+                    const y = e.clientY - rect.top - size / 2;
+                    
+                    ripple.style.cssText = `
+                        position: absolute;
+                        width: ${size}px;
+                        height: ${size}px;
+                        left: ${x}px;
+                        top: ${y}px;
+                        background: rgba(255, 255, 255, 0.3);
+                        border-radius: 50%;
+                        transform: scale(0);
+                        animation: ripple 0.6s ease-out;
+                        pointer-events: none;
+                    `;
+                    
+                    this.style.position = 'relative';
+                    this.appendChild(ripple);
+                    
+                    setTimeout(() => ripple.remove(), 600);
+                });
+            });
+
+            // Add floating animation to icons
+            const floatingIcons = document.querySelectorAll('.stats-icon, .empty-state i');
+            floatingIcons.forEach(icon => {
+                icon.style.animation = 'float 3s ease-in-out infinite';
+                icon.style.animationDelay = Math.random() * 2 + 's';
+            });
+
+            // Intersection Observer for scroll animations
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('fade-in');
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+
+            // Observe main content areas
+            document.querySelectorAll('.modern-card').forEach(card => {
+                observer.observe(card);
+            });
+
+            // Enhanced navbar interactions
+            const navLinks = document.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                link.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-2px)';
+                });
+                
+                link.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+            });
+
+            // Modal enhancements
+            const modal = document.getElementById('quickNoteModal');
+            if (modal) {
+                modal.addEventListener('show.bs.modal', function () {
+                    this.style.display = 'block';
+                    this.style.opacity = '0';
+                    this.querySelector('.modal-content').style.transform = 'scale(0.8) translateY(-50px)';
+                    
+                    setTimeout(() => {
+                        this.style.transition = 'opacity 0.3s ease';
+                        this.querySelector('.modal-content').style.transition = 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+                        this.style.opacity = '1';
+                        this.querySelector('.modal-content').style.transform = 'scale(1) translateY(0)';
+                    }, 10);
+                });
+
+                modal.addEventListener('hide.bs.modal', function () {
+                    this.style.opacity = '0';
+                    this.querySelector('.modal-content').style.transform = 'scale(0.8) translateY(-50px)';
+                });
+            }
+
+            // Form input enhancements
+            const formInputs = document.querySelectorAll('.form-control');
+            formInputs.forEach(input => {
+                input.addEventListener('focus', function() {
+                    this.style.transform = 'scale(1.02)';
+                    this.parentElement.style.transform = 'translateY(-2px)';
+                });
+                
+                input.addEventListener('blur', function() {
+                    this.style.transform = 'scale(1)';
+                    this.parentElement.style.transform = 'translateY(0)';
+                });
+            });
+        });
+
+        // Enhanced Quick Note Save Function
+        function saveQuickNote() {
+            const heading = document.getElementById('quickNoteHeading').value;
+            const content = document.getElementById('quickNoteContent').value;
+            const saveBtn = document.querySelector('[onclick="saveQuickNote()"]');
+            const originalContent = saveBtn.innerHTML;
+            
+            if (!heading.trim()) {
+                // Create a custom alert
+                showCustomAlert('Please enter a heading for your note', 'warning');
+                return;
+            }
+            
+            // Add loading state
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            saveBtn.disabled = true;
+            saveBtn.style.opacity = '0.7';
+            
+            // Simulate API call with enhanced feedback
+            fetch('{% url "quick_create_note" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    heading: heading,
+                    content: content
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showCustomAlert('Note saved successfully!', 'success');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    showCustomAlert('Error saving note: ' + data.error, 'error');
+                    // Restore button
+                    saveBtn.innerHTML = originalContent;
+                    saveBtn.disabled = false;
+                    saveBtn.style.opacity = '1';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showCustomAlert('Error saving note. Please try again.', 'error');
+                // Restore button
+                saveBtn.innerHTML = originalContent;
+                saveBtn.disabled = false;
+                saveBtn.style.opacity = '1';
+            });
+        }
+
+        // Custom Alert Function
+        function showCustomAlert(message, type) {
+            const alertContainer = document.createElement('div');
+            alertContainer.style.cssText = `
+                position: fixed;
+                top: 2rem;
+                right: 2rem;
+                z-index: 9999;
+                padding: 1rem 2rem;
+                border-radius: 12px;
+                color: white;
+                font-weight: 600;
+                backdrop-filter: blur(20px);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                transform: translateX(100%);
+                transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+                max-width: 400px;
+            `;
+
+            // Set background based on type
+            if (type === 'success') {
+                alertContainer.style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
+                alertContainer.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+            } else if (type === 'warning') {
+                alertContainer.style.background = 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)';
+                alertContainer.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
+            } else if (type === 'error') {
+                alertContainer.style.background = 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)';
+                alertContainer.innerHTML = `<i class="fas fa-times-circle"></i> ${message}`;
+            }
+
+            document.body.appendChild(alertContainer);
+
+            // Animate in
+            setTimeout(() => {
+                alertContainer.style.transform = 'translateX(0)';
+            }, 100);
+
+            // Auto remove after 4 seconds
+            setTimeout(() => {
+                alertContainer.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (alertContainer.parentNode) {
+                        alertContainer.parentNode.removeChild(alertContainer);
+                    }
+                }, 300);
+            }, 4000);
+
+            // Click to dismiss
+            alertContainer.addEventListener('click', () => {
+                alertContainer.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (alertContainer.parentNode) {
+                        alertContainer.parentNode.removeChild(alertContainer);
+                    }
+                }, 300);
+            });
+        }
+
+        // Add CSS for ripple animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes ripple {
+                to {
+                    transform: scale(2);
+                    opacity: 0;
+                }
+            }
+            
+            @keyframes float {
+                0%, 100% { transform: translateY(0px); }
+                50% { transform: translateY(-10px); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Performance optimization: Debounced scroll handler
+        let scrollTimeout;
+        window.addEventListener('scroll', () => {
+            if (scrollTimeout) {
+                clearTimeout(scrollTimeout);
+            }
+            
+            scrollTimeout = setTimeout(() => {
+                // Add parallax effect to background
+                const scrolled = window.pageYOffset;
+                const parallax = document.querySelector('body::before');
+                if (parallax) {
+                    document.body.style.setProperty('--scroll', scrolled * 0.5 + 'px');
+                }
+            }, 10);
+        });
+    </script>
+</body>
+</html>

@@ -4,188 +4,960 @@
 {% block title %}Client Profiles{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h3 class="card-title">Client Profiles</h3>
-                    {% if can_create %}
-                        <a href="{% url 'client_profile_create' %}" class="btn btn-primary">
-                            <i class="fas fa-plus"></i> Add New Client
-                        </a>
-                    {% endif %}
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        --info-gradient: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        --dark-bg: #1a1d29;
+        --card-bg: #242738;
+        --text-light: #e2e8f0;
+        --border-color: #334155;
+        --glass-bg: rgba(255, 255, 255, 0.1);
+        --glass-border: rgba(255, 255, 255, 0.2);
+    }
+
+    .modern-container {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        min-height: 100vh;
+        padding: 2rem 0;
+    }
+
+    .glass-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        transition: all 0.3s ease;
+    }
+
+    .glass-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+    }
+
+    .modern-header {
+        background: var(--primary-gradient);
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .modern-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+        opacity: 0.3;
+    }
+
+    .modern-header h3 {
+        color: white;
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+        position: relative;
+        z-index: 1;
+    }
+
+    .modern-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 50px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        position: relative;
+        z-index: 1;
+        backdrop-filter: blur(10px);
+    }
+
+    .modern-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        color: white;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 3rem;
+    }
+
+    .stat-card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        padding: 2rem;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px) scale(1.02);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--gradient);
+    }
+
+    .stat-card.total::before { background: var(--info-gradient); }
+    .stat-card.active::before { background: var(--success-gradient); }
+    .stat-card.muted::before { background: var(--warning-gradient); }
+    .stat-card.full::before { background: var(--primary-gradient); }
+
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        margin-bottom: 1rem;
+        background: var(--gradient);
+    }
+
+    .stat-card.total .stat-icon { background: var(--info-gradient); }
+    .stat-card.active .stat-icon { background: var(--success-gradient); }
+    .stat-card.muted .stat-icon { background: var(--warning-gradient); }
+    .stat-card.full .stat-icon { background: var(--primary-gradient); }
+
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: white;
+        margin: 0;
+        line-height: 1;
+    }
+
+    .stat-label {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.9rem;
+        font-weight: 500;
+        margin: 0.5rem 0 0 0;
+    }
+
+    .search-section {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .modern-form-group {
+        position: relative;
+        margin-bottom: 1.5rem;
+    }
+
+    .modern-input, .modern-select {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        color: white;
+        font-size: 0.95rem;
+        width: 100%;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+    }
+
+    .modern-input:focus, .modern-select:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    .modern-input::placeholder {
+        color: rgba(255, 255, 255, 0.6);
+    }
+
+    .modern-label {
+        color: rgba(255, 255, 255, 0.9);
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        display: block;
+        font-size: 0.9rem;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        align-items: end;
+    }
+
+    .btn-search {
+        background: var(--primary-gradient);
+        border: none;
+        color: white;
+        padding: 1rem 2rem;
+        border-radius: 50px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-search:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+        color: white;
+    }
+
+    .btn-clear {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 1rem 2rem;
+        border-radius: 50px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+    }
+
+    .btn-clear:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: translateY(-2px);
+        color: white;
+    }
+
+    .modern-table-container {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .modern-table {
+        width: 100%;
+        margin: 0;
+        background: transparent;
+    }
+
+    .modern-table thead {
+        background: rgba(102, 126, 234, 0.2);
+        backdrop-filter: blur(10px);
+    }
+
+    .modern-table th {
+        padding: 1.5rem 1rem;
+        color: white;
+        font-weight: 700;
+        border: none;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 1px;
+        position: relative;
+    }
+
+    .modern-table td {
+        padding: 1.5rem 1rem;
+        color: rgba(255, 255, 255, 0.9);
+        border: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        vertical-align: middle;
+    }
+
+    .modern-table tbody tr {
+        transition: all 0.3s ease;
+    }
+
+    .modern-table tbody tr:hover {
+        background: rgba(255, 255, 255, 0.05);
+        transform: scale(1.01);
+    }
+
+    .modern-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .badge-success {
+        background: var(--success-gradient);
+        color: white;
+    }
+
+    .badge-warning {
+        background: var(--warning-gradient);
+        color: white;
+    }
+
+    .badge-info {
+        background: var(--info-gradient);
+        color: white;
+    }
+
+    .badge-secondary {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+    }
+
+    .action-group {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .action-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .action-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--gradient);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .action-btn:hover::before {
+        opacity: 1;
+    }
+
+    .action-btn i {
+        position: relative;
+        z-index: 1;
+        color: white;
+    }
+
+    .btn-view {
+        background: var(--info-gradient);
+        --gradient: var(--info-gradient);
+    }
+
+    .btn-edit {
+        background: var(--warning-gradient);
+        --gradient: var(--warning-gradient);
+    }
+
+    .btn-convert {
+        background: var(--success-gradient);
+        padding: 0.75rem 1.5rem;
+        border-radius: 50px;
+        color: white;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.85rem;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+        width: auto;
+        height: auto;
+    }
+
+    .btn-convert:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(79, 172, 254, 0.4);
+        color: white;
+        text-decoration: none;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        color: rgba(255, 255, 255, 0.3);
+        margin-bottom: 1rem;
+    }
+
+    .modern-modal .modal-content {
+        background: var(--card-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        backdrop-filter: blur(20px);
+        color: white;
+    }
+
+    .modern-modal .modal-header {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 2rem;
+        background: var(--primary-gradient);
+        border-radius: 20px 20px 0 0;
+    }
+
+    .modern-modal .modal-title {
+        color: white;
+        font-weight: 700;
+        font-size: 1.5rem;
+    }
+
+    .modern-modal .modal-body {
+        padding: 2rem;
+    }
+
+    .modern-modal .modal-footer {
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 2rem;
+    }
+
+    .modern-modal .btn-secondary {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+    }
+
+    .modern-modal .btn-success {
+        background: var(--success-gradient);
+        border: none;
+        color: white;
+    }
+
+    @media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .action-buttons {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .modern-table-container {
+            overflow-x: auto;
+        }
+        
+        .action-group {
+            justify-content: center;
+        }
+    }
+
+    /* Animation classes */
+    .fade-in {
+        animation: fadeIn 0.6s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .slide-up {
+        animation: slideUp 0.8s ease-out;
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(40px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+<div class="modern-container">
+    <div class="container-fluid">
+        <!-- Header Section -->
+        <div class="modern-header fade-in">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3>Client Profiles</h3>
+                {% if can_create %}
+                    <a href="{% url 'client_profile_create' %}" class="modern-btn">
+                        <i class="fas fa-plus me-2"></i> Add New Client
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="stats-grid slide-up">
+            <div class="stat-card total">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
                 </div>
-                
-                <!-- Statistics Cards -->
-                <div class="card-body">
-                    <div class="row mb-4">
-                        <div class="col-md-3">
-                            <div class="info-box">
-                                <span class="info-box-icon bg-info"><i class="fas fa-users"></i></span>
-                                <div class="info-box-content">
-                                    <span class="info-box-text">Total Clients</span>
-                                    <span class="info-box-number">{{ stats.total_clients }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="info-box">
-                                <span class="info-box-icon bg-success"><i class="fas fa-check-circle"></i></span>
-                                <div class="info-box-content">
-                                    <span class="info-box-text">Active Clients</span>
-                                    <span class="info-box-number">{{ stats.active_clients }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="info-box">
-                                <span class="info-box-icon bg-warning"><i class="fas fa-volume-mute"></i></span>
-                                <div class="info-box-content">
-                                    <span class="info-box-text">Muted Clients</span>
-                                    <span class="info-box-number">{{ stats.muted_clients }}</span>
-                                </div>
-                            </div>
+                <h2 class="stat-number">{{ stats.total_clients }}</h2>
+                <p class="stat-label">Total Clients</p>
+            </div>
+            <div class="stat-card active">
+                <div class="stat-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h2 class="stat-number">{{ stats.active_clients }}</h2>
+                <p class="stat-label">Active Clients</p>
+            </div>
+            <div class="stat-card muted">
+                <div class="stat-icon">
+                    <i class="fas fa-volume-mute"></i>
+                </div>
+                <h2 class="stat-number">{{ stats.muted_clients }}</h2>
+                <p class="stat-label">Muted Clients</p>
+            </div>
+            <div class="stat-card full">
+                <div class="stat-icon">
+                    <i class="fas fa-user-check"></i>
+                </div>
+                <h2 class="stat-number">{{ stats.converted_clients }}</h2>
+                <p class="stat-label">Full Clients</p>
+            </div>
+        </div>
+
+        <!-- Search and Filter Section -->
+        <div class="search-section slide-up">
+            <form method="GET">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="modern-form-group">
+                            <label class="modern-label">Search</label>
+                            <input type="text" class="modern-input" name="search" 
+                                   value="{{ search_query|default:'' }}" 
+                                   placeholder="Search by name, email, mobile, or PAN">
                         </div>
                     </div>
-
-                    <!-- Search and Filter Form -->
-                    <form method="GET" class="mb-4">
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label>Search</label>
-                                    <input type="text" class="form-control" name="search" 
-                                           value="{{ search_query|default:'' }}" 
-                                           placeholder="Search by name, email, mobile, or PAN">
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label>Status</label>
-                                    <select class="form-control" name="status">
-                                        <option value="">All Status</option>
-                                        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
-                                        <option value="muted" {% if status_filter == 'muted' %}selected{% endif %}>Muted</option>
-                                    </select>
-                                </div>
-                            </div>
-                            {% if rm_list %}
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label>Relationship Manager</label>
-                                    <select class="form-control" name="rm">
-                                        <option value="">All RMs</option>
-                                        {% for rm in rm_list %}
-                                            <option value="{{ rm.id }}" {% if rm_filter == rm.id|stringformat:"s" %}selected{% endif %}>
-                                                {{ rm.get_full_name }}
-                                            </option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                            </div>
-                            {% endif %}
-                            <div class="col-md-2">
-                                <div class="form-group">
-                                    <label>&nbsp;</label>
-                                    <div class="d-flex">
-                                        <button type="submit" class="btn btn-primary mr-2">
-                                            <i class="fas fa-search"></i> Search
-                                        </button>
-                                        <a href="{% url 'client_profile_list' %}" class="btn btn-secondary">
-                                            <i class="fas fa-times"></i> Clear
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="col-md-3">
+                        <div class="modern-form-group">
+                            <label class="modern-label">Status</label>
+                            <select class="modern-select" name="status">
+                                <option value="">All Status</option>
+                                <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                                <option value="muted" {% if status_filter == 'muted' %}selected{% endif %}>Muted</option>
+                            </select>
                         </div>
-                    </form>
-
-                    <!-- Client Profiles Table -->
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Client Name</th>
-                                    <th>Email</th>
-                                    <th>Mobile</th>
-                                    <th>PAN</th>
-                                    <th>RM</th>
-                                    <th>Ops Executive</th>
-                                    <th>Status</th>
-                                    <th>Created Date</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for profile in client_profiles %}
-                                <tr>
-                                    <td>
-                                        <strong>{{ profile.client_full_name }}</strong>
-                                        {% if profile.family_head_name %}
-                                            <br><small class="text-muted">Family Head: {{ profile.family_head_name }}</small>
-                                        {% endif %}
-                                    </td>
-                                    <td>{{ profile.email|default:'-' }}</td>
-                                    <td>{{ profile.mobile_number|default:'-' }}</td>
-                                    <td>{{ profile.pan_number|default:'-' }}</td>
-                                    <td>
-                                        {% if profile.mapped_rm %}
-                                            {{ profile.mapped_rm.get_full_name }}
-                                        {% else %}
-                                            <span class="text-muted">Not Assigned</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if profile.mapped_ops_exec %}
-                                            {{ profile.mapped_ops_exec.get_full_name }}
-                                        {% else %}
-                                            <span class="text-muted">Not Assigned</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if profile.status == 'active' %}
-                                            <span class="badge badge-success">Active</span>
-                                        {% elif profile.status == 'muted' %}
-                                            <span class="badge badge-warning">Muted</span>
-                                        {% else %}
-                                            <span class="badge badge-secondary">{{ profile.status|title }}</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>{{ profile.created_at|date:"M d, Y" }}</td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <a href="{% url 'client_profile_detail' profile.pk %}" 
-                                               class="btn btn-sm btn-info" title="View Details">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            {% if can_modify %}
-                                                <a href="{% url 'client_profile_update' profile.pk %}" 
-                                                   class="btn btn-sm btn-warning" title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                            {% endif %}
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="9" class="text-center">
-                                        <p class="mb-0">No client profiles found.</p>
-                                        {% if can_create %}
-                                            <a href="{% url 'client_profile_create' %}" class="btn btn-primary mt-2">
-                                                <i class="fas fa-plus"></i> Create First Client Profile
-                                            </a>
-                                        {% endif %}
-                                    </td>
-                                </tr>
+                    </div>
+                    {% if rm_list %}
+                    <div class="col-md-3">
+                        <div class="modern-form-group">
+                            <label class="modern-label">Relationship Manager</label>
+                            <select class="modern-select" name="rm">
+                                <option value="">All RMs</option>
+                                {% for rm in rm_list %}
+                                    <option value="{{ rm.id }}" {% if rm_filter == rm.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ rm.get_full_name }}
+                                    </option>
                                 {% endfor %}
-                            </tbody>
-                        </table>
+                            </select>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="col-md-2">
+                        <div class="modern-form-group">
+                            <label class="modern-label">&nbsp;</label>
+                            <div class="action-buttons">
+                                <button type="submit" class="btn-search">
+                                    <i class="fas fa-search me-2"></i> Search
+                                </button>
+                                <a href="{% url 'client_profile_list' %}" class="btn-clear">
+                                    <i class="fas fa-times me-2"></i> Clear
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
+            </form>
+        </div>
+
+        <!-- Client Profiles Table -->
+        <div class="modern-table-container slide-up">
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th>Client Name</th>
+                        <th>Email</th>
+                        <th>Mobile</th>
+                        <th>PAN</th>
+                        <th>RM</th>
+                        <th>Ops Executive</th>
+                        <th>Status</th>
+                        <th>Client Status</th>
+                        <th>Created Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for profile in client_profiles %}
+                    <tr>
+                        <td>
+                            <div>
+                                <strong style="color: white; font-size: 1.1rem;">{{ profile.client_full_name }}</strong>
+                                {% if profile.family_head_name %}
+                                    <br><small style="color: rgba(255, 255, 255, 0.6);">Family Head: {{ profile.family_head_name }}</small>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>{{ profile.email|default:'-' }}</td>
+                        <td>{{ profile.mobile_number|default:'-' }}</td>
+                        <td>{{ profile.pan_number|default:'-' }}</td>
+                        <td>
+                            {% if profile.mapped_rm %}
+                                {{ profile.mapped_rm.get_full_name }}
+                            {% else %}
+                                <span style="color: rgba(255, 255, 255, 0.5);">Not Assigned</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if profile.mapped_ops_exec %}
+                                {{ profile.mapped_ops_exec.get_full_name }}
+                            {% else %}
+                                <span style="color: rgba(255, 255, 255, 0.5);">Not Assigned</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if profile.status == 'active' %}
+                                <span class="modern-badge badge-success">
+                                    <i class="fas fa-check"></i> Active
+                                </span>
+                            {% elif profile.status == 'muted' %}
+                                <span class="modern-badge badge-warning">
+                                    <i class="fas fa-volume-mute"></i> Muted
+                                </span>
+                            {% else %}
+                                <span class="modern-badge badge-secondary">{{ profile.status|title }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if profile.legacy_client %}
+                                <span class="modern-badge badge-success">
+                                    <i class="fas fa-check-circle"></i> Full Client
+                                </span>
+                            {% else %}
+                                <span class="modern-badge badge-info">
+                                    <i class="fas fa-user-plus"></i> Profile Only
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>{{ profile.created_at|date:"M d, Y" }}</td>
+                        <td>
+                            <div class="action-group">
+                                <a href="{% url 'client_profile_detail' profile.pk %}" 
+                                   class="action-btn btn-view" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if can_modify %}
+                                    <a href="{% url 'client_profile_update' profile.pk %}" 
+                                       class="action-btn btn-edit" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                {% endif %}
+                            </div>
+                            {% if not profile.legacy_client and can_convert_to_client %}
+                            <a href="{% url 'convert_to_client' profile.pk %}" 
+                               class="btn-convert" 
+                               title="Convert to Full Client">
+                                <i class="fas fa-user-check"></i> Convert to Client
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="10">
+                            <div class="empty-state">
+                                <i class="fas fa-users"></i>
+                                <h4 style="color: white; margin: 1rem 0;">No client profiles found</h4>
+                                <p style="color: rgba(255, 255, 255, 0.6);">Get started by creating your first client profile</p>
+                                {% if can_create %}
+                                    <a href="{% url 'client_profile_create' %}" class="modern-btn" style="margin-top: 1rem;">
+                                        <i class="fas fa-plus me-2"></i> Create First Client Profile
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Convert to Client Modal -->
+<div class="modal fade modern-modal" id="convertModal" tabindex="-1" role="dialog" aria-labelledby="convertModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="convertModalLabel">
+                    <i class="fas fa-user-check me-2"></i>Convert to Full Client
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 1.5rem;">
+                    <p style="color: rgba(255, 255, 255, 0.9); font-size: 1.1rem;">
+                        This will convert the client profile to a full client and allow you to add additional information such as:
+                    </p>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 2rem 0;">
+                    <div style="background: rgba(255, 255, 255, 0.1); padding: 1rem; border-radius: 12px; text-align: center;">
+                        <i class="fas fa-chart-line" style="font-size: 2rem; color: #4facfe; margin-bottom: 0.5rem;"></i>
+                        <p style="margin: 0; color: white; font-weight: 600;">AUM Management</p>
+                    </div>
+                    <div style="background: rgba(255, 255, 255, 0.1); padding: 1rem; border-radius: 12px; text-align: center;">
+                        <i class="fas fa-coins" style="font-size: 2rem; color: #fee140; margin-bottom: 0.5rem;"></i>
+                        <p style="margin: 0; color: white; font-weight: 600;">SIP Amount</p>
+                    </div>
+                    <div style="background: rgba(255, 255, 255, 0.1); padding: 1rem; border-radius: 12px; text-align: center;">
+                        <i class="fas fa-wallet" style="font-size: 2rem; color: #fa709a; margin-bottom: 0.5rem;"></i>
+                        <p style="margin: 0; color: white; font-weight: 600;">Demat Accounts</p>
+                    </div>
+                    <div style="background: rgba(255, 255, 255, 0.1); padding: 1rem; border-radius: 12px; text-align: center;">
+                        <i class="fas fa-address-book" style="font-size: 2rem; color: #a8edea; margin-bottom: 0.5rem;"></i>
+                        <p style="margin: 0; color: white; font-weight: 600;">Contact Info</p>
+                    </div>
+                </div>
+                <div style="background: rgba(255, 193, 7, 0.2); border: 1px solid rgba(255, 193, 7, 0.4); border-radius: 12px; padding: 1.5rem; margin-top: 2rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <i class="fas fa-exclamation-triangle" style="color: #ffc107; font-size: 1.5rem;"></i>
+                        <div>
+                            <strong style="color: #ffc107;">Important Note:</strong>
+                            <p style="margin: 0.5rem 0 0 0; color: rgba(255, 255, 255, 0.9);">
+                                This action will create a new client record linked to this profile and cannot be undone.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </button>
+                <a href="#" id="confirmConvert" class="btn btn-success">
+                    <i class="fas fa-user-check me-2"></i>Convert to Client
+                </a>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add fade-in animation to table rows
+    const tableRows = document.querySelectorAll('.modern-table tbody tr');
+    tableRows.forEach((row, index) => {
+        row.style.animationDelay = `${index * 0.1}s`;
+        row.classList.add('fade-in');
+    });
+
+    // Handle convert to client button clicks
+    const convertButtons = document.querySelectorAll('[title="Convert to Full Client"]');
+    const convertModal = document.getElementById('convertModal');
+    const confirmButton = document.getElementById('confirmConvert');
+    
+    convertButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const convertUrl = this.getAttribute('href');
+            confirmButton.setAttribute('href', convertUrl);
+            
+            // Add some animation to the modal
+            convertModal.style.display = 'block';
+            convertModal.classList.add('show');
+            convertModal.style.opacity = '0';
+            convertModal.style.transform = 'scale(0.8)';
+            
+            setTimeout(() => {
+                convertModal.style.transition = 'all 0.3s ease';
+                convertModal.style.opacity = '1';
+                convertModal.style.transform = 'scale(1)';
+            }, 10);
+            
+            // If using Bootstrap modal, use this instead:
+            // $(convertModal).modal('show');
+        });
+    });
+
+    // Close modal functionality
+    const closeButtons = convertModal.querySelectorAll('[data-dismiss="modal"]');
+    closeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            convertModal.style.opacity = '0';
+            convertModal.style.transform = 'scale(0.8)';
+            setTimeout(() => {
+                convertModal.style.display = 'none';
+                convertModal.classList.remove('show');
+            }, 300);
+        });
+    });
+
+    // Close modal when clicking outside
+    convertModal.addEventListener('click', function(e) {
+        if (e.target === convertModal) {
+            convertModal.style.opacity = '0';
+            convertModal.style.transform = 'scale(0.8)';
+            setTimeout(() => {
+                convertModal.style.display = 'none';
+                convertModal.classList.remove('show');
+            }, 300);
+        }
+    });
+
+    // Add hover effects to action buttons
+    const actionButtons = document.querySelectorAll('.action-btn');
+    actionButtons.forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-3px) scale(1.1)';
+            this.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.3)';
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+            this.style.boxShadow = 'none';
+        });
+    });
+
+    // Add loading state to search button
+    const searchButton = document.querySelector('.btn-search');
+    if (searchButton) {
+        searchButton.addEventListener('click', function() {
+            const icon = this.querySelector('i');
+            const originalIcon = icon.className;
+            icon.className = 'fas fa-spinner fa-spin me-2';
+            
+            setTimeout(() => {
+                icon.className = originalIcon;
+            }, 1000);
+        });
+    }
+
+    // Add smooth scrolling for better UX
+    const addClientButton = document.querySelector('.modern-btn[href*="create"]');
+    if (addClientButton) {
+        addClientButton.addEventListener('click', function(e) {
+            // Add a subtle loading animation
+            this.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                this.style.transform = 'scale(1)';
+            }, 150);
+        });
+    }
+
+    // Add progressive enhancement for table interactions
+    const tableContainer = document.querySelector('.modern-table-container');
+    if (tableContainer) {
+        let isScrolling = false;
+        
+        tableContainer.addEventListener('scroll', function() {
+            if (!isScrolling) {
+                tableContainer.style.boxShadow = '0 25px 50px rgba(0, 0, 0, 0.4)';
+                isScrolling = true;
+            }
+            
+            clearTimeout(window.scrollTimeout);
+            window.scrollTimeout = setTimeout(() => {
+                tableContainer.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.3)';
+                isScrolling = false;
+            }, 150);
+        });
+    }
+
+    // Add dynamic background particles effect (optional enhancement)
+    function createParticle() {
+        const particle = document.createElement('div');
+        particle.style.cssText = `
+            position: fixed;
+            width: 4px;
+            height: 4px;
+            background: rgba(102, 126, 234, 0.3);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: -1;
+            left: ${Math.random() * window.innerWidth}px;
+            top: ${window.innerHeight}px;
+            animation: floatUp 8s linear infinite;
+        `;
+        
+        document.body.appendChild(particle);
+        
+        setTimeout(() => {
+            particle.remove();
+        }, 8000);
+    }
+
+    // Add CSS for particle animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes floatUp {
+            to {
+                transform: translateY(-${window.innerHeight + 100}px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Create particles periodically (optional - can be removed if too distracting)
+    setInterval(createParticle, 2000);
+
+    // Add intersection observer for scroll animations
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, observerOptions);
+
+    // Observe elements for scroll animations
+    document.querySelectorAll('.stat-card, .search-section, .modern-table-container').forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(30px)';
+        el.style.transition = 'all 0.6s ease';
+        observer.observe(el);
+    });
+});
+</script>
+
 {% endblock %}

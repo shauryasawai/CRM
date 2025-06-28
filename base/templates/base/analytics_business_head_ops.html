@@ -1,0 +1,630 @@
+<!-- templates/base/analytics_business_head_ops.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operations Analytics Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.0/index.min.js"></script>
+    <style>
+        .analytics-container {
+            background: #f8f9fa;
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+        .metric-card {
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            line-height: 1;
+        }
+        .metric-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-bottom: 0;
+        }
+        .metric-trend {
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .chart-small {
+            height: 300px;
+        }
+        .performance-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+        .team-member-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .team-member-card:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .progress-ring {
+            width: 60px;
+            height: 60px;
+        }
+        .filters-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .kpi-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .kpi-excellent { background-color: #28a745; }
+        .kpi-good { background-color: #ffc107; }
+        .kpi-poor { background-color: #dc3545; }
+        
+        .workload-bar {
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .workload-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        
+        @media (max-width: 768px) {
+            .metric-value {
+                font-size: 2rem;
+            }
+            .chart-container {
+                height: 300px;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body class="analytics-container">
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="row">
+            <div class="col-12">
+                <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+                    <div class="container-fluid">
+                        <a class="navbar-brand" href="{% url 'dashboard' %}">
+                            <i class="fas fa-chart-bar"></i> Operations Analytics
+                        </a>
+                        <div class="navbar-nav ms-auto">
+                            <a class="nav-link" href="{% url 'bh_ops_overview' %}">
+                                <i class="fas fa-tachometer-alt"></i> Overview
+                            </a>
+                            <a class="nav-link" href="{% url 'dashboard' %}">
+                                <i class="fas fa-home"></i> Dashboard
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Filters Section -->
+        <div class="filters-section">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <form method="get" id="analyticsFilter" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="dateFrom" class="form-label">From Date</label>
+                            <input type="date" class="form-control" id="dateFrom" name="date_from" 
+                                   value="{{ date_from|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="dateTo" class="form-label">To Date</label>
+                            <input type="date" class="form-control" id="dateTo" name="date_to" 
+                                   value="{{ date_to|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="teamFilter" class="form-label">Team</label>
+                            <select class="form-control" id="teamFilter" name="team">
+                                <option value="">All Teams</option>
+                                {% for team in ops_teams %}
+                                <option value="{{ team.id }}" {% if team.id|stringformat:"s" == request.GET.team %}selected{% endif %}>
+                                    {{ team.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-filter"></i> Apply Filters
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-md-4">
+                    <div class="export-buttons justify-content-end">
+                        <button class="btn btn-outline-success btn-sm" onclick="exportToExcel()">
+                            <i class="fas fa-file-excel"></i> Export Excel
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="exportToPDF()">
+                            <i class="fas fa-file-pdf"></i> Export PDF
+                        </button>
+                        <button class="btn btn-outline-info btn-sm" onclick="printReport()">
+                            <i class="fas fa-print"></i> Print
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Performance Indicators -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body text-center">
+                        <div class="metric-value text-primary">{{ total_operations_team|default:0 }}</div>
+                        <p class="metric-label">Operations Team Size</p>
+                        <div class="metric-trend text-success">
+                            <i class="fas fa-arrow-up"></i> {{ team_growth_rate|default:0 }}% growth
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body text-center">
+                        <div class="metric-value text-success">{{ overall_efficiency|default:0 }}%</div>
+                        <p class="metric-label">Overall Efficiency</p>
+                        <div class="metric-trend {% if efficiency_trend >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            <i class="fas fa-arrow-{% if efficiency_trend >= 0 %}up{% else %}down{% endif %}"></i> 
+                            {{ efficiency_trend|default:0 }}%
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body text-center">
+                        <div class="metric-value text-warning">{{ avg_response_time|default:0 }}h</div>
+                        <p class="metric-label">Avg Response Time</p>
+                        <div class="metric-trend {% if response_time_trend <= 0 %}text-success{% else %}text-danger{% endif %}">
+                            <i class="fas fa-arrow-{% if response_time_trend <= 0 %}down{% else %}up{% endif %}"></i> 
+                            {{ response_time_trend|default:0 }}%
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body text-center">
+                        <div class="metric-value text-info">{{ client_satisfaction|default:0 }}%</div>
+                        <p class="metric-label">Client Satisfaction</p>
+                        <div class="metric-trend {% if satisfaction_trend >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            <i class="fas fa-arrow-{% if satisfaction_trend >= 0 %}up{% else %}down{% endif %}"></i> 
+                            {{ satisfaction_trend|default:0 }}%
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row 1 -->
+        <div class="row mb-4">
+            <!-- Task Completion Trends -->
+            <div class="col-md-8">
+                <div class="chart-container">
+                    <h5 class="mb-3">
+                        <i class="fas fa-tasks text-primary"></i> Task Completion Trends
+                        <small class="text-muted">(Last 30 Days)</small>
+                    </h5>
+                    <canvas id="taskCompletionChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Team Performance Distribution -->
+            <div class="col-md-4">
+                <div class="chart-container chart-small">
+                    <h5 class="mb-3">
+                        <i class="fas fa-users text-success"></i> Team Performance
+                    </h5>
+                    <canvas id="teamPerformanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row 2 -->
+        <div class="row mb-4">
+            <!-- Service Request Analytics -->
+            <div class="col-md-6">
+                <div class="chart-container">
+                    <h5 class="mb-3">
+                        <i class="fas fa-headset text-info"></i> Service Request Analytics
+                    </h5>
+                    <canvas id="serviceRequestChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Client Profile Creation Trends -->
+            <div class="col-md-6">
+                <div class="chart-container">
+                    <h5 class="mb-3">
+                        <i class="fas fa-user-plus text-warning"></i> Client Profile Creation
+                    </h5>
+                    <canvas id="clientProfileChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Team Performance Table -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-trophy text-warning"></i> Individual Team Performance
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Team Member</th>
+                                        <th>Role</th>
+                                        <th>Tasks Completed</th>
+                                        <th>Avg Response Time</th>
+                                        <th>Client Profiles</th>
+                                        <th>Workload</th>
+                                        <th>Performance Score</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for member in team_performance %}
+                                    <tr class="team-member-row" data-member-id="{{ member.user.id }}">
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="me-3">
+                                                    <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" 
+                                                         style="width: 40px; height: 40px;">
+                                                        <i class="fas fa-user text-white"></i>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <strong>{{ member.user.get_full_name|default:member.user.username }}</strong>
+                                                    <br><small class="text-muted">{{ member.user.email }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-{% if member.user.role == 'ops_team_lead' %}primary{% else %}secondary{% endif %}">
+                                                {{ member.user.get_role_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <strong>{{ member.completed_tasks|default:0 }}</strong> / {{ member.total_tasks|default:0 }}
+                                                <div class="progress mt-1" style="height: 5px;">
+                                                    <div class="progress-bar bg-success" 
+                                                         style="width: {{ member.completion_rate|default:0 }}%"></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="{% if member.avg_response_time <= 4 %}text-success{% elif member.avg_response_time <= 8 %}text-warning{% else %}text-danger{% endif %}">
+                                                {{ member.avg_response_time|default:0|floatformat:1 }}h
+                                            </span>
+                                        </td>
+                                        <td>{{ member.client_profiles|default:0 }}</td>
+                                        <td>
+                                            <div class="workload-bar">
+                                                <div class="workload-fill bg-{% if member.workload_percentage <= 70 %}success{% elif member.workload_percentage <= 90 %}warning{% else %}danger{% endif %}" 
+                                                     style="width: {{ member.workload_percentage|default:0 }}%"></div>
+                                            </div>
+                                            <small class="text-muted">{{ member.workload_percentage|default:0 }}%</small>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <span class="kpi-indicator {% if member.performance_score >= 80 %}kpi-excellent{% elif member.performance_score >= 60 %}kpi-good{% else %}kpi-poor{% endif %}"></span>
+                                                <strong>{{ member.performance_score|default:0 }}%</strong>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-primary" onclick="viewMemberDetails({{ member.user.id }})">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button class="btn btn-outline-success" onclick="assignTask({{ member.user.id }})">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="8" class="text-center text-muted">No team members found</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Insights and Recommendations -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-lightbulb"></i> Key Insights
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="insights-list">
+                            {% if insights %}
+                                {% for insight in insights %}
+                                <div class="insight-item mb-3 p-3 border-start border-info border-3 bg-light">
+                                    <h6 class="text-info">{{ insight.title }}</h6>
+                                    <p class="mb-1">{{ insight.description }}</p>
+                                    <small class="text-muted">Impact: {{ insight.impact }}</small>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                            <div class="insight-item mb-3 p-3 border-start border-success border-3 bg-light">
+                                <h6 class="text-success">High Performance</h6>
+                                <p class="mb-1">Operations team is performing above average with strong task completion rates.</p>
+                                <small class="text-muted">Impact: Positive trend</small>
+                            </div>
+                            <div class="insight-item mb-3 p-3 border-start border-warning border-3 bg-light">
+                                <h6 class="text-warning">Response Time Opportunity</h6>
+                                <p class="mb-1">Average response time can be improved by 15% with better task prioritization.</p>
+                                <small class="text-muted">Impact: Medium priority</small>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-chart-line"></i> Recommendations
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="recommendations-list">
+                            {% if recommendations %}
+                                {% for rec in recommendations %}
+                                <div class="recommendation-item mb-3 p-3 border-start border-success border-3 bg-light">
+                                    <h6 class="text-success">{{ rec.title }}</h6>
+                                    <p class="mb-1">{{ rec.description }}</p>
+                                    <small class="text-muted">Expected benefit: {{ rec.benefit }}</small>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                            <div class="recommendation-item mb-3 p-3 border-start border-success border-3 bg-light">
+                                <h6 class="text-success">Optimize Workload Distribution</h6>
+                                <p class="mb-1">Redistribute tasks among team members to balance workload and improve efficiency.</p>
+                                <small class="text-muted">Expected benefit: 20% efficiency improvement</small>
+                            </div>
+                            <div class="recommendation-item mb-3 p-3 border-start border-primary border-3 bg-light">
+                                <h6 class="text-primary">Implement Performance Bonuses</h6>
+                                <p class="mb-1">Reward top performers to maintain motivation and attract talent.</p>
+                                <small class="text-muted">Expected benefit: Improved retention</small>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Chart.js default configuration
+        Chart.defaults.font.family = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+        Chart.defaults.color = '#495057';
+        
+        // Sample data - replace with actual Django context data
+        const taskCompletionData = {
+            labels: [
+                {% for day in task_completion_days|default:"[]" %}
+                '{{ day|date:"M d" }}'{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            datasets: [{
+                label: 'Tasks Completed',
+                data: {{ task_completion_values|default:"[12, 19, 15, 25, 22, 18, 20]"|safe }},
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                tension: 0.4,
+                fill: true
+            }, {
+                label: 'Tasks Created',
+                data: {{ task_creation_values|default:"[8, 14, 18, 20, 16, 22, 25]"|safe }},
+                borderColor: '#6c757d',
+                backgroundColor: 'rgba(108, 117, 125, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        };
+
+        const teamPerformanceData = {
+            labels: ['Excellent', 'Good', 'Average', 'Below Average'],
+            datasets: [{
+                data: {{ team_performance_distribution|default:"[35, 45, 15, 5]"|safe }},
+                backgroundColor: ['#28a745', '#ffc107', '#17a2b8', '#dc3545']
+            }]
+        };
+
+        const serviceRequestData = {
+            labels: ['Open', 'In Progress', 'Resolved', 'Closed'],
+            datasets: [{
+                label: 'Service Requests',
+                data: {{ service_request_data|default:"[25, 35, 85, 120]"|safe }},
+                backgroundColor: ['#dc3545', '#ffc107', '#28a745', '#6c757d']
+            }]
+        };
+
+        const clientProfileData = {
+            labels: [
+                {% for week in profile_creation_weeks|default:"[]" %}
+                'Week {{ forloop.counter }}'{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            datasets: [{
+                label: 'Profiles Created',
+                data: {{ profile_creation_values|default:"[15, 22, 18, 25, 30, 28, 35]"|safe }},
+                backgroundColor: '#ffc107',
+                borderColor: '#ffc107',
+                tension: 0.4
+            }]
+        };
+
+        // Initialize Charts
+        const taskCompletionChart = new Chart(document.getElementById('taskCompletionChart'), {
+            type: 'line',
+            data: taskCompletionData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+
+        const teamPerformanceChart = new Chart(document.getElementById('teamPerformanceChart'), {
+            type: 'doughnut',
+            data: teamPerformanceData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    }
+                }
+            }
+        });
+
+        const serviceRequestChart = new Chart(document.getElementById('serviceRequestChart'), {
+            type: 'bar',
+            data: serviceRequestData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        const clientProfileChart = new Chart(document.getElementById('clientProfileChart'), {
+            type: 'line',
+            data: clientProfileData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Interactive Functions
+        function viewMemberDetails(memberId) {
+            // Implement member detail view
+            window.location.href = `/teams/users/${memberId}/`;
+        }
+
+        function assignTask(memberId) {
+            // Implement quick task assignment
+            window.location.href = `/ops/task-assignment/?assign_to=${memberId}`;
+        }
+
+        function exportToExcel() {
+            // Implement Excel export
+            window.location.href = `/api/export/operations-analytics/?format=excel&date_from=${document.getElementById('dateFrom').value}&date_to=${document.getElementById('dateTo').value}`;
+        }
+
+        function exportToPDF() {
+            // Implement PDF export
+            window.location.href = `/api/export/operations-analytics/?format=pdf&date_from=${document.getElementById('dateFrom').value}&date_to=${document.getElementById('dateTo').value}`;
+        }
+
+        function printReport() {
+            window.print();
+        }
+
+        // Auto-refresh data every 5 minutes
+        setInterval(function() {
+            location.reload();
+        }, 300000);
+    </script>
+</body>
+</html>

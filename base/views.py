@@ -6,14 +6,38 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Sum, Count, Q, Avg
 from django.http import JsonResponse, HttpResponseForbidden
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Sum, Avg, F, Q
 from django.db.models.functions import Extract
 from django.utils import timezone
 from django.db import transaction
-from .models import User, Lead, Client, Task, ServiceRequest, BusinessTracker, InvestmentPlanReview, Team,ProductDiscussion
-from .forms import LeadForm, TaskForm, ServiceRequestForm, InvestmentPlanReviewForm,ClientProfileForm
-from .models import Lead, ProductDiscussion, LeadInteraction, LeadStatusChange
+from django.views.decorators.http import require_POST
+from django.core.files.storage import default_storage
+import json
+from django.views.decorators.http import require_POST, require_GET
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib import messages
+from django.http import JsonResponse, Http404, HttpResponseForbidden
+from django.core.exceptions import PermissionDenied
+from django.db.models import Sum, Count, Q, Avg, F
+from django.db.models.functions import Extract
+from django.utils import timezone
+from django.db import transaction
+from django.views.decorators.http import require_POST, require_GET
+from django.views.decorators.csrf import csrf_exempt
+from django.core.paginator import Paginator
+from django.urls import reverse
+from datetime import datetime, timedelta
+from .models import (
+    User, Lead, Client, Task, ServiceRequest, BusinessTracker, 
+    InvestmentPlanReview, Team, ProductDiscussion, ClientProfile,
+    Note, NoteList
+)
+from .forms import (
+    ClientSearchForm, LeadForm, OperationsTaskAssignmentForm, TaskForm, ServiceRequestForm, InvestmentPlanReviewForm,
+    ClientProfileForm, NoteForm, NoteListForm, QuickNoteForm
+)
 
 # Helper functions for role checks
 def is_top_management(user):
@@ -22,11 +46,42 @@ def is_top_management(user):
 def is_business_head(user):
     return user.role == 'business_head'
 
+def is_business_head_ops(user):
+    return user.role == 'business_head_ops'
+
 def is_rm_head(user):
     return user.role == 'rm_head'
 
 def is_rm(user):
     return user.role == 'rm'
+
+def is_ops_team_lead(user):
+    return user.role == 'ops_team_lead'
+
+def is_ops_exec(user):
+    return user.role == 'ops_exec'
+
+# Login View
+def user_login(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username=username, password=password)
+        if user:
+            login(request, user)
+            return redirect('dashboard')
+        else:
+            return render(request, 'base/login.html', {'error': 'Invalid credentials'})
+    return render(request, 'base/login.html')
+
+# Logout View
+@login_required
+def user_logout(request):
+    logout(request)
+    return redirect('login')
 
 def can_manage_user(manager, target_user):
     """Check if manager can manage target_user based on hierarchy"""
@@ -51,29 +106,6 @@ def get_user_accessible_data(user, model_class, user_field='assigned_to'):
         filter_kwargs = {user_field: user}
         return model_class.objects.filter(**filter_kwargs)
 
-# Login View
-def user_login(request):
-    if request.user.is_authenticated:
-        return redirect('dashboard')
-
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        user = authenticate(request, username=username, password=password)
-        if user:
-            login(request, user)
-            return redirect('dashboard')
-        else:
-            return render(request, 'base/login.html', {'error': 'Invalid credentials'})
-    return render(request, 'base/login.html')
-
-# Logout View
-@login_required
-def user_logout(request):
-    logout(request)
-    return redirect('login')
-
-# Dashboard View (role-based with hierarchy)
 @login_required
 def dashboard(request):
     user = request.user
@@ -90,12 +122,16 @@ def dashboard(request):
 
         # Team metrics
         business_heads_count = User.objects.filter(role='business_head').count()
+        business_heads_ops_count = User.objects.filter(role='business_head_ops').count()
         rm_heads_count = User.objects.filter(role='rm_head').count()
         rms_count = User.objects.filter(role='rm').count()
+        ops_team_leads_count = User.objects.filter(role='ops_team_lead').count()
+        ops_execs_count = User.objects.filter(role='ops_exec').count()
 
         # Recent activities
         recent_leads = Lead.objects.order_by('-created_at')[:5]
         recent_service_requests = ServiceRequest.objects.order_by('-created_at')[:5]
+        recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
 
         context.update({
             'total_aum': total_aum,
@@ -105,10 +141,14 @@ def dashboard(request):
             'total_tasks': total_tasks,
             'open_service_requests': open_service_requests,
             'business_heads_count': business_heads_count,
+            'business_heads_ops_count': business_heads_ops_count,
             'rm_heads_count': rm_heads_count,
             'rms_count': rms_count,
+            'ops_team_leads_count': ops_team_leads_count,
+            'ops_execs_count': ops_execs_count,
             'recent_leads': recent_leads,
             'recent_service_requests': recent_service_requests,
+            'recent_notes': recent_notes,
         })
         template_name = 'base/dashboard_top_management.html'
 
@@ -125,24 +165,26 @@ def dashboard(request):
         # Performance metrics
         lead_conversion_rate = (converted_leads / total_leads * 100) if total_leads > 0 else 0
         
-        # Calculate average response time properly
+        # Calculate average response time using Python datetime operations
         resolved_requests = ServiceRequest.objects.filter(
             status__in=['resolved', 'closed'],
             resolved_at__isnull=False
-        ).annotate(
-            response_time=F('resolved_at') - F('created_at')
-        )
+        ).values('created_at', 'resolved_at')
         
         if resolved_requests.exists():
-            # Calculate average response time in days
-            total_response_time = resolved_requests.aggregate(
-                avg_seconds=Avg(
-                    Extract('epoch', F('resolved_at')) - Extract('epoch', F('created_at'))
-                )
-            )['avg_seconds']
-            avg_response_time_days = total_response_time / (24 * 60 * 60) if total_response_time else 0
+            total_response_seconds = 0
+            request_count = 0
+            
+            for request in resolved_requests:
+                response_time = request['resolved_at'] - request['created_at']
+                total_response_seconds += response_time.total_seconds()
+                request_count += 1
+            
+            avg_response_time_days = (total_response_seconds / request_count) / (24 * 60 * 60) if request_count > 0 else 0
         else:
             avg_response_time_days = 0
+
+        recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
 
         context.update({
             'rm_heads': rm_heads,
@@ -152,13 +194,70 @@ def dashboard(request):
             'lead_conversion_rate': round(lead_conversion_rate, 2),
             'open_service_requests': open_service_requests,
             'avg_response_time': round(avg_response_time_days, 2),
+            'recent_notes': recent_notes,
         })
         template_name = 'base/dashboard_business_head.html'
+
+    elif user.role == 'business_head_ops':
+        # Operations oversight dashboard
+        ops_team_leads = User.objects.filter(role='ops_team_lead')
+        ops_execs = User.objects.filter(role='ops_exec')
+        
+        # Operations metrics
+        total_client_profiles = ClientProfile.objects.count()
+        active_profiles = ClientProfile.objects.filter(status='active').count()
+        muted_profiles = ClientProfile.objects.filter(status='muted').count()
+        
+        # Service requests related to operations
+        ops_service_requests = ServiceRequest.objects.filter(
+            Q(assigned_to__role__in=['ops_team_lead', 'ops_exec']) |
+            Q(raised_by__role__in=['ops_team_lead', 'ops_exec'])
+        )
+        
+        # Task metrics for operations team
+        ops_tasks = Task.objects.filter(assigned_to__role__in=['ops_team_lead', 'ops_exec'])
+        pending_ops_tasks = ops_tasks.filter(completed=False).count()
+        overdue_ops_tasks = ops_tasks.filter(
+            completed=False, 
+            due_date__lt=timezone.now()
+        ).count()
+
+        # Team performance data
+        team_performance = []
+        for lead in ops_team_leads:
+            team_members = lead.get_team_members()
+            team_tasks = Task.objects.filter(assigned_to__in=team_members)
+            team_service_requests = ServiceRequest.objects.filter(
+                Q(assigned_to__in=team_members) | Q(raised_by__in=team_members)
+            )
+            
+            team_performance.append({
+                'lead': lead,
+                'team_size': team_members.count(),
+                'pending_tasks': team_tasks.filter(completed=False).count(),
+                'total_service_requests': team_service_requests.count(),
+                'open_service_requests': team_service_requests.filter(status='open').count(),
+            })
+
+        recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
+
+        context.update({
+            'ops_team_leads': ops_team_leads,
+            'ops_execs': ops_execs,
+            'total_client_profiles': total_client_profiles,
+            'active_profiles': active_profiles,
+            'muted_profiles': muted_profiles,
+            'ops_service_requests': ops_service_requests,
+            'pending_ops_tasks': pending_ops_tasks,
+            'overdue_ops_tasks': overdue_ops_tasks,
+            'team_performance': team_performance,
+            'recent_notes': recent_notes,
+        })
+        template_name = 'base/dashboard_business_head_ops.html'
 
     elif user.role == 'rm_head':
         team_members = user.get_team_members()
         accessible_users = user.get_accessible_users()
-        
         
         # Team metrics
         team_leads = Lead.objects.filter(assigned_to__in=accessible_users)
@@ -193,8 +292,10 @@ def dashboard(request):
                 'sip': member_clients.aggregate(total=Sum('sip_amount'))['total'] or 0,
                 'pending_tasks': member_tasks.filter(completed=False).count(),
                 'overdue_tasks': member_tasks.filter(completed=False, due_date__lt=timezone.now()).count(),
-                'performance_score': getattr(member, 'performance_score', 0)  # Safe getattr with default
+                'performance_score': getattr(member, 'performance_score', 0)
             })
+
+        recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
 
         context.update({
             'team_members': team_members,
@@ -208,16 +309,111 @@ def dashboard(request):
             'team_sip': team_sip,
             'leads_count': team_leads.count(),
             'clients_count': team_clients.count(),
-            'team_members_data': team_members_data,  # Add this to context
+            'team_members_data': team_members_data,
+            'recent_notes': recent_notes,
         })
         template_name = 'base/dashboard_rm_head.html'
+
+    elif user.role == 'ops_team_lead':
+        # Operations Team Lead dashboard
+        team_members = user.get_team_members()  # Ops Executives under this lead
+        
+        # Team metrics
+        team_tasks = Task.objects.filter(assigned_to__in=team_members.union(User.objects.filter(id=user.id)))
+        team_service_requests = ServiceRequest.objects.filter(
+            Q(assigned_to__in=team_members.union(User.objects.filter(id=user.id))) |
+            Q(raised_by__in=team_members.union(User.objects.filter(id=user.id)))
+        )
+        
+        # Client profiles managed by team
+        team_client_profiles = ClientProfile.objects.filter(
+            Q(mapped_ops_exec__in=team_members) | Q(created_by__in=team_members.union(User.objects.filter(id=user.id)))
+        )
+        
+        # Performance metrics
+        pending_tasks = team_tasks.filter(completed=False).count()
+        overdue_tasks = team_tasks.filter(
+            completed=False, 
+            due_date__lt=timezone.now()
+        ).count()
+        
+        # Service request metrics
+        open_requests = team_service_requests.filter(status='open').count()
+        in_progress_requests = team_service_requests.filter(status='in_progress').count()
+        
+        # Team member performance
+        team_members_data = []
+        for member in team_members:
+            member_tasks = team_tasks.filter(assigned_to=member)
+            member_service_requests = team_service_requests.filter(
+                Q(assigned_to=member) | Q(raised_by=member)
+            )
+            member_client_profiles = team_client_profiles.filter(mapped_ops_exec=member)
+            
+            team_members_data.append({
+                'member': member,
+                'task_count': member_tasks.count(),
+                'pending_tasks': member_tasks.filter(completed=False).count(),
+                'service_requests': member_service_requests.count(),
+                'open_requests': member_service_requests.filter(status='open').count(),
+                'client_profiles': member_client_profiles.count(),
+            })
+
+        recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
+
+        context.update({
+            'team_members': team_members,
+            'team_tasks': team_tasks,
+            'team_service_requests': team_service_requests,
+            'team_client_profiles': team_client_profiles,
+            'pending_tasks': pending_tasks,
+            'overdue_tasks': overdue_tasks,
+            'open_requests': open_requests,
+            'in_progress_requests': in_progress_requests,
+            'team_members_data': team_members_data,
+            'recent_notes': recent_notes,
+        })
+        template_name = 'base/dashboard_ops_team_lead.html'
+
+    elif user.role == 'ops_exec':
+        # Operations Executive dashboard
+        my_tasks = Task.objects.filter(assigned_to=user)
+        my_service_requests = ServiceRequest.objects.filter(
+            Q(assigned_to=user) | Q(raised_by=user)
+        )
+        my_client_profiles = ClientProfile.objects.filter(mapped_ops_exec=user)
+        
+        # Personal metrics
+        pending_tasks = my_tasks.filter(completed=False).count()
+        overdue_tasks = my_tasks.filter(completed=False, due_date__lt=timezone.now()).count()
+        open_requests = my_service_requests.filter(status='open').count()
+        
+        # Recent activities
+        recent_tasks = my_tasks.order_by('-created_at')[:5]
+        recent_service_requests = my_service_requests.order_by('-created_at')[:5]
+        recent_client_profiles = my_client_profiles.order_by('-updated_at')[:5]
+        recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
+
+        context.update({
+            'my_tasks': my_tasks,
+            'my_service_requests': my_service_requests,
+            'my_client_profiles': my_client_profiles,
+            'pending_tasks': pending_tasks,
+            'overdue_tasks': overdue_tasks,
+            'open_requests': open_requests,
+            'recent_tasks': recent_tasks,
+            'recent_service_requests': recent_service_requests,
+            'recent_client_profiles': recent_client_profiles,
+            'recent_notes': recent_notes,
+        })
+        template_name = 'base/dashboard_ops_exec.html'
 
     else:  # Relationship Manager
         # Personal dashboard
         leads = Lead.objects.filter(assigned_to=user)
         clients = Client.objects.filter(user=user)
         tasks = Task.objects.filter(assigned_to=user)
-        reminders = user.reminders.filter(is_done=False, remind_at__gte=timezone.now())
+        reminders = user.reminders.filter(is_done=False, remind_at__gte=timezone.now()) if hasattr(user, 'reminders') else []
         service_requests = ServiceRequest.objects.filter(raised_by=user)
         
         # Personal metrics
@@ -228,7 +424,7 @@ def dashboard(request):
         
         # Recent activities
         recent_clients = clients.order_by('-created_at')[:3]
-        upcoming_reminders = reminders.order_by('remind_at')[:5]
+        recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
 
         context.update({
             'leads': leads,
@@ -241,13 +437,1636 @@ def dashboard(request):
             'my_aum': my_aum,
             'my_sip': my_sip,
             'recent_clients': recent_clients,
-            'upcoming_reminders': upcoming_reminders,
+            'recent_notes': recent_notes,
             'leads_count': leads.count(),
             'clients_count': clients.count(),
         })
         template_name = 'base/dashboard_rm.html'
 
     return render(request, template_name, context)
+
+# Notes System Views
+@login_required
+def notes_dashboard(request):
+    """Main notes dashboard with overview"""
+    user = request.user
+    
+    # Get user's note lists and notes
+    note_lists = NoteList.objects.filter(user=user)
+    notes = Note.objects.filter(user=user)
+    
+    # Notes statistics
+    total_notes = notes.count()
+    completed_notes = notes.filter(is_completed=True).count()
+    pending_notes = notes.filter(is_completed=False).count()
+    overdue_notes = notes.filter(is_completed=False, due_date__lt=timezone.now().date()).count()
+    
+    # Recent notes
+    recent_notes = notes.order_by('-updated_at')[:10]
+    
+    # Upcoming reminders
+    upcoming_reminders = notes.filter(
+        reminder_date__gte=timezone.now(),
+        is_completed=False
+    ).order_by('reminder_date')[:5]
+    
+    # Due soon (next 7 days)
+    from datetime import timedelta
+    due_soon = notes.filter(
+        due_date__lte=timezone.now().date() + timedelta(days=7),
+        due_date__gte=timezone.now().date(),
+        is_completed=False
+    ).order_by('due_date')[:5]
+    
+    context = {
+        'note_lists': note_lists,
+        'total_notes': total_notes,
+        'completed_notes': completed_notes,
+        'pending_notes': pending_notes,
+        'overdue_notes': overdue_notes,
+        'recent_notes': recent_notes,
+        'upcoming_reminders': upcoming_reminders,
+        'due_soon': due_soon,
+    }
+    
+    return render(request, 'notes/dashboard.html', context)
+
+@login_required
+def note_list_view(request):
+    """View all notes with filtering options"""
+    user = request.user
+    notes = Note.objects.filter(user=user)
+    
+    # Filtering
+    status_filter = request.GET.get('status')
+    if status_filter == 'completed':
+        notes = notes.filter(is_completed=True)
+    elif status_filter == 'pending':
+        notes = notes.filter(is_completed=False)
+    elif status_filter == 'overdue':
+        notes = notes.filter(is_completed=False, due_date__lt=timezone.now().date())
+    
+    list_filter = request.GET.get('list')
+    if list_filter:
+        notes = notes.filter(note_list_id=list_filter)
+    
+    # Search
+    search_query = request.GET.get('search')
+    if search_query:
+        notes = notes.filter(
+            Q(heading__icontains=search_query) |
+            Q(content__icontains=search_query)
+        )
+    
+    # Sorting
+    sort_by = request.GET.get('sort', '-updated_at')
+    notes = notes.order_by(sort_by)
+    
+    # Get note lists for filter dropdown
+    note_lists = NoteList.objects.filter(user=user)
+    
+    context = {
+        'notes': notes,
+        'note_lists': note_lists,
+        'status_filter': status_filter,
+        'list_filter': list_filter,
+        'search_query': search_query,
+        'sort_by': sort_by,
+    }
+    
+    return render(request, 'notes/note_list.html', context)
+
+@login_required
+def note_create(request):
+    """Create a new note"""
+    if request.method == 'POST':
+        form = NoteForm(request.POST, request.FILES, user=request.user)
+        if form.is_valid():
+            note = form.save(commit=False)
+            note.user = request.user
+            try:
+                note.save()
+                messages.success(request, "Note created successfully.")
+                return redirect('note_detail', pk=note.pk)
+            except ValidationError as e:
+                messages.error(request, str(e))
+        else:
+            messages.error(request, "Please correct the errors below.")
+    else:
+        form = NoteForm(user=request.user)
+    
+    return render(request, 'notes/note_form.html', {
+        'form': form, 
+        'action': 'Create',
+        'title': 'Create New Note'
+    })
+
+@login_required
+def note_detail(request, pk):
+    """View note details"""
+    note = get_object_or_404(Note, pk=pk, user=request.user)
+    
+    context = {
+        'note': note,
+        'can_edit': True,  # User can always edit their own notes
+        'can_delete': True,  # User can always delete their own notes
+    }
+    
+    return render(request, 'notes/note_detail.html', context)
+
+@login_required
+def note_update(request, pk):
+    """Update a note"""
+    note = get_object_or_404(Note, pk=pk, user=request.user)
+    
+    if request.method == 'POST':
+        form = NoteForm(request.POST, request.FILES, instance=note, user=request.user)
+        if form.is_valid():
+            try:
+                form.save()
+                messages.success(request, "Note updated successfully.")
+                return redirect('note_detail', pk=note.pk)
+            except ValidationError as e:
+                messages.error(request, str(e))
+        else:
+            messages.error(request, "Please correct the errors below.")
+    else:
+        form = NoteForm(instance=note, user=request.user)
+    
+    return render(request, 'notes/note_form.html', {
+        'form': form, 
+        'action': 'Update',
+        'title': 'Update Note',
+        'note': note
+    })
+
+@login_required
+def note_delete(request, pk):
+    """Delete a note"""
+    note = get_object_or_404(Note, pk=pk, user=request.user)
+    
+    if request.method == 'POST':
+        note_heading = note.heading
+        
+        # Delete associated file if exists
+        if note.attachment:
+            try:
+                default_storage.delete(note.attachment.name)
+            except:
+                pass  # File might not exist
+        
+        note.delete()
+        messages.success(request, f"Note '{note_heading}' has been deleted.")
+        return redirect('note_list')
+    
+    return render(request, 'notes/note_confirm_delete.html', {'note': note})
+
+@login_required
+@require_POST
+def note_toggle_complete(request, pk):
+    """Toggle note completion status via AJAX"""
+    note = get_object_or_404(Note, pk=pk, user=request.user)
+    
+    note.is_completed = not note.is_completed
+    if note.is_completed:
+        note.completed_at = timezone.now()
+    else:
+        note.completed_at = None
+    note.save()
+    
+    return JsonResponse({
+        'success': True,
+        'is_completed': note.is_completed,
+        'completed_at': note.completed_at.isoformat() if note.completed_at else None
+    })
+    
+import logging
+logger = logging.getLogger(__name__)
+
+
+@login_required
+@require_POST
+def note_toggle_complete(request, pk):
+    """Toggle note completion status via AJAX with enhanced error handling"""
+    try:
+        note = get_object_or_404(Note, pk=pk, user=request.user)
+        
+        # Handle both AJAX and form submissions
+        if request.content_type == 'application/json':
+            try:
+                data = json.loads(request.body)
+                force_status = data.get('is_completed')
+                if force_status is not None:
+                    note.is_completed = bool(force_status)
+                else:
+                    note.is_completed = not note.is_completed
+            except (json.JSONDecodeError, KeyError):
+                note.is_completed = not note.is_completed
+        else:
+            note.is_completed = not note.is_completed
+        
+        if note.is_completed:
+            note.completed_at = timezone.now()
+        else:
+            note.completed_at = None
+        
+        note.save(update_fields=['is_completed', 'completed_at', 'updated_at'])
+        
+        response_data = {
+            'success': True,
+            'is_completed': note.is_completed,
+            'completed_at': note.completed_at.isoformat() if note.completed_at else None,
+            'message': 'Note marked as completed!' if note.is_completed else 'Note marked as incomplete!'
+        }
+        
+        return JsonResponse(response_data)
+    
+    except Note.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Note not found or access denied',
+            'message': 'Note not found or you do not have permission to modify it.'
+        }, status=404)
+    
+    except Exception as e:
+        logger.error(f"Error toggling completion for note {pk}, user {request.user.id}: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Server error',
+            'message': 'An error occurred while updating the note status.'
+        }, status=500)
+        
+@login_required
+def note_list_management(request):
+    """Manage note lists"""
+    user = request.user
+    note_lists = NoteList.objects.filter(user=user)
+    
+    context = {
+        'note_lists': note_lists,
+    }
+    
+    return render(request, 'notes/note_list_management.html', context)
+
+@login_required
+def note_list_create(request):
+    """Create a new note list"""
+    if request.method == 'POST':
+        form = NoteListForm(request.POST)
+        if form.is_valid():
+            note_list = form.save(commit=False)
+            note_list.user = request.user
+            note_list.save()
+            messages.success(request, f"Note list '{note_list.name}' created successfully.")
+            return redirect('note_list_management')
+        else:
+            messages.error(request, "Please correct the errors below.")
+    else:
+        form = NoteListForm()
+    
+    return render(request, 'notes/note_list_form.html', {
+        'form': form, 
+        'action': 'Create',
+        'title': 'Create Note List'
+    })
+
+@login_required
+def note_list_update(request, pk):
+    """Update a note list"""
+    note_list = get_object_or_404(NoteList, pk=pk, user=request.user)
+    
+    if request.method == 'POST':
+        form = NoteListForm(request.POST, instance=note_list)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Note list '{note_list.name}' updated successfully.")
+            return redirect('note_list_management')
+        else:
+            messages.error(request, "Please correct the errors below.")
+    else:
+        form = NoteListForm(instance=note_list)
+    
+    return render(request, 'notes/note_list_form.html', {
+        'form': form, 
+        'action': 'Update',
+        'title': 'Update Note List',
+        'note_list': note_list
+    })
+
+@login_required
+def note_list_delete(request, pk):
+    """Delete a note list"""
+    note_list = get_object_or_404(NoteList, pk=pk, user=request.user)
+    
+    # Check if list has notes
+    notes_count = note_list.notes.count()
+    if notes_count > 0 and request.method == 'GET':
+        messages.warning(request, f"This list contains {notes_count} notes. Deleting the list will also delete all notes in it.")
+    
+    if request.method == 'POST':
+        list_name = note_list.name
+        note_list.delete()  # This will cascade delete all notes in the list
+        messages.success(request, f"Note list '{list_name}' and all its notes have been deleted.")
+        return redirect('note_list_management')
+    
+    return render(request, 'notes/note_list_confirm_delete.html', {
+        'note_list': note_list,
+        'notes_count': notes_count
+    })
+
+# API endpoints for notes
+@login_required
+def get_notes_by_list(request, list_id):
+    """AJAX endpoint to get notes by list"""
+    note_list = get_object_or_404(NoteList, pk=list_id, user=request.user)
+    notes = note_list.notes.all().values('id', 'heading', 'is_completed', 'due_date')
+    
+    return JsonResponse(list(notes), safe=False)
+
+@login_required
+def get_upcoming_reminders(request):
+    """AJAX endpoint for upcoming reminders"""
+    notes = Note.objects.filter(
+        user=request.user,
+        reminder_date__gte=timezone.now(),
+        reminder_date__lte=timezone.now() + timezone.timedelta(days=1),
+        is_completed=False
+    ).values('id', 'heading', 'reminder_date')
+    
+    return JsonResponse(list(notes), safe=False)
+
+
+
+# Helper decorators for role-based access
+def operations_team_required(user):
+    """Check if user is part of operations team"""
+    return user.role in ['business_head_ops', 'ops_team_lead', 'ops_exec']
+
+def ops_team_lead_required(user):
+    """Check if user is operations team lead"""
+    return user.role == 'ops_team_lead'
+
+def business_head_ops_required(user):
+    """Check if user is business head operations"""
+    return user.role == 'business_head_ops'
+
+def ops_management_required(user):
+    """Check if user can manage operations"""
+    return user.role in ['business_head_ops', 'ops_team_lead']
+
+# Operations Team Lead Views
+@login_required
+@user_passes_test(ops_team_lead_required)
+def ops_team_performance(request):
+    """Operations Team Lead view for team performance metrics"""
+    user = request.user
+    team_members = user.get_team_members()
+    
+    # Get date range for filtering
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    
+    if not date_from:
+        date_from = timezone.now().date() - timedelta(days=30)
+    else:
+        date_from = datetime.strptime(date_from, '%Y-%m-%d').date()
+    
+    if not date_to:
+        date_to = timezone.now().date()
+    else:
+        date_to = datetime.strptime(date_to, '%Y-%m-%d').date()
+    
+    # Team performance metrics
+    team_stats = []
+    for member in team_members:
+        # Tasks metrics
+        member_tasks = Task.objects.filter(
+            assigned_to=member,
+            created_at__date__range=[date_from, date_to]
+        )
+        
+        # Service requests metrics
+        member_requests = ServiceRequest.objects.filter(
+            assigned_to=member,
+            created_at__date__range=[date_from, date_to]
+        )
+        
+        # Client profiles metrics
+        member_profiles = ClientProfile.objects.filter(
+            mapped_ops_exec=member,
+            created_at__date__range=[date_from, date_to]
+        )
+        
+        # Calculate completion rates
+        total_tasks = member_tasks.count()
+        completed_tasks = member_tasks.filter(completed=True).count()
+        task_completion_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+        
+        total_requests = member_requests.count()
+        resolved_requests = member_requests.filter(status__in=['resolved', 'closed']).count()
+        request_resolution_rate = (resolved_requests / total_requests * 100) if total_requests > 0 else 0
+        
+        # Average response time for service requests
+        resolved_with_time = member_requests.filter(
+            status__in=['resolved', 'closed'],
+            resolved_at__isnull=False
+        )
+        
+        if resolved_with_time.exists():
+            avg_response_time = resolved_with_time.aggregate(
+                avg_time=Avg(
+                    Extract('epoch', F('resolved_at')) - Extract('epoch', F('created_at'))
+                )
+            )['avg_time']
+            avg_response_hours = avg_response_time / 3600 if avg_response_time else 0
+        else:
+            avg_response_hours = 0
+        
+        team_stats.append({
+            'member': member,
+            'total_tasks': total_tasks,
+            'completed_tasks': completed_tasks,
+            'pending_tasks': total_tasks - completed_tasks,
+            'task_completion_rate': round(task_completion_rate, 2),
+            'total_requests': total_requests,
+            'resolved_requests': resolved_requests,
+            'request_resolution_rate': round(request_resolution_rate, 2),
+            'avg_response_hours': round(avg_response_hours, 2),
+            'client_profiles': member_profiles.count(),
+            'performance_score': round((task_completion_rate + request_resolution_rate) / 2, 2)
+        })
+    
+    # Overall team metrics
+    team_totals = {
+        'total_tasks': sum(stat['total_tasks'] for stat in team_stats),
+        'completed_tasks': sum(stat['completed_tasks'] for stat in team_stats),
+        'total_requests': sum(stat['total_requests'] for stat in team_stats),
+        'resolved_requests': sum(stat['resolved_requests'] for stat in team_stats),
+        'total_profiles': sum(stat['client_profiles'] for stat in team_stats),
+    }
+    
+    context = {
+        'team_members': team_members,
+        'team_stats': team_stats,
+        'team_totals': team_totals,
+        'date_from': date_from,
+        'date_to': date_to,
+        'avg_team_performance': round(sum(stat['performance_score'] for stat in team_stats) / len(team_stats), 2) if team_stats else 0,
+    }
+    
+    return render(request, 'operations/team_performance.html', context)
+
+
+@login_required
+@user_passes_test(ops_team_lead_required)
+def ops_client_profiles(request):
+    """Operations Team Lead view for managing client profiles"""
+    user = request.user
+    team_members = user.get_team_members()
+    
+    # Get client profiles assigned to team
+    client_profiles = ClientProfile.objects.filter(
+        mapped_ops_exec__in=team_members
+    ).select_related('mapped_rm', 'mapped_ops_exec')
+    
+    # Apply filters
+    search_form = ClientSearchForm(request.GET)
+    if search_form.is_valid():
+        search_query = search_form.cleaned_data.get('search_query')
+        status = search_form.cleaned_data.get('status')
+        ops_exec = search_form.cleaned_data.get('ops_exec')
+        
+        if search_query:
+            client_profiles = client_profiles.filter(
+                Q(client_full_name__icontains=search_query) |
+                Q(email__icontains=search_query) |
+                Q(mobile_number__icontains=search_query) |
+                Q(pan_number__icontains=search_query)
+            )
+        
+        if status:
+            client_profiles = client_profiles.filter(status=status)
+        
+        if ops_exec:
+            client_profiles = client_profiles.filter(mapped_ops_exec=ops_exec)
+    
+    # Pagination
+    paginator = Paginator(client_profiles, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Statistics
+    stats = {
+        'total_profiles': client_profiles.count(),
+        'active_profiles': client_profiles.filter(status='active').count(),
+        'muted_profiles': client_profiles.filter(status='muted').count(),
+        'pending_kyc': client_profiles.filter(
+            # Add your KYC pending logic here based on your business rules
+        ).count() if hasattr(ClientProfile, 'kyc_status') else 0,
+    }
+    
+    context = {
+        'client_profiles': page_obj,
+        'search_form': search_form,
+        'team_members': team_members,
+        'stats': stats,
+        'page_obj': page_obj,
+    }
+    
+    return render(request, 'operations/client_profiles.html', context)
+
+
+@login_required
+@user_passes_test(ops_team_lead_required)
+def ops_task_assignment(request):
+    """Operations Team Lead view for task assignment"""
+    user = request.user
+    team_members = user.get_team_members()
+    
+    if request.method == 'POST':
+        form = OperationsTaskAssignmentForm(request.POST, current_user=user)
+        if form.is_valid():
+            task = form.save(commit=False)
+            task.assigned_by = user
+            task.save()
+            messages.success(request, f"Task assigned to {task.assigned_to.get_full_name()}")
+            return redirect('ops_task_assignment')
+    else:
+        form = OperationsTaskAssignmentForm(current_user=user)
+    
+    # Get team tasks
+    team_tasks = Task.objects.filter(
+        assigned_to__in=[user] + list(team_members)
+    ).select_related('assigned_to', 'assigned_by').order_by('-created_at')
+    
+    # Task statistics
+    task_stats = {
+        'total_tasks': team_tasks.count(),
+        'pending_tasks': team_tasks.filter(completed=False).count(),
+        'completed_tasks': team_tasks.filter(completed=True).count(),
+        'overdue_tasks': team_tasks.filter(
+            completed=False,
+            due_date__lt=timezone.now()
+        ).count(),
+        'high_priority': team_tasks.filter(
+            completed=False,
+            priority__in=['high', 'urgent']
+        ).count(),
+    }
+    
+    # Individual member task breakdown
+    member_task_breakdown = []
+    for member in [user] + list(team_members):
+        member_tasks = team_tasks.filter(assigned_to=member)
+        member_task_breakdown.append({
+            'member': member,
+            'total': member_tasks.count(),
+            'pending': member_tasks.filter(completed=False).count(),
+            'completed': member_tasks.filter(completed=True).count(),
+            'overdue': member_tasks.filter(
+                completed=False,
+                due_date__lt=timezone.now()
+            ).count(),
+        })
+    
+    context = {
+        'form': form,
+        'team_tasks': team_tasks[:20],  # Show latest 20 tasks
+        'task_stats': task_stats,
+        'member_task_breakdown': member_task_breakdown,
+        'team_members': team_members,
+    }
+    
+    return render(request, 'operations/task_assignment.html', context)
+
+
+# Operations Executive Views
+@login_required
+@user_passes_test(lambda u: u.role == 'ops_exec')
+def ops_my_tasks(request):
+    """Operations Executive view for personal tasks"""
+    user = request.user
+    
+    # Get user's tasks
+    my_tasks = Task.objects.filter(assigned_to=user).select_related('assigned_by')
+    
+    # Apply filters
+    status_filter = request.GET.get('status', 'pending')
+    priority_filter = request.GET.get('priority')
+    
+    if status_filter == 'pending':
+        my_tasks = my_tasks.filter(completed=False)
+    elif status_filter == 'completed':
+        my_tasks = my_tasks.filter(completed=True)
+    elif status_filter == 'overdue':
+        my_tasks = my_tasks.filter(completed=False, due_date__lt=timezone.now())
+    
+    if priority_filter:
+        my_tasks = my_tasks.filter(priority=priority_filter)
+    
+    my_tasks = my_tasks.order_by('-created_at')
+    
+    # Task statistics
+    task_stats = {
+        'total_tasks': Task.objects.filter(assigned_to=user).count(),
+        'pending_tasks': Task.objects.filter(assigned_to=user, completed=False).count(),
+        'completed_tasks': Task.objects.filter(assigned_to=user, completed=True).count(),
+        'overdue_tasks': Task.objects.filter(
+            assigned_to=user,
+            completed=False,
+            due_date__lt=timezone.now()
+        ).count(),
+        'due_today': Task.objects.filter(
+            assigned_to=user,
+            completed=False,
+            due_date__date=timezone.now().date()
+        ).count(),
+        'due_this_week': Task.objects.filter(
+            assigned_to=user,
+            completed=False,
+            due_date__date__range=[
+                timezone.now().date(),
+                timezone.now().date() + timedelta(days=7)
+            ]
+        ).count(),
+    }
+    
+    # Performance metrics
+    last_30_days = timezone.now() - timedelta(days=30)
+    recent_tasks = Task.objects.filter(
+        assigned_to=user,
+        created_at__gte=last_30_days
+    )
+    
+    performance_metrics = {
+        'tasks_last_30_days': recent_tasks.count(),
+        'completed_last_30_days': recent_tasks.filter(completed=True).count(),
+        'avg_completion_time': 0,  # Calculate based on your business logic
+        'completion_rate': 0,
+    }
+    
+    if recent_tasks.exists():
+        performance_metrics['completion_rate'] = round(
+            (performance_metrics['completed_last_30_days'] / performance_metrics['tasks_last_30_days']) * 100, 2
+        )
+    
+    context = {
+        'my_tasks': my_tasks,
+        'task_stats': task_stats,
+        'performance_metrics': performance_metrics,
+        'status_filter': status_filter,
+        'priority_filter': priority_filter,
+        'priority_choices': Task.PRIORITY_CHOICES,
+    }
+    
+    return render(request, 'operations/my_tasks.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.role == 'ops_exec')
+def ops_my_clients(request):
+    """Operations Executive view for assigned client profiles"""
+    user = request.user
+    
+    # Get assigned client profiles
+    my_clients = ClientProfile.objects.filter(
+        mapped_ops_exec=user
+    ).select_related('mapped_rm')
+    
+    # Apply filters
+    status_filter = request.GET.get('status')
+    search_query = request.GET.get('search')
+    
+    if status_filter:
+        my_clients = my_clients.filter(status=status_filter)
+    
+    if search_query:
+        my_clients = my_clients.filter(
+            Q(client_full_name__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(mobile_number__icontains=search_query) |
+            Q(pan_number__icontains=search_query)
+        )
+    
+    my_clients = my_clients.order_by('-updated_at')
+    
+    # Pagination
+    paginator = Paginator(my_clients, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Client statistics
+    client_stats = {
+        'total_clients': ClientProfile.objects.filter(mapped_ops_exec=user).count(),
+        'active_clients': ClientProfile.objects.filter(mapped_ops_exec=user, status='active').count(),
+        'muted_clients': ClientProfile.objects.filter(mapped_ops_exec=user, status='muted').count(),
+        'new_this_month': ClientProfile.objects.filter(
+            mapped_ops_exec=user,
+            created_at__month=timezone.now().month,
+            created_at__year=timezone.now().year
+        ).count(),
+        'updated_today': ClientProfile.objects.filter(
+            mapped_ops_exec=user,
+            updated_at__date=timezone.now().date()
+        ).count(),
+    }
+    
+    # Recent activities
+    recent_updates = ClientProfile.objects.filter(
+        mapped_ops_exec=user
+    ).order_by('-updated_at')[:5]
+    
+    context = {
+        'my_clients': page_obj,
+        'client_stats': client_stats,
+        'recent_updates': recent_updates,
+        'status_filter': status_filter,
+        'search_query': search_query,
+        'page_obj': page_obj,
+    }
+    
+    return render(request, 'operations/my_clients.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.role == 'ops_exec')
+def ops_service_requests(request):
+    """Operations Executive view for service requests"""
+    user = request.user
+    
+    # Get service requests assigned to user
+    my_requests = ServiceRequest.objects.filter(
+        assigned_to=user
+    ).select_related('client', 'raised_by')
+    
+    # Apply filters
+    status_filter = request.GET.get('status', 'open')
+    priority_filter = request.GET.get('priority')
+    
+    if status_filter and status_filter != 'all':
+        my_requests = my_requests.filter(status=status_filter)
+    
+    if priority_filter:
+        my_requests = my_requests.filter(priority=priority_filter)
+    
+    my_requests = my_requests.order_by('-created_at')
+    
+    # Service request statistics
+    request_stats = {
+        'total_requests': ServiceRequest.objects.filter(assigned_to=user).count(),
+        'open_requests': ServiceRequest.objects.filter(assigned_to=user, status='open').count(),
+        'in_progress': ServiceRequest.objects.filter(assigned_to=user, status='in_progress').count(),
+        'resolved_requests': ServiceRequest.objects.filter(assigned_to=user, status='resolved').count(),
+        'urgent_requests': ServiceRequest.objects.filter(
+            assigned_to=user,
+            priority='urgent',
+            status__in=['open', 'in_progress']
+        ).count(),
+    }
+    
+    # Performance metrics
+    last_30_days = timezone.now() - timedelta(days=30)
+    recent_requests = ServiceRequest.objects.filter(
+        assigned_to=user,
+        created_at__gte=last_30_days
+    )
+    
+    resolved_requests = recent_requests.filter(
+        status__in=['resolved', 'closed'],
+        resolved_at__isnull=False
+    )
+    
+    performance_metrics = {
+        'requests_last_30_days': recent_requests.count(),
+        'resolved_last_30_days': resolved_requests.count(),
+        'resolution_rate': 0,
+        'avg_resolution_time_hours': 0,
+    }
+    
+    if recent_requests.exists():
+        performance_metrics['resolution_rate'] = round(
+            (performance_metrics['resolved_last_30_days'] / performance_metrics['requests_last_30_days']) * 100, 2
+        )
+    
+    if resolved_requests.exists():
+        avg_resolution_time = resolved_requests.aggregate(
+            avg_time=Avg(
+                Extract('epoch', F('resolved_at')) - Extract('epoch', F('created_at'))
+            )
+        )['avg_time']
+        performance_metrics['avg_resolution_time_hours'] = round(avg_resolution_time / 3600, 2) if avg_resolution_time else 0
+    
+    context = {
+        'my_requests': my_requests[:50],  # Limit to 50 for performance
+        'request_stats': request_stats,
+        'performance_metrics': performance_metrics,
+        'status_filter': status_filter,
+        'priority_filter': priority_filter,
+        'status_choices': ServiceRequest.STATUS_CHOICES,
+        'priority_choices': ServiceRequest.PRIORITY_CHOICES if hasattr(ServiceRequest, 'PRIORITY_CHOICES') else Task.PRIORITY_CHOICES,
+    }
+    
+    return render(request, 'operations/service_requests.html', context)
+
+
+# Business Head Operations Views
+@login_required
+@user_passes_test(business_head_ops_required)
+def bh_ops_overview(request):
+    """Business Head Operations overview dashboard"""
+    user = request.user
+    
+    # Get all operations team members
+    ops_team_leads = User.objects.filter(role='ops_team_lead')
+    ops_executives = User.objects.filter(role='ops_exec')
+    
+    # Overall operations metrics
+    total_client_profiles = ClientProfile.objects.count()
+    active_profiles = ClientProfile.objects.filter(status='active').count()
+    muted_profiles = ClientProfile.objects.filter(status='muted').count()
+    
+    # Task metrics
+    ops_tasks = Task.objects.filter(assigned_to__role__in=['ops_team_lead', 'ops_exec'])
+    pending_ops_tasks = ops_tasks.filter(completed=False).count()
+    overdue_ops_tasks = ops_tasks.filter(
+        completed=False,
+        due_date__lt=timezone.now()
+    ).count()
+    
+    # Service request metrics
+    ops_service_requests = ServiceRequest.objects.filter(
+        assigned_to__role__in=['ops_team_lead', 'ops_exec']
+    )
+    open_requests = ops_service_requests.filter(status='open').count()
+    in_progress_requests = ops_service_requests.filter(status='in_progress').count()
+    
+    # Team performance summary
+    team_performance = []
+    for lead in ops_team_leads:
+        team_members = lead.get_team_members()
+        team_tasks = Task.objects.filter(assigned_to__in=team_members)
+        team_requests = ServiceRequest.objects.filter(assigned_to__in=team_members)
+        
+        team_performance.append({
+            'lead': lead,
+            'team_size': team_members.count(),
+            'pending_tasks': team_tasks.filter(completed=False).count(),
+            'open_requests': team_requests.filter(status='open').count(),
+            'client_profiles': ClientProfile.objects.filter(mapped_ops_exec__in=team_members).count(),
+        })
+    
+    # Recent activities
+    recent_profiles = ClientProfile.objects.order_by('-created_at')[:10]
+    recent_requests = ServiceRequest.objects.filter(
+        assigned_to__role__in=['ops_team_lead', 'ops_exec']
+    ).order_by('-created_at')[:10]
+    
+    # Monthly trends (last 6 months)
+    monthly_data = []
+    for i in range(6):
+        month_start = (timezone.now().replace(day=1) - timedelta(days=30*i)).replace(day=1)
+        month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+        
+        monthly_data.append({
+            'month': month_start.strftime('%b %Y'),
+            'profiles_created': ClientProfile.objects.filter(
+                created_at__range=[month_start, month_end]
+            ).count(),
+            'requests_resolved': ServiceRequest.objects.filter(
+                resolved_at__range=[month_start, month_end],
+                assigned_to__role__in=['ops_team_lead', 'ops_exec']
+            ).count(),
+        })
+    
+    context = {
+        'ops_team_leads': ops_team_leads,
+        'ops_executives': ops_executives,
+        'total_client_profiles': total_client_profiles,
+        'active_profiles': active_profiles,
+        'muted_profiles': muted_profiles,
+        'pending_ops_tasks': pending_ops_tasks,
+        'overdue_ops_tasks': overdue_ops_tasks,
+        'open_requests': open_requests,
+        'in_progress_requests': in_progress_requests,
+        'team_performance': team_performance,
+        'recent_profiles': recent_profiles,
+        'recent_requests': recent_requests,
+        'monthly_data': list(reversed(monthly_data)),
+    }
+    
+    return render(request, 'operations/bh_ops_overview.html', context)
+
+
+@login_required
+@user_passes_test(business_head_ops_required)
+def bh_ops_team_management(request):
+    """Business Head Operations team management"""
+    user = request.user
+    
+    # Get operations teams
+    ops_teams = Team.objects.filter(is_ops_team=True).select_related('leader')
+    ops_users = User.objects.filter(role__in=['ops_team_lead', 'ops_exec']).select_related('manager')
+    
+    # Team statistics
+    team_stats = []
+    for team in ops_teams:
+        team_members = team.members.all()
+        team_tasks = Task.objects.filter(assigned_to__in=team_members)
+        team_requests = ServiceRequest.objects.filter(assigned_to__in=team_members)
+        
+        # Calculate team performance metrics
+        total_tasks = team_tasks.count()
+        completed_tasks = team_tasks.filter(completed=True).count()
+        task_completion_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+        
+        total_requests = team_requests.count()
+        resolved_requests = team_requests.filter(status__in=['resolved', 'closed']).count()
+        request_resolution_rate = (resolved_requests / total_requests * 100) if total_requests > 0 else 0
+        
+        team_stats.append({
+            'team': team,
+            'member_count': team_members.count(),
+            'task_completion_rate': round(task_completion_rate, 2),
+            'request_resolution_rate': round(request_resolution_rate, 2),
+            'pending_tasks': team_tasks.filter(completed=False).count(),
+            'open_requests': team_requests.filter(status='open').count(),
+            'performance_score': round((task_completion_rate + request_resolution_rate) / 2, 2),
+        })
+    
+    # Individual user performance
+    user_performance = []
+    for ops_user in ops_users:
+        user_tasks = Task.objects.filter(assigned_to=ops_user)
+        user_requests = ServiceRequest.objects.filter(assigned_to=ops_user)
+        user_profiles = ClientProfile.objects.filter(mapped_ops_exec=ops_user)
+        
+        # Calculate individual metrics
+        total_tasks = user_tasks.count()
+        completed_tasks = user_tasks.filter(completed=True).count()
+        task_completion_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+        
+        total_requests = user_requests.count()
+        resolved_requests = user_requests.filter(status__in=['resolved', 'closed']).count()
+        request_resolution_rate = (resolved_requests / total_requests * 100) if total_requests > 0 else 0
+        
+        user_performance.append({
+            'user': ops_user,
+            'task_completion_rate': round(task_completion_rate, 2),
+            'request_resolution_rate': round(request_resolution_rate, 2),
+            'client_profiles': user_profiles.count(),
+            'pending_tasks': user_tasks.filter(completed=False).count(),
+            'open_requests': user_requests.filter(status='open').count(),
+            'performance_score': round((task_completion_rate + request_resolution_rate) / 2, 2),
+        })
+    
+    # Sort by performance score
+    user_performance.sort(key=lambda x: x['performance_score'], reverse=True)
+    
+    context = {
+        'ops_teams': ops_teams,
+        'team_stats': team_stats,
+        'user_performance': user_performance,
+        'total_ops_users': ops_users.count(),
+        'ops_team_leads_count': ops_users.filter(role='ops_team_lead').count(),
+        'ops_executives_count': ops_users.filter(role='ops_exec').count(),
+    }
+    
+    return render(request, 'operations/team_management.html', context)
+
+
+@login_required
+@user_passes_test(business_head_ops_required)
+def bh_ops_performance_metrics(request):
+    """Business Head Operations performance metrics and analytics"""
+    user = request.user
+    
+    # Get date range for filtering
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    
+    if not date_from:
+        date_from = timezone.now().date() - timedelta(days=90)  # Last 3 months
+    else:
+        date_from = datetime.strptime(date_from, '%Y-%m-%d').date()
+    
+    if not date_to:
+        date_to = timezone.now().date()
+    else:
+        date_to = datetime.strptime(date_to, '%Y-%m-%d').date()
+    
+    # Operations team members
+    ops_users = User.objects.filter(role__in=['ops_team_lead', 'ops_exec'])
+    
+    # Task performance metrics
+    ops_tasks = Task.objects.filter(
+        assigned_to__in=ops_users,
+        created_at__date__range=[date_from, date_to]
+    )
+    
+    task_metrics = {
+        'total_tasks': ops_tasks.count(),
+        'completed_tasks': ops_tasks.filter(completed=True).count(),
+        'pending_tasks': ops_tasks.filter(completed=False).count(),
+        'overdue_tasks': ops_tasks.filter(
+            completed=False,
+            due_date__lt=timezone.now()
+        ).count(),
+        'high_priority_tasks': ops_tasks.filter(priority__in=['high', 'urgent']).count(),
+    }
+    
+    # Service request performance metrics
+    ops_requests = ServiceRequest.objects.filter(
+        assigned_to__in=ops_users,
+        created_at__date__range=[date_from, date_to]
+    )
+    
+    request_metrics = {
+        'total_requests': ops_requests.count(),
+        'open_requests': ops_requests.filter(status='open').count(),
+        'in_progress_requests': ops_requests.filter(status='in_progress').count(),
+        'resolved_requests': ops_requests.filter(status__in=['resolved', 'closed']).count(),
+        'urgent_requests': ops_requests.filter(priority='urgent').count(),
+    }
+    
+    # Client profile metrics
+    client_metrics = {
+        'total_profiles': ClientProfile.objects.filter(
+            created_at__date__range=[date_from, date_to]
+        ).count(),
+        'active_profiles': ClientProfile.objects.filter(
+            created_at__date__range=[date_from, date_to],
+            status='active'
+        ).count(),
+        'profiles_by_ops': ClientProfile.objects.filter(
+            created_at__date__range=[date_from, date_to],
+            mapped_ops_exec__in=ops_users
+        ).count(),
+    }
+    
+    # Calculate performance rates
+    task_completion_rate = (task_metrics['completed_tasks'] / task_metrics['total_tasks'] * 100) if task_metrics['total_tasks'] > 0 else 0
+    request_resolution_rate = (request_metrics['resolved_requests'] / request_metrics['total_requests'] * 100) if request_metrics['total_requests'] > 0 else 0
+    
+    # Weekly performance trends
+    weekly_trends = []
+    current_date = date_from
+    while current_date <= date_to:
+        week_end = min(current_date + timedelta(days=6), date_to)
+        
+        week_tasks = ops_tasks.filter(created_at__date__range=[current_date, week_end])
+        week_requests = ops_requests.filter(created_at__date__range=[current_date, week_end])
+        
+        weekly_trends.append({
+            'week_start': current_date,
+            'tasks_created': week_tasks.count(),
+            'tasks_completed': week_tasks.filter(completed=True).count(),
+            'requests_created': week_requests.count(),
+            'requests_resolved': week_requests.filter(status__in=['resolved', 'closed']).count(),
+        })
+        
+        current_date = week_end + timedelta(days=1)
+    
+    # Top performers
+    top_performers = []
+    for ops_user in ops_users:
+        user_tasks = ops_tasks.filter(assigned_to=ops_user)
+        user_requests = ops_requests.filter(assigned_to=ops_user)
+        
+        user_task_rate = (user_tasks.filter(completed=True).count() / user_tasks.count() * 100) if user_tasks.count() > 0 else 0
+        user_request_rate = (user_requests.filter(status__in=['resolved', 'closed']).count() / user_requests.count() * 100) if user_requests.count() > 0 else 0
+        
+        overall_score = (user_task_rate + user_request_rate) / 2
+        
+        top_performers.append({
+            'user': ops_user,
+            'task_completion_rate': round(user_task_rate, 2),
+            'request_resolution_rate': round(user_request_rate, 2),
+            'overall_score': round(overall_score, 2),
+            'total_tasks': user_tasks.count(),
+            'total_requests': user_requests.count(),
+        })
+    
+    # Sort by overall score
+    top_performers.sort(key=lambda x: x['overall_score'], reverse=True)
+    
+    context = {
+        'date_from': date_from,
+        'date_to': date_to,
+        'task_metrics': task_metrics,
+        'request_metrics': request_metrics,
+        'client_metrics': client_metrics,
+        'task_completion_rate': round(task_completion_rate, 2),
+        'request_resolution_rate': round(request_resolution_rate, 2),
+        'weekly_trends': weekly_trends,
+        'top_performers': top_performers[:10],  # Top 10 performers
+        'ops_users_count': ops_users.count(),
+    }
+    
+    return render(request, 'operations/performance_metrics.html', context)
+
+
+@login_required
+@user_passes_test(business_head_ops_required)
+def bh_ops_compliance(request):
+    """Business Head Operations compliance monitoring"""
+    user = request.user
+    
+    # Get operations team
+    ops_users = User.objects.filter(role__in=['ops_team_lead', 'ops_exec'])
+    
+    # Compliance metrics
+    compliance_metrics = {
+        'total_client_profiles': ClientProfile.objects.count(),
+        'complete_profiles': ClientProfile.objects.exclude(
+            Q(client_full_name='') | Q(email='') | Q(mobile_number='') | Q(pan_number='')
+        ).count(),
+        'incomplete_profiles': ClientProfile.objects.filter(
+            Q(client_full_name='') | Q(email='') | Q(mobile_number='') | Q(pan_number='')
+        ).count(),
+        'missing_ops_assignment': ClientProfile.objects.filter(mapped_ops_exec__isnull=True).count(),
+        'missing_rm_assignment': ClientProfile.objects.filter(mapped_rm__isnull=True).count(),
+    }
+    
+    # Calculate compliance rate
+    compliance_rate = (compliance_metrics['complete_profiles'] / compliance_metrics['total_client_profiles'] * 100) if compliance_metrics['total_client_profiles'] > 0 else 0
+    
+    # Overdue tasks compliance
+    overdue_tasks = Task.objects.filter(
+        assigned_to__in=ops_users,
+        completed=False,
+        due_date__lt=timezone.now()
+    ).select_related('assigned_to')
+    
+    # Service request SLA compliance
+    sla_breached_requests = ServiceRequest.objects.filter(
+        assigned_to__in=ops_users,
+        status='open',
+        created_at__lt=timezone.now() - timedelta(hours=24)  # Assuming 24-hour SLA
+    ).select_related('assigned_to', 'client')
+    
+    # Data quality issues
+    data_quality_issues = []
+    
+    # Check for duplicate PAN numbers
+    duplicate_pans = ClientProfile.objects.values('pan_number').annotate(
+        count=Count('pan_number')
+    ).filter(count__gt=1)
+    
+    if duplicate_pans.exists():
+        data_quality_issues.append({
+            'type': 'Duplicate PAN Numbers',
+            'count': duplicate_pans.count(),
+            'severity': 'High',
+            'details': f"{duplicate_pans.count()} PAN numbers have multiple entries"
+        })
+    
+    # Check for missing email addresses
+    missing_emails = ClientProfile.objects.filter(email='').count()
+    if missing_emails > 0:
+        data_quality_issues.append({
+            'type': 'Missing Email Addresses',
+            'count': missing_emails,
+            'severity': 'Medium',
+            'details': f"{missing_emails} client profiles missing email addresses"
+        })
+    
+    # Check for invalid mobile numbers
+    invalid_mobiles = ClientProfile.objects.exclude(
+        mobile_number__regex=r'^[6-9]\d{9}$'
+    ).exclude(mobile_number='').count()
+    
+    if invalid_mobiles > 0:
+        data_quality_issues.append({
+            'type': 'Invalid Mobile Numbers',
+            'count': invalid_mobiles,
+            'severity': 'Medium',
+            'details': f"{invalid_mobiles} client profiles have invalid mobile numbers"
+        })
+    
+    # Team compliance scores
+    team_compliance = []
+    for ops_user in ops_users:
+        user_profiles = ClientProfile.objects.filter(mapped_ops_exec=ops_user)
+        user_tasks = Task.objects.filter(assigned_to=ops_user)
+        user_requests = ServiceRequest.objects.filter(assigned_to=ops_user)
+        
+        # Calculate individual compliance scores
+        complete_profiles = user_profiles.exclude(
+            Q(client_full_name='') | Q(email='') | Q(mobile_number='') | Q(pan_number='')
+        ).count()
+        
+        profile_completion_rate = (complete_profiles / user_profiles.count() * 100) if user_profiles.count() > 0 else 100
+        
+        overdue_user_tasks = user_tasks.filter(
+            completed=False,
+            due_date__lt=timezone.now()
+        ).count()
+        
+        task_compliance_rate = ((user_tasks.count() - overdue_user_tasks) / user_tasks.count() * 100) if user_tasks.count() > 0 else 100
+        
+        sla_breached_user_requests = user_requests.filter(
+            status='open',
+            created_at__lt=timezone.now() - timedelta(hours=24)
+        ).count()
+        
+        request_compliance_rate = ((user_requests.count() - sla_breached_user_requests) / user_requests.count() * 100) if user_requests.count() > 0 else 100
+        
+        overall_compliance = (profile_completion_rate + task_compliance_rate + request_compliance_rate) / 3
+        
+        team_compliance.append({
+            'user': ops_user,
+            'profile_completion_rate': round(profile_completion_rate, 2),
+            'task_compliance_rate': round(task_compliance_rate, 2),
+            'request_compliance_rate': round(request_compliance_rate, 2),
+            'overall_compliance': round(overall_compliance, 2),
+            'assigned_profiles': user_profiles.count(),
+            'overdue_tasks': overdue_user_tasks,
+            'sla_breached_requests': sla_breached_user_requests,
+        })
+    
+    # Sort by overall compliance
+    team_compliance.sort(key=lambda x: x['overall_compliance'], reverse=True)
+    
+    context = {
+        'compliance_metrics': compliance_metrics,
+        'compliance_rate': round(compliance_rate, 2),
+        'overdue_tasks': overdue_tasks,
+        'sla_breached_requests': sla_breached_requests,
+        'data_quality_issues': data_quality_issues,
+        'team_compliance': team_compliance,
+        'ops_users_count': ops_users.count(),
+    }
+    
+    return render(request, 'operations/compliance.html', context)
+
+
+# API Endpoints for AJAX calls
+@login_required
+@require_GET
+def get_dashboard_stats(request):
+    """API endpoint to get dashboard statistics"""
+    user = request.user
+    
+    try:
+        if user.role == 'top_management':
+            stats = {
+                'total_users': User.objects.count(),
+                'total_clients': Client.objects.count(),
+                'total_leads': Lead.objects.count(),
+                'total_tasks': Task.objects.filter(completed=False).count(),
+                'total_service_requests': ServiceRequest.objects.filter(status='open').count(),
+            }
+        elif user.role in ['business_head', 'business_head_ops']:
+            stats = {
+                'total_clients': Client.objects.count(),
+                'total_leads': Lead.objects.count(),
+                'pending_tasks': Task.objects.filter(completed=False).count(),
+                'open_service_requests': ServiceRequest.objects.filter(status='open').count(),
+            }
+        elif user.role in ['rm_head', 'ops_team_lead']:
+            accessible_users = user.get_accessible_users()
+            stats = {
+                'team_members': accessible_users.count(),
+                'team_tasks': Task.objects.filter(assigned_to__in=accessible_users, completed=False).count(),
+                'team_leads': Lead.objects.filter(assigned_to__in=accessible_users).count(),
+                'team_clients': Client.objects.filter(user__in=accessible_users).count(),
+            }
+        else:  # RM, Ops Exec
+            stats = {
+                'my_tasks': Task.objects.filter(assigned_to=user, completed=False).count(),
+                'my_leads': Lead.objects.filter(assigned_to=user).count(),
+                'my_clients': Client.objects.filter(user=user).count(),
+            }
+        
+        return JsonResponse({'success': True, 'stats': stats})
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@require_GET
+def get_user_hierarchy(request):
+    """API endpoint to get user hierarchy data"""
+    user = request.user
+    
+    try:
+        hierarchy_data = []
+        
+        if user.role in ['top_management', 'business_head', 'business_head_ops']:
+            # Get all users with their hierarchy
+            all_users = User.objects.select_related('manager').all()
+            
+            for u in all_users:
+                hierarchy_data.append({
+                    'id': u.id,
+                    'name': u.get_full_name() or u.username,
+                    'role': u.get_role_display(),
+                    'manager_id': u.manager.id if u.manager else None,
+                    'email': u.email,
+                })
+        
+        elif user.role in ['rm_head', 'ops_team_lead']:
+            # Get accessible users
+            accessible_users = user.get_accessible_users()
+            
+            for u in accessible_users:
+                hierarchy_data.append({
+                    'id': u.id,
+                    'name': u.get_full_name() or u.username,
+                    'role': u.get_role_display(),
+                    'manager_id': u.manager.id if u.manager else None,
+                    'email': u.email,
+                })
+        
+        return JsonResponse({'success': True, 'hierarchy': hierarchy_data})
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@require_GET
+def get_team_performance(request):
+    """API endpoint to get team performance data"""
+    user = request.user
+    
+    try:
+        if user.role in ['rm_head', 'ops_team_lead']:
+            team_members = user.get_team_members()
+            performance_data = []
+            
+            for member in team_members:
+                if user.role == 'rm_head':
+                    # RM team performance
+                    member_leads = Lead.objects.filter(assigned_to=member)
+                    member_clients = Client.objects.filter(user=member)
+                    
+                    performance_data.append({
+                        'user_id': member.id,
+                        'name': member.get_full_name() or member.username,
+                        'leads': member_leads.count(),
+                        'clients': member_clients.count(),
+                        'aum': float(member_clients.aggregate(total=Sum('aum'))['total'] or 0),
+                    })
+                
+                elif user.role == 'ops_team_lead':
+                    # Operations team performance
+                    member_tasks = Task.objects.filter(assigned_to=member)
+                    member_requests = ServiceRequest.objects.filter(assigned_to=member)
+                    member_profiles = ClientProfile.objects.filter(mapped_ops_exec=member)
+                    
+                    performance_data.append({
+                        'user_id': member.id,
+                        'name': member.get_full_name() or member.username,
+                        'total_tasks': member_tasks.count(),
+                        'completed_tasks': member_tasks.filter(completed=True).count(),
+                        'service_requests': member_requests.count(),
+                        'client_profiles': member_profiles.count(),
+                    })
+            
+            return JsonResponse({'success': True, 'performance': performance_data})
+        
+        else:
+            return JsonResponse({'success': False, 'error': 'Insufficient permissions'})
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@require_POST
+def quick_create_note(request):
+    """API endpoint for quick note creation"""
+    try:
+        data = json.loads(request.body)
+        
+        # Get or create default note list
+        note_list, created = NoteList.objects.get_or_create(
+            user=request.user,
+            name='Quick Notes',
+            defaults={'description': 'Quick notes created from dashboard'}
+        )
+        
+        # Create note
+        note = Note.objects.create(
+            user=request.user,
+            note_list=note_list,
+            heading=data.get('heading', 'Quick Note'),
+            content=data.get('content', ''),
+            creation_date=timezone.now().date()
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'note_id': note.id,
+            'message': 'Note created successfully'
+        })
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@require_POST
+def quick_assign_task(request):
+    """API endpoint for quick task assignment"""
+    try:
+        data = json.loads(request.body)
+        
+        # Get assignee
+        assignee_id = data.get('assignee_id')
+        if not assignee_id:
+            assignee = request.user
+        else:
+            assignee = User.objects.get(id=assignee_id)
+            
+            # Check if user can assign to this person
+            if not request.user.can_access_user_data(assignee):
+                return JsonResponse({'success': False, 'error': 'Permission denied'})
+        
+        # Create task
+        task = Task.objects.create(
+            assigned_to=assignee,
+            assigned_by=request.user,
+            title=data.get('title', 'Quick Task'),
+            description=data.get('description', ''),
+            priority=data.get('priority', 'medium'),
+            due_date=data.get('due_date')
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'task_id': task.id,
+            'message': f'Task assigned to {assignee.get_full_name()}'
+        })
+    
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+# Error handling views
+def permission_denied(request, exception=None):
+    """403 error handler"""
+    return render(request, 'errors/403.html', status=403)
+
+
+def not_found(request, exception=None):
+    """404 error handler"""
+    return render(request, 'errors/404.html', status=404)
+
+
+def server_error(request):
+    """500 error handler"""
+    return render(request, 'errors/500.html', status=500)
+
+
+# Quick access views
+@login_required
+def quick_note_create(request):
+    """Quick note creation for modal/popup"""
+    if request.method == 'POST':
+        form = QuickNoteForm(request.POST, user=request.user)
+        if form.is_valid():
+            note = form.save()
+            messages.success(request, 'Note created successfully')
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'note_id': note.id,
+                    'redirect_url': reverse('note_detail', args=[note.id])
+                })
+            
+            return redirect('note_detail', pk=note.id)
+    else:
+        form = QuickNoteForm(user=request.user)
+    
+    context = {'form': form}
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render(request, 'notes/quick_note_form.html', context)
+    
+    return render(request, 'notes/note_form.html', context)
+
+
+@login_required
+def quick_task_create(request):
+    """Quick task creation"""
+    if request.method == 'POST':
+        form = TaskForm(request.POST, current_user=request.user)
+        if form.is_valid():
+            task = form.save()
+            messages.success(request, f'Task assigned to {task.assigned_to.get_full_name()}')
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'task_id': task.id,
+                    'message': f'Task assigned to {task.assigned_to.get_full_name()}'
+                })
+            
+            return redirect('task_list')
+    else:
+        form = TaskForm(current_user=request.user)
+    
+    context = {'form': form}
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render(request, 'tasks/quick_task_form.html', context)
+    
+    return render(request, 'tasks/task_form.html', context)
+
+
+@login_required
+@require_GET
+def quick_client_search(request):
+    """Quick client search for autocomplete"""
+    query = request.GET.get('q', '')
+    
+    if len(query) < 2:
+        return JsonResponse({'results': []})
+    
+    # Filter clients based on user access
+    if request.user.role in ['top_management', 'business_head', 'business_head_ops']:
+        clients = ClientProfile.objects.all()
+    elif request.user.role in ['rm_head', 'ops_team_lead']:
+        accessible_users = request.user.get_accessible_users()
+        clients = ClientProfile.objects.filter(
+            Q(mapped_rm__in=accessible_users) | Q(mapped_ops_exec__in=accessible_users)
+        )
+    elif request.user.role == 'rm':
+        clients = ClientProfile.objects.filter(mapped_rm=request.user)
+    elif request.user.role == 'ops_exec':
+        clients = ClientProfile.objects.filter(mapped_ops_exec=request.user)
+    else:
+        clients = ClientProfile.objects.none()
+    
+    # Search clients
+    clients = clients.filter(
+        Q(client_full_name__icontains=query) |
+        Q(email__icontains=query) |
+        Q(mobile_number__icontains=query) |
+        Q(pan_number__icontains=query)
+    )[:10]
+    
+    results = []
+    for client in clients:
+        results.append({
+            'id': client.id,
+            'text': client.client_full_name,
+            'email': client.email,
+            'mobile': client.mobile_number,
+            'pan': client.pan_number,
+            'status': client.get_status_display(),
+        })
+    
+    return JsonResponse({'results': results})
+
+
+@login_required
+
+@require_GET
+def quick_lead_search(request):
+    """Quick lead search for autocomplete"""
+    query = request.GET.get('q', '')
+    
+    if len(query) < 2:
+        return JsonResponse({'results': []})
+    
+    # Filter leads based on user access
+    if request.user.role in ['top_management', 'business_head']:
+        leads = Lead.objects.all()
+    elif request.user.role == 'rm_head':
+        accessible_users = request.user.get_accessible_users()
+        leads = Lead.objects.filter(assigned_to__in=accessible_users)
+    elif request.user.role == 'rm':
+        leads = Lead.objects.filter(assigned_to=request.user)
+    else:
+        leads = Lead.objects.none()
+    
+    # Search leads
+    leads = leads.filter(
+        Q(name__icontains=query) |
+        Q(email__icontains=query) |
+        Q(mobile__icontains=query) |
+        Q(lead_id__icontains=query)
+    )[:10]
+    
+    results = []
+    for lead in leads:
+        results.append({
+            'id': lead.id,
+            'text': lead.name,
+            'email': lead.email or '',
+            'mobile': lead.mobile or '',
+            'status': lead.get_status_display(),
+            'probability': lead.probability,
+            'assigned_to': lead.assigned_to.get_full_name() if lead.assigned_to else '',
+        })
+    
+    return JsonResponse({'results': results})
+
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -905,7 +2724,95 @@ from django import forms
 from .models import ClientProfile, User, MFUCANAccount, MotilalDematAccount, PrabhudasDematAccount
 from .forms import ClientProfileForm  # Import the form
 
-# Client Profile Form
+# Add this to your views.py
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.urls import reverse
+from django import forms
+
+# Form for converting client profile to full client
+class ConvertToClientForm(forms.ModelForm):
+    class Meta:
+        model = Client
+        fields = ['aum', 'sip_amount', 'demat_count', 'contact_info']
+        widgets = {
+            'aum': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter AUM amount',
+                'step': '0.01'
+            }),
+            'sip_amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter SIP amount',
+                'step': '0.01'
+            }),
+            'demat_count': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Number of demat accounts',
+                'min': '0'
+            }),
+            'contact_info': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Additional contact information'
+            })
+        }
+        labels = {
+            'aum': 'Assets Under Management (AUM)',
+            'sip_amount': 'SIP Amount',
+            'demat_count': 'Number of Demat Accounts',
+            'contact_info': 'Additional Contact Information'
+        }
+
+@login_required
+def convert_to_client(request, profile_id):
+    """Convert a client profile to a full client"""
+    profile = get_object_or_404(ClientProfile, id=profile_id)
+    
+    # Check if user has permission to convert
+    if not request.user.role in ['rm', 'rm_head', 'business_head', 'top_management']:
+        messages.error(request, "You don't have permission to convert client profiles.")
+        return redirect('client_profile_list')
+    
+    # Check if profile is already converted
+    if hasattr(profile, 'legacy_client') and profile.legacy_client:
+        messages.warning(request, "This client profile is already converted to a full client.")
+        return redirect('client_profile_detail', pk=profile.id)
+    
+    # Role-based access control
+    if request.user.role == 'rm' and profile.mapped_rm != request.user:
+        messages.error(request, "You can only convert your own client profiles.")
+        return redirect('client_profile_list')
+    
+    if request.method == 'POST':
+        form = ConvertToClientForm(request.POST)
+        if form.is_valid():
+            # Create new client instance
+            client = form.save(commit=False)
+            client.name = profile.client_full_name
+            client.user = profile.mapped_rm
+            client.client_profile = profile
+            client.created_by = request.user
+            client.save()
+            
+            messages.success(
+                request, 
+                f"Client profile '{profile.client_full_name}' has been successfully converted to a full client."
+            )
+            return redirect('client_profile_list')
+    else:
+        form = ConvertToClientForm()
+    
+    context = {
+        'form': form,
+        'profile': profile,
+        'page_title': f'Convert {profile.client_full_name} to Full Client'
+    }
+    
+    return render(request, 'base/convert_to_client.html', context)
+
+# Update your client_profile_list view to include the convert permission and stats
 @login_required
 def client_profile_list(request):
     """List client profiles with hierarchy-based access control"""
@@ -955,6 +2862,7 @@ def client_profile_list(request):
         total_clients=Count('id'),
         active_clients=Count('id', filter=Q(status='active')),
         muted_clients=Count('id', filter=Q(status='muted')),
+        converted_clients=Count('id', filter=Q(legacy_client__isnull=False)),
     )
 
     # Get RM list for filter dropdown
@@ -971,7 +2879,7 @@ def client_profile_list(request):
         rm_list = None
 
     context = {
-        'client_profiles': client_profiles.select_related('mapped_rm', 'mapped_ops_exec').order_by('-created_at'),
+        'client_profiles': client_profiles.select_related('mapped_rm', 'mapped_ops_exec', 'legacy_client').order_by('-created_at'),
         'search_query': search_query,
         'status_filter': status_filter,
         'rm_filter': rm_filter,
@@ -979,6 +2887,7 @@ def client_profile_list(request):
         'rm_list': rm_list,
         'can_create': user.role in ['rm', 'rm_head', 'business_head', 'top_management'],
         'can_modify': user.can_modify_client_profile(),
+        'can_convert_to_client': user.role in ['rm', 'rm_head', 'business_head', 'top_management'],
     }
     
     return render(request, 'base/client_profiles.html', context)
@@ -1475,8 +3384,12 @@ def service_request_list(request):
 
 @login_required
 def service_request_create(request):
+    # Debug: Print user role and client count
+    print(f"User: {request.user.username}, Role: {request.user.role}")
+    print(f"Total clients in DB: {Client.objects.count()}")
+    
     if request.method == 'POST':
-        form = ServiceRequestForm(request.POST)
+        form = ServiceRequestForm(request.POST, current_user=request.user)
         if form.is_valid():
             service_request = form.save(commit=False)
             service_request.raised_by = request.user
@@ -1484,14 +3397,10 @@ def service_request_create(request):
             messages.success(request, "Service request created successfully.")
             return redirect('service_request_list')
     else:
-        form = ServiceRequestForm()
+        form = ServiceRequestForm(current_user=request.user)
         
-        # Limit client choices based on user's access
-        if request.user.role == 'rm':
-            form.fields['client'].queryset = Client.objects.filter(user=request.user)
-        elif request.user.role == 'rm_head':
-            accessible_users = request.user.get_accessible_users()
-            form.fields['client'].queryset = Client.objects.filter(user__in=accessible_users)
+        # Debug: Print client queryset count after form initialization
+        print(f"Client queryset count: {form.fields['client'].queryset.count()}")
     
     return render(request, 'base/service_request_form.html', {'form': form, 'action': 'Create'})
 
@@ -1790,12 +3699,14 @@ def analytics_dashboard(request):
     
     if user.role in ['top_management', 'business_head']:
         # System-wide analytics
-        total_aum = Client.objects.aggregate(Sum('aum'))['total'] or 0
-        total_sip = Client.objects.aggregate(Sum('sip_amount'))['total'] or 0
+        total_aum = Client.objects.aggregate(total=Sum('aum'))['total'] or 0
+        total_sip = Client.objects.aggregate(total=Sum('sip_amount'))['total'] or 0
         total_clients = Client.objects.count()
         
         # Performance metrics
-        lead_conversion_rate = Lead.objects.filter(status='converted').count() / max(Lead.objects.count(), 1) * 100
+        total_leads = Lead.objects.count()
+        converted_leads = Lead.objects.filter(status='converted').count()
+        lead_conversion_rate = (converted_leads / max(total_leads, 1)) * 100
         
         # Team performance
         team_performance = User.objects.filter(role='rm').annotate(
@@ -1817,8 +3728,8 @@ def analytics_dashboard(request):
         accessible_users = user.get_accessible_users()
         team_clients = Client.objects.filter(user__in=accessible_users)
         
-        team_aum = team_clients.aggregate(Sum('aum'))['total'] or 0
-        team_sip = team_clients.aggregate(Sum('sip_amount'))['total'] or 0
+        team_aum = team_clients.aggregate(total=Sum('aum'))['total'] or 0
+        team_sip = team_clients.aggregate(total=Sum('sip_amount'))['total'] or 0
         
         # Individual team member performance
         team_performance = accessible_users.filter(role='rm').annotate(
@@ -1837,8 +3748,8 @@ def analytics_dashboard(request):
     else:  # RM
         # Personal analytics
         my_clients = Client.objects.filter(user=user)
-        my_aum = my_clients.aggregate(Sum('aum'))['total'] or 0
-        my_sip = my_clients.aggregate(Sum('sip_amount'))['total'] or 0
+        my_aum = my_clients.aggregate(total=Sum('aum'))['total'] or 0
+        my_sip = my_clients.aggregate(total=Sum('sip_amount'))['total'] or 0
         
         # Monthly performance
         from django.utils import timezone

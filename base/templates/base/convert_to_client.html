@@ -1,0 +1,258 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-user-check"></i> {{ page_title }}
+                    </h3>
+                    <div class="card-tools">
+                        <a href="{% url 'client_profile_list' %}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Back to Client Profiles
+                        </a>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <!-- Client Profile Summary -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-info"><i class="fas fa-user"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Client Profile</span>
+                                    <span class="info-box-number">{{ profile.client_full_name }}</span>
+                                    {% if profile.email %}
+                                        <div class="small text-muted">{{ profile.email }}</div>
+                                    {% endif %}
+                                    {% if profile.mobile_number %}
+                                        <div class="small text-muted">{{ profile.mobile_number }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-success"><i class="fas fa-user-tie"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Relationship Manager</span>
+                                    <span class="info-box-number">
+                                        {% if profile.mapped_rm %}
+                                            {{ profile.mapped_rm.get_full_name }}
+                                        {% else %}
+                                            Not Assigned
+                                        {% endif %}
+                                    </span>
+                                    {% if profile.pan_number %}
+                                        <div class="small text-muted">PAN: {{ profile.pan_number }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Conversion Information -->
+                    <div class="alert alert-info">
+                        <h5><i class="fas fa-info-circle"></i> What happens when you convert?</h5>
+                        <p class="mb-2">Converting this client profile to a full client will:</p>
+                        <ul class="mb-0">
+                            <li>Create a complete client record with financial information</li>
+                            <li>Allow tracking of AUM, SIP amounts, and demat accounts</li>
+                            <li>Enable advanced client management features</li>
+                            <li>Link the existing profile data with the new client record</li>
+                        </ul>
+                    </div>
+
+                    <!-- Conversion Form -->
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.aum.id_for_label }}" class="required">
+                                        {{ form.aum.label }}
+                                    </label>
+                                    {{ form.aum }}
+                                    <small class="form-text text-muted">
+                                        Enter the total assets under management in rupees
+                                    </small>
+                                    {% if form.aum.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.aum.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.sip_amount.id_for_label }}">
+                                        {{ form.sip_amount.label }}
+                                    </label>
+                                    {{ form.sip_amount }}
+                                    <small class="form-text text-muted">
+                                        Monthly SIP amount in rupees (optional)
+                                    </small>
+                                    {% if form.sip_amount.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.sip_amount.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.demat_count.id_for_label }}">
+                                        {{ form.demat_count.label }}
+                                    </label>
+                                    {{ form.demat_count }}
+                                    <small class="form-text text-muted">
+                                        Number of demat accounts (default: 0)
+                                    </small>
+                                    {% if form.demat_count.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.demat_count.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.contact_info.id_for_label }}">
+                                        {{ form.contact_info.label }}
+                                    </label>
+                                    {{ form.contact_info }}
+                                    <small class="form-text text-muted">
+                                        Any additional contact information (optional)
+                                    </small>
+                                    {% if form.contact_info.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.contact_info.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <button type="submit" class="btn btn-success btn-lg">
+                                        <i class="fas fa-user-check"></i> Convert to Full Client
+                                    </button>
+                                    <a href="{% url 'client_profile_list' %}" class="btn btn-secondary btn-lg ml-2">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Form validation
+(function() {
+    'use strict';
+    window.addEventListener('load', function() {
+        var forms = document.getElementsByClassName('needs-validation');
+        var validation = Array.prototype.filter.call(forms, function(form) {
+            form.addEventListener('submit', function(event) {
+                if (form.checkValidity() === false) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    }, false);
+})();
+
+// Number format validation
+document.addEventListener('DOMContentLoaded', function() {
+    const aumInput = document.getElementById('id_aum');
+    const sipInput = document.getElementById('id_sip_amount');
+    
+    [aumInput, sipInput].forEach(input => {
+        if (input) {
+            input.addEventListener('input', function() {
+                // Remove any non-numeric characters except decimal point
+                this.value = this.value.replace(/[^0-9.]/g, '');
+                
+                // Ensure only one decimal point
+                const parts = this.value.split('.');
+                if (parts.length > 2) {
+                    this.value = parts[0] + '.' + parts.slice(1).join('');
+                }
+            });
+        }
+    });
+});
+</script>
+
+<style>
+.required:after {
+    content: " *";
+    color: red;
+}
+
+.info-box {
+    box-shadow: 0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2);
+    border-radius: .25rem;
+    background: #fff;
+    display: flex;
+    margin-bottom: 1rem;
+    min-height: 80px;
+    padding: .5rem;
+    position: relative;
+    width: 100%;
+}
+
+.info-box .info-box-icon {
+    border-radius: .25rem;
+    align-items: center;
+    display: flex;
+    font-size: 1.875rem;
+    justify-content: center;
+    text-align: center;
+    width: 70px;
+    color: #fff;
+}
+
+.info-box .info-box-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    line-height: 1.8;
+    margin-left: 10px;
+    padding: 0 10px;
+}
+
+.info-box .info-box-number {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.info-box .info-box-text {
+    text-transform: uppercase;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+</style>
+
+{% endblock %}

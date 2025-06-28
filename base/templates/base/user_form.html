@@ -2,86 +2,337 @@
 
 {% block title %}Edit {{ profile_user.get_full_name|default:profile_user.username }}{% endblock %}
 
-{% block content %}
-<div class="container py-5">
-    <div class="card">
-        <div class="card-header">
-            <h2>Edit User: {{ profile_user.get_full_name|default:profile_user.username }}</h2>
-        </div>
-        <div class="card-body">
-            <form method="post">
-                {% csrf_token %}
-                <div class="form-group">
-                    <label for="id_first_name">First Name</label>
-                    {{ form.first_name }}
-                    {% if form.first_name.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.first_name.errors }}
-                    </div>
-                    {% endif %}
-                </div>
-                
-                <div class="form-group">
-                    <label for="id_last_name">Last Name</label>
-                    {{ form.last_name }}
-                    {% if form.last_name.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.last_name.errors }}
-                    </div>
-                    {% endif %}
-                </div>
-                
-                <div class="form-group">
-                    <label for="id_email">Email</label>
-                    {{ form.email }}
-                    {% if form.email.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.email.errors }}
-                    </div>
-                    {% endif %}
-                </div>
-                
-                <div class="form-group">
-                    <label for="id_role">Role</label>
-                    {{ form.role }}
-                    {% if form.role.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.role.errors }}
-                    </div>
-                    {% endif %}
-                </div>
-                
-                <div class="form-group">
-                    <label for="id_teams">Teams</label>
-                    {{ form.teams }}
-                    {% if form.teams.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.teams.errors }}
-                    </div>
-                    {% endif %}
-                </div>
-                
-                <div class="form-group mt-4">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Save Changes
-                    </button>
-                    <a href="{% url 'user_profile' profile_user.id %}" class="btn btn-secondary">
-                        Cancel
-                    </a>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
+{% block extra_css %}
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+:root {
+  --primary-color: #4a6cf7;
+  --secondary-color: #6c757d;
+  --success-color: #28a745;
+  --danger-color: #dc3545;
+  --light-color: #f8f9fa;
+  --dark-color: #343a40;
+  --border-color: #e9ecef;
+  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --transition: all 0.3s ease;
+}
+
+.profile-form-container {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+}
+
+.profile-form-card {
+  border: none;
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  transition: var(--transition);
+}
+
+.profile-form-header {
+  background: linear-gradient(135deg, #2c3e50, #4a6cf7);
+  padding: 2rem;
+  color: white;
+}
+
+.profile-form-title {
+  font-weight: 700;
+  margin-bottom: 0;
+  font-size: 1.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.profile-form-body {
+  padding: 2rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.form-control, .select2-selection {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  transition: var(--transition);
+}
+
+.form-control:focus, .select2-selection--multiple:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.25rem rgba(74, 108, 247, 0.15);
+  outline: none;
+}
+
+.error-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0 0;
+  color: var(--danger-color);
+  font-size: 0.875rem;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+  background-color: #3a5bd9;
+  border-color: #3a5bd9;
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background-color: var(--secondary-color);
+  border-color: var(--secondary-color);
+}
+
+.btn-secondary:hover {
+  background-color: #5a6268;
+  border-color: #5a6268;
+}
+
+/* Select2 customizations */
+.select2-container--default .select2-selection--multiple {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  min-height: 42px;
+}
+
+.select2-container--default.select2-container--focus .select2-selection--multiple {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.25rem rgba(74, 108, 247, 0.15);
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+  border-radius: 4px;
+  padding: 0 8px;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+  color: white;
+  margin-right: 4px;
+}
+
+/* Role badge styling */
+.role-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+
+.role-admin {
+  background-color: #ffebee;
+  color: #d32f2f;
+}
+
+.role-manager {
+  background-color: #fff3e0;
+  color: #f57c00;
+}
+
+.role-user {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+@media (max-width: 768px) {
+  .profile-form-container {
+    padding: 0 1rem;
+  }
+  
+  .profile-form-header {
+    padding: 1.5rem;
+  }
+  
+  .profile-form-body {
+    padding: 1.5rem;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-form-container">
+  <div class="profile-form-card">
+    <div class="profile-form-header">
+      <h1 class="profile-form-title">
+        <i class="fas fa-user-edit"></i>
+        Edit User: {{ profile_user.get_full_name|default:profile_user.username }}
+      </h1>
+    </div>
+    
+    <div class="profile-form-body">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger mb-4">
+            {% for error in form.non_field_errors %}
+              {{ error }}
+            {% endfor %}
+          </div>
+        {% endif %}
+        
+        <!-- Name Fields -->
+        <div class="row">
+          <div class="col-md-6">
+            <div class="form-group">
+              <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name</label>
+              {{ form.first_name }}
+              {% if form.first_name.errors %}
+                <ul class="error-list">
+                  {% for error in form.first_name.errors %}
+                    <li>{{ error }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="form-group">
+              <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name</label>
+              {{ form.last_name }}
+              {% if form.last_name.errors %}
+                <ul class="error-list">
+                  {% for error in form.last_name.errors %}
+                    <li>{{ error }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        
+        <!-- Email Field -->
+        <div class="form-group">
+          <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
+          {{ form.email }}
+          {% if form.email.errors %}
+            <ul class="error-list">
+              {% for error in form.email.errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+        
+        <!-- Role Field -->
+        <div class="form-group">
+          <label for="{{ form.role.id_for_label }}" class="form-label">Role</label>
+          {{ form.role }}
+          {% if form.role.errors %}
+            <ul class="error-list">
+              {% for error in form.role.errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+        
+        <!-- Teams Field -->
+        <div class="form-group">
+          <label for="{{ form.teams.id_for_label }}" class="form-label">Teams</label>
+          {{ form.teams }}
+          {% if form.teams.errors %}
+            <ul class="error-list">
+              {% for error in form.teams.errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+        
+        <div class="form-actions">
+          <a href="{% url 'user_profile' profile_user.id %}" class="btn btn-secondary">
+            <i class="fas fa-times"></i> Cancel
+          </a>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 $(document).ready(function() {
+    // Initialize Select2 with customizations
     $('select').select2({
         placeholder: "Select options",
-        allowClear: true
+        allowClear: true,
+        width: '100%',
+        theme: 'bootstrap4'
     });
+
+    // Form submission loading state
+    $('form').on('submit', function() {
+        const submitBtn = $(this).find('button[type="submit"]');
+        submitBtn.prop('disabled', true);
+        submitBtn.html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+    });
+
+    // Add role badge styling
+    const roleSelect = $('#id_role');
+    function updateRoleBadge() {
+        const selectedRole = roleSelect.find('option:selected').text().toLowerCase();
+        roleSelect.removeClass('role-admin role-manager role-user');
+        if (selectedRole) {
+            roleSelect.addClass(`role-${selectedRole}`);
+        }
+    }
+    
+    // Initialize and update on change
+    updateRoleBadge();
+    roleSelect.on('change', updateRoleBadge);
 });
 </script>
 {% endblock %}

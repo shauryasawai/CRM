@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Note Lists</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            --danger-gradient: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            --info-gradient: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            --dark-bg: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --text-light: #e2e8f0;
+            --card-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--dark-bg);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            color: var(--text-light);
+            overflow-x: hidden;
+        }
+
+        /* Animated background particles */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse"><circle cx="15" cy="15" r="2" fill="rgba(255,255,255,0.05)"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            animation: float 35s ease-in-out infinite;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-40px) rotate(180deg); }
+        }
+
+        .list-container {
+            padding: 2rem 0;
+            min-height: 100vh;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modern-navbar {
+            background: var(--glass-bg) !important;
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            margin-bottom: 3rem;
+        }
+
+        .modern-navbar .navbar-brand {
+            font-weight: 800;
+            font-size: 1.5rem;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .modern-navbar .nav-link {
+            color: var(--text-light) !important;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem !important;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            margin: 0 0.25rem;
+        }
+
+        .modern-navbar .nav-link:hover {
+            background: var(--glass-bg);
+            color: white !important;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .page-header {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 3rem;
+            margin-bottom: 3rem;
+            box-shadow: var(--card-shadow);
+            position: relative;
+            overflow: hidden;
+            animation: slideInDown 0.8s ease-out;
+        }
+
+        @keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--primary-gradient);
+            opacity: 0.1;
+            z-index: -1;
+        }
+
+        .page-header h2 {
+            color: white;
+            font-weight: 900;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .page-header p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+            margin: 0;
+        }
+
+        .modern-btn {
+            background: var(--gradient);
+            border: none;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border: 2px solid transparent;
+        }
+
+        .modern-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.6s;
+        }
+
+        .modern-btn:hover::before {
+            left: 100%;
+        }
+
+        .modern-btn:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            color: white;
+            text-decoration: none;
+        }
+
+        .btn-primary { --gradient: var(--primary-gradient); }
+        .btn-outline-primary { 
+            background: transparent;
+            border: 2px solid rgba(102, 126, 234, 0.5);
+            color: #667eea;
+            --gradient: var(--primary-gradient);
+        }
+        .btn-outline-primary:hover {
+            background: var(--primary-gradient);
+            border-color: transparent;
+            color: white;
+        }
+
+        .list-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: var(--card-shadow);
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            overflow: hidden;
+            position: relative;
+            height: 100%;
+            animation: slideInUp 0.8s ease-out both;
+        }
+
+        .list-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 35px 70px rgba(0, 0, 0, 0.3);
+        }
+
+        .list-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--gradient);
+            z-index: 1;
+        }
+
+        .list-card.default-list::before { background: var(--success-gradient); }
+        .list-card.project-list::before { background: var(--info-gradient); }
+        .list-card.personal-list::before { background: var(--warning-gradient); }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .list-header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .list-header h5 {
+            color: white;
+            font-weight: 800;
+            font-size: 1.25rem;
+            margin-bottom: 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .list-header i {
+            color: #667eea;
+            font-size: 1.5rem;
+        }
+
+        .list-header .default-badge {
+            background: var(--success-gradient);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+        }
+
+        .note-count {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .modern-card-body {
+            padding: 2rem;
+            color: rgba(255, 255, 255, 0.9);
+            flex: 1;
+        }
+
+        .card-text {
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .stats-row {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-value.text-warning { color: #fee140 !important; }
+        .stat-value.text-success { color: #00f2fe !important; }
+
+        .recent-notes {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 1.5rem;
+        }
+
+        .recent-notes h6 {
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            font-size: 0.875rem;
+            letter-spacing: 0.1em;
+        }
+
+        .note-preview {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .note-preview:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        .note-preview a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .note-preview a:hover {
+            color: #4facfe;
+        }
+
+        .note-preview i {
+            color: #00f2fe;
+        }
+
+        .modern-card-footer {
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .action-buttons {
+            opacity: 0.7;
+            transition: all 0.3s ease;
+        }
+
+        .list-card:hover .action-buttons {
+            opacity: 1;
+        }
+
+        .action-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            margin: 0 0.25rem;
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .action-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--gradient);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .action-btn:hover::before {
+            opacity: 1;
+        }
+
+        .action-btn i {
+            position: relative;
+            z-index: 1;
+            color: white;
+        }
+
+        .btn-view {
+            border-color: rgba(168, 237, 234, 0.5);
+            color: #a8edea;
+            --gradient: var(--info-gradient);
+        }
+
+        .btn-edit {
+            border-color: rgba(255, 255, 255, 0.3);
+            color: rgba(255, 255, 255, 0.8);
+            --gradient: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-delete {
+            border-color: rgba(255, 154, 158, 0.5);
+            color: #ff9a9e;
+            --gradient: var(--danger-gradient);
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px) scale(1.1);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .quick-actions-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            margin-top: 3rem;
+            animation: slideInUp 0.8s ease-out 0.5s both;
+        }
+
+        .quick-actions-header {
+            background: var(--info-gradient);
+            padding: 1.5rem 2rem;
+            color: white;
+            font-weight: 700;
+        }
+
+        .quick-action-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.9);
+            padding: 2rem 1rem;
+            border-radius: 16px;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            transition: all 0.3s ease;
+            height: 100%;
+            backdrop-filter: blur(10px);
+        }
+
+        .quick-action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            text-decoration: none;
+        }
+
+        .quick-action-btn i {
+            font-size: 2rem;
+            color: #4facfe;
+        }
+
+        .empty-state {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: var(--card-shadow);
+            padding: 6rem 3rem;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .empty-state::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--primary-gradient);
+            opacity: 0.1;
+            z-index: -1;
+        }
+
+        .empty-state i {
+            font-size: 5rem;
+            color: rgba(102, 126, 234, 0.5);
+            margin-bottom: 2rem;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .empty-state h4 {
+            color: white;
+            font-weight: 800;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .tips-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            margin-top: 3rem;
+            animation: slideInUp 0.8s ease-out 0.7s both;
+        }
+
+        .tips-header {
+            background: var(--info-gradient);
+            padding: 1.5rem 2rem;
+            color: white;
+            font-weight: 700;
+        }
+
+        .tip-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            height: 100%;
+        }
+
+        .tip-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .tip-item h6 {
+            color: white;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        .tip-item i {
+            font-size: 1.5rem;
+        }
+
+        .tip-item p {
+            color: rgba(255, 255, 255, 0.8);
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        /* Animation delays for staggered loading */
+        .list-card:nth-child(1) { animation-delay: 0.1s; }
+        .list-card:nth-child(2) { animation-delay: 0.2s; }
+        .list-card:nth-child(3) { animation-delay: 0.3s; }
+        .list-card:nth-child(4) { animation-delay: 0.4s; }
+        .list-card:nth-child(5) { animation-delay: 0.5s; }
+        .list-card:nth-child(6) { animation-delay: 0.6s; }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .list-container {
+                padding: 1rem 0;
+            }
+
+            .page-header {
+                padding: 2rem;
+                text-align: center;
+            }
+
+            .page-header h2 {
+                font-size: 2rem;
+            }
+
+            .modern-btn {
+                padding: 0.875rem 1.5rem;
+                font-size: 0.875rem;
+                width: 100%;
+                justify-content: center;
+                margin-bottom: 1rem;
+            }
+
+            .list-header,
+            .modern-card-body,
+            .modern-card-footer {
+                padding: 1.5rem;
+            }
+
+            .d-flex.justify-content-between {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .action-buttons {
+                opacity: 1;
+                justify-content: center;
+            }
+
+            .quick-action-btn {
+                padding: 1.5rem 0.75rem;
+            }
+
+            .quick-action-btn i {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-gradient);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary-gradient);
+        }
+    </style>
+</head>
+<body class="list-container">
+    <div class="container-fluid">
+        <!-- Modern Header -->
+        <div class="row">
+            <div class="col-12">
+                <nav class="navbar navbar-expand-lg modern-navbar">
+                    <div class="container-fluid">
+                        <a class="navbar-brand" href="{% url 'notes_dashboard' %}">
+                            <i class="fas fa-folder-open"></i> Manage Note Lists
+                        </a>
+                        <div class="navbar-nav ms-auto">
+                            <a class="nav-link" href="{% url 'notes_dashboard' %}">
+                                <i class="fas fa-arrow-left"></i> Back to Notes
+                            </a>
+                            <a class="nav-link" href="{% url 'dashboard' %}">
+                                <i class="fas fa-home"></i> Dashboard
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Modern Page Header -->
+        <div class="row">
+            <div class="col-12">
+                <div class="page-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2><i class="fas fa-folder-open"></i> My Note Lists</h2>
+                            <p>Organize your notes into custom lists by topic or project</p>
+                        </div>
+                        <div>
+                            <a href="{% url 'note_list_create' %}" class="modern-btn btn-primary">
+                                <i class="fas fa-plus"></i> Create New List
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Note Lists -->
+        {% if note_lists %}
+        <div class="row">
+            {% for note_list in note_lists %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="list-card {% if note_list.name == 'General' %}default-list{% elif 'Project' in note_list.name %}project-list{% elif 'Personal' in note_list.name %}personal-list{% endif %}">
+                    <div class="list-header">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h5>
+                                    {% if note_list.name == 'General' %}
+                                        <i class="fas fa-star"></i>
+                                    {% else %}
+                                        <i class="fas fa-folder"></i>
+                                    {% endif %}
+                                    {{ note_list.name }}
+                                </h5>
+                                {% if note_list.name == 'General' %}
+                                    <span class="default-badge">Default List</span>
+                                {% endif %}
+                            </div>
+                            <span class="note-count">
+                                {{ note_list.notes.count }} notes
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="modern-card-body">
+                        {% if note_list.description %}
+                            <p class="card-text">{{ note_list.description|truncatechars:100 }}</p>
+                        {% else %}
+                            <p class="card-text">No description provided</p>
+                        {% endif %}
+                        
+                        <!-- List Statistics -->
+                        <div class="stats-row">
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <div class="stat-item">
+                                        <div class="stat-label">Total</div>
+                                        <div class="stat-value">{{ note_list.notes.count }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="stat-item">
+                                        <div class="stat-label">Pending</div>
+                                        <div class="stat-value text-warning">{{ note_list.pending_count|default:0 }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="stat-item">
+                                        <div class="stat-label">Done</div>
+                                        <div class="stat-value text-success">{{ note_list.completed_count|default:0 }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recent Notes Preview -->
+                        {% if note_list.notes.exists %}
+                        <div class="recent-notes">
+                            <h6>Recent Notes:</h6>
+                            {% for note in note_list.notes.all|slice:":3" %}
+                            <div class="note-preview d-flex align-items-center">
+                                {% if note.is_completed %}
+                                    <i class="fas fa-check-circle me-3"></i>
+                                {% else %}
+                                    <i class="fas fa-circle me-3" style="font-size: 0.5rem;"></i>
+                                {% endif %}
+                                <small class="text-truncate flex-grow-1">
+                                    <a href="{% url 'note_detail' note.pk %}">
+                                        {{ note.heading|truncatechars:30 }}
+                                    </a>
+                                </small>
+                            </div>
+                            {% endfor %}
+                            {% if note_list.notes.count > 3 %}
+                                <small style="color: rgba(255,255,255,0.6); margin-left: 2rem;">
+                                    and {{ note_list.notes.count|add:"-3" }} more...
+                                </small>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="modern-card-footer">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small style="color: rgba(255,255,255,0.7);">
+                                <i class="fas fa-clock"></i>
+                                Updated {{ note_list.updated_at|timesince }} ago
+                            </small>
+                            <div class="action-buttons d-flex">
+                                <a href="{% url 'note_list' %}?list={{ note_list.id }}" 
+                                   class="action-btn btn-view" title="View Notes">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'note_list_update' note_list.pk %}" 
+                                   class="action-btn btn-edit" title="Edit List">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% if note_list.name != 'General' %}
+                                <button type="button" class="action-btn btn-delete" 
+                                        onclick="confirmDelete('{{ note_list.pk }}', '{{ note_list.name }}')" 
+                                        title="Delete List">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Modern Quick Actions -->
+        <div class="row">
+            <div class="col-12">
+                <div class="quick-actions-card">
+                    <div class="quick-actions-header">
+                        <h6 class="mb-0"><i class="fas fa-bolt"></i> Quick Actions</h6>
+                    </div>
+                    <div class="p-4">
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <a href="{% url 'note_create' %}" class="quick-action-btn">
+                                    <i class="fas fa-plus"></i>
+                                    <span>Create Note</span>
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <a href="{% url 'note_list_create' %}" class="quick-action-btn">
+                                    <i class="fas fa-folder-plus"></i>
+                                    <span>Create List</span>
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <a href="{% url 'note_list' %}" class="quick-action-btn">
+                                    <i class="fas fa-list"></i>
+                                    <span>All Notes</span>
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <a href="{% url 'notes_dashboard' %}" class="quick-action-btn">
+                                    <i class="fas fa-tachometer-alt"></i>
+                                    <span>Dashboard</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% else %}
+        <!-- Modern Empty State -->
+        <div class="row">
+            <div class="col-12">
+                <div class="empty-state">
+                    <i class="fas fa-folder-open"></i>
+                    <h4>No Note Lists Yet</h4>
+                    <p class="mb-4">Create your first note list to organize your notes by topic or project.</p>
+                    <div class="d-flex justify-content-center gap-3 flex-wrap">
+                        <a href="{% url 'note_list_create' %}" class="modern-btn btn-primary">
+                            <i class="fas fa-plus"></i> Create Your First List
+                        </a>
+                        <a href="{% url 'note_create' %}" class="modern-btn btn-outline-primary">
+                            <i class="fas fa-sticky-note"></i> Create a Note
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Modern Tips Section -->
+        <div class="row">
+            <div class="col-12">
+                <div class="tips-card">
+                    <div class="tips-header">
+                        <h6 class="mb-0"><i class="fas fa-lightbulb"></i> Pro Tips for Organizing Notes</h6>
+                    </div>
+                    <div class="p-4">
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <div class="tip-item">
+                                    <h6><i class="fas fa-project-diagram" style="color: #4facfe;"></i> Project-Based</h6>
+                                    <p>Create lists for different projects or clients you're working on to keep everything organized.</p>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="tip-item">
+                                    <h6><i class="fas fa-tags" style="color: #00f2fe;"></i> Topic-Based</h6>
+                                    <p>Organize by topics like "Meeting Notes", "Ideas", "To-Do Items" for quick reference.</p>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="tip-item">
+                                    <h6><i class="fas fa-calendar" style="color: #fee140;"></i> Time-Based</h6>
+                                    <p>Create monthly or quarterly lists to track time-sensitive notes and deadlines.</p>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div class="tip-item">
+                                    <h6><i class="fas fa-star" style="color: #ff9a9e;"></i> Priority-Based</h6>
+                                    <p>Use lists like "Urgent", "Important", "Later" for effective priority management.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modern Delete Confirmation Modal -->
+    <div class="modal-overlay" id="deleteModalOverlay" style="display: none;">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div class="modal-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h3>Delete List</h3>
+            </div>
+            
+            <div class="modal-body">
+                <p class="modal-text">
+                    Are you sure you want to delete the list 
+                    <strong id="listNameToDelete"></strong>?
+                </p>
+                <div class="modal-warning">
+                    <i class="fas fa-info-circle"></i>
+                    <span>All notes in this list will also be permanently deleted. This action cannot be undone.</span>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="modal-btn cancel-btn" onclick="closeDeleteModal()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <a href="#" id="confirmDeleteBtn" class="modal-btn delete-btn">
+                    <i class="fas fa-trash"></i> Delete List
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+            transform: scale(0.8) translateY(20px);
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .modal-overlay.active .modal-container {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-header {
+            background: var(--danger-gradient);
+            padding: 2rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .modal-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+        }
+
+        .modal-icon i {
+            font-size: 2.5rem;
+            color: white;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .modal-header h3 {
+            color: white;
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-body {
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .modal-text {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .modal-text strong {
+            color: #ff9a9e;
+            font-weight: 700;
+        }
+
+        .modal-warning {
+            background: rgba(255, 193, 7, 0.2);
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            border-radius: 12px;
+            padding: 1rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin: 0;
+        }
+
+        .modal-warning i {
+            color: #ffc107;
+            font-size: 1.2rem;
+        }
+
+        .modal-footer {
+            padding: 2rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .modal-btn {
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            border: 2px solid;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            position: relative;
+            overflow: hidden;
+            min-width: 140px;
+            justify-content: center;
+            text-decoration: none;
+        }
+
+        .modal-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .modal-btn:hover::before {
+            left: 100%;
+        }
+
+        .cancel-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .cancel-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 255, 255, 0.1);
+        }
+
+        .delete-btn {
+            background: var(--danger-gradient);
+            color: white;
+            border-color: rgba(255, 154, 158, 0.5);
+            box-shadow: 0 4px 15px rgba(255, 154, 158, 0.3);
+        }
+
+        .delete-btn:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 10px 25px rgba(255, 154, 158, 0.4);
+            color: white;
+            text-decoration: none;
+        }
+
+        @media (max-width: 768px) {
+            .modal-container {
+                width: 95%;
+                margin: 1rem;
+            }
+
+            .modal-header,
+            .modal-body,
+            .modal-footer {
+                padding: 1.5rem;
+            }
+
+            .modal-footer {
+                flex-direction: column;
+            }
+
+            .modal-btn {
+                width: 100%;
+            }
+
+            .modal-icon {
+                width: 60px;
+                height: 60px;
+            }
+
+            .modal-icon i {
+                font-size: 2rem;
+            }
+
+            .modal-header h3 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Enhanced animations and interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            // Staggered animation for list cards
+            const listCards = document.querySelectorAll('.list-card');
+            listCards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(50px)';
+                
+                setTimeout(() => {
+                    card.style.transition = 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 150);
+            });
+
+            // Enhanced hover effects for action buttons
+            const actionButtons = document.querySelectorAll('.action-btn');
+            actionButtons.forEach(button => {
+                button.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-3px) scale(1.1)';
+                    this.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.3)';
+                });
+                
+                button.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0) scale(1)';
+                    this.style.boxShadow = 'none';
+                });
+            });
+
+            // Enhanced button animations
+            const modernBtns = document.querySelectorAll('.modern-btn, .quick-action-btn');
+            modernBtns.forEach(btn => {
+                btn.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-3px) scale(1.05)';
+                });
+                
+                btn.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0) scale(1)';
+                });
+
+                // Add click ripple effect
+                btn.addEventListener('click', function(e) {
+                    const ripple = document.createElement('span');
+                    const rect = this.getBoundingClientRect();
+                    const size = Math.max(rect.width, rect.height);
+                    const x = e.clientX - rect.left - size / 2;
+                    const y = e.clientY - rect.top - size / 2;
+                    
+                    ripple.style.cssText = `
+                        position: absolute;
+                        width: ${size}px;
+                        height: ${size}px;
+                        left: ${x}px;
+                        top: ${y}px;
+                        background: rgba(255, 255, 255, 0.3);
+                        border-radius: 50%;
+                        transform: scale(0);
+                        animation: ripple 0.6s ease-out;
+                        pointer-events: none;
+                    `;
+                    
+                    this.style.position = 'relative';
+                    this.appendChild(ripple);
+                    
+                    setTimeout(() => ripple.remove(), 600);
+                });
+            });
+
+            // Enhanced navbar interactions
+            const navLinks = document.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                link.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-2px)';
+                });
+                
+                link.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+            });
+
+            // Intersection Observer for scroll animations
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+
+            // Observe cards for scroll animations
+            document.querySelectorAll('.quick-actions-card, .tips-card').forEach(card => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(30px)';
+                card.style.transition = 'all 0.8s ease';
+                observer.observe(card);
+            });
+        });
+
+        // Enhanced Delete Confirmation Modal
+        function confirmDelete(listId, listName) {
+            const modal = document.getElementById('deleteModalOverlay');
+            const listNameElement = document.getElementById('listNameToDelete');
+            const confirmBtn = document.getElementById('confirmDeleteBtn');
+            
+            // Set the list name in the modal
+            listNameElement.textContent = listName;
+            
+            // Set the delete URL
+            confirmBtn.href = `/note-lists/${listId}/delete/`; // Adjust this URL pattern to match your Django URLs
+            
+            // Show the modal with animation
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                modal.classList.add('active');
+            }, 10);
+            
+            // Prevent body scroll
+            document.body.style.overflow = 'hidden';
+            
+            // Add escape key listener
+            document.addEventListener('keydown', handleEscapeKey);
+        }
+
+        function closeDeleteModal() {
+            const modal = document.getElementById('deleteModalOverlay');
+            
+            // Hide the modal with animation
+            modal.classList.remove('active');
+            
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+            
+            // Restore body scroll
+            document.body.style.overflow = '';
+            
+            // Remove escape key listener
+            document.removeEventListener('keydown', handleEscapeKey);
+        }
+
+        function handleEscapeKey(event) {
+            if (event.key === 'Escape') {
+                closeDeleteModal();
+            }
+        }
+
+        // Close modal when clicking overlay
+        document.getElementById('deleteModalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeDeleteModal();
+            }
+        });
+
+        // Enhanced keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'n':
+                        e.preventDefault();
+                        window.location.href = '{% url "note_list_create" %}';
+                        break;
+                    case 'h':
+                        e.preventDefault();
+                        window.location.href = '{% url "notes_dashboard" %}';
+                        break;
+                    case 'b':
+                        e.preventDefault();
+                        window.location.href = '{% url "note_create" %}';
+                        break;
+                }
+            }
+        });
+
+        // Add CSS for ripple animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes ripple {
+                to {
+                    transform: scale(2);
+                    opacity: 0;
+                }
+            }
+            
+            @keyframes pulse {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.05); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Add loading states for navigation
+        document.querySelectorAll('a:not([onclick])').forEach(link => {
+            link.addEventListener('click', function(e) {
+                if (this.href && !this.href.includes('#')) {
+                    this.style.opacity = '0.7';
+                    this.style.pointerEvents = 'none';
+                    
+                    // Create loading indicator
+                    const loader = document.createElement('i');
+                    loader.className = 'fas fa-spinner fa-spin';
+                    loader.style.marginLeft = '0.5rem';
+                    this.appendChild(loader);
+                }
+            });
+        });
+
+        // Performance optimization: Debounced scroll handler
+        let scrollTimeout;
+        window.addEventListener('scroll', () => {
+            if (scrollTimeout) {
+                clearTimeout(scrollTimeout);
+            }
+            
+            scrollTimeout = setTimeout(() => {
+                // Add parallax effect to background
+                const scrolled = window.pageYOffset;
+                document.body.style.setProperty('--scroll', scrolled * 0.5 + 'px');
+            }, 10);
+        });
+    </script>
+</body>
+</html>

@@ -3,15 +3,16 @@ from django.contrib.auth.models import AbstractUser, Group
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator, FileExtensionValidator
 
-# Define User roles as constants (keep existing)
+# Updated User roles with Ops roles
 ROLE_CHOICES = (
     ('top_management', 'Top Management'),
     ('business_head', 'Business Head'),
+    ('business_head_ops', 'Business Head - Ops'),  # New role
     ('rm_head', 'RM Head'),
     ('rm', 'Relationship Manager'),
-    ('ops_team_lead', 'Operations Team Lead'),
+    ('ops_team_lead', 'Operations Team Lead'),  # Updated
     ('ops_exec', 'Operations Executive'),
 )
 
@@ -50,12 +51,12 @@ class User(AbstractUser):
         help_text="Direct manager in the hierarchy"
     )
     
-    # For RM Heads to manage teams through Django Groups
+    # For RM Heads and Ops Team Leads to manage teams through Django Groups
     managed_groups = models.ManyToManyField(
         Group,
         blank=True,
         related_name='group_leaders',
-        help_text="Groups managed by this RM Head"
+        help_text="Groups managed by this user"
     )
 
     # Teams this user belongs to
@@ -73,7 +74,7 @@ class User(AbstractUser):
         ordering = ['role', 'username']
 
     def clean(self):
-        """Validate hierarchy rules"""
+        """Validate hierarchy rules with updated ops roles"""
         super().clean()
         
         # Role-based manager validation
@@ -83,29 +84,32 @@ class User(AbstractUser):
         if self.role == 'business_head' and self.manager and self.manager.role != 'top_management':
             raise ValidationError("Business Head can only report to Top Management")
             
+        if self.role == 'business_head_ops' and self.manager and self.manager.role not in ['top_management', 'business_head']:
+            raise ValidationError("Business Head - Ops can only report to Top Management or Business Head")
+            
         if self.role == 'rm_head' and self.manager and self.manager.role not in ['business_head', 'top_management']:
             raise ValidationError("RM Head can only report to Business Head or Top Management")
             
         if self.role == 'rm' and self.manager and self.manager.role not in ['rm_head', 'business_head']:
             raise ValidationError("RM can only report to RM Head or Business Head")
             
-        if self.role == 'ops_team_lead' and self.manager and self.manager.role not in ['business_head', 'top_management']:
-            raise ValidationError("Ops Team Lead can only report to Business Head or Top Management")
+        if self.role == 'ops_team_lead' and self.manager and self.manager.role not in ['business_head_ops', 'business_head', 'top_management']:
+            raise ValidationError("Ops Team Lead can only report to Business Head - Ops, Business Head, or Top Management")
             
         if self.role == 'ops_exec' and self.manager and self.manager.role != 'ops_team_lead':
             raise ValidationError("Ops Exec can only report to Ops Team Lead")
         
     def is_operations_team(self):
         """Check if user is in operations team"""
-        return self.teams.filter(is_ops_team=True).exists()
+        return self.teams.filter(is_ops_team=True).exists() or self.role in ['business_head_ops', 'ops_team_lead', 'ops_exec']
 
     def can_modify_client_profile(self):
         """Check if user can modify client profiles"""
-        return self.role in ['ops_team_lead', 'business_head', 'top_management']
+        return self.role in ['ops_team_lead', 'business_head', 'business_head_ops', 'top_management']
 
     def can_view_client_profile(self):
         """Check if user can view client profiles"""
-        return self.role in ['rm', 'rm_head', 'business_head', 'top_management', 'ops_team_lead', 'ops_exec']
+        return self.role in ['rm', 'rm_head', 'business_head', 'business_head_ops', 'top_management', 'ops_team_lead', 'ops_exec']
 
     def get_team_members(self):
         """Get all team members for this user (if they're a team leader)"""
@@ -115,6 +119,15 @@ class User(AbstractUser):
                 role='rm',
                 groups__in=self.managed_groups.all()
             ).distinct()
+        elif self.role == 'business_head_ops':
+            # Get all operations team members under this Business Head - Ops
+            return User.objects.filter(
+                role__in=['ops_team_lead', 'ops_exec'],
+                manager__in=[self] + list(self.subordinates.all())
+            ).distinct()
+        elif self.role == 'ops_team_lead':
+            # Get operations executives under this team lead
+            return User.objects.filter(role='ops_exec', manager=self)
         return User.objects.none()
 
     def get_teams_display(self):
@@ -123,8 +136,8 @@ class User(AbstractUser):
     get_teams_display.short_description = 'Teams'
 
     def get_managed_teams_display(self):
-        """Display teams this user manages (for RM Heads)"""
-        if self.role == 'rm_head':
+        """Display teams this user manages"""
+        if self.role in ['rm_head', 'ops_team_lead']:
             return ", ".join([team.name for team in Team.objects.filter(leader=self)]) or "No teams managed"
         return "N/A"
     get_managed_teams_display.short_description = 'Managed Teams'
@@ -148,6 +161,14 @@ class User(AbstractUser):
                 if current.role == 'rm_head':
                     return current
                 current = current.manager
+        elif self.role == 'ops_exec':
+            # Ops Exec should get approval from Ops Team Lead
+            if self.manager and self.manager.role == 'ops_team_lead':
+                return self.manager
+        elif self.role == 'ops_team_lead':
+            # Ops Team Lead should get approval from Business Head - Ops or Business Head
+            if self.manager and self.manager.role in ['business_head_ops', 'business_head']:
+                return self.manager
         
         # For other roles, return direct manager
         return self.manager
@@ -160,6 +181,14 @@ class User(AbstractUser):
             
         # RM Head can approve for RMs in their hierarchy
         if self.role == 'rm_head' and user.role == 'rm':
+            current = user
+            while current:
+                if current.manager == self:
+                    return True
+                current = current.manager
+                
+        # Ops Team Lead can approve for Ops Execs
+        if self.role == 'ops_team_lead' and user.role == 'ops_exec':
             current = user
             while current:
                 if current.manager == self:
@@ -179,26 +208,26 @@ class User(AbstractUser):
         """Check if this user can access target_user's data"""
         if self.role == 'top_management':
             return True
-        elif self.role == 'business_head':
+        elif self.role in ['business_head', 'business_head_ops']:
             return True
-        elif self.role == 'rm_head':
+        elif self.role in ['rm_head', 'ops_team_lead']:
             # Can access own data and team members' data
             if target_user == self:
                 return True
             return target_user in self.get_team_members()
-        else:  # RM
+        else:  # RM, Ops Exec
             return target_user == self
 
     def get_accessible_users(self):
         """Get all users this user can access data for"""
         if self.role == 'top_management':
             return User.objects.all()
-        elif self.role == 'business_head':
+        elif self.role in ['business_head', 'business_head_ops']:
             return User.objects.all()
-        elif self.role == 'rm_head':
+        elif self.role in ['rm_head', 'ops_team_lead']:
             team_members = self.get_team_members()
             return User.objects.filter(id__in=[self.id] + [tm.id for tm in team_members])
-        else:  # RM
+        else:  # RM, Ops Exec
             return User.objects.filter(id=self.id)
 
 # Add leader relationship to Team after User is defined
@@ -225,7 +254,100 @@ class TeamMembership(models.Model):
 
     def __str__(self):
         return f"{self.user} in {self.team}"
+
+# Notes System Models
+class NoteList(models.Model):
+    """Lists to organize notes by topic"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='note_lists')
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
+    class Meta:
+        unique_together = ('user', 'name')
+        ordering = ['name']
+        verbose_name = 'Note List'
+        verbose_name_plural = 'Note Lists'
+    
+    def __str__(self):
+        return f"{self.name} - {self.user.username}"
+
+def note_file_upload_path(instance, filename):
+    """Generate file upload path for note attachments"""
+    return f'notes/{instance.user.id}/{instance.id}/{filename}'
+
+class Note(models.Model):
+    """Individual notes with privacy (no manager access)"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notes')
+    note_list = models.ForeignKey(NoteList, on_delete=models.CASCADE, related_name='notes')
+    
+    # Note details
+    heading = models.CharField(max_length=200)
+    content = models.TextField()
+    
+    # Dates
+    creation_date = models.DateField(default=timezone.now)
+    reminder_date = models.DateTimeField(null=True, blank=True)
+    due_date = models.DateField(null=True, blank=True)
+    
+    # File attachment (max 500KB)
+    attachment = models.FileField(
+        upload_to=note_file_upload_path,
+        null=True,
+        blank=True,
+        validators=[
+            FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png', 'xlsx', 'xls'])
+        ],
+        help_text="Maximum file size: 500KB"
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Status
+    is_completed = models.BooleanField(default=False)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-updated_at']
+        verbose_name = 'Note'
+        verbose_name_plural = 'Notes'
+    
+    def __str__(self):
+        return f"{self.heading} - {self.user.username}"
+    
+    def clean(self):
+        """Validate file size (500KB limit)"""
+        super().clean()
+        if self.attachment:
+            if self.attachment.size > 500 * 1024:  # 500KB in bytes
+                raise ValidationError("File size cannot exceed 500KB")
+    
+    def save(self, *args, **kwargs):
+        # Set completed_at when marking as completed
+        if self.is_completed and not self.completed_at:
+            self.completed_at = timezone.now()
+        elif not self.is_completed:
+            self.completed_at = None
+        super().save(*args, **kwargs)
+    
+    @property
+    def is_overdue(self):
+        """Check if note is overdue"""
+        if self.due_date and not self.is_completed:
+            return timezone.now().date() > self.due_date
+        return False
+    
+    @property
+    def has_reminder_pending(self):
+        """Check if reminder is pending"""
+        if self.reminder_date and not self.is_completed:
+            return timezone.now() < self.reminder_date
+        return False
+
+# Existing models continue below...
 class ClientProfile(models.Model):
     """Main client profile model with all required fields"""
     # Add the missing client_id field
@@ -324,14 +446,6 @@ class ClientProfile(models.Model):
         self.muted_reason = reason
         self.muted_by = muted_by
         self.muted_date = timezone.now()
-        self.save()
-    
-    def unmute_client(self, unmuted_by):
-        """Unmute the client"""
-        self.status = 'active'
-        self.muted_reason = None
-        self.muted_by = None
-        self.muted_date = None
         self.save()
     
     def unmute_client(self, unmuted_by):
