@@ -1,4 +1,5 @@
 {% extends 'base/base.html' %}
+{% load humanize %}
 {% block title %}Dashboard{% endblock %}
 
 {% block extra_css %}
@@ -660,6 +661,97 @@
         animation: float 6s ease-in-out infinite;
     }
 
+    /* Recent Activities */
+    .activity-list {
+        background: var(--bg-card);
+        border: 1px solid var(--border-light);
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow-md);
+    }
+
+    .activity-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem 0;
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+
+    .activity-icon {
+        width: 40px;
+        height: 40px;
+        background: var(--gradient-primary);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        color: var(--text-primary);
+    }
+
+    .activity-content {
+        flex: 1;
+    }
+
+    .activity-title {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+
+    .activity-meta {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .quick-action {
+        background: var(--bg-card);
+        border: 1px solid var(--border-light);
+        border-radius: 16px;
+        padding: 1.5rem;
+        text-align: center;
+        text-decoration: none;
+        color: var(--text-primary);
+        transition: all 0.3s ease;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .quick-action:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+        border-color: var(--accent-primary);
+    }
+
+    .quick-action-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        color: var(--accent-primary);
+    }
+
+    .quick-action-title {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .quick-action-desc {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+    }
+
     /* Responsive Design */
     @media (max-width: 1400px) {
         .kpi-grid {
@@ -810,12 +902,12 @@
     <!-- Header Section -->
     <div class="dashboard-header">
         <h1 class="dashboard-title">Command Center</h1>
-        <p class="welcome-text">Welcome back, {{ request.user.get_full_name }}</p>
+        <p class="welcome-text">Welcome back, {{ request.user.get_full_name|default:request.user.username }}</p>
         <div class="role-indicator role-{{ request.user.role }}">
             {% if request.user.role == 'top_management' %}
                 <span class="role-icon">👑</span>
                 <span>{{ request.user.get_role_display }}</span>
-            {% elif request.user.role == 'business_head' %}
+            {% elif request.user.role == 'business_head' or request.user.role == 'business_head_ops' %}
                 <span class="role-icon">🎯</span>
                 <span>{{ request.user.get_role_display }}</span>
             {% elif request.user.role == 'rm_head' %}
@@ -830,12 +922,19 @@
             <a href="{% url 'hrm_dashboard' %}" class="action-btn btn-hrms">
                 <span>📋</span> HRMS Portal
             </a>
+            {% if request.user.role == 'rm_head' %}
+                <a href="{% url 'dashboard_rm_head' %}" class="action-btn">
+                    <span>🏛️</span> RM Head Dashboard
+                </a>
+            {% endif %}
         </div>
     </div>
 
     <!-- Dashboard Content -->
     <div class="dashboard-content">
-            <!-- Top Management KPIs -->
+        
+        {% if request.user.role == 'top_management' or request.user.role == 'business_head' or request.user.role == 'business_head_ops' %}
+            <!-- Top Management/Business Head KPIs -->
             <h2 class="section-title">
                 <div class="section-icon">📊</div>
                 Executive KPI Dashboard
@@ -846,11 +945,11 @@
                     <div class="kpi-header">
                         <div class="kpi-icon">💰</div>
                         <div class="kpi-trend">
-                            <span>📈</span> +12.5%
+                            <span>📈</span> Total
                         </div>
                     </div>
                     <div class="kpi-label">Total AUM</div>
-                    <div class="kpi-value">{{ kpis.aum|default:"₹0" }}</div>
+                    <div class="kpi-value">₹{{ total_aum|intcomma|default:"0" }}</div>
                     <div class="kpi-description">Assets Under Management across all portfolios</div>
                 </div>
 
@@ -862,7 +961,7 @@
                         </div>
                     </div>
                     <div class="kpi-label">Total SIPs</div>
-                    <div class="kpi-value">{{ kpis.sip|default:"0" }}</div>
+                    <div class="kpi-value">₹{{ total_sip|intcomma|default:"0" }}</div>
                     <div class="kpi-description">Systematic Investment Plans currently active</div>
                 </div>
 
@@ -870,12 +969,419 @@
                     <div class="kpi-header">
                         <div class="kpi-icon">👥</div>
                         <div class="kpi-trend">
-                            <span>🚀</span> Growing
+                            <span>🚀</span> {{ total_users|default:"0" }}
                         </div>
                     </div>
-                    <div class="kpi-label">Team Performance</div>
-                    <div class="kpi-value">{{ kpis.team_metrics|default:"95%" }}</div>
-                    <div class="kpi-description">Overall team efficiency and performance metrics</div>
+                    <div class="kpi-label">Total Users</div>
+                    <div class="kpi-value">{{ total_users|default:"0" }}</div>
+                    <div class="kpi-description">Active users across all roles and teams</div>
+                </div>
+
+                <div class="kpi-card danger floating">
+                    <div class="kpi-header">
+                        <div class="kpi-icon">📋</div>
+                        <div class="kpi-trend">
+                            <span>⚠️</span> {{ pending_tasks|default:"0" }}
+                        </div>
+                    </div>
+                    <div class="kpi-label">Pending Tasks</div>
+                    <div class="kpi-value">{{ pending_tasks|default:"0" }}</div>
+                    <div class="kpi-description">Tasks requiring immediate attention</div>
                 </div>
             </div>
-            {% endblock %}
+
+            <!-- Business Metrics -->
+            <h2 class="section-title">
+                <div class="section-icon">📈</div>
+                Business Metrics
+            </h2>
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon">🎯</div>
+                        <div class="metric-badge">{{ total_leads|default:"0" }} Total</div>
+                    </div>
+                    <div class="metric-value">{{ total_leads|default:"0" }}</div>
+                    <div class="metric-label">Total Leads</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon">👨‍💼</div>
+                        <div class="metric-badge">{{ total_clients|default:"0" }} Active</div>
+                    </div>
+                    <div class="metric-value">{{ total_clients|default:"0" }}</div>
+                    <div class="metric-label">Total Clients</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon">🏛️</div>
+                        <div class="metric-badge">{{ total_teams|default:"0" }} Teams</div>
+                    </div>
+                    <div class="metric-value">{{ total_teams|default:"0" }}</div>
+                    <div class="metric-label">Active Teams</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon">🛠️</div>
+                        <div class="metric-badge">{{ service_requests_count|default:"0" }} Open</div>
+                    </div>
+                    <div class="metric-value">{{ service_requests_count|default:"0" }}</div>
+                    <div class="metric-label">Service Requests</div>
+                </div>
+            </div>
+
+        {% elif request.user.role == 'rm_head' %}
+            <!-- RM Head Dashboard -->
+            <h2 class="section-title">
+                <div class="section-icon">⚡</div>
+                Team Leadership Overview
+            </h2>
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon">👥</div>
+                        <div class="metric-badge">{{ team_members|length|default:"0" }} Members</div>
+                    </div>
+                    <div class="metric-value">{{ team_members|length|default:"0" }}</div>
+                    <div class="metric-label">Team Members</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon">💰</div>
+                        <div class="metric-badge">₹{{ team_aum|intcomma|default:"0" }}</div>
+                    </div>
+                    <div class="metric-value">₹{{ team_aum|intcomma|default:"0" }}</div>
+                    <div class="metric-label">Team AUM</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon">🎯</div>
+                        <div class="metric-badge">{{ leads_count|default:"0" }} Active</div>
+                    </div>
+                    <div class="metric-value">{{ leads_count|default:"0" }}</div>
+                    <div class="metric-label">Team Leads</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon">📋</div>
+                        <div class="metric-badge">{{ pending_tasks|default:"0" }} Pending</div>
+                    </div>
+                    <div class="metric-value">{{ pending_tasks|default:"0" }}</div>
+                    <div class="metric-label">Team Tasks</div>
+                </div>
+            </div>
+
+        {% else %}
+            <!-- Regular RM Dashboard -->
+            <h2 class="section-title">
+                <div class="section-icon">🤝</div>
+                Personal Dashboard
+            </h2>
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon">🎯</div>
+                        <div class="metric-badge">{{ leads_count|default:"0" }} Total</div>
+                    </div>
+                    <div class="metric-value">{{ leads_count|default:"0" }}</div>
+                    <div class="metric-label">My Leads</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon">👨‍💼</div>
+                        <div class="metric-badge">{{ clients_count|default:"0" }} Active</div>
+                    </div>
+                    <div class="metric-value">{{ clients_count|default:"0" }}</div>
+                    <div class="metric-label">My Clients</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon">💰</div>
+                        <div class="metric-badge">₹{{ my_aum|intcomma|default:"0" }}</div>
+                    </div>
+                    <div class="metric-value">₹{{ my_aum|intcomma|default:"0" }}</div>
+                    <div class="metric-label">My AUM</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon">📋</div>
+                        <div class="metric-badge">{{ pending_tasks|default:"0" }} Pending</div>
+                    </div>
+                    <div class="metric-value">{{ pending_tasks|default:"0" }}</div>
+                    <div class="metric-label">My Tasks</div>
+                </div>
+            </div>
+
+            <!-- Personal SIP Information -->
+            <div class="stats-list">
+                <div class="stat-item">
+                    <div class="stat-icon">🔄</div>
+                    <div class="stat-content">
+                        <div class="stat-value">₹{{ my_sip|intcomma|default:"0" }}</div>
+                        <div class="stat-label">Monthly SIP Amount</div>
+                    </div>
+                </div>
+
+                <div class="stat-item">
+                    <div class="stat-icon">⚠️</div>
+                    <div class="stat-content">
+                        <div class="stat-value">{{ overdue_tasks|default:"0" }}</div>
+                        <div class="stat-label">Overdue Tasks</div>
+                    </div>
+                </div>
+
+                <div class="stat-item">
+                    <div class="stat-icon">🛠️</div>
+                    <div class="stat-content">
+                        <div class="stat-value">{{ service_requests.count|default:"0" }}</div>
+                        <div class="stat-label">Service Requests</div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Quick Actions Section -->
+        <h2 class="section-title">
+            <div class="section-icon">⚡</div>
+            Quick Actions
+        </h2>
+        
+        <div class="quick-actions">
+            {% if request.user.role == 'top_management' or request.user.role == 'business_head' or request.user.role == 'business_head_ops' %}
+                <a href="{% url 'lead_list' %}" class="quick-action">
+                    <div class="quick-action-icon">🎯</div>
+                    <div class="quick-action-title">Manage Leads</div>
+                    <div class="quick-action-desc">View and manage all leads</div>
+                </a>
+                <a href="{% url 'client_list' %}" class="quick-action">
+                    <div class="quick-action-icon">👨‍💼</div>
+                    <div class="quick-action-title">Client Portfolio</div>
+                    <div class="quick-action-desc">Manage client portfolios</div>
+                </a>
+                <a href="{% url 'team_management' %}" class="quick-action">
+                    <div class="quick-action-icon">🏛️</div>
+                    <div class="quick-action-title">Team Management</div>
+                    <div class="quick-action-desc">Manage teams and assignments</div>
+                </a>
+                <a href="{% url 'task_list' %}" class="quick-action">
+                    <div class="quick-action-icon">📋</div>
+                    <div class="quick-action-title">Task Management</div>
+                    <div class="quick-action-desc">View and assign tasks</div>
+                </a>
+            {% elif request.user.role == 'rm_head' %}
+                <a href="{% url 'lead_list' %}" class="quick-action">
+                    <div class="quick-action-icon">🎯</div>
+                    <div class="quick-action-title">Team Leads</div>
+                    <div class="quick-action-desc">Manage team leads</div>
+                </a>
+                <a href="{% url 'client_list' %}" class="quick-action">
+                    <div class="quick-action-icon">👨‍💼</div>
+                    <div class="quick-action-title">Team Clients</div>
+                    <div class="quick-action-desc">View team client portfolio</div>
+                </a>
+                <a href="{% url 'team_management' %}" class="quick-action">
+                    <div class="quick-action-icon">🏛️</div>
+                    <div class="quick-action-title">My Teams</div>
+                    <div class="quick-action-desc">Manage your teams</div>
+                </a>
+                <a href="{% url 'task_list' %}" class="quick-action">
+                    <div class="quick-action-icon">📋</div>
+                    <div class="quick-action-title">Team Tasks</div>
+                    <div class="quick-action-desc">Monitor team tasks</div>
+                </a>
+            {% else %}
+                <a href="{% url 'lead_list' %}" class="quick-action">
+                    <div class="quick-action-icon">🎯</div>
+                    <div class="quick-action-title">My Leads</div>
+                    <div class="quick-action-desc">Manage your leads</div>
+                </a>
+                <a href="{% url 'client_list' %}" class="quick-action">
+                    <div class="quick-action-icon">👨‍💼</div>
+                    <div class="quick-action-title">My Clients</div>
+                    <div class="quick-action-desc">View your client portfolio</div>
+                </a>
+                <a href="{% url 'task_list' %}" class="quick-action">
+                    <div class="quick-action-icon">📋</div>
+                    <div class="quick-action-title">My Tasks</div>
+                    <div class="quick-action-desc">View and update tasks</div>
+                </a>
+                <a href="{% url 'note_list' %}" class="quick-action">
+                    <div class="quick-action-icon">📝</div>
+                    <div class="quick-action-title">Notes</div>
+                    <div class="quick-action-desc">Manage your notes</div>
+                </a>
+            {% endif %}
+        </div>
+
+        {% if request.user.role == 'rm' %}
+            <!-- Recent Activities for RM -->
+            <h2 class="section-title">
+                <div class="section-icon">📈</div>
+                Recent Activities
+            </h2>
+            
+            <div class="activity-list">
+                {% for client in recent_clients %}
+                    <div class="activity-item">
+                        <div class="activity-icon">👨‍💼</div>
+                        <div class="activity-content">
+                            <div class="activity-title">New Client: {{ client.name }}</div>
+                            <div class="activity-meta">Added on {{ client.created_at|date:"M d, Y" }}</div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="activity-item">
+                        <div class="activity-icon">📝</div>
+                        <div class="activity-content">
+                            <div class="activity-title">No recent activities</div>
+                            <div class="activity-meta">Start by adding clients or managing leads</div>
+                        </div>
+                    </div>
+                {% endfor %}
+
+                {% for note in recent_notes %}
+                    <div class="activity-item">
+                        <div class="activity-icon">📝</div>
+                        <div class="activity-content">
+                            <div class="activity-title">{{ note.heading|default:"Note updated" }}</div>
+                            <div class="activity-meta">Updated {{ note.updated_at|timesince }} ago</div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Performance Chart Placeholder -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <h3 class="chart-title">Performance Analytics</h3>
+                <div class="metric-badge">Coming Soon</div>
+            </div>
+            <div class="chart-placeholder">
+                <div class="placeholder-icon">📊</div>
+                <div class="placeholder-text">Analytics Dashboard</div>
+                <div class="placeholder-subtext">
+                    Performance charts and detailed analytics will be available here.<br>
+                    Track your progress, team performance, and business metrics.
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add loading states and animations
+    const cards = document.querySelectorAll('.kpi-card, .metric-card, .stat-item');
+    
+    cards.forEach((card, index) => {
+        // Add staggered animation
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            card.style.transition = 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+
+    // Add hover effects for cards
+    cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.zIndex = '10';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.zIndex = '1';
+        });
+    });
+
+    // Add click animation for quick actions
+    const quickActions = document.querySelectorAll('.quick-action');
+    quickActions.forEach(action => {
+        action.addEventListener('click', function(e) {
+            // Create ripple effect
+            const ripple = document.createElement('span');
+            const rect = this.getBoundingClientRect();
+            const size = Math.max(rect.height, rect.width);
+            const x = e.clientX - rect.left - size / 2;
+            const y = e.clientY - rect.top - size / 2;
+            
+            ripple.style.cssText = `
+                position: absolute;
+                width: ${size}px;
+                height: ${size}px;
+                background: rgba(0, 0, 0, 0.1);
+                border-radius: 50%;
+                transform: translate(${x}px, ${y}px) scale(0);
+                animation: ripple 0.6s ease-out;
+                pointer-events: none;
+                z-index: 1000;
+            `;
+            
+            this.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 600);
+        });
+    });
+
+    // Auto-refresh for real-time data (if needed)
+    let refreshInterval;
+    
+    function startAutoRefresh() {
+        refreshInterval = setInterval(() => {
+            // Add logic to refresh specific metrics without full page reload
+            console.log('Auto-refreshing dashboard metrics...');
+        }, 30000); // Refresh every 30 seconds
+    }
+
+    function stopAutoRefresh() {
+        if (refreshInterval) {
+            clearInterval(refreshInterval);
+        }
+    }
+
+    // Start auto-refresh on page load
+    startAutoRefresh();
+
+    // Stop auto-refresh when page becomes hidden
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            stopAutoRefresh();
+        } else {
+            startAutoRefresh();
+        }
+    });
+});
+
+// Add CSS for ripple animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes ripple {
+        to {
+            transform: translate(var(--x), var(--y)) scale(4);
+            opacity: 0;
+        }
+    }
+    
+    .quick-action {
+        position: relative;
+        overflow: hidden;
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

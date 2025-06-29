@@ -1,3 +1,4 @@
+
 {% extends 'base/base.html' %}
 {% block title %}Dashboard{% endblock %}
 
@@ -290,7 +291,6 @@
         height: 100%;
         background: var(--gradient-primary);
         border-radius: 4px;
-        width: 75%;
         animation: fillProgress 2s ease-out forwards;
         position: relative;
         overflow: hidden;
@@ -380,7 +380,7 @@
         box-shadow: 0 15px 40px rgba(211, 255, 97, 0.4);
     }
 
-    .client-portfolio {
+    .team-stats {
         background: var(--card-bg);
         border: 1px solid var(--border-light);
         border-radius: 24px;
@@ -391,12 +391,12 @@
         transition: all 0.3s ease;
     }
 
-    .client-portfolio:hover {
+    .team-stats:hover {
         transform: translateY(-2px);
         box-shadow: var(--card-shadow-hover);
     }
 
-    .portfolio-header {
+    .team-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -405,17 +405,136 @@
         gap: 1rem;
     }
 
-    .portfolio-title {
+    .team-title {
         font-size: 1.8rem;
         font-weight: 800;
         color: var(--text-primary);
         margin: 0;
     }
 
-    .portfolio-stats {
+    .team-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .team-item {
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid var(--border-light);
+        border-radius: 16px;
+        padding: 1.5rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        text-align: center;
+    }
+
+    .team-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--gradient-primary);
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+    }
+
+    .team-item:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
+        border-color: var(--primary-dark);
+    }
+
+    .team-item:hover::before {
+        transform: scaleX(1);
+    }
+
+    .team-count {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--accent-black);
+        margin-bottom: 0.5rem;
+        font-feature-settings: 'tnum';
+    }
+
+    .team-role {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .recent-activities {
+        background: var(--card-bg);
+        border: 1px solid var(--border-light);
+        border-radius: 24px;
+        padding: 2.5rem;
+        margin-bottom: 2rem;
+        backdrop-filter: blur(20px);
+        box-shadow: var(--card-shadow);
+    }
+
+    .activity-header {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin-bottom: 2rem;
+    }
+
+    .activity-section {
+        margin-bottom: 2rem;
+    }
+
+    .activity-section:last-child {
+        margin-bottom: 0;
+    }
+
+    .activity-section-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        margin-bottom: 1rem;
         display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .activity-list {
+        list-style: none;
+        padding: 0;
+    }
+
+    .activity-item {
+        padding: 1rem;
+        border: 1px solid var(--border-light);
+        border-radius: 12px;
+        margin-bottom: 0.75rem;
+        background: rgba(255, 255, 255, 0.5);
+        transition: all 0.3s ease;
+    }
+
+    .activity-item:hover {
+        background: rgba(255, 255, 255, 0.8);
+        transform: translateX(5px);
+        border-color: var(--primary-dark);
+    }
+
+    .activity-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .activity-name {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+    }
+
+    .activity-meta {
+        font-size: 0.85rem;
+        color: var(--text-muted);
     }
 
     .stat-badge {
@@ -435,79 +554,28 @@
         box-shadow: 0 8px 25px rgba(211, 255, 97, 0.4);
     }
 
-    .portfolio-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 1.5rem;
+    .stat-badge.blue {
+        background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+        color: white;
     }
 
-    .portfolio-item {
-        background: rgba(255, 255, 255, 0.8);
-        border: 1px solid var(--border-light);
-        border-radius: 16px;
-        padding: 2rem;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
-        overflow: hidden;
+    .stat-badge.green {
+        background: linear-gradient(135deg, #10B981, #059669);
+        color: white;
     }
 
-    .portfolio-item::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: var(--gradient-primary);
-        transform: scaleX(0);
-        transition: transform 0.3s ease;
+    .stat-badge.orange {
+        background: linear-gradient(135deg, #F59E0B, #D97706);
+        color: white;
     }
 
-    .portfolio-item:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
-        border-color: var(--primary-dark);
+    .stat-badge.red {
+        background: linear-gradient(135deg, #EF4444, #DC2626);
+        color: white;
     }
 
-    .portfolio-item:hover::before {
-        transform: scaleX(1);
-    }
-
-    .client-name {
-        font-weight: 700;
-        font-size: 1.1rem;
-        margin-bottom: 0.5rem;
-        color: var(--text-primary);
-    }
-
-    .client-meta {
-        font-size: 0.9rem;
-        color: var(--text-muted);
-        margin-bottom: 1.5rem;
-        font-weight: 500;
-    }
-
-    .client-value {
-        font-size: 1.8rem;
-        font-weight: 800;
-        margin-bottom: 0.75rem;
-        color: var(--accent-black);
-        font-feature-settings: 'tnum';
-    }
-
-    .client-growth {
-        font-size: 0.9rem;
-        display: flex;
-        align-items: center;
-        font-weight: 600;
-    }
-
-    .growth-positive {
-        color: var(--success-color);
-    }
-
-    .growth-negative {
-        color: var(--error-color);
+    .currency {
+        font-size: 2.5rem;
     }
 
     /* Animations */
@@ -571,7 +639,7 @@
 
     /* Responsive Design */
     @media (max-width: 1024px) {
-        .rm-grid, .portfolio-grid {
+        .rm-grid, .team-grid {
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
         }
     }
@@ -581,11 +649,11 @@
             padding: 1.5rem;
         }
 
-        .rm-card, .client-portfolio {
+        .rm-card, .team-stats, .recent-activities {
             padding: 2rem;
         }
 
-        .rm-card-value {
+        .rm-card-value, .team-count {
             font-size: 2.5rem;
         }
 
@@ -593,15 +661,10 @@
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         }
 
-        .portfolio-header {
+        .team-header {
             flex-direction: column;
             align-items: flex-start;
             gap: 1rem;
-        }
-
-        .portfolio-stats {
-            width: 100%;
-            justify-content: flex-start;
         }
     }
 
@@ -622,7 +685,7 @@
             padding: 1.5rem;
         }
 
-        .rm-card-value, .client-value {
+        .rm-card-value, .team-count {
             font-size: 2rem;
         }
 
@@ -659,7 +722,7 @@
 <div class="dashboard-container">
     <!-- Header Section -->
     <div class="dashboard-header">
-        <h1 class="welcome-title">Command Center</h1>
+        <h1 class="welcome-title">Executive Command Center</h1>
         <p class="user-info">Welcome back, {{ request.user.get_full_name }}</p>
         <div class="role-indicator role-{{ request.user.role|slugify }}">
             {% if request.user.role == 'top_management' %}
@@ -681,66 +744,25 @@
 
     <!-- Dashboard Content -->
     <div class="dashboard-content">
+        <!-- Key Metrics Grid -->
         <div class="rm-grid">
             <div class="rm-card">
                 <div class="rm-card-header">
-                    <div class="rm-card-icon">🎯</div>
+                    <div class="rm-card-icon">💰</div>
                     <div>
-                        <div class="rm-card-title">Active Leads</div>
-                        <div class="rm-card-subtitle">Currently assigned to you</div>
+                        <div class="rm-card-title">Total AUM</div>
+                        <div class="rm-card-subtitle">Assets Under Management</div>
                     </div>
                 </div>
-                <div class="rm-card-value">{{ leads.count|default:"24" }}</div>
-                <div class="rm-card-description">Leads in your pipeline requiring follow-up and strategic attention</div>
-                <div class="rm-progress-container">
-                    <div class="rm-progress-label">
-                        <span>Conversion Rate</span>
-                        <span>75%</span>
-                    </div>
-                    <div class="rm-progress-bar">
-                        <div class="rm-progress-fill" style="width: 75%;"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="rm-card">
-                <div class="rm-card-header">
-                    <div class="rm-card-icon">📋</div>
-                    <div>
-                        <div class="rm-card-title">Pending Tasks</div>
-                        <div class="rm-card-subtitle">Requiring your attention</div>
-                    </div>
-                </div>
-                <div class="rm-card-value">{{ tasks.count|default:"12" }}</div>
-                <div class="rm-card-description">Critical tasks and deliverables to complete this week</div>
-                <div class="rm-progress-container">
-                    <div class="rm-progress-label">
-                        <span>Completion Rate</span>
-                        <span>65%</span>
-                    </div>
-                    <div class="rm-progress-bar">
-                        <div class="rm-progress-fill" style="width: 65%; background: linear-gradient(135deg, #3B82F6, #1D4ED8);"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="rm-card">
-                <div class="rm-card-header">
-                    <div class="rm-card-icon">🎫</div>
-                    <div>
-                        <div class="rm-card-title">Service Requests</div>
-                        <div class="rm-card-subtitle">Open tickets</div>
-                    </div>
-                </div>
-                <div class="rm-card-value">{{ service_requests.count|default:"8" }}</div>
-                <div class="rm-card-description">Client service requests awaiting resolution and support</div>
+                <div class="rm-card-value currency">₹{{ total_aum|floatformat:0|default:"0" }}</div>
+                <div class="rm-card-description">Total assets under management across all clients and portfolios</div>
                 <div class="rm-progress-container">
                     <div class="rm-progress-label">
                         <span>Resolution Rate</span>
-                        <span>92%</span>
+                        <span>{% if open_service_requests > 0 %}Pending{% else %}100%{% endif %}</span>
                     </div>
                     <div class="rm-progress-bar">
-                        <div class="rm-progress-fill" style="width: 92%; background: linear-gradient(135deg, #10B981, #059669);"></div>
+                        <div class="rm-progress-fill" style="width: {% if open_service_requests > 0 %}{% widthratio open_service_requests 50 100 %}{% else %}100{% endif %}%; background: linear-gradient(135deg, #10B981, #059669);"></div>
                     </div>
                 </div>
             </div>
@@ -765,37 +787,118 @@
             </a>
         </div>
 
-        <!-- Client Portfolio -->
-        <div class="client-portfolio">
-            <div class="portfolio-header">
-                <h3 class="portfolio-title">Top Client Portfolios</h3>
-                <div class="portfolio-stats">
-                    <div class="stat-badge">Total: {{ clients.count|default:"42" }}</div>
-                    <div class="stat-badge" style="background: linear-gradient(135deg, #10B981, #059669); color: white;">
-                        Active: {{ active_clients.count|default:"36" }}
+        <!-- Team Statistics -->
+        <div class="team-stats">
+            <div class="team-header">
+                <h3 class="team-title">Team Structure Overview</h3>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <div class="stat-badge blue">
+                        Total Staff: {{ business_heads_count|add:business_heads_ops_count|add:rm_heads_count|add:rms_count|add:ops_team_leads_count|add:ops_execs_count }}
+                    </div>
+                    <div class="stat-badge green">
+                        Active: {{ business_heads_count|add:rm_heads_count|add:rms_count }}
                     </div>
                 </div>
             </div>
-            <div class="portfolio-grid">
-                {% for client in top_clients|slice:":4" %}
-                <div class="portfolio-item">
-                    <div class="client-name">{{ client.name }}</div>
-                    <div class="client-meta">{{ client.portfolio_size }} • {{ client.join_date|date:"M Y" }}</div>
-                    <div class="client-value">{{ client.current_value }}</div>
-                    <div class="client-growth">
-                        <span class="growth-positive">▲ {{ client.growth }}%</span> last quarter
-                    </div>
+            <div class="team-grid">
+                <div class="team-item">
+                    <div class="team-count">{{ business_heads_count|default:"0" }}</div>
+                    <div class="team-role">Business Heads</div>
                 </div>
-                {% empty %}
-                <div class="portfolio-item">
-                    <div class="client-name">Premium Portfolio Available</div>
-                    <div class="client-meta">Add clients to see comprehensive portfolio data</div>
-                    <div class="client-value">$0</div>
-                    <div class="client-growth">
-                        <span style="color: var(--text-muted);">Ready to grow</span>
-                    </div>
+                <div class="team-item">
+                    <div class="team-count">{{ business_heads_ops_count|default:"0" }}</div>
+                    <div class="team-role">Business Head Ops</div>
                 </div>
-                {% endfor %}
+                <div class="team-item">
+                    <div class="team-count">{{ rm_heads_count|default:"0" }}</div>
+                    <div class="team-role">RM Heads</div>
+                </div>
+                <div class="team-item">
+                    <div class="team-count">{{ rms_count|default:"0" }}</div>
+                    <div class="team-role">Relationship Managers</div>
+                </div>
+                <div class="team-item">
+                    <div class="team-count">{{ ops_team_leads_count|default:"0" }}</div>
+                    <div class="team-role">Ops Team Leads</div>
+                </div>
+                <div class="team-item">
+                    <div class="team-count">{{ ops_execs_count|default:"0" }}</div>
+                    <div class="team-role">Operations Executives</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activities -->
+        <div class="recent-activities">
+            <h3 class="activity-header">Recent Activities & Updates</h3>
+            
+            <div class="activity-section">
+                <div class="activity-section-title">
+                    <span>🎯</span> Latest Leads
+                </div>
+                <ul class="activity-list">
+                    {% for lead in recent_leads %}
+                    <li class="activity-item">
+                        <div class="activity-name">{{ lead.first_name }} {{ lead.last_name }}</div>
+                        <div class="activity-meta">
+                            {{ lead.phone }} • {{ lead.source|default:"Direct" }} • 
+                            Created {{ lead.created_at|timesince }} ago
+                            {% if lead.assigned_to %} • Assigned to {{ lead.assigned_to.get_full_name }}{% endif %}
+                        </div>
+                    </li>
+                    {% empty %}
+                    <li class="activity-item">
+                        <div class="activity-name">No recent leads</div>
+                        <div class="activity-meta">Create new leads to see activity here</div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="activity-section">
+                <div class="activity-section-title">
+                    <span>🎫</span> Recent Service Requests
+                </div>
+                <ul class="activity-list">
+                    {% for request in recent_service_requests %}
+                    <li class="activity-item">
+                        <div class="activity-name">{{ request.subject|default:"Service Request" }}</div>
+                        <div class="activity-meta">
+                            {% if request.client %}{{ request.client.name }}{% else %}No client{% endif %} • 
+                            {{ request.status|capfirst }} • 
+                            {{ request.priority|capfirst }} Priority • 
+                            Created {{ request.created_at|timesince }} ago
+                        </div>
+                    </li>
+                    {% empty %}
+                    <li class="activity-item">
+                        <div class="activity-name">No recent service requests</div>
+                        <div class="activity-meta">All service requests are up to date</div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="activity-section">
+                <div class="activity-section-title">
+                    <span>📝</span> Your Recent Notes
+                </div>
+                <ul class="activity-list">
+                    {% for note in recent_notes %}
+                    <li class="activity-item">
+                        <div class="activity-name">{{ note.title|default:"Personal Note" }}</div>
+                        <div class="activity-meta">
+                            {% if note.content %}{{ note.content|truncatewords:10 }}{% endif %} • 
+                            Updated {{ note.updated_at|timesince }} ago
+                        </div>
+                    </li>
+                    {% empty %}
+                    <li class="activity-item">
+                        <div class="activity-name">No recent notes</div>
+                        <div class="activity-meta">Start adding notes to track important information</div>
+                    </li>
+                    {% endfor %}
+                </ul>
             </div>
         </div>
     </div>
@@ -818,9 +921,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 100);
     });
 
-    // Enhanced portfolio item animations
-    const portfolioItems = document.querySelectorAll('.portfolio-item');
-    portfolioItems.forEach((item, index) => {
+    // Enhanced team item animations
+    const teamItems = document.querySelectorAll('.team-item');
+    teamItems.forEach((item, index) => {
         item.style.opacity = '0';
         item.style.transform = 'translateY(20px)';
         item.style.transition = 'all 0.5s ease';
@@ -855,7 +958,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 current = target;
                 clearInterval(timer);
             }
-            element.textContent = Math.floor(current);
+            
+            // Format number display based on element class
+            if (element.classList.contains('currency')) {
+                element.textContent = '₹' + Math.floor(current).toLocaleString('en-IN');
+            } else {
+                element.textContent = Math.floor(current).toLocaleString('en-IN');
+            }
         }, 16);
     }
 
@@ -863,9 +972,21 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => {
         const valueElements = document.querySelectorAll('.rm-card-value');
         valueElements.forEach(element => {
-            const targetValue = parseInt(element.textContent) || 0;
+            let targetValue = 0;
+            const textContent = element.textContent.replace(/[₹,]/g, '');
+            targetValue = parseInt(textContent) || 0;
+            
             if (targetValue > 0) {
                 animateCounter(element, targetValue, 1500);
+            }
+        });
+
+        // Animate team counts
+        const teamCounts = document.querySelectorAll('.team-count');
+        teamCounts.forEach(element => {
+            const targetValue = parseInt(element.textContent) || 0;
+            if (targetValue > 0) {
+                animateCounter(element, targetValue, 1000);
             }
         });
     }, 500);
@@ -910,11 +1031,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Progress bar animation enhancement
+    // Progress bar animation enhancement with real data
     const progressBars = document.querySelectorAll('.rm-progress-fill');
     progressBars.forEach((bar, index) => {
+        const originalWidth = bar.style.width;
         bar.style.transform = 'scaleX(0)';
         bar.style.transformOrigin = 'left';
+        bar.style.width = originalWidth;
         
         setTimeout(() => {
             bar.style.transition = 'transform 2s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
@@ -970,7 +1093,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }, observerOptions);
 
     // Observe elements for scroll animations
-    const animateOnScroll = document.querySelectorAll('.client-portfolio, .quick-actions');
+    const animateOnScroll = document.querySelectorAll('.team-stats, .recent-activities, .quick-actions');
     animateOnScroll.forEach(el => {
         el.style.opacity = '0';
         el.style.transform = 'translateY(30px)';
@@ -1007,6 +1130,29 @@ document.addEventListener('DOMContentLoaded', function() {
         
         userInfo.textContent = userInfo.textContent.replace('Welcome back', greeting);
     }
+
+    // Add activity item hover effects
+    const activityItems = document.querySelectorAll('.activity-item');
+    activityItems.forEach(item => {
+        item.addEventListener('mouseenter', () => {
+            item.style.transform = 'translateX(5px)';
+            item.style.background = 'rgba(255, 255, 255, 0.8)';
+        });
+        
+        item.addEventListener('mouseleave', () => {
+            item.style.transform = 'translateX(0)';
+            item.style.background = 'rgba(255, 255, 255, 0.5)';
+        });
+    });
+
+    // Real-time data refresh simulation (if needed)
+    // Uncomment to enable periodic data updates
+    /*
+    setInterval(() => {
+        // Add AJAX calls here to refresh data periodically
+        console.log('Refreshing dashboard data...');
+    }, 300000); // Refresh every 5 minutes
+    */
 });
 
 // Add CSS for ripple animation
@@ -1024,13 +1170,15 @@ style.textContent = `
         overflow: hidden;
     }
     
-    .rm-card-value {
+    .rm-card-value, .team-count {
         transition: all 0.3s ease;
     }
     
     /* Enhanced focus states for accessibility */
     .action-btn:focus,
-    .rm-card:focus {
+    .rm-card:focus,
+    .team-item:focus,
+    .activity-item:focus {
         outline: 3px solid var(--primary-bg);
         outline-offset: 2px;
     }
@@ -1042,6 +1190,22 @@ style.textContent = `
             animation-iteration-count: 1 !important;
             transition-duration: 0.01ms !important;
         }
+    }
+    
+    /* Responsive currency formatting */
+    .currency {
+        font-variant-numeric: tabular-nums;
+    }
+    
+    /* Activity items enhanced styling */
+    .activity-item {
+        cursor: pointer;
+        border-left: 3px solid transparent;
+        transition: all 0.3s ease;
+    }
+    
+    .activity-item:hover {
+        border-left-color: var(--primary-bg);
     }
 `;
 document.head.appendChild(style);

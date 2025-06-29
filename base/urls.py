@@ -91,9 +91,14 @@ urlpatterns = [
     path('tasks/', include([
         path('', views.task_list, name='task_list'),
         path('create/', views.task_create, name='task_create'),
-        path('<int:pk>/edit/', views.task_update, name='task_update'),
+        path('<int:pk>/update/', views.task_update, name='task_update'),
         path('<int:pk>/delete/', views.task_delete, name='task_delete'),
         path('<int:pk>/toggle-complete/', views.task_toggle_complete, name='task_toggle_complete'),
+        path('<int:pk>/mark-done/', views.mark_task_done, name='mark_task_done'),
+        path('<int:pk>/reopen/', views.reopen_task, name='reopen_task'),
+        path('bulk-mark-done/', views.bulk_mark_tasks_done, name='bulk_mark_tasks_done'),
+        path('stats/', views.task_stats, name='task_stats'),
+
     ])),
     
     # Service Request Management

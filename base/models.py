@@ -67,6 +67,30 @@ class User(AbstractUser):
         blank=True,
         help_text="Teams this user belongs to"
     )
+    
+    def get_team_members(self):
+        '''Get team members for RM Heads and Team Leads'''
+        if hasattr(self, 'subordinates'):
+            return self.subordinates.all()
+        return User.objects.filter(supervisor=self)
+    
+    @property 
+    def lead_count(self):
+        '''Get count of leads assigned to this user'''
+        return self.lead_set.count()
+    
+    @property
+    def task_count(self):
+        '''Get count of tasks assigned to this user'''
+        return self.task_set.count()
+    
+    @property
+    def performance_score(self):
+        '''Calculate a performance score based on leads and tasks'''
+        leads = self.lead_count
+        tasks = self.task_count
+        team_size = self.get_team_members().count()
+        return min(100, (leads * 5) + (tasks * 2) + (team_size * 10))
 
     class Meta:
         verbose_name = 'User'

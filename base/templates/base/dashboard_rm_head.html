@@ -726,53 +726,75 @@
         <div class="metric-card blue">
             <div class="metric-icon">🎯</div>
             <div class="metric-label">Team Leads</div>
-            <div class="metric-value">{{ leads_count }}</div>
+            <div class="metric-value">{{ leads_count|default:0 }}</div>
             <div class="metric-trend trend-positive">
-                <span>📈</span> {{ leads_count }} Active
+                <span>📈</span> {{ leads_count|default:0 }} Active
             </div>
-            <svg class="progress-ring">
-                <circle class="background" cx="30" cy="30" r="25"></circle>
-                <circle class="progress" cx="30" cy="30" r="25" style="stroke-dashoffset: calc(157 - (157 * {{ leads_count_percentage|default:75 }}) / 100);"></circle>
-            </svg>
+            {% with percentage=leads_count|default:0 %}
+                {% if percentage > 0 %}
+                    <svg class="progress-ring">
+                        <circle class="background" cx="30" cy="30" r="25"></circle>
+                        <circle class="progress" cx="30" cy="30" r="25" 
+                                style="stroke-dashoffset: calc(157 - (157 * {{ percentage|floatformat:0 }}) / 100);"></circle>
+                    </svg>
+                {% endif %}
+            {% endwith %}
         </div>
 
         <div class="metric-card green">
             <div class="metric-icon">💰</div>
             <div class="metric-label">Team AUM</div>
-            <div class="metric-value">₹{{ team_aum|intcomma }}</div>
+            <div class="metric-value">₹{{ team_aum|intcomma|default:"0" }}</div>
             <div class="metric-trend trend-positive">
-                <span>📊</span> {{ clients_count }} Clients
+                <span>📊</span> {{ clients_count|default:0 }} Clients
             </div>
-            <svg class="progress-ring">
-                <circle class="background" cx="30" cy="30" r="25"></circle>
-                <circle class="progress" cx="30" cy="30" r="25" style="stroke-dashoffset: calc(157 - (157 * {{ aum_growth_percentage|default:60 }}) / 100);"></circle>
-            </svg>
+            {% with total_aum=team_aum|default:0 %}
+                {% if total_aum > 0 %}
+                    <svg class="progress-ring">
+                        <circle class="background" cx="30" cy="30" r="25"></circle>
+                        <circle class="progress" cx="30" cy="30" r="25" 
+                                style="stroke-dashoffset: calc(157 - (157 * 60) / 100);"></circle>
+                    </svg>
+                {% endif %}
+            {% endwith %}
         </div>
 
         <div class="metric-card orange">
             <div class="metric-icon">📋</div>
             <div class="metric-label">Pending Tasks</div>
-            <div class="metric-value">{{ pending_tasks }}</div>
-            <div class="metric-trend trend-negative">
-                <span>⚠️</span> {{ overdue_tasks }} Overdue
+            <div class="metric-value">{{ pending_tasks|default:0 }}</div>
+            <div class="metric-trend {% if overdue_tasks > 0 %}trend-negative{% else %}trend-positive{% endif %}">
+                <span>{% if overdue_tasks > 0 %}⚠️{% else %}✅{% endif %}</span> 
+                {{ overdue_tasks|default:0 }} Overdue
             </div>
-            <svg class="progress-ring">
-                <circle class="background" cx="30" cy="30" r="25"></circle>
-                <circle class="progress" cx="30" cy="30" r="25" style="stroke-dashoffset: calc(157 - (157 * {{ task_completion_percentage|default:45 }}) / 100);"></circle>
-            </svg>
+            {% with total_tasks=team_tasks.count|default:1 completed_tasks=team_tasks.count|default:0 %}
+                {% if total_tasks > 0 %}
+                    {% widthratio completed_tasks total_tasks 100 as completion_percentage %}
+                    <svg class="progress-ring">
+                        <circle class="background" cx="30" cy="30" r="25"></circle>
+                        <circle class="progress" cx="30" cy="30" r="25" 
+                                style="stroke-dashoffset: calc(157 - (157 * {{ completion_percentage|default:0 }}) / 100);"></circle>
+                    </svg>
+                {% endif %}
+            {% endwith %}
         </div>
 
         <div class="metric-card purple">
             <div class="metric-icon">🔄</div>
             <div class="metric-label">Team SIP</div>
-            <div class="metric-value">₹{{ team_sip|intcomma }}</div>
+            <div class="metric-value">₹{{ team_sip|intcomma|default:"0" }}</div>
             <div class="metric-trend trend-positive">
                 <span>📈</span> Monthly Recurring
             </div>
-            <svg class="progress-ring">
-                <circle class="background" cx="30" cy="30" r="25"></circle>
-                <circle class="progress" cx="30" cy="30" r="25" style="stroke-dashoffset: calc(157 - (157 * {{ sip_growth_percentage|default:30 }}) / 100);"></circle>
-            </svg>
+            {% with total_sip=team_sip|default:0 %}
+                {% if total_sip > 0 %}
+                    <svg class="progress-ring">
+                        <circle class="background" cx="30" cy="30" r="25"></circle>
+                        <circle class="progress" cx="30" cy="30" r="25" 
+                                style="stroke-dashoffset: calc(157 - (157 * 30) / 100);"></circle>
+                    </svg>
+                {% endif %}
+            {% endwith %}
         </div>
     </div>
 
@@ -788,9 +810,9 @@
                 Teams Under My Leadership
             </h2>
             <div class="team-stats-header">
-                <span>{{ user.led_teams.count }} Teams</span>
-                <span>{{ team_members|length }} Members</span>
-                <span>₹{{ team_aum|intcomma }} Total AUM</span>
+                <span>{{ user.led_teams.count|default:0 }} Teams</span>
+                <span>{{ team_members|length|default:0 }} Members</span>
+                <span>₹{{ team_aum|intcomma|default:"0" }} Total AUM</span>
             </div>
         </div>
 
@@ -800,7 +822,7 @@
                 <div class="team-card">
                     <div class="team-card-header">
                         <h3 class="team-name">{{ team.name }}</h3>
-                        <span class="badge badge-blue">{{ team.members.count }} members</span>
+                        <span class="badge badge-blue">{{ team.members.count|default:0 }} members</span>
                     </div>
                     <div class="team-leader">
                         Leader: {{ team.leader.get_full_name|default:team.leader.username }}
@@ -808,15 +830,15 @@
                     
                     <div class="team-stats">
                         <div class="team-stat">
-                            <div class="team-stat-value">{{ team.members.count }}</div>
+                            <div class="team-stat-value">{{ team.members.count|default:0 }}</div>
                             <div class="team-stat-label">Members</div>
                         </div>
                         <div class="team-stat">
-                            <div class="team-stat-value">₹{{ team.get_team_aum|intcomma }}</div>
+                            <div class="team-stat-value">₹{{ team.get_team_aum|intcomma|default:"0" }}</div>
                             <div class="team-stat-label">AUM</div>
                         </div>
                         <div class="team-stat">
-                            <div class="team-stat-value">{{ team.get_active_tasks.count }}</div>
+                            <div class="team-stat-value">{{ team.get_active_tasks.count|default:0 }}</div>
                             <div class="team-stat-label">Tasks</div>
                         </div>
                     </div>
@@ -855,9 +877,9 @@
                 My Team Members
             </h2>
             <div class="team-stats-header">
-                <span>{{ team_members|length }} Members</span>
-                <span>{{ clients_count }} Clients</span>
-                <span>₹{{ team_aum|intcomma }} AUM</span>
+                <span>{{ team_members|length|default:0 }} Members</span>
+                <span>{{ clients_count|default:0 }} Clients</span>
+                <span>₹{{ team_aum|intcomma|default:"0" }} AUM</span>
             </div>
         </div>
 
@@ -884,17 +906,17 @@
                             </div>
                         </td>
                         <td>
-                            <span class="metric-badge badge-blue">{{ member_data.lead_count }}</span>
+                            <span class="metric-badge badge-blue">{{ member_data.lead_count|default:0 }}</span>
                         </td>
                         <td>
-                            <span class="metric-badge badge-green">{{ member_data.client_count }}</span>
+                            <span class="metric-badge badge-green">{{ member_data.client_count|default:0 }}</span>
                         </td>
-                        <td>₹{{ member_data.aum|intcomma }}</td>
-                        <td>₹{{ member_data.sip|intcomma }}</td>
+                        <td>₹{{ member_data.aum|intcomma|default:"0" }}</td>
+                        <td>₹{{ member_data.sip|intcomma|default:"0" }}</td>
                         <td>
                             <div class="task-summary">
                                 <span class="badge {% if member_data.pending_tasks > 5 %}badge-red{% elif member_data.pending_tasks > 0 %}badge-orange{% else %}badge-green{% endif %}">
-                                    {{ member_data.pending_tasks }} pending
+                                    {{ member_data.pending_tasks|default:0 }} pending
                                 </span>
                                 {% if member_data.overdue_tasks > 0 %}
                                 <span class="badge badge-red" style="margin-left: 5px;">
@@ -905,9 +927,9 @@
                         </td>
                         <td>
                             <div class="performance-indicator">
-                                <span class="performance-score">{{ member_data.performance_score }}%</span>
+                                <span class="performance-score">{{ member_data.performance_score|default:0 }}%</span>
                                 <div class="performance-bar">
-                                    <div class="performance-fill" style="width: {{ member_data.performance_score }}%"></div>
+                                    <div class="performance-fill" style="width: {{ member_data.performance_score|default:0 }}%"></div>
                                 </div>
                             </div>
                         </td>
@@ -938,9 +960,9 @@
                 Team Tasks Overview
             </h2>
             <div class="team-stats-header">
-                <span>{{ pending_tasks }} Pending</span>
-                <span>{{ overdue_tasks }} Overdue</span>
-                <span>{{ team_tasks.count }} Total</span>
+                <span>{{ pending_tasks|default:0 }} Pending</span>
+                <span>{{ overdue_tasks|default:0 }} Overdue</span>
+                <span>{{ team_tasks.count|default:0 }} Total</span>
             </div>
         </div>
 
@@ -962,7 +984,7 @@
                             <tr>
                                 <td>
                                     <div class="task-info">
-                                        <strong>{{ task.title }}</strong>
+                                        <strong>{{ task.title|default:"Untitled Task" }}</strong>
                                         {% if task.description %}
                                         <small>{{ task.description|truncatechars:50 }}</small>
                                         {% endif %}
@@ -970,19 +992,23 @@
                                 </td>
                                 <td>{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</td>
                                 <td>
+                                    {% if task.due_date %}
                                     <div class="due-date {% if task.due_date < now %}overdue{% endif %}">
                                         {{ task.due_date|date:"M d, Y" }}
                                         {% if task.due_date < now %}
                                         <span class="overdue-label">(Overdue)</span>
                                         {% endif %}
                                     </div>
+                                    {% else %}
+                                    <span class="text-muted">No due date</span>
+                                    {% endif %}
                                 </td>
                                 <td>
                                     <span class="metric-badge 
                                         {% if task.priority == 'high' %}badge-red
                                         {% elif task.priority == 'medium' %}badge-orange
                                         {% else %}badge-blue{% endif %}">
-                                        {{ task.get_priority_display }}
+                                        {{ task.get_priority_display|default:task.priority|default:"Normal"|title }}
                                     </span>
                                 </td>
                                 <td>
@@ -1015,10 +1041,10 @@
         <div class="action-panel" style="margin-top: 2rem;">
             <div class="action-buttons">
                 <a href="{% url 'task_list' %}?status=pending" class="action-btn btn-secondary">
-                    <span>📋</span> View All Pending Tasks
+                    <span>📋</span> View All Pending Tasks ({{ pending_tasks|default:0 }})
                 </a>
                 <a href="{% url 'task_list' %}?status=overdue" class="action-btn btn-danger">
-                    <span>⚠️</span> View Overdue Tasks
+                    <span>⚠️</span> View Overdue Tasks ({{ overdue_tasks|default:0 }})
                 </a>
                 <a href="{% url 'task_list' %}" class="action-btn btn-primary">
                     <span>➕</span> Manage Tasks
@@ -1035,9 +1061,11 @@
                 Recent Service Requests
             </h2>
             <div class="team-stats-header">
-                <span>{{ team_service_requests.count }} Total</span>
-                <span>{{ team_service_requests|length }} Open</span>
-                <span>{{ team_service_requests.count }} Processed</span>
+                <span>{{ team_service_requests.count|default:0 }} Total</span>
+                {% with open_requests=team_service_requests|length %}
+                <span>{{ open_requests|default:0 }} Open</span>
+                {% endwith %}
+                <span>{{ team_service_requests.count|default:0 }} Processed</span>
             </div>
         </div>
 
@@ -1079,7 +1107,7 @@
                                 {% if request.priority == 'high' %}badge-red
                                 {% elif request.priority == 'medium' %}badge-orange
                                 {% else %}badge-blue{% endif %}">
-                                {{ request.get_priority_display|default:request.priority|title }}
+                                {{ request.get_priority_display|default:request.priority|default:"Normal"|title }}
                             </span>
                         </td>
                         <td>
@@ -1087,7 +1115,7 @@
                                 {% if request.status == 'resolved' %}badge-green
                                 {% elif request.status == 'in_progress' %}badge-orange
                                 {% else %}badge-red{% endif %}">
-                                {{ request.get_status_display|default:request.status|title }}
+                                {{ request.get_status_display|default:request.status|default:"Open"|title }}
                             </span>
                         </td>
                         <td>
@@ -1128,13 +1156,13 @@
     <div class="action-panel">
         <div class="action-buttons">
             <a href="{% url 'lead_list' %}" class="action-btn btn-primary">
-                <span>🎯</span> View All Leads ({{ leads_count }})
+                <span>🎯</span> View All Leads ({{ leads_count|default:0 }})
             </a>
             <a href="{% url 'client_list' %}" class="action-btn btn-accent">
-                <span>💰</span> View Client Portfolio ({{ clients_count }})
+                <span>💰</span> View Client Portfolio ({{ clients_count|default:0 }})
             </a>
             <a href="{% url 'task_list' %}" class="action-btn btn-secondary">
-                <span>📋</span> Manage Tasks ({{ team_tasks.count }})
+                <span>📋</span> Manage Tasks ({{ team_tasks.count|default:0 }})
             </a>
             <a href="{% url 'dashboard' %}" class="action-btn btn-accent">
                 <span>📈</span> Dashboard Home

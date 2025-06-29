@@ -3210,6 +3210,8 @@ def client_delete(request, pk):
         return redirect('client_profile_list')
 
 # Task Views with Hierarchy
+from django.views.decorators.csrf import csrf_protect
+
 @login_required
 def task_list(request):
     user = request.user
@@ -3236,6 +3238,7 @@ def task_list(request):
         'tasks': tasks.order_by('-created_at'),
         'current_status': status_filter,
         'search_query': search_query,
+        'now': timezone.now(),  # Add current time for template
     }
     
     return render(request, 'base/tasks.html', context)
@@ -3314,31 +3317,281 @@ def task_delete(request, pk):
     
     return render(request, 'base/task_confirm_delete.html', {'task': task})
 
+# Enhanced version of your existing task_toggle_complete function
 @login_required
+@require_POST
+@csrf_protect
 def task_toggle_complete(request, pk):
     """AJAX endpoint to toggle task completion"""
-    if request.method == 'POST':
+    try:
         task = get_object_or_404(Task, pk=pk)
         
         # Check permissions
         if not (task.assigned_to == request.user or request.user.can_access_user_data(task.assigned_to)):
-            return JsonResponse({'error': 'Permission denied'}, status=403)
+            return JsonResponse({
+                'success': False,
+                'error': 'You do not have permission to modify this task.'
+            }, status=403)
         
+        # Toggle completion status
         task.completed = not task.completed
         if task.completed:
             task.completed_at = timezone.now()
         else:
             task.completed_at = None
+        
+        task.save()
+        
+        # Return success response
+        return JsonResponse({
+            'success': True,
+            'completed': task.completed,
+            'completed_at': task.completed_at.isoformat() if task.completed_at else None,
+            'message': 'Task marked as completed!' if task.completed else 'Task marked as incomplete!',
+            'task_id': task.id,
+            'task_title': task.title
+        })
+        
+    except Task.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Task not found.'
+        }, status=404)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error toggling task completion {pk}: {str(e)}")
+        
+        return JsonResponse({
+            'success': False,
+            'error': 'An unexpected error occurred. Please try again.'
+        }, status=500)
+
+# New dedicated function for marking as done (non-toggle)
+@login_required
+@require_POST
+@csrf_protect
+def mark_task_done(request, pk):
+    """AJAX endpoint to mark task as completed (one-way action)"""
+    try:
+        task = get_object_or_404(Task, pk=pk)
+        
+        # Check permissions
+        if not (task.assigned_to == request.user or request.user.can_access_user_data(task.assigned_to)):
+            return JsonResponse({
+                'success': False,
+                'error': 'You do not have permission to modify this task.'
+            }, status=403)
+        
+        # Check if already completed
+        if task.completed:
+            return JsonResponse({
+                'success': False,
+                'error': 'Task is already completed.'
+            })
+        
+        # Mark as completed
+        task.completed = True
+        task.completed_at = timezone.now()
         task.save()
         
         return JsonResponse({
             'success': True,
-            'completed': task.completed,
-            'completed_at': task.completed_at.isoformat() if task.completed_at else None
+            'message': f'Task "{task.title}" has been marked as completed!',
+            'task_id': task.id,
+            'completed_at': task.completed_at.isoformat(),
+            'assigned_to': task.assigned_to.get_full_name()
         })
-    
-    return JsonResponse({'error': 'Invalid request'}, status=400)
+        
+    except Task.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Task not found.'
+        }, status=404)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error marking task as done {pk}: {str(e)}")
+        
+        return JsonResponse({
+            'success': False,
+            'error': 'An unexpected error occurred. Please try again.'
+        }, status=500)
 
+# Task reopen function (opposite of mark as done)
+@login_required
+@require_POST
+@csrf_protect
+def reopen_task(request, pk):
+    """Reopen a completed task"""
+    try:
+        task = get_object_or_404(Task, pk=pk)
+        
+        # Check permissions
+        if not (task.assigned_to == request.user or request.user.can_access_user_data(task.assigned_to)):
+            return JsonResponse({
+                'success': False,
+                'error': 'You do not have permission to modify this task.'
+            }, status=403)
+        
+        # Check if task is completed
+        if not task.completed:
+            return JsonResponse({
+                'success': False,
+                'error': 'Task is not completed.'
+            })
+        
+        # Reopen task
+        task.completed = False
+        task.completed_at = None
+        task.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Task "{task.title}" has been reopened.',
+            'task_id': task.id
+        })
+        
+    except Task.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Task not found.'
+        }, status=404)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error reopening task {pk}: {str(e)}")
+        
+        return JsonResponse({
+            'success': False,
+            'error': 'An unexpected error occurred.'
+        }, status=500)
+
+# Bulk operations for multiple tasks
+@login_required
+@require_POST
+@csrf_protect
+def bulk_mark_tasks_done(request):
+    """Mark multiple tasks as completed"""
+    try:
+        data = json.loads(request.body)
+        task_ids = data.get('task_ids', [])
+        
+        if not task_ids:
+            return JsonResponse({
+                'success': False,
+                'error': 'No task IDs provided.'
+            })
+        
+        # Get tasks and check permissions
+        tasks = Task.objects.filter(id__in=task_ids)
+        accessible_tasks = []
+        
+        for task in tasks:
+            if (task.assigned_to == request.user or 
+                request.user.can_access_user_data(task.assigned_to)):
+                accessible_tasks.append(task)
+        
+        if not accessible_tasks:
+            return JsonResponse({
+                'success': False,
+                'error': 'No accessible tasks found or permission denied.'
+            })
+        
+        # Update tasks
+        updated_count = 0
+        for task in accessible_tasks:
+            if not task.completed:
+                task.completed = True
+                task.completed_at = timezone.now()
+                task.save()
+                updated_count += 1
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'{updated_count} task(s) marked as completed.',
+            'updated_count': updated_count,
+            'total_requested': len(task_ids)
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON data.'
+        })
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error in bulk mark tasks done: {str(e)}")
+        
+        return JsonResponse({
+            'success': False,
+            'error': 'An unexpected error occurred.'
+        }, status=500)
+        
+        # Task statistics view
+@login_required
+def task_stats(request):
+    """Get task statistics for the current user"""
+    user = request.user
+    tasks = get_user_accessible_data(user, Task, 'assigned_to')
+    
+    # Calculate statistics
+    total_tasks = tasks.count()
+    completed_tasks = tasks.filter(completed=True).count()
+    pending_tasks = tasks.filter(completed=False).count()
+    overdue_tasks = tasks.filter(
+        completed=False, 
+        due_date__lt=timezone.now()
+    ).count()
+    
+    # Tasks due in next 7 days
+    next_week = timezone.now() + timezone.timedelta(days=7)
+    due_soon = tasks.filter(
+        completed=False,
+        due_date__range=[timezone.now(), next_week]
+    ).count()
+    
+    # Priority breakdown
+    priority_stats = {}
+    for priority, _ in Task.PRIORITY_CHOICES:
+        priority_stats[priority] = tasks.filter(
+            priority=priority, 
+            completed=False
+        ).count()
+    
+    stats = {
+        'total_tasks': total_tasks,
+        'completed_tasks': completed_tasks,
+        'pending_tasks': pending_tasks,
+        'overdue_tasks': overdue_tasks,
+        'due_soon': due_soon,
+        'completion_rate': round((completed_tasks / total_tasks * 100), 1) if total_tasks > 0 else 0,
+        'priority_breakdown': priority_stats
+    }
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse(stats)
+    
+    return render(request, 'base/task_stats.html', {'stats': stats})
+
+# Utility function to check if task is overdue
+def is_task_overdue(task):
+    """Check if a task is overdue"""
+    if task.completed or not task.due_date:
+        return False
+    return task.due_date < timezone.now()
+
+# Helper function to get task status
+def get_task_status(task):
+    """Get human-readable task status"""
+    if task.completed:
+        return 'completed'
+    elif is_task_overdue(task):
+        return 'overdue'
+    else:
+        return 'pending'
+    
 # Service Request Views with Hierarchy
 @login_required
 def service_request_list(request):

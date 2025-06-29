@@ -8,6 +8,7 @@
         --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
         --danger-gradient: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+        --complete-gradient: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
         --dark-bg: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
         --glass-bg: rgba(255, 255, 255, 0.1);
         --glass-border: rgba(255, 255, 255, 0.2);
@@ -361,11 +362,11 @@
 
     .action-buttons {
         display: flex !important;
-        gap: 1rem !important;
+        gap: 0.75rem !important;
         align-items: center !important;
         flex-wrap: wrap !important;
         justify-content: flex-start !important;
-        min-width: 200px !important;
+        min-width: 280px !important;
     }
 
     .action-btn {
@@ -435,6 +436,62 @@
         color: white !important;
         transform: translateY(-3px) scale(1.05) !important;
         box-shadow: 0 10px 25px rgba(255, 154, 158, 0.4) !important;
+        text-decoration: none !important;
+    }
+
+    /* New Mark as Done Button Styles */
+    .mark-done-btn {
+        background: rgba(86, 171, 47, 0.2) !important;
+        color: #56ab2f !important;
+        border-color: rgba(86, 171, 47, 0.5) !important;
+        box-shadow: 0 4px 15px rgba(86, 171, 47, 0.2) !important;
+        border: 2px solid rgba(86, 171, 47, 0.5) !important;
+        cursor: pointer !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+    }
+
+    .mark-done-btn:hover {
+        background: var(--complete-gradient) !important;
+        color: white !important;
+        transform: translateY(-3px) scale(1.05) !important;
+        box-shadow: 0 10px 25px rgba(86, 171, 47, 0.4) !important;
+        text-decoration: none !important;
+    }
+
+    .mark-done-btn:disabled {
+        opacity: 0.5 !important;
+        cursor: not-allowed !important;
+        transform: none !important;
+        box-shadow: 0 4px 15px rgba(86, 171, 47, 0.1) !important;
+    }
+
+    .mark-done-btn:disabled:hover {
+        transform: none !important;
+        background: rgba(86, 171, 47, 0.2) !important;
+        color: #56ab2f !important;
+        box-shadow: 0 4px 15px rgba(86, 171, 47, 0.1) !important;
+    }
+
+    /* Reopen Button Styles */
+    .reopen-btn {
+        background: rgba(255, 165, 0, 0.2) !important;
+        color: #ffa500 !important;
+        border-color: rgba(255, 165, 0, 0.5) !important;
+        box-shadow: 0 4px 15px rgba(255, 165, 0, 0.2) !important;
+        border: 2px solid rgba(255, 165, 0, 0.5) !important;
+        cursor: pointer !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+    }
+
+    .reopen-btn:hover {
+        background: linear-gradient(135deg, #ffa500 0%, #ff8c00 100%) !important;
+        color: white !important;
+        transform: translateY(-3px) scale(1.05) !important;
+        box-shadow: 0 10px 25px rgba(255, 165, 0, 0.4) !important;
         text-decoration: none !important;
     }
 
@@ -523,6 +580,17 @@
         animation: bounce 3s ease-in-out infinite;
     }
 
+    /* Completed task row styling */
+    .task-completed {
+        opacity: 0.7;
+        background: rgba(86, 171, 47, 0.1);
+    }
+
+    .task-completed .task-title {
+        text-decoration: line-through;
+        color: #a8e6cf;
+    }
+
     /* Enhanced mobile responsiveness */
     @media (max-width: 1200px) {
         .tasks-container {
@@ -564,6 +632,7 @@
         .action-buttons {
             flex-direction: column;
             gap: 0.75rem;
+            min-width: auto !important;
         }
 
         .action-btn {
@@ -637,6 +706,17 @@
         from { opacity: 0; }
         to { opacity: 1; }
     }
+
+    /* Success animation for mark as done */
+    .mark-done-success {
+        animation: markDoneSuccess 0.6s ease-out;
+    }
+
+    @keyframes markDoneSuccess {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); background: var(--complete-gradient); }
+        100% { transform: scale(1); }
+    }
 </style>
 
 <div class="tasks-container">
@@ -662,7 +742,7 @@
             </thead>
             <tbody>
                 {% for task in tasks %}
-                <tr class="fade-in" style="animation-delay: {{ forloop.counter0|floatformat:1 }}00ms;">
+                <tr class="fade-in {% if task.completed %}task-completed{% endif %}" style="animation-delay: {{ forloop.counter0|floatformat:1 }}00ms;">
                     <td>
                         <div class="task-title">{{ task.title }}</div>
                     </td>
@@ -681,24 +761,45 @@
                         <div class="assigned-user">{{ task.assigned_to.get_full_name }}</div>
                     </td>
                     <td>
-                        <span class="status-badge status-{{ task.status|lower|slugify }}">
-                            {% if task.status|lower == 'pending' %}
-                                <i class="fas fa-clock"></i>
-                            {% elif task.status|lower == 'in-progress' %}
-                                <i class="fas fa-spinner"></i>
-                            {% elif task.status|lower == 'completed' %}
+                        {% if task.completed %}
+                            <span class="status-badge status-completed">
                                 <i class="fas fa-check-circle"></i>
-                            {% elif task.status|lower == 'overdue' %}
+                                Completed
+                            </span>
+                        {% elif task.due_date and task.due_date < now %}
+                            <span class="status-badge status-overdue">
                                 <i class="fas fa-exclamation-triangle"></i>
-                            {% endif %}
-                            {{ task.status }}
-                        </span>
+                                Overdue
+                            </span>
+                        {% else %}
+                            <span class="status-badge status-pending">
+                                <i class="fas fa-clock"></i>
+                                Pending
+                            </span>
+                        {% endif %}
                     </td>
                     <td>
                         <div class="action-buttons">
                             <a href="{% url 'task_update' task.pk %}" class="action-btn edit-btn">
                                 <i class="fas fa-edit"></i> Edit
                             </a>
+                            
+                            {% if not task.completed %}
+                            <button type="button" class="action-btn mark-done-btn" 
+                                    data-task-id="{{ task.pk }}" 
+                                    data-task-title="{{ task.title }}"
+                                    onclick="markTaskAsDone(this)">
+                                <i class="fas fa-check"></i> Mark Done
+                            </button>
+                            {% else %}
+                            <button type="button" class="action-btn reopen-btn" 
+                                    data-task-id="{{ task.pk }}" 
+                                    data-task-title="{{ task.title }}"
+                                    onclick="reopenTask(this)">
+                                <i class="fas fa-undo"></i> Reopen
+                            </button>
+                            {% endif %}
+                            
                             <button type="button" class="action-btn delete-btn" 
                                     data-task-id="{{ task.pk }}" 
                                     data-task-title="{{ task.title }}"
@@ -1024,11 +1125,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const actionButtons = document.querySelectorAll('.action-btn');
     actionButtons.forEach(button => {
         button.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-3px) scale(1.05)';
+            if (!this.disabled) {
+                this.style.transform = 'translateY(-3px) scale(1.05)';
+            }
         });
         
         button.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0) scale(1)';
+            if (!this.disabled) {
+                this.style.transform = 'translateY(0) scale(1)';
+            }
         });
     });
 
@@ -1036,6 +1141,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const buttons = document.querySelectorAll('.add-task-btn, .action-btn');
     buttons.forEach(button => {
         button.addEventListener('click', function(e) {
+            if (this.disabled) return;
+            
             // Create ripple effect
             const ripple = document.createElement('span');
             const rect = this.getBoundingClientRect();
@@ -1133,6 +1240,156 @@ document.addEventListener('DOMContentLoaded', function() {
         observer.observe(tableContainer);
     }
 
+    // Mark Task as Done Function
+    window.markTaskAsDone = function(button) {
+        const taskId = button.getAttribute('data-task-id');
+        const taskTitle = button.getAttribute('data-task-title');
+        const row = button.closest('tr');
+        const statusBadge = row.querySelector('.status-badge');
+        const taskTitleElement = row.querySelector('.task-title');
+        
+        // Add loading state
+        button.disabled = true;
+        button.classList.add('loading');
+        const icon = button.querySelector('i');
+        const originalIconClass = icon.className;
+        icon.className = 'fas fa-spinner fa-spin';
+        
+        // Create form data
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        
+        // Send AJAX request
+        fetch(`/tasks/${taskId}/mark-done/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update UI
+                statusBadge.className = 'status-badge status-completed';
+                statusBadge.innerHTML = '<i class="fas fa-check-circle"></i> Completed';
+                
+                // Add completed styling to row
+                row.classList.add('task-completed');
+                taskTitleElement.style.textDecoration = 'line-through';
+                taskTitleElement.style.color = '#a8e6cf';
+                
+                // Replace mark done button with reopen button
+                button.outerHTML = `
+                    <button type="button" class="action-btn reopen-btn" 
+                            data-task-id="${taskId}" 
+                            data-task-title="${taskTitle}"
+                            onclick="reopenTask(this)">
+                        <i class="fas fa-undo"></i> Reopen
+                    </button>
+                `;
+                
+                // Add success animation
+                row.classList.add('mark-done-success');
+                setTimeout(() => {
+                    row.classList.remove('mark-done-success');
+                }, 600);
+                
+                // Show success notification
+                showNotification('Task marked as completed successfully!', 'success');
+            } else {
+                // Handle error
+                showNotification(data.error || 'Failed to mark task as done', 'error');
+                
+                // Reset button state
+                button.disabled = false;
+                button.classList.remove('loading');
+                icon.className = originalIconClass;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('An error occurred while marking the task as done', 'error');
+            
+            // Reset button state
+            button.disabled = false;
+            button.classList.remove('loading');
+            icon.className = originalIconClass;
+        });
+    };
+
+    // Reopen Task Function
+    window.reopenTask = function(button) {
+        const taskId = button.getAttribute('data-task-id');
+        const taskTitle = button.getAttribute('data-task-title');
+        const row = button.closest('tr');
+        const statusBadge = row.querySelector('.status-badge');
+        const taskTitleElement = row.querySelector('.task-title');
+        
+        // Add loading state
+        button.disabled = true;
+        button.classList.add('loading');
+        const icon = button.querySelector('i');
+        const originalIconClass = icon.className;
+        icon.className = 'fas fa-spinner fa-spin';
+        
+        // Create form data
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        
+        // Send AJAX request
+        fetch(`/tasks/${taskId}/reopen/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update UI
+                statusBadge.className = 'status-badge status-pending';
+                statusBadge.innerHTML = '<i class="fas fa-clock"></i> Pending';
+                
+                // Remove completed styling from row
+                row.classList.remove('task-completed');
+                taskTitleElement.style.textDecoration = 'none';
+                taskTitleElement.style.color = '#ffffff';
+                
+                // Replace reopen button with mark done button
+                button.outerHTML = `
+                    <button type="button" class="action-btn mark-done-btn" 
+                            data-task-id="${taskId}" 
+                            data-task-title="${taskTitle}"
+                            onclick="markTaskAsDone(this)">
+                        <i class="fas fa-check"></i> Mark Done
+                    </button>
+                `;
+                
+                // Show success notification
+                showNotification('Task has been reopened successfully!', 'success');
+            } else {
+                // Handle error
+                showNotification(data.error || 'Failed to reopen task', 'error');
+                
+                // Reset button state
+                button.disabled = false;
+                button.classList.remove('loading');
+                icon.className = originalIconClass;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('An error occurred while reopening the task', 'error');
+            
+            // Reset button state
+            button.disabled = false;
+            button.classList.remove('loading');
+            icon.className = originalIconClass;
+        });
+    };
+
     // Delete Task Modal Functions
     window.openDeleteModal = function(button) {
         const taskId = button.getAttribute('data-task-id');
@@ -1210,6 +1467,115 @@ document.addEventListener('DOMContentLoaded', function() {
             this.style.boxShadow = '0 4px 15px rgba(255, 154, 158, 0.2)';
         });
     });
+
+    // Notification system
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.innerHTML = `
+            <div class="notification-content">
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
+                <span>${message}</span>
+            </div>
+            <button class="notification-close" onclick="this.parentElement.remove()">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        // Add notification styles if not already added
+        if (!document.querySelector('#notification-styles')) {
+            const notificationStyles = document.createElement('style');
+            notificationStyles.id = 'notification-styles';
+            notificationStyles.textContent = `
+                .notification {
+                    position: fixed;
+                    top: 2rem;
+                    right: 2rem;
+                    min-width: 300px;
+                    max-width: 500px;
+                    padding: 1.5rem;
+                    border-radius: 12px;
+                    background: var(--glass-bg);
+                    backdrop-filter: blur(20px);
+                    border: 1px solid var(--glass-border);
+                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+                    z-index: 2000;
+                    display: flex;
+                    align-items: center;
+                    gap: 1rem;
+                    transform: translateX(100%);
+                    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+                    animation: slideInRight 0.3s ease-out forwards;
+                }
+                
+                .notification-success {
+                    border-left: 4px solid #56ab2f;
+                }
+                
+                .notification-error {
+                    border-left: 4px solid #ff9a9e;
+                }
+                
+                .notification-content {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    flex: 1;
+                    color: rgba(255, 255, 255, 0.9);
+                    font-weight: 500;
+                }
+                
+                .notification-content i {
+                    font-size: 1.2rem;
+                    color: #56ab2f;
+                }
+                
+                .notification-error .notification-content i {
+                    color: #ff9a9e;
+                }
+                
+                .notification-close {
+                    background: none;
+                    border: none;
+                    color: rgba(255, 255, 255, 0.7);
+                    cursor: pointer;
+                    padding: 0.5rem;
+                    border-radius: 50%;
+                    transition: all 0.2s ease;
+                }
+                
+                .notification-close:hover {
+                    background: rgba(255, 255, 255, 0.1);
+                    color: white;
+                }
+                
+                @keyframes slideInRight {
+                    from { transform: translateX(100%); }
+                    to { transform: translateX(0); }
+                }
+                
+                @media (max-width: 768px) {
+                    .notification {
+                        top: 1rem;
+                        right: 1rem;
+                        left: 1rem;
+                        min-width: auto;
+                    }
+                }
+            `;
+            document.head.appendChild(notificationStyles);
+        }
+        
+        document.body.appendChild(notification);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => notification.remove(), 300);
+            }
+        }, 5000);
+    }
 });
 </script>
 
