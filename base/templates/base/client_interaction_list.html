@@ -1,0 +1,250 @@
+<!-- base/client_interaction_list.html -->
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Client Interactions - {{ client_profile.client_full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.interaction-card {
+    transition: all 0.3s ease;
+    border-left: 4px solid #e3f2fd;
+}
+.interaction-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+.interaction-card.priority-high {
+    border-left-color: #f44336;
+}
+.interaction-card.priority-urgent {
+    border-left-color: #ff5722;
+}
+.interaction-card.priority-medium {
+    border-left-color: #ff9800;
+}
+.interaction-card.priority-low {
+    border-left-color: #4caf50;
+}
+.interaction-type-badge {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+}
+.follow-up-badge {
+    background-color: #ff5722;
+    color: white;
+}
+.edit-status-badge {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+}
+.edit-available {
+    background-color: #28a745;
+    color: white;
+}
+.edit-expired {
+    background-color: #6c757d;
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="mb-1">Client Interactions</h4>
+                            <p class="text-muted mb-0">
+                                <strong>{{ client_profile.client_full_name }}</strong> ({{ client_profile.client_id }})
+                                <br>
+                                <small>PAN: {{ client_profile.pan_number }} | RM: {{ client_profile.mapped_rm|default:"Not assigned" }}</small>
+                            </p>
+                        </div>
+                        <div class="text-end">
+                            {% if can_add_interaction %}
+                                <a href="{% url 'client_interaction_create' client_profile.id %}" class="btn btn-primary">
+                                    <i class="fas fa-plus"></i> Add Interaction
+                                </a>
+                            {% endif %}
+                            <a href="{% url 'client_profile_detail' client_profile.id %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Profile
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="search" class="form-label">Search</label>
+                            <input type="text" class="form-control" id="search" name="search" 
+                                   value="{{ search_query }}" placeholder="Search in notes or type...">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="type" class="form-label">Interaction Type</label>
+                            <select class="form-select" id="type" name="type">
+                                <option value="">All Types</option>
+                                <option value="call" {% if interaction_type == 'call' %}selected{% endif %}>Phone Call</option>
+                                <option value="email" {% if interaction_type == 'email' %}selected{% endif %}>Email</option>
+                                <option value="meeting" {% if interaction_type == 'meeting' %}selected{% endif %}>Meeting</option>
+                                <option value="video_call" {% if interaction_type == 'video_call' %}selected{% endif %}>Video Call</option>
+                                <option value="site_visit" {% if interaction_type == 'site_visit' %}selected{% endif %}>Site Visit</option>
+                                <option value="documentation" {% if interaction_type == 'documentation' %}selected{% endif %}>Documentation</option>
+                                <option value="complaint" {% if interaction_type == 'complaint' %}selected{% endif %}>Complaint</option>
+                                <option value="follow_up" {% if interaction_type == 'follow_up' %}selected{% endif %}>Follow Up</option>
+                                <option value="advisory" {% if interaction_type == 'advisory' %}selected{% endif %}>Advisory</option>
+                                <option value="other" {% if interaction_type == 'other' %}selected{% endif %}>Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-search"></i> Filter
+                            </button>
+                            <a href="{% url 'client_interaction_list' client_profile.id %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Clear
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interactions List -->
+    <div class="row">
+        <div class="col-12">
+            {% if interactions %}
+                {% for interaction in interactions %}
+                    <div class="card mb-3 interaction-card priority-{{ interaction.priority }}">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="badge bg-primary interaction-type-badge me-2">
+                                            {{ interaction.get_interaction_type_display }}
+                                        </span>
+                                        <span class="badge bg-{{ interaction.priority }} interaction-type-badge me-2">
+                                            {{ interaction.get_priority_display }}
+                                        </span>
+                                        {% if interaction.follow_up_required %}
+                                            <span class="badge follow-up-badge interaction-type-badge">
+                                                Follow-up Required
+                                            </span>
+                                        {% endif %}
+                                        <!-- Edit Status Badge -->
+                                        {% if interaction.can_edit %}
+                                            <span class="badge edit-available edit-status-badge ms-2">
+                                                <i class="fas fa-edit"></i> Editable
+                                            </span>
+                                        {% else %}
+                                            <span class="badge edit-expired edit-status-badge ms-2">
+                                                <i class="fas fa-lock"></i> Read-only
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    <p class="mb-2">
+                                        <strong>Date:</strong> {{ interaction.interaction_date|date:"M d, Y H:i" }}
+                                        {% if interaction.duration_minutes %}
+                                            | <strong>Duration:</strong> {{ interaction.duration_minutes }} minutes
+                                        {% endif %}
+                                    </p>
+                                    <p class="mb-2">{{ interaction.notes|truncatewords:30 }}</p>
+                                    {% if interaction.follow_up_date %}
+                                        <p class="mb-0 text-warning">
+                                            <i class="fas fa-calendar-alt"></i> Follow-up: {{ interaction.follow_up_date|date:"M d, Y" }}
+                                        </p>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <p class="mb-1">
+                                        <small class="text-muted">
+                                            by {{ interaction.created_by.get_full_name|default:interaction.created_by.username }}
+                                        </small>
+                                    </p>
+                                    <p class="mb-2">
+                                        <small class="text-muted">{{ interaction.get_time_since_creation }} ago</small>
+                                    </p>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'client_interaction_detail' client_profile.id interaction.id %}" 
+                                           class="btn btn-outline-primary">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                        {% if interaction.can_edit %}
+                                            <a href="{% url 'client_interaction_update' client_profile.id interaction.id %}" 
+                                               class="btn btn-outline-warning">
+                                                <i class="fas fa-edit"></i> Edit
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+
+                <!-- Pagination -->
+                {% if interactions.has_other_pages %}
+                    <nav aria-label="Interactions pagination">
+                        <ul class="pagination justify-content-center">
+                            {% if interactions.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ interactions.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if interaction_type %}&type={{ interaction_type }}{% endif %}">
+                                        Previous
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            {% for num in interactions.paginator.page_range %}
+                                {% if interactions.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > interactions.number|add:'-3' and num < interactions.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if interaction_type %}&type={{ interaction_type }}{% endif %}">
+                                            {{ num }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if interactions.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ interactions.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if interaction_type %}&type={{ interaction_type }}{% endif %}">
+                                        Next
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% endif %}
+            {% else %}
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                        <h5>No Interactions Found</h5>
+                        <p class="text-muted">No interactions match your search criteria.</p>
+                        {% if can_add_interaction %}
+                            <a href="{% url 'client_interaction_create' client_profile.id %}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Add First Interaction
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

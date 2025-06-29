@@ -10,6 +10,7 @@
         --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
         --info-gradient: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        --danger-gradient: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
         --dark-bg: #1a1d29;
         --card-bg: #242738;
         --text-light: #e2e8f0;
@@ -323,6 +324,11 @@
         color: white;
     }
 
+    .badge-danger {
+        background: var(--danger-gradient);
+        color: white;
+    }
+
     .action-group {
         display: flex;
         gap: 0.5rem;
@@ -375,6 +381,16 @@
         --gradient: var(--warning-gradient);
     }
 
+    .btn-interactions {
+        background: var(--danger-gradient);
+        --gradient: var(--danger-gradient);
+    }
+
+    .btn-add-interaction {
+        background: var(--success-gradient);
+        --gradient: var(--success-gradient);
+    }
+
     .btn-convert {
         background: var(--success-gradient);
         padding: 0.75rem 1.5rem;
@@ -399,6 +415,82 @@
         text-decoration: none;
     }
 
+    .client-interaction-summary {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-top: 0.5rem;
+        border-left: 4px solid;
+    }
+
+    .interaction-summary-good {
+        border-left-color: #10b981;
+    }
+
+    .interaction-summary-warning {
+        border-left-color: #f59e0b;
+    }
+
+    .interaction-summary-danger {
+        border-left-color: #ef4444;
+    }
+
+    .interaction-stats {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        font-size: 0.85rem;
+    }
+
+    .interaction-stat {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .last-contact-indicator {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .contact-recent {
+        background: rgba(16, 185, 129, 0.2);
+        color: #10b981;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .contact-moderate {
+        background: rgba(245, 158, 11, 0.2);
+        color: #f59e0b;
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .contact-old {
+        background: rgba(239, 68, 68, 0.2);
+        color: #ef4444;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .contact-never {
+        background: rgba(107, 114, 128, 0.2);
+        color: #6b7280;
+        border: 1px solid rgba(107, 114, 128, 0.3);
+    }
+
+    .follow-up-alert {
+        position: relative;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+
     .empty-state {
         text-align: center;
         padding: 4rem 2rem;
@@ -411,48 +503,7 @@
         margin-bottom: 1rem;
     }
 
-    .modern-modal .modal-content {
-        background: var(--card-bg);
-        border: 1px solid var(--glass-border);
-        border-radius: 20px;
-        backdrop-filter: blur(20px);
-        color: white;
-    }
-
-    .modern-modal .modal-header {
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 2rem;
-        background: var(--primary-gradient);
-        border-radius: 20px 20px 0 0;
-    }
-
-    .modern-modal .modal-title {
-        color: white;
-        font-weight: 700;
-        font-size: 1.5rem;
-    }
-
-    .modern-modal .modal-body {
-        padding: 2rem;
-    }
-
-    .modern-modal .modal-footer {
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 2rem;
-    }
-
-    .modern-modal .btn-secondary {
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        color: white;
-    }
-
-    .modern-modal .btn-success {
-        background: var(--success-gradient);
-        border: none;
-        color: white;
-    }
-
+    /* Responsive Design */
     @media (max-width: 768px) {
         .stats-grid {
             grid-template-columns: 1fr;
@@ -469,6 +520,12 @@
         
         .action-group {
             justify-content: center;
+        }
+
+        .interaction-stats {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
         }
     }
 
@@ -509,7 +566,7 @@
         <!-- Header Section -->
         <div class="modern-header fade-in">
             <div class="d-flex justify-content-between align-items-center">
-                <h3>Client Profiles</h3>
+                <h3>Client Profiles & Interactions</h3>
                 {% if can_create %}
                     <a href="{% url 'client_profile_create' %}" class="modern-btn">
                         <i class="fas fa-plus me-2"></i> Add New Client
@@ -518,7 +575,7 @@
             </div>
         </div>
 
-        <!-- Statistics Cards -->
+        <!-- Enhanced Statistics Cards - Removed Interactions and Follow-ups -->
         <div class="stats-grid slide-up">
             <div class="stat-card total">
                 <div class="stat-icon">
@@ -550,11 +607,11 @@
             </div>
         </div>
 
-        <!-- Search and Filter Section -->
+        <!-- Enhanced Search and Filter Section -->
         <div class="search-section slide-up">
             <form method="GET">
                 <div class="row">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="modern-form-group">
                             <label class="modern-label">Search</label>
                             <input type="text" class="modern-input" name="search" 
@@ -562,13 +619,25 @@
                                    placeholder="Search by name, email, mobile, or PAN">
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <div class="modern-form-group">
                             <label class="modern-label">Status</label>
                             <select class="modern-select" name="status">
                                 <option value="">All Status</option>
                                 <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
                                 <option value="muted" {% if status_filter == 'muted' %}selected{% endif %}>Muted</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="modern-form-group">
+                            <label class="modern-label">Interaction Activity</label>
+                            <select class="modern-select" name="interaction_filter">
+                                <option value="">All Clients</option>
+                                <option value="no_interactions" {% if interaction_filter == 'no_interactions' %}selected{% endif %}>No Interactions</option>
+                                <option value="recent_interactions" {% if interaction_filter == 'recent_interactions' %}selected{% endif %}>Recent Activity</option>
+                                <option value="overdue_followups" {% if interaction_filter == 'overdue_followups' %}selected{% endif %}>Overdue Follow-ups</option>
+                                <option value="due_today" {% if interaction_filter == 'due_today' %}selected{% endif %}>Follow-ups Due Today</option>
                             </select>
                         </div>
                     </div>
@@ -604,20 +673,18 @@
             </form>
         </div>
 
-        <!-- Client Profiles Table -->
+        <!-- Enhanced Client Profiles Table with Interaction Data -->
         <div class="modern-table-container slide-up">
             <table class="modern-table">
                 <thead>
                     <tr>
                         <th>Client Name</th>
-                        <th>Email</th>
-                        <th>Mobile</th>
-                        <th>PAN</th>
-                        <th>RM</th>
-                        <th>Ops Executive</th>
+                        <th>Contact Info</th>
+                        <th>Assigned Personnel</th>
                         <th>Status</th>
-                        <th>Client Status</th>
-                        <th>Created Date</th>
+                        <th>Interaction Summary</th>
+                        <th>Last Contact</th>
+                        <th>Follow-ups</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -627,78 +694,180 @@
                         <td>
                             <div>
                                 <strong style="color: white; font-size: 1.1rem;">{{ profile.client_full_name }}</strong>
+                                <br><small style="color: rgba(255, 255, 255, 0.6);">ID: {{ profile.client_id }}</small>
                                 {% if profile.family_head_name %}
                                     <br><small style="color: rgba(255, 255, 255, 0.6);">Family Head: {{ profile.family_head_name }}</small>
                                 {% endif %}
                             </div>
                         </td>
-                        <td>{{ profile.email|default:'-' }}</td>
-                        <td>{{ profile.mobile_number|default:'-' }}</td>
-                        <td>{{ profile.pan_number|default:'-' }}</td>
                         <td>
-                            {% if profile.mapped_rm %}
-                                {{ profile.mapped_rm.get_full_name }}
+                            <div>
+                                <div style="color: rgba(255, 255, 255, 0.9);">{{ profile.email|default:'-' }}</div>
+                                <div style="color: rgba(255, 255, 255, 0.7);">{{ profile.mobile_number|default:'-' }}</div>
+                                <small style="color: rgba(255, 255, 255, 0.6);">PAN: {{ profile.pan_number|default:'-' }}</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div>
+                                <div style="color: rgba(255, 255, 255, 0.9);">
+                                    <strong>RM:</strong> 
+                                    {% if profile.mapped_rm %}
+                                        {{ profile.mapped_rm.get_full_name }}
+                                    {% else %}
+                                        <span style="color: rgba(255, 255, 255, 0.5);">Not Assigned</span>
+                                    {% endif %}
+                                </div>
+                                <div style="color: rgba(255, 255, 255, 0.7);">
+                                    <strong>Ops:</strong>
+                                    {% if profile.mapped_ops_exec %}
+                                        {{ profile.mapped_ops_exec.get_full_name }}
+                                    {% else %}
+                                        <span style="color: rgba(255, 255, 255, 0.5);">Not Assigned</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div>
+                                {% if profile.status == 'active' %}
+                                    <span class="modern-badge badge-success">
+                                        <i class="fas fa-check"></i> Active
+                                    </span>
+                                {% elif profile.status == 'muted' %}
+                                    <span class="modern-badge badge-warning">
+                                        <i class="fas fa-volume-mute"></i> Muted
+                                    </span>
+                                {% else %}
+                                    <span class="modern-badge badge-secondary">{{ profile.status|title }}</span>
+                                {% endif %}
+                                
+                                <div style="margin-top: 0.5rem;">
+                                    {% if profile.legacy_client %}
+                                        <span class="modern-badge badge-success">
+                                            <i class="fas fa-check-circle"></i> Full Client
+                                        </span>
+                                    {% else %}
+                                        <span class="modern-badge badge-info">
+                                            <i class="fas fa-user-plus"></i> Profile Only
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if profile.interaction_count %}
+                                <div class="client-interaction-summary {% if profile.interaction_count > 10 %}interaction-summary-good{% elif profile.interaction_count > 3 %}interaction-summary-warning{% else %}interaction-summary-danger{% endif %}">
+                                    <div class="interaction-stats">
+                                        <div class="interaction-stat">
+                                            <i class="fas fa-comments" style="color: #667eea;"></i>
+                                            <span>{{ profile.interaction_count }} total</span>
+                                        </div>
+                                        {% if profile.recent_interactions_count %}
+                                            <div class="interaction-stat">
+                                                <i class="fas fa-calendar-week" style="color: #10b981;"></i>
+                                                <span>{{ profile.recent_interactions_count }} this month</span>
+                                            </div>
+                                        {% endif %}
+                                        {% if profile.high_priority_count %}
+                                            <div class="interaction-stat">
+                                                <i class="fas fa-exclamation-triangle" style="color: #f59e0b;"></i>
+                                                <span>{{ profile.high_priority_count }} high priority</span>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
                             {% else %}
-                                <span style="color: rgba(255, 255, 255, 0.5);">Not Assigned</span>
+                                <div class="client-interaction-summary interaction-summary-danger">
+                                    <div style="text-align: center; color: rgba(255, 255, 255, 0.6);">
+                                        <i class="fas fa-comment-slash" style="margin-bottom: 0.5rem; display: block;"></i>
+                                        No interactions recorded
+                                    </div>
+                                </div>
                             {% endif %}
                         </td>
                         <td>
-                            {% if profile.mapped_ops_exec %}
-                                {{ profile.mapped_ops_exec.get_full_name }}
+                            {% if profile.last_interaction_date %}
+                                {% with days_since=profile.days_since_last_interaction %}
+                                    {% if days_since == 0 %}
+                                        <span class="last-contact-indicator contact-recent">Today</span>
+                                    {% elif days_since <= 7 %}
+                                        <span class="last-contact-indicator contact-recent">{{ days_since }} day{{ days_since|pluralize }} ago</span>
+                                    {% elif days_since <= 30 %}
+                                        <span class="last-contact-indicator contact-moderate">{{ days_since }} day{{ days_since|pluralize }} ago</span>
+                                    {% else %}
+                                        <span class="last-contact-indicator contact-old">{{ days_since }} day{{ days_since|pluralize }} ago</span>
+                                    {% endif %}
+                                {% endwith %}
+                                <div style="font-size: 0.75rem; color: rgba(255, 255, 255, 0.6); margin-top: 0.25rem;">
+                                    {{ profile.last_interaction_type|default:"Contact" }} - {{ profile.last_interaction_date|date:"M d, Y" }}
+                                </div>
                             {% else %}
-                                <span style="color: rgba(255, 255, 255, 0.5);">Not Assigned</span>
+                                <span class="last-contact-indicator contact-never">Never contacted</span>
                             {% endif %}
                         </td>
                         <td>
-                            {% if profile.status == 'active' %}
-                                <span class="modern-badge badge-success">
-                                    <i class="fas fa-check"></i> Active
-                                </span>
-                            {% elif profile.status == 'muted' %}
+                            {% if profile.overdue_followups %}
+                                <div class="follow-up-alert">
+                                    <span class="modern-badge badge-danger">
+                                        <i class="fas fa-exclamation-triangle"></i> 
+                                        {{ profile.overdue_followups }} overdue
+                                    </span>
+                                </div>
+                            {% elif profile.due_today_followups %}
                                 <span class="modern-badge badge-warning">
-                                    <i class="fas fa-volume-mute"></i> Muted
+                                    <i class="fas fa-clock"></i> 
+                                    {{ profile.due_today_followups }} due today
                                 </span>
-                            {% else %}
-                                <span class="modern-badge badge-secondary">{{ profile.status|title }}</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if profile.legacy_client %}
-                                <span class="modern-badge badge-success">
-                                    <i class="fas fa-check-circle"></i> Full Client
-                                </span>
-                            {% else %}
+                            {% elif profile.upcoming_followups %}
                                 <span class="modern-badge badge-info">
-                                    <i class="fas fa-user-plus"></i> Profile Only
+                                    <i class="fas fa-calendar-check"></i> 
+                                    {{ profile.upcoming_followups }} upcoming
+                                </span>
+                            {% else %}
+                                <span class="modern-badge badge-success">
+                                    <i class="fas fa-check"></i> Up to date
                                 </span>
                             {% endif %}
                         </td>
-                        <td>{{ profile.created_at|date:"M d, Y" }}</td>
                         <td>
                             <div class="action-group">
                                 <a href="{% url 'client_profile_detail' profile.pk %}" 
-                                   class="action-btn btn-view" title="View Details">
+                                   class="action-btn btn-view" title="View Profile">
                                     <i class="fas fa-eye"></i>
                                 </a>
+                                
+                                <a href="{% url 'client_interaction_list' profile.pk %}" 
+                                   class="action-btn btn-interactions" title="View Interactions">
+                                    <i class="fas fa-comments"></i>
+                                </a>
+                                
+                                {% if user.role == 'rm' and profile.mapped_rm == user %}
+                                    <a href="{% url 'client_interaction_create' profile.pk %}" 
+                                       class="action-btn btn-add-interaction" title="Add Interaction">
+                                        <i class="fas fa-plus"></i>
+                                    </a>
+                                {% endif %}
+                                
                                 {% if can_modify %}
                                     <a href="{% url 'client_profile_update' profile.pk %}" 
-                                       class="action-btn btn-edit" title="Edit">
+                                       class="action-btn btn-edit" title="Edit Profile">
                                         <i class="fas fa-edit"></i>
                                     </a>
                                 {% endif %}
                             </div>
+                            
                             {% if not profile.legacy_client and can_convert_to_client %}
-                            <a href="{% url 'convert_to_client' profile.pk %}" 
-                               class="btn-convert" 
-                               title="Convert to Full Client">
-                                <i class="fas fa-user-check"></i> Convert to Client
-                            </a>
+                                <a href="{% url 'convert_to_client' profile.pk %}" 
+                                   class="btn-convert" 
+                                   title="Convert to Full Client">
+                                    <i class="fas fa-user-check"></i> Convert to Client
+                                </a>
                             {% endif %}
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="10">
+                        <td colspan="8">
                             <div class="empty-state">
                                 <i class="fas fa-users"></i>
                                 <h4 style="color: white; margin: 1rem 0;">No client profiles found</h4>
@@ -715,10 +884,50 @@
                 </tbody>
             </table>
         </div>
+
+
+        <!-- Pagination -->
+        {% if client_profiles.has_other_pages %}
+        <div style="margin-top: 2rem; text-align: center;">
+            <nav aria-label="Client profiles pagination">
+                <ul class="pagination justify-content-center" style="background: transparent;">
+                    {% if client_profiles.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link modern-btn" href="?page={{ client_profiles.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if rm_filter %}&rm={{ rm_filter }}{% endif %}{% if interaction_filter %}&interaction_filter={{ interaction_filter }}{% endif %}">
+                                Previous
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    {% for num in client_profiles.paginator.page_range %}
+                        {% if client_profiles.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link modern-btn" style="background: var(--primary-gradient);">{{ num }}</span>
+                            </li>
+                        {% elif num > client_profiles.number|add:'-3' and num < client_profiles.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link modern-btn" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if rm_filter %}&rm={{ rm_filter }}{% endif %}{% if interaction_filter %}&interaction_filter={{ interaction_filter }}{% endif %}">
+                                    {{ num }}
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if client_profiles.has_next %}
+                        <li class="page-item">
+                            <a class="page-link modern-btn" href="?page={{ client_profiles.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if rm_filter %}&rm={{ rm_filter }}{% endif %}{% if interaction_filter %}&interaction_filter={{ interaction_filter }}{% endif %}">
+                                Next
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
     </div>
 </div>
 
-<!-- Convert to Client Modal -->
+<!-- Enhanced Convert to Client Modal -->
 <div class="modal fade modern-modal" id="convertModal" tabindex="-1" role="dialog" aria-labelledby="convertModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
@@ -748,8 +957,8 @@
                         <p style="margin: 0; color: white; font-weight: 600;">Demat Accounts</p>
                     </div>
                     <div style="background: rgba(255, 255, 255, 0.1); padding: 1rem; border-radius: 12px; text-align: center;">
-                        <i class="fas fa-address-book" style="font-size: 2rem; color: #a8edea; margin-bottom: 0.5rem;"></i>
-                        <p style="margin: 0; color: white; font-weight: 600;">Contact Info</p>
+                        <i class="fas fa-comments" style="font-size: 2rem; color: #a8edea; margin-bottom: 0.5rem;"></i>
+                        <p style="margin: 0; color: white; font-weight: 600;">Interaction History</p>
                     </div>
                 </div>
                 <div style="background: rgba(255, 193, 7, 0.2); border: 1px solid rgba(255, 193, 7, 0.4); border-radius: 12px; padding: 1.5rem; margin-top: 2rem;">
@@ -758,7 +967,7 @@
                         <div>
                             <strong style="color: #ffc107;">Important Note:</strong>
                             <p style="margin: 0.5rem 0 0 0; color: rgba(255, 255, 255, 0.9);">
-                                This action will create a new client record linked to this profile and cannot be undone.
+                                This action will create a new client record linked to this profile and cannot be undone. All existing interactions will be preserved.
                             </p>
                         </div>
                     </div>
@@ -785,7 +994,7 @@ document.addEventListener('DOMContentLoaded', function() {
         row.classList.add('fade-in');
     });
 
-    // Handle convert to client button clicks
+    // Enhanced convert to client button functionality
     const convertButtons = document.querySelectorAll('[title="Convert to Full Client"]');
     const convertModal = document.getElementById('convertModal');
     const confirmButton = document.getElementById('confirmConvert');
@@ -796,7 +1005,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const convertUrl = this.getAttribute('href');
             confirmButton.setAttribute('href', convertUrl);
             
-            // Add some animation to the modal
+            // Show modal with animation
             convertModal.style.display = 'block';
             convertModal.classList.add('show');
             convertModal.style.opacity = '0';
@@ -807,15 +1016,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 convertModal.style.opacity = '1';
                 convertModal.style.transform = 'scale(1)';
             }, 10);
-            
-            // If using Bootstrap modal, use this instead:
-            // $(convertModal).modal('show');
         });
     });
 
     // Close modal functionality
-    const closeButtons = convertModal.querySelectorAll('[data-dismiss="modal"]');
-    closeButtons.forEach(button => {
+    const closeButtons = convertModal?.querySelectorAll('[data-dismiss="modal"]');
+    closeButtons?.forEach(button => {
         button.addEventListener('click', function() {
             convertModal.style.opacity = '0';
             convertModal.style.transform = 'scale(0.8)';
@@ -827,7 +1033,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Close modal when clicking outside
-    convertModal.addEventListener('click', function(e) {
+    convertModal?.addEventListener('click', function(e) {
         if (e.target === convertModal) {
             convertModal.style.opacity = '0';
             convertModal.style.transform = 'scale(0.8)';
@@ -838,7 +1044,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Add hover effects to action buttons
+    // Enhanced hover effects for action buttons
     const actionButtons = document.querySelectorAll('.action-btn');
     actionButtons.forEach(button => {
         button.addEventListener('mouseenter', function() {
@@ -866,76 +1072,49 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Add smooth scrolling for better UX
-    const addClientButton = document.querySelector('.modern-btn[href*="create"]');
-    if (addClientButton) {
-        addClientButton.addEventListener('click', function(e) {
-            // Add a subtle loading animation
-            this.style.transform = 'scale(0.95)';
+    // Enhanced interaction summary hover effects
+    const interactionSummaries = document.querySelectorAll('.client-interaction-summary');
+    interactionSummaries.forEach(summary => {
+        summary.addEventListener('mouseenter', function() {
+            this.style.transform = 'scale(1.02)';
+            this.style.transition = 'all 0.3s ease';
+        });
+        
+        summary.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1)';
+        });
+    });
+
+    // Auto-refresh for follow-up alerts (every 5 minutes)
+    setInterval(() => {
+        const followUpAlerts = document.querySelectorAll('.follow-up-alert');
+        followUpAlerts.forEach(alert => {
+            // Add a subtle flash effect to draw attention
+            alert.style.opacity = '0.7';
             setTimeout(() => {
-                this.style.transform = 'scale(1)';
-            }, 150);
+                alert.style.opacity = '1';
+            }, 500);
         });
-    }
+    }, 300000); // 5 minutes
 
-    // Add progressive enhancement for table interactions
-    const tableContainer = document.querySelector('.modern-table-container');
-    if (tableContainer) {
-        let isScrolling = false;
-        
-        tableContainer.addEventListener('scroll', function() {
-            if (!isScrolling) {
-                tableContainer.style.boxShadow = '0 25px 50px rgba(0, 0, 0, 0.4)';
-                isScrolling = true;
-            }
-            
-            clearTimeout(window.scrollTimeout);
-            window.scrollTimeout = setTimeout(() => {
-                tableContainer.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.3)';
-                isScrolling = false;
-            }, 150);
-        });
-    }
-
-    // Add dynamic background particles effect (optional enhancement)
-    function createParticle() {
-        const particle = document.createElement('div');
-        particle.style.cssText = `
-            position: fixed;
-            width: 4px;
-            height: 4px;
-            background: rgba(102, 126, 234, 0.3);
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: -1;
-            left: ${Math.random() * window.innerWidth}px;
-            top: ${window.innerHeight}px;
-            animation: floatUp 8s linear infinite;
-        `;
-        
-        document.body.appendChild(particle);
-        
-        setTimeout(() => {
-            particle.remove();
-        }, 8000);
-    }
-
-    // Add CSS for particle animation
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes floatUp {
-            to {
-                transform: translateY(-${window.innerHeight + 100}px) rotate(360deg);
-                opacity: 0;
+    // Quick filter shortcuts
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey || e.metaKey) {
+            switch(e.key) {
+                case 'f':
+                    e.preventDefault();
+                    document.querySelector('input[name="search"]').focus();
+                    break;
+                case 'n':
+                    e.preventDefault();
+                    const createButton = document.querySelector('a[href*="create"]');
+                    if (createButton) createButton.click();
+                    break;
             }
         }
-    `;
-    document.head.appendChild(style);
+    });
 
-    // Create particles periodically (optional - can be removed if too distracting)
-    setInterval(createParticle, 2000);
-
-    // Add intersection observer for scroll animations
+    // Add intersection observer for enhanced animations
     const observerOptions = {
         threshold: 0.1,
         rootMargin: '0px 0px -50px 0px'
@@ -946,9 +1125,37 @@ document.addEventListener('DOMContentLoaded', function() {
             if (entry.isIntersecting) {
                 entry.target.style.opacity = '1';
                 entry.target.style.transform = 'translateY(0)';
+                
+                // Add special animation for stat cards
+                if (entry.target.classList.contains('stat-card')) {
+                    const number = entry.target.querySelector('.stat-number');
+                    if (number) {
+                        animateNumber(number);
+                    }
+                }
             }
         });
     }, observerOptions);
+
+    // Animate numbers in stat cards
+    function animateNumber(element) {
+        const finalNumber = parseInt(element.textContent);
+        const duration = 1000;
+        const startTime = performance.now();
+        
+        function animate(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const currentNumber = Math.floor(finalNumber * progress);
+            element.textContent = currentNumber;
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            }
+        }
+        
+        requestAnimationFrame(animate);
+    }
 
     // Observe elements for scroll animations
     document.querySelectorAll('.stat-card, .search-section, .modern-table-container').forEach(el => {
@@ -957,6 +1164,52 @@ document.addEventListener('DOMContentLoaded', function() {
         el.style.transition = 'all 0.6s ease';
         observer.observe(el);
     });
+
+    // Real-time updates for interaction counts (if WebSocket available)
+    if (typeof WebSocket !== 'undefined') {
+        // This would connect to a WebSocket for real-time updates
+        // Implementation depends on your WebSocket setup
+        console.log('WebSocket available for real-time updates');
+    }
+
+    // Keyboard navigation for table rows
+    let selectedRow = -1;
+    const tableRows = document.querySelectorAll('.modern-table tbody tr');
+    
+    document.addEventListener('keydown', function(e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+        
+        switch(e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                selectedRow = Math.min(selectedRow + 1, tableRows.length - 1);
+                highlightRow();
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                selectedRow = Math.max(selectedRow - 1, 0);
+                highlightRow();
+                break;
+            case 'Enter':
+                e.preventDefault();
+                if (selectedRow >= 0) {
+                    const viewButton = tableRows[selectedRow].querySelector('.btn-view');
+                    if (viewButton) viewButton.click();
+                }
+                break;
+        }
+    });
+
+    function highlightRow() {
+        tableRows.forEach((row, index) => {
+            if (index === selectedRow) {
+                row.style.background = 'rgba(102, 126, 234, 0.3)';
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else {
+                row.style.background = '';
+            }
+        });
+    }
 });
 </script>
 

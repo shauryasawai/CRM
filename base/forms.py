@@ -3596,3 +3596,300 @@ class UserEditForm(forms.ModelForm):
        # Disable role field if not top management
        if current_user and current_user.role != 'top_management':
            self.fields['role'].disabled = True
+           
+# forms.py
+from django import forms
+from django.utils import timezone
+from django.core.exceptions import ValidationError
+from .models import ClientInteraction, INTERACTION_TYPE_CHOICES
+
+
+class ClientInteractionForm(forms.ModelForm):
+    """Form for creating and updating client interactions"""
+    
+    class Meta:
+        model = ClientInteraction
+        fields = [
+            'interaction_type', 'interaction_date', 'duration_minutes',
+            'notes', 'priority', 'follow_up_required', 'follow_up_date'
+        ]
+        widgets = {
+            'interaction_type': forms.Select(
+                attrs={
+                    'class': 'form-select',
+                    'id': 'id_interaction_type'
+                }
+            ),
+            'interaction_date': forms.DateTimeInput(
+                attrs={
+                    'type': 'datetime-local',
+                    'class': 'form-control',
+                    'id': 'id_interaction_date'
+                }
+            ),
+            'duration_minutes': forms.NumberInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Enter duration in minutes',
+                    'min': '1',
+                    'max': '480',  # 8 hours max
+                    'id': 'id_duration_minutes'
+                }
+            ),
+            'notes': forms.Textarea(
+                attrs={
+                    'class': 'form-control',
+                    'rows': 6,
+                    'placeholder': 'Enter detailed notes about the interaction...',
+                    'id': 'id_notes'
+                }
+            ),
+            'priority': forms.Select(
+                attrs={
+                    'class': 'form-select',
+                    'id': 'id_priority'
+                }
+            ),
+            'follow_up_required': forms.CheckboxInput(
+                attrs={
+                    'class': 'form-check-input',
+                    'id': 'id_follow_up_required'
+                }
+            ),
+            'follow_up_date': forms.DateInput(
+                attrs={
+                    'type': 'date',
+                    'class': 'form-control',
+                    'id': 'id_follow_up_date'
+                }
+            ),
+        }
+        help_texts = {
+            'duration_minutes': 'Optional: How long did the interaction last?',
+            'notes': 'Provide detailed information about what was discussed',
+            'follow_up_date': 'Required if follow-up is marked as needed',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Set default interaction_date to now if creating new interaction
+        if not self.instance.pk:
+            self.fields['interaction_date'].initial = timezone.now()
+        
+        # Make notes field required
+        self.fields['notes'].required = True
+        
+        # Set up conditional follow_up_date requirement
+        self.fields['follow_up_date'].required = False
+
+    def clean_interaction_date(self):
+        """Validate interaction date"""
+        interaction_date = self.cleaned_data.get('interaction_date')
+        
+        if interaction_date:
+            # Don't allow future dates beyond 24 hours
+            if interaction_date > timezone.now() + timezone.timedelta(hours=24):
+                raise ValidationError(
+                    "Interaction date cannot be more than 24 hours in the future."
+                )
+            
+            # Don't allow dates too far in the past (1 year)
+            if interaction_date < timezone.now() - timezone.timedelta(days=365):
+                raise ValidationError(
+                    "Interaction date cannot be more than 1 year in the past."
+                )
+        
+        return interaction_date
+
+    def clean_duration_minutes(self):
+        """Validate duration"""
+        duration = self.cleaned_data.get('duration_minutes')
+        
+        if duration is not None:
+            if duration < 1:
+                raise ValidationError("Duration must be at least 1 minute.")
+            if duration > 480:  # 8 hours
+                raise ValidationError("Duration cannot exceed 8 hours (480 minutes).")
+        
+        return duration
+
+    def clean_follow_up_date(self):
+        """Validate follow-up date"""
+        follow_up_date = self.cleaned_data.get('follow_up_date')
+        follow_up_required = self.cleaned_data.get('follow_up_required')
+        
+        if follow_up_required and not follow_up_date:
+            raise ValidationError("Follow-up date is required when follow-up is marked as needed.")
+        
+        if follow_up_date:
+            if follow_up_date <= timezone.now().date():
+                raise ValidationError("Follow-up date must be in the future.")
+            
+            # Don't allow follow-up dates more than 1 year in future
+            if follow_up_date > timezone.now().date() + timezone.timedelta(days=365):
+                raise ValidationError("Follow-up date cannot be more than 1 year in the future.")
+        
+        return follow_up_date
+
+    def clean_notes(self):
+        """Validate notes field"""
+        notes = self.cleaned_data.get('notes')
+        
+        if notes:
+            # Remove extra whitespace
+            notes = notes.strip()
+            
+            # Minimum length check
+            if len(notes) < 10:
+                raise ValidationError("Notes must be at least 10 characters long.")
+            
+            # Maximum length check
+            if len(notes) > 2000:
+                raise ValidationError("Notes cannot exceed 2000 characters.")
+        
+        return notes
+
+    def clean(self):
+        """Cross-field validation"""
+        cleaned_data = super().clean()
+        follow_up_required = cleaned_data.get('follow_up_required')
+        follow_up_date = cleaned_data.get('follow_up_date')
+        interaction_date = cleaned_data.get('interaction_date')
+        
+        # Ensure follow-up date is after interaction date
+        if follow_up_date and interaction_date:
+            if follow_up_date <= interaction_date.date():
+                raise ValidationError({
+                    'follow_up_date': 'Follow-up date must be after the interaction date.'
+                })
+        
+        # Clear follow_up_date if not required
+        if not follow_up_required:
+            cleaned_data['follow_up_date'] = None
+        
+        return cleaned_data
+
+
+class InteractionFilterForm(forms.Form):
+    """Form for filtering interactions in the list view"""
+    
+    PRIORITY_CHOICES = [
+        ('', 'All Priorities'),
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('urgent', 'Urgent'),
+    ]
+    
+    FOLLOW_UP_CHOICES = [
+        ('', 'All'),
+        ('yes', 'Follow-up Required'),
+        ('no', 'No Follow-up'),
+    ]
+    
+    search = forms.CharField(
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                'class': 'form-control',
+                'placeholder': 'Search in notes or interaction type...',
+            }
+        )
+    )
+    
+    interaction_type = forms.ChoiceField(
+        choices=[('', 'All Types')] + INTERACTION_TYPE_CHOICES,
+        required=False,
+        widget=forms.Select(
+            attrs={'class': 'form-select'}
+        )
+    )
+    
+    priority = forms.ChoiceField(
+        choices=PRIORITY_CHOICES,
+        required=False,
+        widget=forms.Select(
+            attrs={'class': 'form-select'}
+        )
+    )
+    
+    follow_up_required = forms.ChoiceField(
+        choices=FOLLOW_UP_CHOICES,
+        required=False,
+        widget=forms.Select(
+            attrs={'class': 'form-select'}
+        )
+    )
+    
+    date_from = forms.DateField(
+        required=False,
+        widget=forms.DateInput(
+            attrs={
+                'type': 'date',
+                'class': 'form-control'
+            }
+        )
+    )
+    
+    date_to = forms.DateField(
+        required=False,
+        widget=forms.DateInput(
+            attrs={
+                'type': 'date',
+                'class': 'form-control'
+            }
+        )
+    )
+
+    def clean(self):
+        """Validate date range"""
+        cleaned_data = super().clean()
+        date_from = cleaned_data.get('date_from')
+        date_to = cleaned_data.get('date_to')
+        
+        if date_from and date_to:
+            if date_from > date_to:
+                raise ValidationError("Start date must be before end date.")
+        
+        return cleaned_data
+
+
+class BulkInteractionActionForm(forms.Form):
+    """Form for bulk actions on interactions"""
+    
+    ACTION_CHOICES = [
+        ('mark_follow_up', 'Mark as requiring follow-up'),
+        ('unmark_follow_up', 'Remove follow-up requirement'),
+        ('change_priority', 'Change priority'),
+    ]
+    
+    action = forms.ChoiceField(
+        choices=ACTION_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    new_priority = forms.ChoiceField(
+        choices=[
+            ('low', 'Low'),
+            ('medium', 'Medium'),
+            ('high', 'High'),
+            ('urgent', 'Urgent'),
+        ],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    
+    interaction_ids = forms.CharField(
+        widget=forms.HiddenInput()
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        action = cleaned_data.get('action')
+        new_priority = cleaned_data.get('new_priority')
+        
+        if action == 'change_priority' and not new_priority:
+            raise ValidationError("Priority is required when changing priority.")
+        
+        return cleaned_data

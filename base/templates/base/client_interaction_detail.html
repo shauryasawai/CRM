@@ -1,0 +1,182 @@
+<!-- base/client_interaction_detail.html -->
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Interaction Details - {{ client_profile.client_full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.detail-card {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.detail-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+.badge-priority-high { background-color: #f44336; }
+.badge-priority-urgent { background-color: #ff5722; }
+.badge-priority-medium { background-color: #ff9800; }
+.badge-priority-low { background-color: #4caf50; }
+.notes-section {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1.5rem;
+    min-height: 200px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card detail-card">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-comments"></i> Interaction Details
+                        </h5>
+                        <div>
+                            {% if can_edit %}
+                                <a href="{% url 'client_interaction_update' client_profile.id interaction.id %}" 
+                                   class="btn btn-light btn-sm">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                <a href="{% url 'client_interaction_delete' client_profile.id interaction.id %}" 
+                                   class="btn btn-danger btn-sm">
+                                    <i class="fas fa-trash"></i> Delete
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Interaction Summary -->
+                    <div class="detail-section">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-primary mb-3">Interaction Summary</h6>
+                                <div class="mb-2">
+                                    <span class="badge bg-primary me-2">{{ interaction.get_interaction_type_display }}</span>
+                                    <span class="badge badge-priority-{{ interaction.priority }}">{{ interaction.get_priority_display }}</span>
+                                    {% if interaction.follow_up_required %}
+                                        <span class="badge bg-warning text-dark">Follow-up Required</span>
+                                    {% endif %}
+                                </div>
+                                <p class="mb-1">
+                                    <strong>Date & Time:</strong> {{ interaction.interaction_date|date:"M d, Y H:i" }}
+                                </p>
+                                {% if interaction.duration_minutes %}
+                                    <p class="mb-1">
+                                        <strong>Duration:</strong> {{ interaction.duration_minutes }} minutes
+                                    </p>
+                                {% endif %}
+                                {% if interaction.follow_up_date %}
+                                    <p class="mb-1">
+                                        <strong>Follow-up Date:</strong> {{ interaction.follow_up_date|date:"M d, Y" }}
+                                    </p>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-primary mb-3">Created By</h6>
+                                <p class="mb-1">
+                                    <strong>{{ interaction.created_by.get_full_name|default:interaction.created_by.username }}</strong>
+                                </p>
+                                <p class="mb-1 text-muted">
+                                    {{ interaction.get_time_since_creation }} ago
+                                </p>
+                                <p class="mb-0 text-muted small">
+                                    Created: {{ interaction.created_at|date:"M d, Y H:i" }}
+                                    {% if interaction.updated_at != interaction.created_at %}
+                                        <br>Updated: {{ interaction.updated_at|date:"M d, Y H:i" }}
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes Section -->
+                    <div class="mb-4">
+                        <h6 class="text-primary mb-3">Interaction Notes</h6>
+                        <div class="notes-section">
+                            {{ interaction.notes|linebreaks }}
+                        </div>
+                    </div>
+
+                    <!-- Edit Status -->
+                    {% if can_edit %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            This interaction can be edited or deleted within 24 hours of creation.
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-lock"></i>
+                            This interaction is read-only. Interactions can only be edited within 24 hours of creation and only by the creator.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <!-- Client Info -->
+            <div class="card detail-card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">Client Information</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-1">
+                        <strong>{{ client_profile.client_full_name }}</strong>
+                    </p>
+                    <p class="mb-1 text-muted">{{ client_profile.client_id }}</p>
+                    <p class="mb-1">
+                        <strong>PAN:</strong> {{ client_profile.pan_number }}
+                    </p>
+                    <p class="mb-1">
+                        <strong>Email:</strong> {{ client_profile.email }}
+                    </p>
+                    <p class="mb-1">
+                        <strong>Mobile:</strong> {{ client_profile.mobile_number }}
+                    </p>
+                    <p class="mb-0">
+                        <strong>RM:</strong> {{ client_profile.mapped_rm|default:"Not assigned" }}
+                    </p>
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'client_profile_detail' client_profile.id %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-user"></i> View Profile
+                    </a>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card detail-card">
+                <div class="card-header">
+                    <h6 class="mb-0">Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'client_interaction_list' client_profile.id %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-list"></i> All Interactions
+                        </a>
+                        {% if request.user.role == 'rm' and client_profile.mapped_rm == request.user %}
+                            <a href="{% url 'client_interaction_create' client_profile.id %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-plus"></i> New Interaction
+                            </a>
+                        {% endif %}
+                        <a href="{% url 'client_profile_detail' client_profile.id %}" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-arrow-left"></i> Back to Profile
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

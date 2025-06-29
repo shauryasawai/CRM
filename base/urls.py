@@ -37,27 +37,34 @@ urlpatterns = [
     ])),
     
     # Client Profile Management
-    path('client-profiles/', include([
-        path('', views.client_profile_list, name='client_profile_list'),
-        path('create/', views.client_profile_create, name='client_profile_create'),
-        path('<int:pk>/', views.client_profile_detail, name='client_profile_detail'),
-        path('<int:pk>/edit/', views.client_profile_update, name='client_profile_update'),
-        path('<int:pk>/mute/', views.client_profile_mute, name='client_profile_mute'),
-        path('<int:pk>/delete/', views.client_profile_delete, name='client_profile_delete'),
-        path('<int:profile_id>/convert-to-client/', views.convert_to_client, name='convert_to_client'),
-        
-        # Modification requests
-        path('modification-requests/', views.modification_requests, name='modification_requests'),
-        path('modifications/<int:pk>/approve/', views.approve_modification, name='approve_modification'),
-    ])),
+path('client-profiles/', include([
+    path('', views.client_profile_list, name='client_profile_list'),
+    path('create/', views.client_profile_create, name='client_profile_create'),
+    path('<int:pk>/', views.client_profile_detail, name='client_profile_detail'),
+    path('<int:pk>/edit/', views.client_profile_update, name='client_profile_update'),
+    path('<int:pk>/mute/', views.client_profile_mute, name='client_profile_mute'),
+    path('<int:pk>/delete/', views.client_profile_delete, name='client_profile_delete'),
+    path('<int:profile_id>/convert-to-client/', views.convert_to_client, name='convert_to_client'),
     
-    # Legacy client URLs (for backward compatibility)
-    path('clients/', include([
-        path('', views.client_list, name='client_list'),
-        path('create/', views.client_create, name='client_create'),
-        path('<int:pk>/edit/', views.client_update, name='client_update'),
-        path('<int:pk>/delete/', views.client_delete, name='client_delete'),
-    ])),
+    # Client Interaction URLs
+    path('<int:profile_id>/interactions/', views.client_interaction_list, name='client_interaction_list'),
+    path('<int:profile_id>/interactions/create/', views.client_interaction_create, name='client_interaction_create'),
+    path('<int:profile_id>/interactions/<int:interaction_id>/', views.client_interaction_detail, name='client_interaction_detail'),
+    path('<int:profile_id>/interactions/<int:interaction_id>/edit/', views.client_interaction_update, name='client_interaction_update'),
+    path('<int:profile_id>/interactions/<int:interaction_id>/delete/', views.client_interaction_delete, name='client_interaction_delete'),
+    
+    # Modification requests
+    path('modification-requests/', views.modification_requests, name='modification_requests'),
+    path('modifications/<int:pk>/approve/', views.approve_modification, name='approve_modification'),
+])),
+
+# Legacy client URLs (for backward compatibility)
+path('clients/', include([
+    path('', views.client_list, name='client_list'),
+    path('create/', views.client_create, name='client_create'),
+    path('<int:pk>/edit/', views.client_update, name='client_update'),
+    path('<int:pk>/delete/', views.client_delete, name='client_delete'),
+])),
     
     # Lead Management
     path('leads/', include([

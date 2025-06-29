@@ -372,6 +372,21 @@ class Note(models.Model):
         return False
 
 # Existing models continue below...
+
+# Add interaction type choices
+INTERACTION_TYPE_CHOICES = [
+    ('call', 'Phone Call'),
+    ('email', 'Email'),
+    ('meeting', 'Meeting'),
+    ('video_call', 'Video Call'),
+    ('site_visit', 'Site Visit'),
+    ('documentation', 'Documentation'),
+    ('complaint', 'Complaint'),
+    ('follow_up', 'Follow Up'),
+    ('advisory', 'Advisory'),
+    ('other', 'Other'),
+]
+
 class ClientProfile(models.Model):
     """Main client profile model with all required fields"""
     # Add the missing client_id field
@@ -479,6 +494,95 @@ class ClientProfile(models.Model):
         self.muted_by = None
         self.muted_date = None
         self.save()
+
+
+class ClientInteraction(models.Model):
+    """Model to track all client interactions"""
+    client_profile = models.ForeignKey(
+        ClientProfile,
+        on_delete=models.CASCADE,
+        related_name='interactions'
+    )
+    interaction_type = models.CharField(
+        max_length=20,
+        choices=INTERACTION_TYPE_CHOICES,
+        default='call'
+    )
+    interaction_date = models.DateTimeField(default=timezone.now)
+    duration_minutes = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        help_text="Duration in minutes (optional)"
+    )
+    notes = models.TextField(
+        help_text="Detailed notes about the interaction"
+    )
+    follow_up_required = models.BooleanField(default=False)
+    follow_up_date = models.DateField(
+        blank=True,
+        null=True,
+        help_text="Date for follow-up (if required)"
+    )
+    priority = models.CharField(
+        max_length=10,
+        choices=[
+            ('low', 'Low'),
+            ('medium', 'Medium'),
+            ('high', 'High'),
+            ('urgent', 'Urgent'),
+        ],
+        default='medium'
+    )
+    
+    # Tracking fields
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='created_interactions'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-interaction_date', '-created_at']
+        verbose_name = 'Client Interaction'
+        verbose_name_plural = 'Client Interactions'
+        permissions = [
+            ('can_view_all_interactions', 'Can view all client interactions'),
+            ('can_edit_own_interactions', 'Can edit own interactions'),
+        ]
+    
+    def __str__(self):
+        return f"{self.client_profile.client_full_name} - {self.get_interaction_type_display()} on {self.interaction_date.strftime('%Y-%m-%d')}"
+    
+    def clean(self):
+        """Validate interaction data"""
+        super().clean()
+        if self.follow_up_required and not self.follow_up_date:
+            raise ValidationError("Follow-up date is required when follow-up is marked as required.")
+        
+        if self.follow_up_date and self.follow_up_date <= timezone.now().date():
+            raise ValidationError("Follow-up date must be in the future.")
+    
+    def is_editable_by(self, user):
+        """Check if the interaction can be edited by the given user"""
+        from datetime import timedelta
+        
+        # Only creator can edit
+        if user != self.created_by:
+            return False
+        
+        # Only within 24 hours
+        if timezone.now() - self.created_at > timedelta(hours=24):
+            return False
+        
+        return True
+    
+    def get_time_since_creation(self):
+        """Get human-readable time since creation"""
+        from django.utils.timesince import timesince
+        return timesince(self.created_at)
         
 class ClientAccount(models.Model):
     """Base abstract model for all client account types"""

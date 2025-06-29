@@ -2812,6 +2812,8 @@ def convert_to_client(request, profile_id):
     
     return render(request, 'base/convert_to_client.html', context)
 
+
+from django.db.models import Count, Q, Max
 # Update your client_profile_list view to include the convert permission and stats
 @login_required
 def client_profile_list(request):
@@ -2857,7 +2859,34 @@ def client_profile_list(request):
     if rm_filter and user.role in ['rm_head', 'business_head', 'top_management']:
         client_profiles = client_profiles.filter(mapped_rm_id=rm_filter)
 
-    # Get statistics
+    # Get the interaction filter
+    interaction_filter = request.GET.get('interaction_filter')
+
+    # Get profiles with related data (NO database annotations)
+    profiles_list = list(client_profiles.select_related(
+        'mapped_rm', 'mapped_ops_exec', 'legacy_client'
+    ).order_by('-created_at'))
+
+    # Add interaction data using Python calculations
+    profiles_with_interaction_data = add_interaction_data_safely(profiles_list)
+
+    # Apply interaction-based filters AFTER calculating the data
+    if interaction_filter:
+        if interaction_filter == 'no_interactions':
+            profiles_with_interaction_data = [p for p in profiles_with_interaction_data if p.interaction_count == 0]
+        elif interaction_filter == 'recent_interactions':
+            profiles_with_interaction_data = [p for p in profiles_with_interaction_data if p.recent_interactions_count > 0]
+        elif interaction_filter == 'overdue_followups':
+            profiles_with_interaction_data = [p for p in profiles_with_interaction_data if p.overdue_followups > 0]
+        elif interaction_filter == 'due_today':
+            profiles_with_interaction_data = [p for p in profiles_with_interaction_data if p.due_today_followups > 0]
+
+    # Pagination
+    paginator = Paginator(profiles_with_interaction_data, 25)
+    page_number = request.GET.get('page')
+    client_profiles_paginated = paginator.get_page(page_number)
+
+    # Get statistics (use original queryset for stats)
     stats = client_profiles.aggregate(
         total_clients=Count('id'),
         active_clients=Count('id', filter=Q(status='active')),
@@ -2879,10 +2908,11 @@ def client_profile_list(request):
         rm_list = None
 
     context = {
-        'client_profiles': client_profiles.select_related('mapped_rm', 'mapped_ops_exec', 'legacy_client').order_by('-created_at'),
+        'client_profiles': client_profiles_paginated,
         'search_query': search_query,
         'status_filter': status_filter,
         'rm_filter': rm_filter,
+        'interaction_filter': interaction_filter,
         'stats': stats,
         'rm_list': rm_list,
         'can_create': user.role in ['rm', 'rm_head', 'business_head', 'top_management'],
@@ -2891,6 +2921,160 @@ def client_profile_list(request):
     }
     
     return render(request, 'base/client_profiles.html', context)
+
+
+def add_interaction_data_safely(profiles):
+    """
+    Add interaction data to profiles using only Python calculations.
+    This avoids any database annotation issues.
+    """
+    from django.utils import timezone
+    
+    today = timezone.now().date()
+    month_start = today.replace(day=1)
+    
+    for profile in profiles:
+        # Initialize all fields with safe defaults
+        profile.interaction_count = 0
+        profile.recent_interactions_count = 0
+        profile.high_priority_count = 0
+        profile.last_interaction_date = None
+        profile.last_interaction_type = None
+        profile.days_since_last_interaction = None
+        profile.overdue_followups = 0
+        profile.due_today_followups = 0
+        profile.upcoming_followups = 0
+        
+        try:
+            # Try to find the interaction relationship
+            interactions = None
+            
+            # Try common relationship names
+            for relation_name in ['interactions', 'clientinteraction_set', 'client_interactions']:
+                if hasattr(profile, relation_name):
+                    interactions = getattr(profile, relation_name).all()
+                    break
+            
+            # If we still don't have interactions, try to find them dynamically
+            if interactions is None:
+                # Import here to avoid circular imports
+                from django.apps import apps
+                
+                # Look for models that might be ClientInteraction
+                for model in apps.get_models():
+                    model_name = model.__name__.lower()
+                    if 'interaction' in model_name and 'client' in model_name:
+                        # Try to find the foreign key field
+                        for field in model._meta.fields:
+                            if (hasattr(field, 'related_model') and 
+                                field.related_model == profile.__class__):
+                                interactions = model.objects.filter(**{field.name: profile})
+                                break
+                        if interactions is not None:
+                            break
+            
+            if interactions is None:
+                continue  # Skip this profile if we can't find interactions
+            
+            # Convert to list to avoid repeated database hits
+            interaction_list = list(interactions)
+            
+            # Basic count
+            profile.interaction_count = len(interaction_list)
+            
+            if profile.interaction_count == 0:
+                continue
+            
+            # Process each interaction
+            recent_count = 0
+            high_priority_count = 0
+            last_interaction = None
+            last_date = None
+            overdue_count = 0
+            due_today_count = 0
+            upcoming_count = 0
+            
+            for interaction in interaction_list:
+                # Get interaction date
+                interaction_date = None
+                for date_field in ['interaction_date', 'date', 'created_at']:
+                    if hasattr(interaction, date_field):
+                        date_value = getattr(interaction, date_field)
+                        if date_value:
+                            if hasattr(date_value, 'date'):  # datetime object
+                                interaction_date = date_value.date()
+                            else:  # date object
+                                interaction_date = date_value
+                            break
+                
+                if interaction_date:
+                    # Check if recent (this month)
+                    if interaction_date >= month_start:
+                        recent_count += 1
+                    
+                    # Check if this is the latest interaction
+                    if last_date is None or interaction_date > last_date:
+                        last_date = interaction_date
+                        last_interaction = interaction
+                
+                # Check priority
+                for priority_field in ['priority', 'importance', 'urgency']:
+                    if hasattr(interaction, priority_field):
+                        priority_value = getattr(interaction, priority_field)
+                        if priority_value and str(priority_value).lower() == 'high':
+                            high_priority_count += 1
+                        break
+                
+                # Check follow-ups
+                follow_up_date = None
+                for followup_field in ['follow_up_date', 'followup_date', 'next_follow_up']:
+                    if hasattr(interaction, followup_field):
+                        follow_up_date = getattr(interaction, followup_field)
+                        break
+                
+                if follow_up_date:
+                    # Check if completed
+                    is_completed = False
+                    for completed_field in ['follow_up_completed', 'completed', 'is_completed']:
+                        if hasattr(interaction, completed_field):
+                            is_completed = bool(getattr(interaction, completed_field))
+                            break
+                    
+                    if not is_completed:
+                        if follow_up_date < today:
+                            overdue_count += 1
+                        elif follow_up_date == today:
+                            due_today_count += 1
+                        elif follow_up_date > today:
+                            upcoming_count += 1
+            
+            # Set calculated values
+            profile.recent_interactions_count = recent_count
+            profile.high_priority_count = high_priority_count
+            profile.overdue_followups = overdue_count
+            profile.due_today_followups = due_today_count
+            profile.upcoming_followups = upcoming_count
+            
+            # Set last interaction data
+            if last_interaction and last_date:
+                profile.last_interaction_date = last_date
+                profile.days_since_last_interaction = (today - last_date).days
+                
+                # Get interaction type
+                for type_field in ['interaction_type', 'type', 'category']:
+                    if hasattr(last_interaction, type_field):
+                        profile.last_interaction_type = getattr(last_interaction, type_field)
+                        break
+                
+                if not profile.last_interaction_type:
+                    profile.last_interaction_type = 'Contact'
+        
+        except Exception as e:
+            print(f"Error processing interactions for profile {profile.id}: {str(e)}")
+            # Keep the default values we set at the beginning
+            continue
+    
+    return profiles
 
 @login_required
 def client_profile_create(request):
@@ -2947,14 +3131,28 @@ def client_profile_detail(request, pk):
     except AttributeError:
         modifications = []
     
+    # Get client interactions - recent 10 interactions
+    try:
+        interactions = client_profile.interactions.select_related('created_by').order_by('-interaction_date')[:10]
+    except AttributeError:
+        interactions = []
+    
+    # Check if user can add interactions (only assigned RM)
+    can_add_interaction = (
+        request.user.role == 'rm' and 
+        client_profile.mapped_rm == request.user
+    )
+    
     context = {
         'client_profile': client_profile,
         'mfu_accounts': mfu_accounts,
         'motilal_accounts': motilal_accounts,
         'prabhudas_accounts': prabhudas_accounts,
         'modifications': modifications,
+        'interactions': interactions,
         'can_modify': request.user.can_modify_client_profile(),
         'can_mute': request.user.role in ['business_head', 'top_management', 'ops_team_lead'],
+        'can_add_interaction': can_add_interaction,
     }
     
     return render(request, 'base/client_profile_detail.html', context)
@@ -3090,6 +3288,219 @@ def client_profile_delete(request, pk):
     return render(request, 'base/client_profile_confirm_delete.html', {
         'client_profile': client_profile
     })
+
+# NEW: Client Interaction Views
+@login_required
+def client_interaction_create(request, profile_id):
+    """Create a new client interaction - only assigned RM can create"""
+    client_profile = get_object_or_404(ClientProfile, id=profile_id)
+    
+    # Only assigned RM can create interactions
+    if request.user.role != 'rm' or client_profile.mapped_rm != request.user:
+        messages.error(request, "Only the assigned RM can add client interactions.")
+        return redirect('client_profile_detail', pk=profile_id)
+    
+    if request.method == 'POST':
+        try:
+            from .models import ClientInteraction
+            from .forms import ClientInteractionForm
+            
+            form = ClientInteractionForm(request.POST)
+            if form.is_valid():
+                interaction = form.save(commit=False)
+                interaction.client_profile = client_profile
+                interaction.created_by = request.user
+                interaction.save()
+                
+                messages.success(request, "Client interaction recorded successfully.")
+                return redirect('client_profile_detail', pk=profile_id)
+            else:
+                messages.error(request, "Please correct the errors below.")
+        except ImportError:
+            messages.error(request, "Client interaction feature is not available.")
+            return redirect('client_profile_detail', pk=profile_id)
+    else:
+        try:
+            from .forms import ClientInteractionForm
+            form = ClientInteractionForm()
+        except ImportError:
+            messages.error(request, "Client interaction feature is not available.")
+            return redirect('client_profile_detail', pk=profile_id)
+    
+    context = {
+        'form': form,
+        'client_profile': client_profile,
+        'title': f'Add Interaction - {client_profile.client_full_name}'
+    }
+    
+    return render(request, 'base/client_interaction_form.html', context)
+
+@login_required
+def client_interaction_list(request, profile_id):
+    """List all interactions for a client profile"""
+    client_profile = get_object_or_404(ClientProfile, id=profile_id)
+    
+    # Check if user can access this client's data
+    if not request.user.can_access_user_data(client_profile.mapped_rm):
+        raise PermissionDenied("You don't have permission to view this client's interactions.")
+    
+    try:
+        # Get all interactions for this client
+        interactions = client_profile.interactions.select_related('created_by').order_by('-interaction_date')
+        
+        # Filter by interaction type if specified
+        interaction_type = request.GET.get('type')
+        if interaction_type:
+            interactions = interactions.filter(interaction_type=interaction_type)
+        
+        # Search in interaction notes
+        search_query = request.GET.get('search')
+        if search_query:
+            interactions = interactions.filter(
+                Q(notes__icontains=search_query) |
+                Q(interaction_type__icontains=search_query)
+            )
+        
+        # Pagination
+        from django.core.paginator import Paginator
+        paginator = Paginator(interactions, 20)  # Show 20 interactions per page
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        
+        # Check if user can add interactions (only assigned RM)
+        can_add_interaction = (
+            request.user.role == 'rm' and 
+            client_profile.mapped_rm == request.user
+        )
+        
+        context = {
+            'client_profile': client_profile,
+            'interactions': page_obj,
+            'search_query': search_query,
+            'interaction_type': interaction_type,
+            'can_add_interaction': can_add_interaction,
+        }
+        
+        return render(request, 'base/client_interaction_list.html', context)
+        
+    except AttributeError:
+        messages.error(request, "Client interaction feature is not available.")
+        return redirect('client_profile_detail', pk=profile_id)
+
+@login_required
+def client_interaction_detail(request, profile_id, interaction_id):
+    """View details of a specific client interaction"""
+    client_profile = get_object_or_404(ClientProfile, id=profile_id)
+    
+    # Check if user can access this client's data
+    if not request.user.can_access_user_data(client_profile.mapped_rm):
+        raise PermissionDenied("You don't have permission to view this client's interactions.")
+    
+    try:
+        interaction = get_object_or_404(client_profile.interactions.select_related('created_by'), id=interaction_id)
+        
+        # Check if user can edit this interaction (only creator and within 24 hours)
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        can_edit = (
+            request.user == interaction.created_by and
+            timezone.now() - interaction.created_at <= timedelta(hours=24)
+        )
+        
+        context = {
+            'client_profile': client_profile,
+            'interaction': interaction,
+            'can_edit': can_edit,
+        }
+        
+        return render(request, 'base/client_interaction_detail.html', context)
+        
+    except AttributeError:
+        messages.error(request, "Client interaction feature is not available.")
+        return redirect('client_profile_detail', pk=profile_id)
+
+@login_required
+def client_interaction_update(request, profile_id, interaction_id):
+    """Update a client interaction - only creator can update within 24 hours"""
+    client_profile = get_object_or_404(ClientProfile, id=profile_id)
+    
+    try:
+        interaction = get_object_or_404(client_profile.interactions, id=interaction_id)
+        
+        # Check if user can edit this interaction
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        if request.user != interaction.created_by:
+            messages.error(request, "You can only edit your own interactions.")
+            return redirect('client_interaction_detail', profile_id=profile_id, interaction_id=interaction_id)
+        
+        if timezone.now() - interaction.created_at > timedelta(hours=24):
+            messages.error(request, "Interactions can only be edited within 24 hours of creation.")
+            return redirect('client_interaction_detail', profile_id=profile_id, interaction_id=interaction_id)
+        
+        if request.method == 'POST':
+            from .forms import ClientInteractionForm
+            form = ClientInteractionForm(request.POST, instance=interaction)
+            if form.is_valid():
+                form.save()
+                messages.success(request, "Interaction updated successfully.")
+                return redirect('client_interaction_detail', profile_id=profile_id, interaction_id=interaction_id)
+            else:
+                messages.error(request, "Please correct the errors below.")
+        else:
+            from .forms import ClientInteractionForm
+            form = ClientInteractionForm(instance=interaction)
+        
+        context = {
+            'form': form,
+            'client_profile': client_profile,
+            'interaction': interaction,
+            'title': f'Edit Interaction - {client_profile.client_full_name}'
+        }
+        
+        return render(request, 'base/client_interaction_form.html', context)
+        
+    except (AttributeError, ImportError):
+        messages.error(request, "Client interaction feature is not available.")
+        return redirect('client_profile_detail', pk=profile_id)
+
+@login_required
+def client_interaction_delete(request, profile_id, interaction_id):
+    """Delete a client interaction - only creator can delete within 24 hours"""
+    client_profile = get_object_or_404(ClientProfile, id=profile_id)
+    
+    try:
+        interaction = get_object_or_404(client_profile.interactions, id=interaction_id)
+        
+        # Check if user can delete this interaction
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        if request.user != interaction.created_by:
+            messages.error(request, "You can only delete your own interactions.")
+            return redirect('client_interaction_detail', profile_id=profile_id, interaction_id=interaction_id)
+        
+        if timezone.now() - interaction.created_at > timedelta(hours=24):
+            messages.error(request, "Interactions can only be deleted within 24 hours of creation.")
+            return redirect('client_interaction_detail', profile_id=profile_id, interaction_id=interaction_id)
+        
+        if request.method == 'POST':
+            interaction.delete()
+            messages.success(request, "Interaction deleted successfully.")
+            return redirect('client_profile_detail', pk=profile_id)
+        
+        context = {
+            'client_profile': client_profile,
+            'interaction': interaction,
+        }
+        
+        return render(request, 'base/client_interaction_confirm_delete.html', context)
+        
+    except AttributeError:
+        messages.error(request, "Client interaction feature is not available.")
+        return redirect('client_profile_detail', pk=profile_id)
 
 @login_required
 def modification_requests(request):

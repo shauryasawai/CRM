@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
 from .models import (
-    User, Team, TeamMembership, NoteList, Note,
+    ClientInteraction, User, Team, TeamMembership, NoteList, Note,
     ClientProfile, MFUCANAccount, MotilalDematAccount, PrabhudasDematAccount,
     ClientProfileModification, Lead, LeadInteraction, ProductDiscussion, 
     LeadStatusChange, Client, Task, Reminder, ServiceRequest, 
@@ -961,7 +961,381 @@ class CustomGroupAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         return super().get_queryset(request).prefetch_related('user_set')
 
+# Add these imports to your existing admin.py
+from django.utils.html import format_html
+from django.urls import reverse
+from django.utils import timezone
+from django.db.models import Count, Q
+from django.contrib.admin import SimpleListFilter
+from datetime import timedelta
 
+# Custom Filters for ClientInteraction
+class FollowUpFilter(SimpleListFilter):
+    """Filter interactions by follow-up status"""
+    title = 'follow-up status'
+    parameter_name = 'followup'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('required', 'Follow-up required'),
+            ('overdue', 'Overdue follow-up'),
+            ('today', 'Due today'),
+            ('this_week', 'Due this week'),
+            ('completed', 'No follow-up needed'),
+        )
+
+    def queryset(self, request, queryset):
+        today = timezone.now().date()
+        week_end = today + timedelta(days=7)
+
+        if self.value() == 'required':
+            return queryset.filter(follow_up_required=True)
+        elif self.value() == 'overdue':
+            return queryset.filter(
+                follow_up_required=True,
+                follow_up_date__lt=today
+            )
+        elif self.value() == 'today':
+            return queryset.filter(
+                follow_up_required=True,
+                follow_up_date=today
+            )
+        elif self.value() == 'this_week':
+            return queryset.filter(
+                follow_up_required=True,
+                follow_up_date__range=[today, week_end]
+            )
+        elif self.value() == 'completed':
+            return queryset.filter(follow_up_required=False)
+        return queryset
+
+
+class InteractionPriorityFilter(SimpleListFilter):
+    """Filter interactions by priority"""
+    title = 'priority'
+    parameter_name = 'priority_level'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('high_urgent', 'High & Urgent'),
+            ('medium', 'Medium'),
+            ('low', 'Low'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'high_urgent':
+            return queryset.filter(priority__in=['high', 'urgent'])
+        elif self.value() == 'medium':
+            return queryset.filter(priority='medium')
+        elif self.value() == 'low':
+            return queryset.filter(priority='low')
+        return queryset
+
+
+# Inline Admin for ClientInteraction (to add to your existing ClientProfileAdmin)
+class ClientInteractionInline(admin.TabularInline):
+    """Inline admin for client interactions"""
+    model = ClientInteraction
+    extra = 0
+    max_num = 5  # Show only 5 most recent in inline
+    readonly_fields = ('created_at', 'updated_at', 'get_edit_status')
+    fields = (
+        'interaction_type', 'interaction_date', 'priority', 
+        'notes', 'follow_up_required', 'follow_up_date',
+        'created_by', 'get_edit_status'
+    )
+    
+    def get_edit_status(self, obj):
+        if obj.pk:
+            if timezone.now() - obj.created_at <= timedelta(hours=24):
+                return format_html('<span style="color: green;">✓ Editable</span>')
+            else:
+                return format_html('<span style="color: red;">✗ Read-only</span>')
+        return "-"
+    get_edit_status.short_description = "Edit Status"
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('created_by').order_by('-interaction_date')
+
+
+# Main ClientInteraction Admin
+@admin.register(ClientInteraction)
+class ClientInteractionAdmin(admin.ModelAdmin):
+    list_display = [
+        'get_client_info', 'interaction_type', 'interaction_date', 
+        'priority', 'duration_minutes', 'follow_up_required', 
+        'get_follow_up_status', 'created_by', 'get_edit_status'
+    ]
+    
+    list_filter = [
+        'interaction_type', InteractionPriorityFilter, FollowUpFilter,
+        'interaction_date', 'created_at', 'created_by'
+    ]
+    
+    search_fields = [
+        'client_profile__client_full_name', 'client_profile__pan_number',
+        'client_profile__client_id', 'notes', 'interaction_type'
+    ]
+    
+    readonly_fields = [
+        'created_at', 'updated_at', 'get_time_since_creation',
+        'get_edit_status', 'get_client_details', 'get_follow_up_status'
+    ]
+    
+    fieldsets = (
+        ('Client & Interaction', {
+            'fields': (
+                'client_profile',
+                'get_client_details',
+                ('interaction_type', 'interaction_date'),
+                ('duration_minutes', 'priority'),
+            )
+        }),
+        ('Interaction Details', {
+            'fields': (
+                'notes',
+            )
+        }),
+        ('Follow-up', {
+            'fields': (
+                ('follow_up_required', 'follow_up_date'),
+                'get_follow_up_status',
+            )
+        }),
+        ('Metadata', {
+            'fields': (
+                ('created_by', 'created_at'),
+                ('updated_at', 'get_time_since_creation'),
+                'get_edit_status',
+            ),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    date_hierarchy = 'interaction_date'
+    ordering = ['-interaction_date', '-created_at']
+    actions = ['mark_follow_up_required', 'mark_follow_up_completed', 'change_priority_to_high', 'export_interactions']
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request).select_related(
+            'client_profile', 'created_by', 'client_profile__mapped_rm'
+        )
+        
+        # Apply the same permission logic as your ClientProfile
+        user = request.user
+        if user.is_superuser or user.role in ['top_management', 'business_head', 'business_head_ops']:
+            return qs
+        elif user.role == 'rm_head':
+            accessible_users = user.get_accessible_users()
+            return qs.filter(client_profile__mapped_rm__in=accessible_users)
+        elif user.role == 'rm':
+            return qs.filter(client_profile__mapped_rm=user)
+        elif user.role in ['ops_team_lead', 'ops_exec']:
+            return qs  # Can view all interactions for operational purposes
+        else:
+            return qs.filter(created_by=user)  # Can only see own interactions
+    
+    def get_client_info(self, obj):
+        """Display client info with link"""
+        if obj.client_profile:
+            url = reverse('admin:base_clientprofile_change', args=[obj.client_profile.pk])
+            return format_html(
+                '<a href="{}" title="View client profile"><strong>{}</strong><br><small>{}</small></a>',
+                url,
+                obj.client_profile.client_full_name,
+                obj.client_profile.client_id
+            )
+        return "-"
+    get_client_info.short_description = "Client"
+    get_client_info.admin_order_field = 'client_profile__client_full_name'
+    
+    def get_edit_status(self, obj):
+        """Show edit status with detailed info - COMPLETELY FIXED"""
+        if obj.pk:
+            time_diff = timezone.now() - obj.created_at
+            hours_passed = time_diff.total_seconds() / 3600
+            
+            if hours_passed <= 24:
+                remaining_hours = round(24 - hours_passed, 1)
+                return format_html(
+                    '<span style="color: green;" title="Editable for {} more hours">✓ Editable</span>',
+                    remaining_hours
+                )
+            else:
+                expired_hours = round(hours_passed - 24, 1)
+                return format_html(
+                    '<span style="color: red;" title="Edit window expired {} hours ago">✗ Read-only</span>',
+                    expired_hours
+                )
+        return "-"
+    get_edit_status.short_description = "Edit Status"
+    
+    def get_follow_up_status(self, obj):
+        """Show follow-up status with color coding - COMPLETELY FIXED"""
+        if not obj.follow_up_required:
+            return format_html('<span style="color: green;">No follow-up needed</span>')
+        
+        if not obj.follow_up_date:
+            return format_html('<span style="color: orange;">Follow-up required (no date set)</span>')
+        
+        today = timezone.now().date()
+        days_diff = (obj.follow_up_date - today).days
+        
+        if days_diff < 0:
+            overdue_days = abs(days_diff)
+            return format_html(
+                '<span style="color: red; font-weight: bold;" title="Overdue by {} days">OVERDUE</span>',
+                overdue_days
+            )
+        elif days_diff == 0:
+            return format_html('<span style="color: orange; font-weight: bold;">DUE TODAY</span>')
+        elif days_diff <= 7:
+            return format_html(
+                '<span style="color: blue;" title="Due in {} days">Due in {} days</span>',
+                days_diff, days_diff
+            )
+        else:
+            due_date = obj.follow_up_date.strftime('%Y-%m-%d')
+            return format_html(
+                '<span style="color: gray;" title="Due in {} days">Due {}</span>',
+                days_diff, due_date
+            )
+    get_follow_up_status.short_description = "Follow-up Status"
+    
+    def get_time_since_creation(self, obj):
+        """Get human-readable time since creation"""
+        if obj.pk:
+            return obj.get_time_since_creation()
+        return "-"
+    get_time_since_creation.short_description = "Created"
+    
+    def get_client_details(self, obj):
+        """Show detailed client information - COMPLETELY FIXED"""
+        if obj.client_profile:
+            client = obj.client_profile
+            url = reverse('admin:base_clientprofile_change', args=[client.pk])
+            
+            # Build HTML content with safe formatting
+            client_name = client.client_full_name
+            client_id = client.client_id
+            pan_number = client.pan_number
+            email = client.email
+            mobile = client.mobile_number
+            rm_name = client.mapped_rm or 'Not assigned'
+            
+            html_template = '''
+            <div style="background: #f8f9fa; padding: 10px; border-radius: 5px;">
+                <a href="{}" style="text-decoration: none;">
+                    <strong>{}</strong> ({})<br>
+                    <small>PAN: {} | Email: {}<br>
+                    Mobile: {} | RM: {}</small>
+                </a>
+            </div>
+            '''
+            
+            return format_html(
+                html_template,
+                url, client_name, client_id, pan_number, email, mobile, rm_name
+            )
+        return "-"
+    get_client_details.short_description = "Client Details"
+    
+    def save_model(self, request, obj, form, change):
+        """Set created_by for new objects"""
+        if not change:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+    
+    def has_change_permission(self, request, obj=None):
+        """Check if user can change this interaction"""
+        if obj is None:
+            return super().has_change_permission(request)
+        
+        user = request.user
+        
+        # Superuser and top management can always edit
+        if user.is_superuser or user.role in ['top_management', 'business_head', 'business_head_ops']:
+            return True
+        
+        # Check if within 24-hour edit window for creator
+        if obj.created_by == user:
+            return obj.is_editable_by(user)
+        
+        # RM Head can edit interactions for their team members
+        if user.role == 'rm_head':
+            return user.can_access_user_data(obj.client_profile.mapped_rm)
+        
+        # RM can edit their own client interactions (within time limit)
+        if user.role == 'rm' and obj.client_profile.mapped_rm == user:
+            return obj.is_editable_by(user) if obj.created_by == user else False
+        
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        """Same logic as change permission"""
+        return self.has_change_permission(request, obj)
+    
+    # COMPLETELY FIXED Admin Actions - No f-strings
+    @admin.action(description='Mark selected interactions as requiring follow-up')
+    def mark_follow_up_required(self, request, queryset):
+        """Mark interactions as requiring follow-up"""
+        updated = queryset.update(follow_up_required=True)
+        message = '{} interactions marked as requiring follow-up.'.format(updated)
+        self.message_user(request, message)
+    
+    @admin.action(description='Mark selected interactions as follow-up completed')
+    def mark_follow_up_completed(self, request, queryset):
+        """Mark interactions as follow-up completed"""
+        updated = queryset.update(follow_up_required=False, follow_up_date=None)
+        message = '{} interactions marked as follow-up completed.'.format(updated)
+        self.message_user(request, message)
+    
+    @admin.action(description='Change priority to High for selected interactions')
+    def change_priority_to_high(self, request, queryset):
+        """Change priority to high"""
+        updated = queryset.update(priority='high')
+        message = '{} interactions priority changed to High.'.format(updated)
+        self.message_user(request, message)
+    
+    @admin.action(description='Export selected interactions to CSV')
+    def export_interactions(self, request, queryset):
+        """Export interactions to CSV"""
+        import csv
+        from django.http import HttpResponse
+        
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="client_interactions.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow([
+            'Client Name', 'Client ID', 'PAN', 'Interaction Type', 'Date', 
+            'Duration (mins)', 'Priority', 'Notes', 'Follow-up Required', 
+            'Follow-up Date', 'Created By', 'Created At'
+        ])
+        
+        for interaction in queryset.select_related('client_profile', 'created_by'):
+            # Safe handling of all data
+            client_name = interaction.client_profile.client_full_name if interaction.client_profile else ''
+            client_id = interaction.client_profile.client_id if interaction.client_profile else ''
+            pan_number = interaction.client_profile.pan_number if interaction.client_profile else ''
+            interaction_type = interaction.get_interaction_type_display()
+            interaction_date = interaction.interaction_date.strftime('%Y-%m-%d %H:%M')
+            duration = interaction.duration_minutes or ''
+            priority = interaction.get_priority_display()
+            notes = interaction.notes
+            follow_up_required = 'Yes' if interaction.follow_up_required else 'No'
+            follow_up_date = interaction.follow_up_date.strftime('%Y-%m-%d') if interaction.follow_up_date else ''
+            created_by = interaction.created_by.get_full_name() if interaction.created_by else ''
+            created_at = interaction.created_at.strftime('%Y-%m-%d %H:%M')
+            
+            writer.writerow([
+                client_name, client_id, pan_number, interaction_type, interaction_date,
+                duration, priority, notes, follow_up_required, follow_up_date,
+                created_by, created_at
+            ])
+        
+        return response
+    
 # Register all models
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(Team, TeamAdmin)
