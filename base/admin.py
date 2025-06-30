@@ -1,18 +1,23 @@
+import csv
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
+from django.http import HttpResponse
+from django.shortcuts import redirect
 from django.utils.html import format_html
 from django.urls import reverse
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
 from .models import (
-    ClientInteraction, User, Team, TeamMembership, NoteList, Note,
+    ClientInteraction, ServiceRequestComment, ServiceRequestDocument, ServiceRequestType, ServiceRequestWorkflow, User, Team, TeamMembership, NoteList, Note,
     ClientProfile, MFUCANAccount, MotilalDematAccount, PrabhudasDematAccount,
     ClientProfileModification, Lead, LeadInteraction, ProductDiscussion, 
     LeadStatusChange, Client, Task, Reminder, ServiceRequest, 
     BusinessTracker, InvestmentPlanReview
 )
 from django.contrib.auth.forms import UserChangeForm, UserCreationForm
+from django.contrib import messages
+from datetime import datetime, timedelta
 
 
 class TeamMembershipInline(admin.TabularInline):
@@ -818,44 +823,467 @@ class ReminderAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related('user')
 
 
+from django.contrib import admin
+from django.urls import reverse
+from django.utils.html import format_html
+from django.utils import timezone
+from django.db.models import Count, Q
+from django.shortcuts import redirect
+from django.contrib import messages
+from django.http import HttpResponse
+import csv
+from datetime import datetime, timedelta
+
+
+class ServiceRequestDocumentInline(admin.TabularInline):
+    """Inline admin for service request documents"""
+    model = ServiceRequestDocument
+    extra = 0
+    readonly_fields = ('uploaded_at', 'uploaded_by')
+    fields = ('document_name', 'document', 'uploaded_by', 'uploaded_at')
+    
+    def has_change_permission(self, request, obj=None):
+        return False  # Don't allow editing documents
+
+
+class ServiceRequestCommentInline(admin.TabularInline):
+    """Inline admin for service request comments"""
+    model = ServiceRequestComment
+    extra = 0
+    readonly_fields = ('created_at', 'commented_by')
+    fields = ('comment', 'is_internal', 'commented_by', 'created_at')
+    ordering = ('-created_at',)
+    
+    def has_change_permission(self, request, obj=None):
+        return False  # Don't allow editing comments
+
+
+class ServiceRequestWorkflowInline(admin.TabularInline):
+    """Inline admin for workflow history"""
+    model = ServiceRequestWorkflow
+    extra = 0
+    readonly_fields = ('from_status', 'to_status', 'from_user', 'to_user', 'transition_date', 'remarks')
+    fields = ('from_status', 'to_status', 'from_user', 'to_user', 'transition_date', 'remarks')
+    ordering = ('-transition_date',)
+    
+    def has_add_permission(self, request, obj=None):
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
 class ServiceRequestAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'client_link', 'status', 'priority', 
-        'raised_by_link', 'assigned_to_link', 'created_at'
+        'request_id', 'client_link', 'request_type_link', 'status_colored', 
+        'priority_colored', 'raised_by_link', 'assigned_to_link', 'current_owner_link',
+        'created_at', 'sla_status', 'days_pending'
     )
-    list_filter = ('status', 'priority', 'created_at')
-    search_fields = ('description', 'client__name', 'raised_by__username')
+    list_filter = (
+        'status', 'priority', 'request_type__category', 'request_type',
+        'sla_breached', 'client_approved', 'created_at', 'resolved_at'
+    )
+    search_fields = (
+        'request_id', 'description', 'client__name', 'client__email',
+        'raised_by__username', 'raised_by__first_name', 'raised_by__last_name',
+        'assigned_to__username', 'assigned_to__first_name', 'assigned_to__last_name'
+    )
     ordering = ('-created_at',)
-    autocomplete_fields = ('client', 'raised_by', 'assigned_to')
+    autocomplete_fields = ('client', 'raised_by', 'assigned_to', 'current_owner')
     date_hierarchy = 'created_at'
-    actions = ['mark_as_resolved']
+    
+    # Enhanced actions
+    actions = [
+        'mark_as_resolved', 'mark_as_in_progress', 'mark_as_closed',
+        'bulk_reassign', 'export_to_csv', 'mark_sla_breached'
+    ]
+    
+    # Fieldsets for better organization
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('request_id', 'client', 'request_type', 'description', 'priority')
+        }),
+        ('Assignment & Ownership', {
+            'fields': ('raised_by', 'assigned_to', 'current_owner')
+        }),
+        ('Status & Workflow', {
+            'fields': ('status', 'resolution_summary', 'client_approved')
+        }),
+        ('Timestamps', {
+            'fields': (
+                'created_at', 'submitted_at', 'documents_requested_at',
+                'documents_received_at', 'resolved_at', 'closed_at'
+            ),
+            'classes': ('collapse',)
+        }),
+        ('SLA & Tracking', {
+            'fields': ('expected_completion_date', 'sla_breached', 'documents_complete'),
+            'classes': ('collapse',)
+        }),
+        ('Additional Details', {
+            'fields': ('additional_details', 'required_documents_list'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    readonly_fields = (
+        'request_id', 'created_at', 'updated_at', 'submitted_at',
+        'documents_requested_at', 'documents_received_at', 'resolved_at',
+        'closed_at', 'client_approval_date'
+    )
+    
+    inlines = [ServiceRequestCommentInline, ServiceRequestDocumentInline, ServiceRequestWorkflowInline]
+    
+    
+    
+    # Custom methods for display
+    def request_type_link(self, obj):
+        if obj.request_type:
+            url = reverse('admin:base_servicerequesttype_change', args=[obj.request_type.pk])
+            return format_html(
+                '<a href="{}" title="{}">{}</a>',
+                url, obj.request_type.description or '', obj.request_type.name
+            )
+        return '-'
+    request_type_link.short_description = 'Request Type'
     
     def client_link(self, obj):
         url = reverse('admin:base_client_change', args=[obj.client.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.client.name)
+        return format_html(
+            '<a href="{}" title="Client ID: {}">{}</a>',
+            url, obj.client.pk, obj.client.name
+        )
     client_link.short_description = 'Client'
     
     def raised_by_link(self, obj):
         if obj.raised_by:
-            url = reverse('admin:base_user_change', args=[obj.raised_by.pk])
-            return format_html('<a href="{}">{}</a>', url, obj.raised_by.username)
+            name = obj.raised_by.get_full_name() or obj.raised_by.username
+            return name
         return '-'
-    raised_by_link.short_description = 'Raised By'
     
     def assigned_to_link(self, obj):
         if obj.assigned_to:
-            url = reverse('admin:base_user_change', args=[obj.assigned_to.pk])
-            return format_html('<a href="{}">{}</a>', url, obj.assigned_to.username)
+            name = obj.assigned_to.get_full_name() or obj.assigned_to.username
+            return name
         return '-'
-    assigned_to_link.short_description = 'Assigned To'
     
+    def current_owner_link(self, obj):
+        if obj.current_owner:
+            name = obj.current_owner.get_full_name() or obj.current_owner.username
+            return name
+        return '-'
+    
+    def status_colored(self, obj):
+        colors = {
+            'draft': '#6c757d',        # Gray
+            'submitted': '#007bff',     # Blue
+            'documents_requested': '#ffc107',  # Yellow
+            'documents_received': '#17a2b8',   # Cyan
+            'in_progress': '#fd7e14',   # Orange
+            'resolved': '#28a745',      # Green
+            'client_verification': '#6f42c1',  # Purple
+            'closed': '#343a40',        # Dark
+            'on_hold': '#dc3545',       # Red
+            'rejected': '#e83e8c'       # Pink
+        }
+        color = colors.get(obj.status, '#6c757d')
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color, obj.get_status_display()
+        )
+    status_colored.short_description = 'Status'
+    
+    def priority_colored(self, obj):
+        colors = {
+            'low': '#28a745',      # Green
+            'medium': '#ffc107',   # Yellow
+            'high': '#fd7e14',     # Orange
+            'urgent': '#dc3545'    # Red
+        }
+        color = colors.get(obj.priority, '#6c757d')
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color, obj.get_priority_display()
+        )
+    priority_colored.short_description = 'Priority'
+    
+    def sla_status(self, obj):
+        if obj.sla_breached:
+            return format_html('<span style="color: red; font-weight: bold;">BREACHED</span>')
+        elif obj.expected_completion_date:
+            if obj.expected_completion_date < timezone.now():
+                return format_html('<span style="color: orange; font-weight: bold;">OVERDUE</span>')
+            elif obj.expected_completion_date < timezone.now() + timedelta(hours=4):
+                return format_html('<span style="color: orange;">AT RISK</span>')
+            else:
+                return format_html('<span style="color: green;">ON TRACK</span>')
+        return '-'
+    sla_status.short_description = 'SLA Status'
+    
+    def days_pending(self, obj):
+        if obj.status in ['closed', 'rejected']:
+            return '-'
+        
+        start_date = obj.created_at
+        if obj.status == 'documents_requested':
+            start_date = obj.documents_requested_at or obj.created_at
+        elif obj.status in ['documents_received', 'in_progress']:
+            start_date = obj.documents_received_at or obj.submitted_at or obj.created_at
+        
+        days = (timezone.now() - start_date).days
+        
+        if days > 7:
+            return format_html('<span style="color: red; font-weight: bold;">{} days</span>', days)
+        elif days > 3:
+            return format_html('<span style="color: orange;">{} days</span>', days)
+        else:
+            return f'{days} days'
+    days_pending.short_description = 'Days Pending'
+    
+    # Enhanced actions
     def mark_as_resolved(self, request, queryset):
-        updated = queryset.update(status='resolved', resolved_at=timezone.now())
-        self.message_user(request, f"{updated} service requests marked as resolved")
+        updated_count = 0
+        for obj in queryset:
+            if obj.status not in ['resolved', 'closed']:
+                obj.status = 'resolved'
+                obj.resolved_at = timezone.now()
+                obj.save()
+                
+                # Create workflow history
+                ServiceRequestWorkflow.objects.create(
+                    service_request=obj,
+                    from_status=obj.status,
+                    to_status='resolved',
+                    from_user=request.user,
+                    to_user=obj.current_owner,
+                    remarks='Bulk action: Marked as resolved via admin'
+                )
+                updated_count += 1
+        
+        self.message_user(
+            request, 
+            f"{updated_count} service request(s) marked as resolved",
+            messages.SUCCESS
+        )
     mark_as_resolved.short_description = "Mark selected requests as resolved"
-
+    
+    def mark_as_in_progress(self, request, queryset):
+        updated_count = 0
+        for obj in queryset:
+            if obj.status in ['submitted', 'documents_received']:
+                obj.status = 'in_progress'
+                obj.save()
+                
+                ServiceRequestWorkflow.objects.create(
+                    service_request=obj,
+                    from_status=obj.status,
+                    to_status='in_progress',
+                    from_user=request.user,
+                    to_user=obj.current_owner,
+                    remarks='Bulk action: Started processing via admin'
+                )
+                updated_count += 1
+        
+        self.message_user(
+            request,
+            f"{updated_count} service request(s) marked as in progress",
+            messages.SUCCESS
+        )
+    mark_as_in_progress.short_description = "Mark selected requests as in progress"
+    
+    def mark_as_closed(self, request, queryset):
+        updated_count = 0
+        for obj in queryset:
+            if obj.status == 'client_verification':
+                obj.status = 'closed'
+                obj.closed_at = timezone.now()
+                obj.client_approved = True
+                obj.client_approval_date = timezone.now()
+                obj.save()
+                
+                ServiceRequestWorkflow.objects.create(
+                    service_request=obj,
+                    from_status='client_verification',
+                    to_status='closed',
+                    from_user=request.user,
+                    to_user=obj.current_owner,
+                    remarks='Bulk action: Closed via admin'
+                )
+                updated_count += 1
+        
+        self.message_user(
+            request,
+            f"{updated_count} service request(s) marked as closed",
+            messages.SUCCESS
+        )
+    mark_as_closed.short_description = "Mark selected requests as closed"
+    
+    def bulk_reassign(self, request, queryset):
+        # This would redirect to a custom page for bulk reassignment
+        selected_ids = ','.join(str(obj.id) for obj in queryset)
+        return redirect(f'/admin/bulk-reassign/?ids={selected_ids}')
+    bulk_reassign.short_description = "Bulk reassign selected requests"
+    
+    def export_to_csv(self, request, queryset):
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="service_requests_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow([
+            'Request ID', 'Client', 'Request Type', 'Status', 'Priority',
+            'Raised By', 'Assigned To', 'Current Owner', 'Created At',
+            'Expected Completion', 'SLA Breached', 'Description'
+        ])
+        
+        for obj in queryset:
+            writer.writerow([
+                obj.request_id,
+                obj.client.name,
+                obj.request_type.name if obj.request_type else '',
+                obj.get_status_display(),
+                obj.get_priority_display(),
+                obj.raised_by.get_full_name() if obj.raised_by else '',
+                obj.assigned_to.get_full_name() if obj.assigned_to else '',
+                obj.current_owner.get_full_name() if obj.current_owner else '',
+                obj.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                obj.expected_completion_date.strftime('%Y-%m-%d %H:%M:%S') if obj.expected_completion_date else '',
+                'Yes' if obj.sla_breached else 'No',
+                obj.description[:100] + '...' if len(obj.description) > 100 else obj.description
+            ])
+        
+        return response
+    export_to_csv.short_description = "Export selected requests to CSV"
+    
+    def mark_sla_breached(self, request, queryset):
+        updated_count = queryset.filter(
+            expected_completion_date__lt=timezone.now(),
+            status__in=['submitted', 'documents_requested', 'documents_received', 'in_progress']
+        ).update(sla_breached=True)
+        
+        self.message_user(
+            request,
+            f"{updated_count} service request(s) marked as SLA breached",
+            messages.WARNING
+        )
+    mark_sla_breached.short_description = "Mark overdue requests as SLA breached"
+    
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('client', 'raised_by', 'assigned_to')
+        return super().get_queryset(request).select_related(
+            'client', 'raised_by', 'assigned_to', 'current_owner', 'request_type'
+        ).prefetch_related('comments', 'documents')
+    
+
+
+def changelist_view(self, request, extra_context=None):
+    # Add summary statistics to changelist
+    queryset = self.get_queryset(request)
+    
+    # Apply any filters that are currently active
+    cl = self.get_changelist_instance(request)
+    queryset = cl.get_queryset(request)
+    
+    extra_context = extra_context or {}
+    extra_context['summary_stats'] = {
+        'total_requests': queryset.count(),
+        'open_requests': queryset.filter(
+            status__in=['submitted', 'documents_requested', 'documents_received', 'in_progress']
+        ).count(),
+        'overdue_requests': queryset.filter(
+            expected_completion_date__lt=timezone.now(),
+            status__in=['submitted', 'documents_requested', 'documents_received', 'in_progress']
+        ).count(),
+        'urgent_requests': queryset.filter(
+            priority='urgent',
+            status__in=['submitted', 'documents_requested', 'documents_received', 'in_progress']
+        ).count(),
+        'sla_breached': queryset.filter(sla_breached=True).count(),
+    }
+    
+    return super().changelist_view(request, extra_context=extra_context)
+
+
+@admin.register(ServiceRequestType)
+class ServiceRequestTypeAdmin(admin.ModelAdmin):
+    list_display = ('name', 'category', 'code', 'is_active', 'request_count')
+    list_filter = ('category', 'is_active')
+    search_fields = ('name', 'code', 'description')
+    ordering = ('category', 'name')
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'category', 'code', 'description', 'is_active')
+        }),
+        ('Configuration', {
+            'fields': ('required_documents',),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def request_count(self, obj):
+        count = obj.service_requests.count()
+        if count > 0:
+            url = reverse('admin:base_servicerequest_changelist')
+            return format_html(
+                '<a href="{}?request_type__id__exact={}">{}</a>',
+                url, obj.id, count
+            )
+        return 0
+    request_count.short_description = 'Request Count'
+
+
+@admin.register(ServiceRequestDocument)
+class ServiceRequestDocumentAdmin(admin.ModelAdmin):
+    list_display = ('document_name', 'service_request_link', 'uploaded_by', 'uploaded_at', 'file_size')
+    list_filter = ('uploaded_at', 'uploaded_by')
+    search_fields = ('document_name', 'service_request__request_id', 'uploaded_by__username')
+    ordering = ('-uploaded_at',)
+    readonly_fields = ('uploaded_at', 'file_size')
+    
+    def service_request_link(self, obj):
+        url = reverse('admin:base_servicerequest_change', args=[obj.service_request.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.service_request.request_id)
+    service_request_link.short_description = 'Service Request'
+    
+    def file_size(self, obj):
+        if obj.document:
+            size_mb = obj.document.size / (1024 * 1024)
+            return f"{size_mb:.2f} MB"
+        return '-'
+    file_size.short_description = 'File Size'
+
+
+@admin.register(ServiceRequestComment)
+class ServiceRequestCommentAdmin(admin.ModelAdmin):
+    list_display = ('service_request_link', 'comment_preview', 'commented_by', 'is_internal', 'created_at')
+    list_filter = ('is_internal', 'created_at', 'commented_by')
+    search_fields = ('comment', 'service_request__request_id', 'commented_by__username')
+    ordering = ('-created_at',)
+    readonly_fields = ('created_at',)
+    
+    def service_request_link(self, obj):
+        url = reverse('admin:base_servicerequest_change', args=[obj.service_request.pk])
+    service_request_link.short_description = 'Service Request'
+    
+    def comment_preview(self, obj):
+        return obj.comment[:50] + '...' if len(obj.comment) > 50 else obj.comment
+    comment_preview.short_description = 'Comment'
+
+
+@admin.register(ServiceRequestWorkflow)
+class ServiceRequestWorkflowAdmin(admin.ModelAdmin):
+    list_display = ('service_request_link', 'from_status', 'to_status', 'from_user', 'to_user', 'transition_date')
+    list_filter = ('from_status', 'to_status', 'transition_date')
+    search_fields = ('service_request__request_id', 'from_user__username', 'to_user__username')
+    ordering = ('-transition_date',)
+    readonly_fields = ('transition_date',)
+    
+    def service_request_link(self, obj):
+        url = reverse('admin:base_servicerequest_change', args=[obj.service_request.pk])
+        return format_html('<a href="{}">{}</a>', url, obj.service_request.request_id)
+    service_request_link.short_description = 'Service Request'
 
 
 # Business Tracking and Analytics Admin Classes
@@ -1373,6 +1801,11 @@ admin.site.register(BusinessTracker, BusinessTrackerAdmin)
 # Unregister default Group admin and register custom one
 admin.site.unregister(Group)
 admin.site.register(Group, CustomGroupAdmin)
+from django.contrib.auth import get_user_model
+# For the User model:
+User = get_user_model()
+user_change_url = f'admin:{User._meta.app_label}_{User._meta.model_name}_change'
+
 
 # Customize admin site headers
 admin.site.site_header = "CRM Administration"

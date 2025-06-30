@@ -6,12 +6,13 @@ from django.utils import timezone
 from django.db.models import Q
 from django.core.validators import FileExtensionValidator
 from .models import (
-    User, Lead, Client, Task, ServiceRequest, InvestmentPlanReview, 
+    ServiceRequestComment, ServiceRequestDocument, ServiceRequestType, User, Lead, Client, Task, ServiceRequest, InvestmentPlanReview, 
     Team, BusinessTracker, LeadInteraction, ProductDiscussion, 
     LeadStatusChange, TeamMembership, Reminder, ClientProfile,
     ClientProfileModification, MFUCANAccount, MotilalDematAccount,
     PrabhudasDematAccount, Note, NoteList
 )
+from base import models
 
 # Updated Constants with new operations roles
 ROLE_CHOICES = (
@@ -611,72 +612,6 @@ class TaskForm(forms.ModelForm):
         if commit:
             task.save()
         return task
-
-
-# Updated Service Request Form
-class ServiceRequestForm(forms.ModelForm):
-    """Enhanced service request form with operations support"""
-    
-    class Meta:
-        model = ServiceRequest
-        fields = ('client', 'description', 'priority', 'assigned_to')
-        widgets = {
-            'client': forms.Select(attrs={'class': 'form-control'}),
-            'description': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
-            'priority': forms.Select(attrs={'class': 'form-control'}),
-            'assigned_to': forms.Select(attrs={'class': 'form-control'}),
-        }
-    
-    def __init__(self, *args, **kwargs):
-        self.current_user = kwargs.pop('current_user', None)
-        super().__init__(*args, **kwargs)
-        
-        # Limit client choices based on user role
-        if self.current_user:
-            if self.current_user.role in ['top_management', 'business_head', 'business_head_ops']:
-                # Senior management can create service requests for any client
-                self.fields['client'].queryset = Client.objects.all()
-                # Can assign to operations team
-                self.fields['assigned_to'].queryset = User.objects.filter(
-                    role__in=['ops_exec', 'ops_team_lead']
-                )
-                
-            elif self.current_user.role == 'rm_head':
-                # Can create for team clients
-                accessible_users = self.current_user.get_accessible_users()
-                self.fields['client'].queryset = Client.objects.filter(user__in=accessible_users)
-                self.fields['assigned_to'].queryset = User.objects.filter(
-                    role__in=['ops_exec', 'ops_team_lead']
-                )
-                
-            elif self.current_user.role == 'rm':
-                # Can only create for own clients
-                self.fields['client'].queryset = Client.objects.filter(user=self.current_user)
-                self.fields['assigned_to'].queryset = User.objects.filter(
-                    role__in=['ops_exec', 'ops_team_lead']
-                )
-                
-            elif self.current_user.role == 'ops_team_lead':
-                # Can assign to team members
-                team_members = self.current_user.get_team_members()
-                self.fields['assigned_to'].queryset = User.objects.filter(
-                    id__in=[tm.id for tm in team_members]
-                )
-                # Can access all clients for service requests
-                self.fields['client'].queryset = Client.objects.all()
-                
-            elif self.current_user.role == 'ops_exec':
-                # Can only assign to self
-                self.fields['assigned_to'].queryset = User.objects.filter(id=self.current_user.id)
-                self.fields['assigned_to'].initial = self.current_user
-                # Can access all clients for service requests
-                self.fields['client'].queryset = Client.objects.all()
-                
-            else:
-                # Default to empty queryset for unknown roles
-                self.fields['client'].queryset = Client.objects.none()
-        else:
-            self.fields['client'].queryset = Client.objects.none()
 
 
 
@@ -1893,16 +1828,40 @@ class TaskForm(forms.ModelForm):
         return task
 
 
-# Updated Service Request Form
+from django import forms
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+from datetime import timedelta
+
+from django import forms
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+from datetime import timedelta
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+
 class ServiceRequestForm(forms.ModelForm):
-    """Enhanced service request form with operations support"""
+    request_type = forms.ModelChoiceField(
+        queryset=ServiceRequestType.objects.filter(is_active=True),
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        empty_label="Select Request Type"
+    )
     
     class Meta:
         model = ServiceRequest
-        fields = ('client', 'description', 'priority', 'assigned_to')
+        fields = (
+            'client', 'request_type', 'description', 'priority', 
+            'assigned_to'
+        )
         widgets = {
             'client': forms.Select(attrs={'class': 'form-control'}),
-            'description': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
+            'description': forms.Textarea(attrs={
+                'rows': 4, 
+                'class': 'form-control',
+                'placeholder': 'Describe the service request in detail...'
+            }),
             'priority': forms.Select(attrs={'class': 'form-control'}),
             'assigned_to': forms.Select(attrs={'class': 'form-control'}),
         }
@@ -1911,52 +1870,285 @@ class ServiceRequestForm(forms.ModelForm):
         self.current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
         
-        # Limit client choices based on user role
+        # Set default priority
+        self.fields['priority'].initial = 'medium'
+        
         if self.current_user:
-            if self.current_user.role in ['top_management', 'business_head', 'business_head_ops']:
-                # Senior management can create service requests for any client
-                self.fields['client'].queryset = Client.objects.all()
-                # Can assign to operations team
-                self.fields['assigned_to'].queryset = User.objects.filter(
-                    role__in=['ops_exec', 'ops_team_lead']
-                )
-                
-            elif self.current_user.role == 'rm_head':
-                # Can create for team clients
+            self._setup_client_queryset()
+            self._setup_assigned_to_queryset()
+            self._configure_field_access()
+    
+    def _setup_client_queryset(self):
+        """Setup client queryset based on user role"""
+        user_role = self.current_user.role
+        
+        if user_role in ['top_management', 'business_head', 'business_head_ops']:
+            self.fields['client'].queryset = Client.objects.all()
+            
+        elif user_role == 'rm_head':
+            if hasattr(self.current_user, 'get_accessible_users'):
                 accessible_users = self.current_user.get_accessible_users()
                 self.fields['client'].queryset = Client.objects.filter(user__in=accessible_users)
-                self.fields['assigned_to'].queryset = User.objects.filter(
-                    role__in=['ops_exec', 'ops_team_lead']
-                )
+            else:
+                self.fields['client'].queryset = Client.objects.all()
                 
-            elif self.current_user.role == 'rm':
-                # Can only create for own clients
-                self.fields['client'].queryset = Client.objects.filter(user=self.current_user)
-                self.fields['assigned_to'].queryset = User.objects.filter(
-                    role__in=['ops_exec', 'ops_team_lead']
-                )
-                
-            elif self.current_user.role == 'ops_team_lead':
-                # Can assign to team members
+        elif user_role == 'rm':
+            self.fields['client'].queryset = Client.objects.filter(user=self.current_user)
+            
+        elif user_role in ['ops_team_lead', 'ops_exec']:
+            self.fields['client'].queryset = Client.objects.all()
+            
+        else:
+            self.fields['client'].queryset = Client.objects.all()
+    
+    def _setup_assigned_to_queryset(self):
+        """Setup assigned_to queryset based on user role"""
+        user_role = self.current_user.role
+        
+        if user_role in ['top_management', 'business_head', 'business_head_ops']:
+            # Can assign to any operations team member
+            self.fields['assigned_to'].queryset = User.objects.filter(
+                role__in=['ops_exec', 'ops_team_lead'],
+                is_active=True
+            ).order_by('first_name', 'last_name')
+            
+        elif user_role in ['rm_head', 'rm']:
+            # Auto-assignment - show available ops executives
+            self.fields['assigned_to'].queryset = User.objects.filter(
+                role='ops_exec',
+                is_active=True
+            ).order_by('first_name', 'last_name')
+            
+        elif user_role == 'ops_team_lead':
+            # Can assign to team members
+            if hasattr(self.current_user, 'get_team_members'):
                 team_members = self.current_user.get_team_members()
                 self.fields['assigned_to'].queryset = User.objects.filter(
-                    id__in=[tm.id for tm in team_members]
+                    id__in=[tm.id for tm in team_members if tm.role == 'ops_exec'],
+                    is_active=True
                 )
-                # Can access all clients for service requests
-                self.fields['client'].queryset = Client.objects.all()
-                
-            elif self.current_user.role == 'ops_exec':
-                # Can only assign to self
-                self.fields['assigned_to'].queryset = User.objects.filter(id=self.current_user.id)
-                self.fields['assigned_to'].initial = self.current_user
-                # Can access all clients for service requests
-                self.fields['client'].queryset = Client.objects.all()
-                
             else:
-                # Default to empty queryset for unknown roles
-                self.fields['client'].queryset = Client.objects.none()
+                self.fields['assigned_to'].queryset = User.objects.filter(
+                    role='ops_exec',
+                    is_active=True
+                )
+                
+        elif user_role == 'ops_exec':
+            # Can assign to self or team lead
+            self.fields['assigned_to'].queryset = User.objects.filter(
+                id=self.current_user.id
+            )
+            
         else:
-            self.fields['client'].queryset = Client.objects.none()
+            self.fields['assigned_to'].queryset = User.objects.filter(
+                role='ops_exec',
+                is_active=True
+            )
+    
+    def _configure_field_access(self):
+        """Configure field access based on user role"""
+        user_role = self.current_user.role
+        
+        if user_role == 'rm':
+            # RM sees assignment as auto-assigned
+            self.fields['assigned_to'].help_text = "Will be auto-assigned to appropriate operations executive"
+            self.fields['client'].help_text = "Select from your assigned clients"
+            
+        elif user_role == 'rm_head':
+            self.fields['assigned_to'].help_text = "Will be auto-assigned to appropriate operations executive"
+            
+        elif user_role in ['ops_exec', 'ops_team_lead']:
+            self.fields['client'].help_text = "Client for whom the service request is being processed"
+    
+    def clean(self):
+        """Custom form validation"""
+        cleaned_data = super().clean()
+        
+        client = cleaned_data.get('client')
+        assigned_to = cleaned_data.get('assigned_to')
+        
+        # Validate client permissions
+        if client and self.current_user:
+            if self.current_user.role == 'rm':
+                if client.user != self.current_user:
+                    raise ValidationError(
+                        "You can only create service requests for your own clients."
+                    )
+            elif self.current_user.role == 'rm_head':
+                if hasattr(self.current_user, 'get_accessible_users'):
+                    accessible_users = self.current_user.get_accessible_users()
+                    if client.user not in accessible_users:
+                        raise ValidationError(
+                            "You can only create service requests for clients in your team."
+                        )
+        
+        # Validate operations assignment
+        if assigned_to:
+            if not assigned_to.is_active:
+                raise ValidationError("Cannot assign to inactive user.")
+            
+            if assigned_to.role not in ['ops_exec', 'ops_team_lead']:
+                raise ValidationError(
+                    "Service requests can only be assigned to operations team members."
+                )
+        
+        return cleaned_data
+    
+    def save(self, commit=True):
+        """Enhanced save method with additional logic"""
+        instance = super().save(commit=False)
+        
+        # Set raised_by if creating new request
+        if not instance.pk and self.current_user:
+            instance.raised_by = self.current_user
+        
+        # Auto-assign operations executive if not set
+        if not instance.assigned_to and self.current_user:
+            instance.assigned_to = self._get_auto_assigned_ops_exec()
+        
+        # Set current owner
+        if instance.assigned_to:
+            instance.current_owner = instance.assigned_to
+        
+        # Set initial status
+        if not instance.pk:
+            instance.status = 'draft'
+        
+        if commit:
+            instance.save()
+            self._create_audit_trail(instance)
+        
+        return instance
+    
+    def _get_auto_assigned_ops_exec(self):
+        """Auto-assign operations executive based on workload"""
+        from django.db.models import Count
+        
+        # Get the ops executive with least workload
+        ops_executives = User.objects.filter(
+            role='ops_exec',
+            is_active=True
+        ).annotate(
+            active_requests=Count(
+                'assigned_service_requests',
+                filter=models.Q(
+                    assigned_service_requests__status__in=[
+                        'submitted', 'documents_requested', 'documents_received', 'in_progress'
+                    ]
+                )
+            )
+        ).order_by('active_requests')
+        
+        return ops_executives.first()
+    
+    def _create_audit_trail(self, instance):
+        """Create audit trail for the form submission"""
+        if self.current_user:
+            action = "created" if not self.instance.pk else "updated"
+            
+            ServiceRequestComment.objects.create(
+                service_request=instance,
+                comment=f"Service request {action} by {self.current_user.get_full_name() or self.current_user.username}",
+                commented_by=self.current_user,
+                is_internal=True
+            )
+
+
+# Additional form for admin interface to match your image
+class ServiceRequestAdminForm(forms.ModelForm):
+    """Admin form with all fields visible like in your image"""
+    
+    class Meta:
+        model = ServiceRequest
+        fields = '__all__'
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4}),
+            'resolution_summary': forms.Textarea(attrs={'rows': 4}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Make some fields readonly in admin
+        if self.instance.pk:
+            self.fields['request_id'].widget.attrs['readonly'] = True
+            self.fields['created_at'].widget.attrs['readonly'] = True
+            self.fields['updated_at'].widget.attrs['readonly'] = True
+
+
+# Simple form for quick actions
+class ServiceRequestActionForm(forms.Form):
+    """Form for workflow actions"""
+    action = forms.ChoiceField(choices=[])
+    comments = forms.CharField(
+        widget=forms.Textarea(attrs={'rows': 3}),
+        required=False,
+        help_text="Optional comments about this action"
+    )
+    
+    def __init__(self, *args, **kwargs):
+        available_actions = kwargs.pop('available_actions', [])
+        super().__init__(*args, **kwargs)
+        
+        action_choices = [
+            ('submit', 'Submit Request'),
+            ('request_documents', 'Request Documents'),
+            ('start_processing', 'Start Processing'),
+            ('resolve', 'Resolve Request'),
+            ('verify', 'Verify Resolution'),
+            ('close', 'Close Request'),
+        ]
+        
+        # Filter choices based on available actions
+        self.fields['action'].choices = [
+            (value, label) for value, label in action_choices 
+            if value in available_actions
+        ]
+
+
+# Document upload form
+class ServiceRequestDocumentForm(forms.ModelForm):
+    """Form for uploading documents"""
+    
+    class Meta:
+        model = ServiceRequestDocument
+        fields = ['document', 'document_name']
+        widgets = {
+            'document': forms.ClearableFileInput(attrs={
+                'accept': '.pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx'
+            }),
+        }
+    
+    def clean_document(self):
+        document = self.cleaned_data.get('document')
+        
+        if document:
+            # Check file size (10MB limit)
+            if document.size > 10 * 1024 * 1024:
+                raise ValidationError("File size cannot exceed 10MB.")
+            
+            # Check file type
+            allowed_extensions = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx', '.xls', '.xlsx']
+            file_extension = '.' + document.name.split('.')[-1].lower()
+            
+            if file_extension not in allowed_extensions:
+                raise ValidationError(
+                    f"File type not supported. Allowed types: {', '.join(allowed_extensions)}"
+                )
+        
+        return document
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        
+        # Set document name from file if not provided
+        if not instance.document_name and instance.document:
+            instance.document_name = instance.document.name
+        
+        if commit:
+            instance.save()
+        
+        return instance
 
 
 # Updated Lead Form with operations awareness
@@ -3369,69 +3561,7 @@ class TaskForm(forms.ModelForm):
 
 
 # Updated Service Request Form
-class ServiceRequestForm(forms.ModelForm):
-    """Enhanced service request form with operations support"""
-    
-    class Meta:
-        model = ServiceRequest
-        fields = ('client', 'description', 'priority', 'assigned_to')
-        widgets = {
-            'client': forms.Select(attrs={'class': 'form-control'}),
-            'description': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
-            'priority': forms.Select(attrs={'class': 'form-control'}),
-            'assigned_to': forms.Select(attrs={'class': 'form-control'}),
-        }
-    
-    def __init__(self, *args, **kwargs):
-        self.current_user = kwargs.pop('current_user', None)
-        super().__init__(*args, **kwargs)
-        
-        # Limit client choices based on user role
-        if self.current_user:
-            if self.current_user.role in ['top_management', 'business_head', 'business_head_ops']:
-                # Senior management can create service requests for any client
-                self.fields['client'].queryset = Client.objects.all()
-                # Can assign to operations team
-                self.fields['assigned_to'].queryset = User.objects.filter(
-                    role__in=['ops_exec', 'ops_team_lead']
-                )
-                
-            elif self.current_user.role == 'rm_head':
-                # Can create for team clients
-                accessible_users = self.current_user.get_accessible_users()
-                self.fields['client'].queryset = Client.objects.filter(user__in=accessible_users)
-                self.fields['assigned_to'].queryset = User.objects.filter(
-                    role__in=['ops_exec', 'ops_team_lead']
-                )
-                
-            elif self.current_user.role == 'rm':
-                # Can only create for own clients
-                self.fields['client'].queryset = Client.objects.filter(user=self.current_user)
-                self.fields['assigned_to'].queryset = User.objects.filter(
-                    role__in=['ops_exec', 'ops_team_lead']
-                )
-                
-            elif self.current_user.role == 'ops_team_lead':
-                # Can assign to team members
-                team_members = self.current_user.get_team_members()
-                self.fields['assigned_to'].queryset = User.objects.filter(
-                    id__in=[tm.id for tm in team_members]
-                )
-                # Can access all clients for service requests
-                self.fields['client'].queryset = Client.objects.all()
-                
-            elif self.current_user.role == 'ops_exec':
-                # Can only assign to self
-                self.fields['assigned_to'].queryset = User.objects.filter(id=self.current_user.id)
-                self.fields['assigned_to'].initial = self.current_user
-                # Can access all clients for service requests
-                self.fields['client'].queryset = Client.objects.all()
-                
-            else:
-                # Default to empty queryset for unknown roles
-                self.fields['client'].queryset = Client.objects.none()
-        else:
-            self.fields['client'].queryset = Client.objects.none()
+
             
             
 class OperationsTaskAssignmentForm(forms.ModelForm):

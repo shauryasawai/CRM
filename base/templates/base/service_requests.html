@@ -51,7 +51,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 3rem;
+        margin-bottom: 2rem;
         flex-wrap: wrap;
         gap: 1.5rem;
     }
@@ -76,6 +76,13 @@
         border-radius: 2px;
     }
 
+    .header-actions {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
     .add-request-btn {
         background: var(--gradient-dark);
         color: white;
@@ -85,7 +92,6 @@
         font-weight: 600;
         font-size: 0.95rem;
         cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         text-decoration: none;
         display: inline-flex;
         align-items: center;
@@ -95,39 +101,109 @@
         overflow: hidden;
     }
 
-    .add-request-btn::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-        transition: left 0.5s;
+    /* Statistics Cards */
+    .stats-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
     }
 
-    .add-request-btn:hover {
-        transform: translateY(-3px);
-        box-shadow: var(--shadow-heavy);
+    .stat-card {
+        background: var(--card-bg);
+        padding: 1.5rem;
+        border-radius: 16px;
+        box-shadow: var(--shadow-light);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--border-color);
+        text-align: center;
     }
 
-    .add-request-btn:hover::before {
-        left: 100%;
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        color: var(--text-muted);
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    /* Filters */
+    .filters-container {
+        background: var(--card-bg);
+        padding: 1.5rem;
+        border-radius: 16px;
+        box-shadow: var(--shadow-light);
+        margin-bottom: 2rem;
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--border-color);
+    }
+
+    .filters-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        align-items: end;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .filter-label {
+        font-weight: 600;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .filter-input, .filter-select {
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 0.9rem;
+        background: white;
+        color: var(--text-secondary);
+    }
+
+    .filter-input:focus, .filter-select:focus {
+        outline: none;
+        border-color: #000;
+        box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .filter-btn {
+        padding: 0.75rem 1.5rem;
+        background: var(--gradient-dark);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
     }
 
     .table-container {
         background: var(--card-bg);
         border-radius: 20px;
         box-shadow: var(--shadow-medium);
-        overflow: hidden;
+        overflow-x: auto;
         backdrop-filter: blur(10px);
         border: 1px solid var(--border-color);
     }
 
     .requests-table {
         width: 100%;
+        min-width: 1200px;
         border-collapse: collapse;
         background: transparent;
+        table-layout: fixed;
     }
 
     .requests-table thead {
@@ -146,47 +222,84 @@
     }
 
     .requests-table th {
-        padding: 1.5rem 2rem;
+        padding: 1.5rem 1rem;
         text-align: left;
         color: white;
         font-weight: 700;
         text-transform: uppercase;
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         letter-spacing: 0.1em;
         position: relative;
+        white-space: nowrap;
     }
 
     .requests-table td {
-        padding: 1.5rem 2rem;
+        padding: 1.5rem 1rem;
         border-bottom: 1px solid var(--border-color);
         color: var(--text-secondary);
         font-weight: 500;
         vertical-align: middle;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Column widths */
+    .requests-table th:nth-child(1), /* Request ID */
+    .requests-table td:nth-child(1) {
+        width: 140px;
+    }
+
+    .requests-table th:nth-child(2), /* Client */
+    .requests-table td:nth-child(2) {
+        width: 150px;
+    }
+
+    .requests-table th:nth-child(3), /* Type */
+    .requests-table td:nth-child(3) {
+        width: 120px;
+    }
+
+    .requests-table th:nth-child(4), /* Description */
+    .requests-table td:nth-child(4) {
+        width: 250px;
+    }
+
+    .requests-table th:nth-child(5), /* Status */
+    .requests-table td:nth-child(5) {
+        width: 140px;
+    }
+
+    .requests-table th:nth-child(6), /* Priority */
+    .requests-table td:nth-child(6) {
+        width: 100px;
+    }
+
+    .requests-table th:nth-child(7), /* Raised By */
+    .requests-table td:nth-child(7) {
+        width: 130px;
+    }
+
+    .requests-table th:nth-child(8), /* Assigned To */
+    .requests-table td:nth-child(8) {
+        width: 130px;
+    }
+
+    .requests-table th:nth-child(9), /* Created */
+    .requests-table td:nth-child(9) {
+        width: 100px;
+    }
+
+    .requests-table th:nth-child(10), /* Actions */
+    .requests-table td:nth-child(10) {
+        width: 180px;
     }
 
     .requests-table tbody tr {
-        transition: all 0.3s ease;
         position: relative;
     }
 
     .requests-table tbody tr:last-child td {
         border-bottom: none;
-    }
-
-    .requests-table tbody tr:hover {
-        background: rgba(0, 0, 0, 0.02);
-        transform: scale(1.001);
-    }
-
-    .requests-table tbody tr:hover::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 0;
-        height: 100%;
-        width: 4px;
-        background: var(--gradient-dark);
-        border-radius: 0 2px 2px 0;
     }
 
     .status-badge {
@@ -213,16 +326,35 @@
         border-radius: inherit;
     }
 
-    .status-open {
+    /* Enhanced Status Colors */
+    .status-draft {
+        color: #6b7280;
+        background: rgba(107, 114, 128, 0.1);
+        border: 1px solid rgba(107, 114, 128, 0.2);
+    }
+
+    .status-submitted {
+        color: #2563eb;
+        background: rgba(37, 99, 235, 0.1);
+        border: 1px solid rgba(37, 99, 235, 0.2);
+    }
+
+    .status-documents-requested {
         color: #d97706;
         background: rgba(245, 158, 11, 0.1);
         border: 1px solid rgba(245, 158, 11, 0.2);
     }
 
+    .status-documents-received {
+        color: #0891b2;
+        background: rgba(8, 145, 178, 0.1);
+        border: 1px solid rgba(8, 145, 178, 0.2);
+    }
+
     .status-in-progress {
-        color: #2563eb;
-        background: rgba(37, 99, 235, 0.1);
-        border: 1px solid rgba(37, 99, 235, 0.2);
+        color: #7c3aed;
+        background: rgba(124, 58, 237, 0.1);
+        border: 1px solid rgba(124, 58, 237, 0.2);
     }
 
     .status-resolved {
@@ -231,10 +363,59 @@
         border: 1px solid rgba(5, 150, 105, 0.2);
     }
 
+    .status-client-verification {
+        color: #dc2626;
+        background: rgba(220, 38, 38, 0.1);
+        border: 1px solid rgba(220, 38, 38, 0.2);
+    }
+
     .status-closed {
-        color: #6b7280;
-        background: rgba(107, 114, 128, 0.1);
-        border: 1px solid rgba(107, 114, 128, 0.2);
+        color: #374151;
+        background: rgba(55, 65, 81, 0.1);
+        border: 1px solid rgba(55, 65, 81, 0.2);
+    }
+
+    .status-on-hold {
+        color: #ea580c;
+        background: rgba(234, 88, 12, 0.1);
+        border: 1px solid rgba(234, 88, 12, 0.2);
+    }
+
+    .priority-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .priority-low {
+        color: #059669;
+        background: rgba(5, 150, 105, 0.1);
+    }
+
+    .priority-medium {
+        color: #d97706;
+        background: rgba(245, 158, 11, 0.1);
+    }
+
+    .priority-high {
+        color: #dc2626;
+        background: rgba(220, 38, 38, 0.1);
+    }
+
+    .priority-urgent {
+        color: #7c2d12;
+        background: rgba(124, 45, 18, 0.1);
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
     }
 
     .action-buttons {
@@ -255,6 +436,18 @@
         gap: 0.4rem;
         position: relative;
         overflow: hidden;
+    }
+
+    .view-btn {
+        background: rgba(5, 150, 105, 0.1);
+        color: #059669;
+        border: 1px solid rgba(5, 150, 105, 0.2);
+    }
+
+    .view-btn:hover {
+        background: rgba(5, 150, 105, 0.15);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
     }
 
     .edit-btn {
@@ -323,9 +516,56 @@
         opacity: 0.7;
     }
 
-    .raised-by {
+    .raised-by, .assigned-to {
         font-weight: 600;
         color: var(--text-secondary);
+    }
+
+    .request-id {
+        font-family: 'Courier New', monospace;
+        font-weight: 700;
+        color: var(--text-primary);
+        background: rgba(0, 0, 0, 0.05);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+    }
+
+    .date-info {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    /* Pagination */
+    .pagination-container {
+        display: flex;
+        justify-content: center;
+        margin-top: 2rem;
+    }
+
+    .pagination {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .pagination a, .pagination span {
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .pagination a {
+        background: var(--card-bg);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+    }
+
+    .pagination .current {
+        background: var(--gradient-dark);
+        color: white;
     }
 
     /* Responsive Design */
@@ -347,28 +587,40 @@
             gap: 1rem;
         }
 
+        .stats-container {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .filters-row {
+            grid-template-columns: 1fr;
+        }
+
         .table-container {
             overflow-x: auto;
             border-radius: 16px;
         }
 
         .requests-table {
-            min-width: 700px;
+            min-width: 1000px;
         }
 
         .requests-table th,
         .requests-table td {
-            padding: 1rem 1.5rem;
+            padding: 1rem 0.8rem;
         }
 
         .action-buttons {
             flex-direction: column;
-            gap: 0.5rem;
-            min-width: 120px;
+            gap: 0.3rem;
+            min-width: 100px;
         }
 
         .description-text {
-            max-width: 200px;
+            max-width: 180px;
+        }
+
+        .client-info {
+            max-width: 120px;
         }
 
         .add-request-btn {
@@ -378,6 +630,10 @@
     }
 
     @media (max-width: 480px) {
+        .stats-container {
+            grid-template-columns: 1fr;
+        }
+
         .requests-table th,
         .requests-table td {
             padding: 0.75rem 1rem;
@@ -435,22 +691,95 @@
 </style>
 
 <div class="requests-container">
+    <!-- Header Section -->
     <div class="requests-header">
         <h1 class="requests-title">Service Requests</h1>
-        <a href="{% url 'service_request_create' %}" class="add-request-btn">
-            <i class="fas fa-plus"></i> Add New Request
-        </a>
+        <div class="header-actions">
+            {% if user.role in 'rm,rm_head,business_head,top_management' %}
+            <a href="{% url 'service_request_create' %}" class="add-request-btn">
+                <i class="fas fa-plus"></i> Add New Request
+            </a>
+            {% endif %}
+        </div>
     </div>
 
+    <!-- Statistics Cards -->
+    {% if stats %}
+    <div class="stats-container">
+        <div class="stat-card">
+            <div class="stat-number">{{ stats.total_requests|default:0 }}</div>
+            <div class="stat-label">Total Requests</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ stats.open_requests|default:0 }}</div>
+            <div class="stat-label">Open Requests</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ stats.urgent_requests|default:0 }}</div>
+            <div class="stat-label">Urgent Requests</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ stats.overdue_requests|default:0 }}</div>
+            <div class="stat-label">Overdue Requests</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Filters Section -->
+    <div class="filters-container">
+        <form method="GET" class="filters-row">
+            <div class="filter-group">
+                <label class="filter-label">Search</label>
+                <input type="text" name="search" value="{{ search_query }}" 
+                       placeholder="Search requests..." class="filter-input">
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Status</label>
+                <select name="status" class="filter-select">
+                    <option value="">All Statuses</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Priority</label>
+                <select name="priority" class="filter-select">
+                    <option value="">All Priorities</option>
+                    {% if priority_choices %}
+                        {% for value, label in priority_choices %}
+                        <option value="{{ value }}" {% if current_priority == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    {% endif %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <button type="submit" class="filter-btn">
+                    <i class="fas fa-search"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Service Requests Table -->
     {% if service_requests %}
     <div class="table-container">
         <table class="requests-table">
             <thead>
                 <tr>
+                    <th>Request ID</th>
                     <th>Client</th>
+                    <th>Type</th>
                     <th>Description</th>
                     <th>Status</th>
+                    <th>Priority</th>
                     <th>Raised By</th>
+                    <th>Assigned To</th>
+                    <th>Created</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -458,10 +787,16 @@
                 {% for req in service_requests %}
                 <tr>
                     <td>
+                        <div class="request-id">{{ req.request_id|default:req.id }}</div>
+                    </td>
+                    <td>
                         <div class="client-info">
-                            <i class="fas fa-building client-icon"></i>
+                            <i class="fas fa-user client-icon"></i>
                             <span>{{ req.client.name }}</span>
                         </div>
+                    </td>
+                    <td>
+                        <span>{{ req.request_type.name|default:"General" }}</span>
                     </td>
                     <td>
                         <div class="description-text" title="{{ req.description }}">
@@ -470,20 +805,48 @@
                     </td>
                     <td>
                         <span class="status-badge status-{{ req.status|lower|slugify }}">
-                            {{ req.status }}
+                            {{ req.get_status_display|default:req.status }}
                         </span>
                     </td>
                     <td>
-                        <div class="raised-by">{{ req.raised_by.get_full_name }}</div>
+                        <span class="priority-badge priority-{{ req.priority|lower }}">
+                            {{ req.get_priority_display|default:req.priority }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="raised-by">
+                            {{ req.raised_by.get_full_name|default:req.raised_by.username }}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="assigned-to">
+                            {% if req.assigned_to %}
+                                {{ req.assigned_to.get_full_name|default:req.assigned_to.username }}
+                            {% else %}
+                                <span style="color: #6b7280;">Unassigned</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="date-info">{{ req.created_at|date:"M d, Y" }}</div>
                     </td>
                     <td>
                         <div class="action-buttons">
+                            <a href="{% url 'service_request_detail' req.pk %}" class="action-btn view-btn">
+                                <i class="fas fa-eye"></i> View
+                            </a>
+                            {% if permissions.can_edit %}
                             <a href="{% url 'service_request_update' req.pk %}" class="action-btn edit-btn">
                                 <i class="fas fa-edit"></i> Edit
                             </a>
-                            <a href="{% url 'service_request_delete' req.pk %}" class="action-btn delete-btn">
+                            {% endif %}
+                            {% if permissions.can_delete %}
+                            <a href="{% url 'service_request_delete' req.pk %}" 
+                               class="action-btn delete-btn"
+                               onclick="return confirm('Are you sure you want to delete this request?')">
                                 <i class="fas fa-trash"></i> Delete
                             </a>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>
@@ -491,9 +854,47 @@
             </tbody>
         </table>
     </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="pagination-container">
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+                <a href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+                <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            {% endif %}
+
+            <span class="current">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+                <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     {% else %}
     <div class="empty-message">
-        <p>No service requests found. Create your first request to get started!</p>
+        <p>No service requests found. 
+           {% if user.role in 'rm,rm_head,business_head,top_management' %}
+           <a href="{% url 'service_request_create' %}" style="color: var(--text-primary); text-decoration: underline;">
+               Create your first request
+           </a> to get started!
+           {% else %}
+           Contact your RM to create service requests.
+           {% endif %}
+        </p>
     </div>
     {% endif %}
 </div>

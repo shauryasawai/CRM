@@ -1,0 +1,990 @@
+{% extends 'base/base.html' %}
+{% block title %}Service Request {{ service_request.request_id|default:service_request.id }}{% endblock %}
+{% block content %}
+<style>
+    :root {
+        --primary-bg: #D3FF61;
+        --card-bg: rgba(255, 255, 255, 0.95);
+        --text-primary: #000000;
+        --text-secondary: #333333;
+        --text-muted: #666666;
+        --border-color: rgba(0, 0, 0, 0.1);
+        --shadow-light: 0 2px 10px rgba(0, 0, 0, 0.08);
+        --shadow-medium: 0 4px 20px rgba(0, 0, 0, 0.12);
+        --gradient-dark: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        background: var(--primary-bg);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        line-height: 1.6;
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+    }
+
+    .detail-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+        animation: slideInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideInUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .detail-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+    }
+
+    .request-title {
+        font-size: clamp(1.8rem, 4vw, 2.5rem);
+        font-weight: 800;
+        color: var(--text-primary);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .request-id-badge {
+        background: var(--gradient-dark);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-family: 'Courier New', monospace;
+        font-weight: 700;
+    }
+
+    .back-btn {
+        background: var(--card-bg);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        box-shadow: var(--shadow-light);
+    }
+
+    .detail-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .main-content {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .detail-card {
+        background: var(--card-bg);
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: var(--shadow-medium);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--border-color);
+    }
+
+    .card-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0 0 1.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .info-value {
+        font-weight: 600;
+        color: var(--text-secondary);
+        font-size: 1rem;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .status-draft { color: #6b7280; background: rgba(107, 114, 128, 0.1); }
+    .status-submitted { color: #2563eb; background: rgba(37, 99, 235, 0.1); }
+    .status-documents-requested { color: #d97706; background: rgba(245, 158, 11, 0.1); }
+    .status-documents-received { color: #0891b2; background: rgba(8, 145, 178, 0.1); }
+    .status-in-progress { color: #7c3aed; background: rgba(124, 58, 237, 0.1); }
+    .status-resolved { color: #059669; background: rgba(5, 150, 105, 0.1); }
+    .status-client-verification { color: #dc2626; background: rgba(220, 38, 38, 0.1); }
+    .status-closed { color: #374151; background: rgba(55, 65, 81, 0.1); }
+    .status-on-hold { color: #ea580c; background: rgba(234, 88, 12, 0.1); }
+
+    .priority-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .priority-low { color: #059669; background: rgba(5, 150, 105, 0.1); }
+    .priority-medium { color: #d97706; background: rgba(245, 158, 11, 0.1); }
+    .priority-high { color: #dc2626; background: rgba(220, 38, 38, 0.1); }
+    .priority-urgent { color: #7c2d12; background: rgba(124, 45, 18, 0.1); }
+
+    .description-box {
+        background: rgba(0, 0, 0, 0.02);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1.5rem;
+        font-size: 1rem;
+        line-height: 1.6;
+        color: var(--text-secondary);
+    }
+
+    .actions-card {
+        position: sticky;
+        top: 2rem;
+    }
+
+    .action-btn {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        border: none;
+        cursor: pointer;
+    }
+
+    .action-primary {
+        background: var(--gradient-dark);
+        color: white;
+    }
+
+    .action-secondary {
+        background: rgba(37, 99, 235, 0.1);
+        color: #2563eb;
+        border: 1px solid rgba(37, 99, 235, 0.2);
+    }
+
+    .action-warning {
+        background: rgba(245, 158, 11, 0.1);
+        color: #d97706;
+        border: 1px solid rgba(245, 158, 11, 0.2);
+    }
+
+    .action-success {
+        background: rgba(5, 150, 105, 0.1);
+        color: #059669;
+        border: 1px solid rgba(5, 150, 105, 0.2);
+    }
+
+    .action-danger {
+        background: rgba(239, 68, 68, 0.1);
+        color: #dc2626;
+        border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    .comments-section {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .comment-item {
+        background: rgba(0, 0, 0, 0.02);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid var(--border-color);
+    }
+
+    .comment-internal {
+        border-left-color: #dc2626;
+        background: rgba(220, 38, 38, 0.05);
+    }
+
+    .comment-header {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        gap: 1rem;
+    }
+
+    .comment-author {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .comment-date {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+    }
+
+    .comment-content {
+        color: var(--text-secondary);
+        line-height: 1.5;
+    }
+
+    .internal-badge {
+        background: rgba(220, 38, 38, 0.1);
+        color: #dc2626;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .documents-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .document-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem;
+        background: rgba(0, 0, 0, 0.02);
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+    }
+
+    .document-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .document-icon {
+        color: var(--text-muted);
+        font-size: 1.2rem;
+    }
+
+    .document-details {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    .document-name {
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+
+    .document-meta {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    .document-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .doc-btn {
+        padding: 0.5rem;
+        border-radius: 6px;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        font-size: 0.8rem;
+    }
+
+    .doc-download {
+        background: rgba(5, 150, 105, 0.1);
+        color: #059669;
+    }
+
+    .doc-delete {
+        background: rgba(239, 68, 68, 0.1);
+        color: #dc2626;
+    }
+
+    .timeline-item {
+        display: flex;
+        gap: 1rem;
+        padding: 1rem 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .timeline-item:last-child {
+        border-bottom: none;
+    }
+
+    .timeline-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--text-muted);
+        margin-top: 0.5rem;
+        flex-shrink: 0;
+    }
+
+    .timeline-content {
+        flex: 1;
+    }
+
+    .timeline-title {
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 0.25rem;
+    }
+
+    .timeline-date {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 0.5rem;
+    }
+
+    .form-input, .form-textarea, .form-select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 0.9rem;
+        background: white;
+        color: var(--text-secondary);
+    }
+
+    .form-textarea {
+        resize: vertical;
+        min-height: 100px;
+    }
+
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        backdrop-filter: blur(5px);
+    }
+
+    .modal.active {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-content {
+        background: var(--card-bg);
+        border-radius: 16px;
+        padding: 2rem;
+        max-width: 500px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: var(--shadow-medium);
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .modal-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .close-btn {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--text-muted);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: var(--text-muted);
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .detail-container {
+            padding: 1rem;
+        }
+
+        .detail-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .detail-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .request-title {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .actions-card {
+            position: static;
+        }
+
+        .comment-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .document-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+    }
+</style>
+
+<div class="detail-container">
+    <!-- Header -->
+    <div class="detail-header">
+        <h1 class="request-title">
+            Service Request
+            <span class="request-id-badge">{{ service_request.request_id|default:service_request.id }}</span>
+        </h1>
+        <a href="{% url 'service_request_list' %}" class="back-btn">
+            <i class="fas fa-arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="detail-grid">
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Request Information -->
+            <div class="detail-card">
+                <h2 class="card-title">
+                    <i class="fas fa-info-circle"></i> Request Information
+                </h2>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Client</div>
+                        <div class="info-value">{{ service_request.client.name }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Request Type</div>
+                        <div class="info-value">{{ service_request.request_type.name|default:"General Request" }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Status</div>
+                        <div class="info-value">
+                            <span class="status-badge status-{{ service_request.status|lower|slugify }}">
+                                {{ service_request.get_status_display|default:service_request.status }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Priority</div>
+                        <div class="info-value">
+                            <span class="priority-badge priority-{{ service_request.priority|lower }}">
+                                {{ service_request.get_priority_display|default:service_request.priority }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Raised By</div>
+                        <div class="info-value">{{ service_request.raised_by.get_full_name|default:service_request.raised_by.username }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Assigned To</div>
+                        <div class="info-value">
+                            {% if service_request.assigned_to %}
+                                {{ service_request.assigned_to.get_full_name|default:service_request.assigned_to.username }}
+                            {% else %}
+                                <span style="color: var(--text-muted);">Unassigned</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Created</div>
+                        <div class="info-value">{{ service_request.created_at|date:"M d, Y g:i A" }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Last Updated</div>
+                        <div class="info-value">{{ service_request.updated_at|date:"M d, Y g:i A" }}</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 1.5rem;">
+                    <div class="info-label">Description</div>
+                    <div class="description-box">{{ service_request.description }}</div>
+                </div>
+
+                {% if service_request.resolution_summary %}
+                <div style="margin-top: 1.5rem;">
+                    <div class="info-label">Resolution Summary</div>
+                    <div class="description-box">{{ service_request.resolution_summary }}</div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Comments Section -->
+            <div class="detail-card">
+                <h2 class="card-title">
+                    <i class="fas fa-comments"></i> Comments ({{ comments.count }})
+                </h2>
+                
+                {% if permissions.can_add_comment %}
+                <button class="action-btn action-primary" onclick="openModal('commentModal')">
+                    <i class="fas fa-plus"></i> Add Comment
+                </button>
+                {% endif %}
+
+                <div class="comments-section">
+                    {% for comment in comments %}
+                    <div class="comment-item {% if comment.is_internal %}comment-internal{% endif %}">
+                        <div class="comment-header">
+                            <div>
+                                <span class="comment-author">{{ comment.commented_by.get_full_name|default:comment.commented_by.username }}</span>
+                                {% if comment.is_internal %}
+                                <span class="internal-badge">Internal</span>
+                                {% endif %}
+                            </div>
+                            <span class="comment-date">{{ comment.created_at|date:"M d, Y g:i A" }}</span>
+                        </div>
+                        <div class="comment-content">{{ comment.comment }}</div>
+                    </div>
+                    {% empty %}
+                    <div class="empty-state">
+                        <i class="fas fa-comment-slash"></i>
+                        <p>No comments yet</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Documents Section -->
+            <div class="detail-card">
+                <h2 class="card-title">
+                    <i class="fas fa-paperclip"></i> Documents ({{ documents.count }})
+                </h2>
+                
+                {% if permissions.can_upload_document %}
+                <button class="action-btn action-secondary" onclick="openModal('documentModal')">
+                    <i class="fas fa-upload"></i> Upload Document
+                </button>
+                {% endif %}
+
+                <div class="documents-list">
+                    {% for document in documents %}
+                    <div class="document-item">
+                        <div class="document-info">
+                            <i class="fas fa-file document-icon"></i>
+                            <div class="document-details">
+                                <div class="document-name">{{ document.document_name }}</div>
+                                <div class="document-meta">
+                                    Uploaded by {{ document.uploaded_by.get_full_name|default:document.uploaded_by.username }}
+                                    on {{ document.uploaded_at|date:"M d, Y" }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="document-actions">
+                            {% if permissions.can_download_documents %}
+                            <a href="{{ document.document.url }}" class="doc-btn doc-download" download>
+                                <i class="fas fa-download"></i>
+                            </a>
+                            {% endif %}
+                            {% if permissions.can_delete and document.uploaded_by == user %}
+                            <a href="{% url 'service_request_delete_document' document.id %}" 
+                               class="doc-btn doc-delete"
+                               onclick="return confirm('Delete this document?')">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="empty-state">
+                        <i class="fas fa-file-slash"></i>
+                        <p>No documents uploaded</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <!-- Actions Card -->
+            <div class="detail-card actions-card">
+                <h2 class="card-title">
+                    <i class="fas fa-cog"></i> Actions
+                </h2>
+                
+                {% if permissions.can_edit %}
+                <a href="{% url 'service_request_update' service_request.pk %}" class="action-btn action-secondary">
+                    <i class="fas fa-edit"></i> Edit Request
+                </a>
+                {% endif %}
+
+                {% if 'submit' in available_actions %}
+                <form method="post" action="{% url 'service_request_submit' service_request.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="action-btn action-primary">
+                        <i class="fas fa-paper-plane"></i> Submit Request
+                    </button>
+                </form>
+                {% endif %}
+
+                {% if 'request_documents' in available_actions %}
+                <button class="action-btn action-warning" onclick="openModal('requestDocumentsModal')">
+                    <i class="fas fa-file-alt"></i> Request Documents
+                </button>
+                {% endif %}
+
+                {% if 'submit_documents' in available_actions %}
+                <form method="post" action="{% url 'service_request_action' service_request.pk 'submit_documents' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="action-btn action-success">
+                        <i class="fas fa-check"></i> Submit Documents
+                    </button>
+                </form>
+                {% endif %}
+
+                {% if 'start_processing' in available_actions %}
+                <form method="post" action="{% url 'service_request_action' service_request.pk 'start_processing' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="action-btn action-primary">
+                        <i class="fas fa-play"></i> Start Processing
+                    </button>
+                </form>
+                {% endif %}
+
+                {% if 'resolve' in available_actions %}
+                <button class="action-btn action-success" onclick="openModal('resolveModal')">
+                    <i class="fas fa-check-circle"></i> Resolve Request
+                </button>
+                {% endif %}
+
+                {% if 'verify' in available_actions %}
+                <button class="action-btn action-success" onclick="openModal('verifyModal')">
+                    <i class="fas fa-clipboard-check"></i> Verify Resolution
+                </button>
+                {% endif %}
+
+                {% if permissions.can_delete %}
+                <a href="{% url 'service_request_delete' service_request.pk %}" 
+                   class="action-btn action-danger"
+                   onclick="return confirm('Are you sure you want to delete this request?')">
+                    <i class="fas fa-trash"></i> Delete Request
+                </a>
+                {% endif %}
+            </div>
+
+            <!-- Quick Info Card -->
+            <div class="detail-card">
+                <h2 class="card-title">
+                    <i class="fas fa-clock"></i> Timeline
+                </h2>
+                {% if workflow_history %}
+                    {% for workflow in workflow_history %}
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-title">
+                                {{ workflow.from_status|title }} → {{ workflow.to_status|title }}
+                            </div>
+                            <div class="timeline-date">{{ workflow.transition_date|date:"M d, Y g:i A" }}</div>
+                            {% if workflow.remarks %}
+                            <div style="margin-top: 0.25rem; color: var(--text-muted); font-size: 0.85rem;">
+                                {{ workflow.remarks }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-history"></i>
+                    <p>No workflow history</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+{% if permissions.can_add_comment %}
+<!-- Add Comment Modal -->
+<div id="commentModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Add Comment</h3>
+            <button class="close-btn" onclick="closeModal('commentModal')">&times;</button>
+        </div>
+        <form method="post" action="{% url 'service_request_add_comment' service_request.pk %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label">Comment</label>
+                <textarea name="comment" class="form-textarea" required></textarea>
+            </div>
+            {% if user.role in 'ops_exec,ops_team_lead,operations_head' %}
+            <div class="checkbox-group">
+                <input type="checkbox" name="is_internal" id="is_internal">
+                <label for="is_internal">Internal comment (not visible to client)</label>
+            </div>
+            {% endif %}
+            <button type="submit" class="action-btn action-primary">
+                <i class="fas fa-save"></i> Add Comment
+            </button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% if permissions.can_upload_document %}
+<!-- Upload Document Modal -->
+<div id="documentModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Upload Document</h3>
+            <button class="close-btn" onclick="closeModal('documentModal')">&times;</button>
+        </div>
+        <form method="post" action="{% url 'service_request_upload_document' service_request.pk %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label">Select Documents</label>
+                <input type="file" name="documents" class="form-input" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx">
+                <small style="color: var(--text-muted);">Max 10MB per file. Allowed: PDF, Images, Word, Excel</small>
+            </div>
+            <button type="submit" class="action-btn action-primary">
+                <i class="fas fa-upload"></i> Upload Documents
+            </button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% if 'request_documents' in available_actions %}
+<!-- Request Documents Modal -->
+<div id="requestDocumentsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Request Documents</h3>
+            <button class="close-btn" onclick="closeModal('requestDocumentsModal')">&times;</button>
+        </div>
+        <form method="post" action="{% url 'service_request_action' service_request.pk 'request_documents' %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label">Required Documents</label>
+                <textarea name="document_list" class="form-textarea" 
+                          placeholder="List the documents required (comma-separated)&#10;Example: KYC Copy, Address Proof, Bank Statement" required></textarea>
+            </div>
+            <button type="submit" class="action-btn action-warning">
+                <i class="fas fa-file-alt"></i> Request Documents
+            </button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% if 'resolve' in available_actions %}
+<!-- Resolve Request Modal -->
+<div id="resolveModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Resolve Request</h3>
+            <button class="close-btn" onclick="closeModal('resolveModal')">&times;</button>
+        </div>
+        <form method="post" action="{% url 'service_request_action' service_request.pk 'resolve' %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label">Resolution Summary</label>
+                <textarea name="resolution_summary" class="form-textarea" 
+                          placeholder="Describe how the request was resolved..." required></textarea>
+            </div>
+            <button type="submit" class="action-btn action-success">
+                <i class="fas fa-check-circle"></i> Mark as Resolved
+            </button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% if 'verify' in available_actions %}
+<!-- Verify Resolution Modal -->
+<div id="verifyModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Verify Resolution</h3>
+            <button class="close-btn" onclick="closeModal('verifyModal')">&times;</button>
+        </div>
+        <div style="margin-bottom: 1.5rem;">
+            <div class="info-label">Resolution Summary</div>
+            <div class="description-box">{{ service_request.resolution_summary }}</div>
+        </div>
+        <div style="display: flex; gap: 1rem;">
+            <form method="post" action="{% url 'service_request_action' service_request.pk 'verify_resolution' %}" style="flex: 1;">
+                {% csrf_token %}
+                <input type="hidden" name="approved" value="true">
+                <button type="submit" class="action-btn action-success">
+                    <i class="fas fa-thumbs-up"></i> Approve Resolution
+                </button>
+            </form>
+            <form method="post" action="{% url 'service_request_action' service_request.pk 'verify_resolution' %}" style="flex: 1;">
+                {% csrf_token %}
+                <input type="hidden" name="approved" value="false">
+                <button type="submit" class="action-btn action-danger">
+                    <i class="fas fa-thumbs-down"></i> Reject & Rework
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function openModal(modalId) {
+    document.getElementById(modalId).classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('active');
+    document.body.style.overflow = 'auto';
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('modal')) {
+        closeModal(e.target.id);
+    }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const activeModal = document.querySelector('.modal.active');
+        if (activeModal) {
+            closeModal(activeModal.id);
+        }
+    }
+});
+
+// Auto-hide messages after 5 seconds
+document.addEventListener('DOMContentLoaded', function() {
+    const messages = document.querySelectorAll('.alert, .message');
+    messages.forEach(function(message) {
+        setTimeout(function() {
+            message.style.opacity = '0';
+            setTimeout(function() {
+                message.remove();
+            }, 300);
+        }, 5000);
+    });
+});
+
+// Confirmation for critical actions
+document.querySelectorAll('form').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+        const button = form.querySelector('button[type="submit"]');
+        if (button && button.classList.contains('action-danger')) {
+            if (!confirm('Are you sure you want to perform this action?')) {
+                e.preventDefault();
+            }
+        }
+    });
+});
+</script>
+
+{% endblock %}

@@ -30,7 +30,7 @@ from django.core.paginator import Paginator
 from django.urls import reverse
 from datetime import datetime, timedelta
 from .models import (
-    User, Lead, Client, Task, ServiceRequest, BusinessTracker, 
+    ServiceRequestComment, ServiceRequestDocument, ServiceRequestType, User, Lead, Client, Task, ServiceRequest, BusinessTracker, 
     InvestmentPlanReview, Team, ProductDiscussion, ClientProfile,
     Note, NoteList
 )
@@ -1187,86 +1187,6 @@ def ops_my_clients(request):
     
     return render(request, 'operations/my_clients.html', context)
 
-
-@login_required
-@user_passes_test(lambda u: u.role == 'ops_exec')
-def ops_service_requests(request):
-    """Operations Executive view for service requests"""
-    user = request.user
-    
-    # Get service requests assigned to user
-    my_requests = ServiceRequest.objects.filter(
-        assigned_to=user
-    ).select_related('client', 'raised_by')
-    
-    # Apply filters
-    status_filter = request.GET.get('status', 'open')
-    priority_filter = request.GET.get('priority')
-    
-    if status_filter and status_filter != 'all':
-        my_requests = my_requests.filter(status=status_filter)
-    
-    if priority_filter:
-        my_requests = my_requests.filter(priority=priority_filter)
-    
-    my_requests = my_requests.order_by('-created_at')
-    
-    # Service request statistics
-    request_stats = {
-        'total_requests': ServiceRequest.objects.filter(assigned_to=user).count(),
-        'open_requests': ServiceRequest.objects.filter(assigned_to=user, status='open').count(),
-        'in_progress': ServiceRequest.objects.filter(assigned_to=user, status='in_progress').count(),
-        'resolved_requests': ServiceRequest.objects.filter(assigned_to=user, status='resolved').count(),
-        'urgent_requests': ServiceRequest.objects.filter(
-            assigned_to=user,
-            priority='urgent',
-            status__in=['open', 'in_progress']
-        ).count(),
-    }
-    
-    # Performance metrics
-    last_30_days = timezone.now() - timedelta(days=30)
-    recent_requests = ServiceRequest.objects.filter(
-        assigned_to=user,
-        created_at__gte=last_30_days
-    )
-    
-    resolved_requests = recent_requests.filter(
-        status__in=['resolved', 'closed'],
-        resolved_at__isnull=False
-    )
-    
-    performance_metrics = {
-        'requests_last_30_days': recent_requests.count(),
-        'resolved_last_30_days': resolved_requests.count(),
-        'resolution_rate': 0,
-        'avg_resolution_time_hours': 0,
-    }
-    
-    if recent_requests.exists():
-        performance_metrics['resolution_rate'] = round(
-            (performance_metrics['resolved_last_30_days'] / performance_metrics['requests_last_30_days']) * 100, 2
-        )
-    
-    if resolved_requests.exists():
-        avg_resolution_time = resolved_requests.aggregate(
-            avg_time=Avg(
-                Extract('epoch', F('resolved_at')) - Extract('epoch', F('created_at'))
-            )
-        )['avg_time']
-        performance_metrics['avg_resolution_time_hours'] = round(avg_resolution_time / 3600, 2) if avg_resolution_time else 0
-    
-    context = {
-        'my_requests': my_requests[:50],  # Limit to 50 for performance
-        'request_stats': request_stats,
-        'performance_metrics': performance_metrics,
-        'status_filter': status_filter,
-        'priority_filter': priority_filter,
-        'status_choices': ServiceRequest.STATUS_CHOICES,
-        'priority_choices': ServiceRequest.PRIORITY_CHOICES if hasattr(ServiceRequest, 'PRIORITY_CHOICES') else Task.PRIORITY_CHOICES,
-    }
-    
-    return render(request, 'operations/service_requests.html', context)
 
 
 # Business Head Operations Views
@@ -4004,47 +3924,1164 @@ def get_task_status(task):
         return 'pending'
     
 # Service Request Views with Hierarchy
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib import messages
+from django.http import JsonResponse, HttpResponseForbidden
+from django.db.models import Q, Count, Avg, F, Case, When, IntegerField
+from django.db.models.functions import Extract
+from django.utils import timezone
+from django.core.paginator import Paginator
+from datetime import timedelta, datetime
+from django.views.decorators.http import require_http_methods
+import json
+
+
 @login_required
 def service_request_list(request):
+    """Enhanced service request list view with proper hierarchy-based access"""
     user = request.user
     
-    if user.role in ['top_management', 'business_head']:
-        service_requests = ServiceRequest.objects.all()
-    elif user.role == 'rm_head':
-        accessible_users = user.get_accessible_users()
-        service_requests = ServiceRequest.objects.filter(
+    # Base queryset with optimized queries
+    base_queryset = ServiceRequest.objects.select_related(
+        'client', 'raised_by', 'assigned_to', 'current_owner', 'request_type'
+    ).prefetch_related('comments', 'documents')
+    
+    # Role-based filtering with hierarchy support
+    if user.role in ['top_management']:
+        service_requests = base_queryset.all()
+    elif user.role == 'operations_head':
+        # Operations head can see all requests in their business unit
+        accessible_users = user.get_accessible_users() if hasattr(user, 'get_accessible_users') else []
+        service_requests = base_queryset.filter(
+            Q(raised_by__in=accessible_users) | 
+            Q(assigned_to__in=accessible_users) |
+            Q(current_owner__in=accessible_users)
+        ).distinct()
+    elif user.role == 'ops_team_lead':
+        # Team lead can see requests from their team and mapped RMs
+        team_members = user.get_team_members() if hasattr(user, 'get_team_members') else []
+        mapped_rms = user.get_mapped_rms() if hasattr(user, 'get_mapped_rms') else []
+        service_requests = base_queryset.filter(
+            Q(assigned_to__in=team_members) |
+            Q(raised_by__in=mapped_rms) |
+            Q(assigned_to=user) |
+            Q(raised_by=user)
+        ).distinct()
+    elif user.role == 'business_head':
+        # Business head can see requests from their entire hierarchy
+        accessible_users = user.get_accessible_users() if hasattr(user, 'get_accessible_users') else []
+        service_requests = base_queryset.filter(
             Q(raised_by__in=accessible_users) | 
             Q(client__user__in=accessible_users) |
             Q(assigned_to__in=accessible_users)
         ).distinct()
-    else:  # RM
-        service_requests = ServiceRequest.objects.filter(
-            Q(raised_by=user) | 
-            Q(client__user=user) |
-            Q(assigned_to=user)
+    elif user.role == 'rm_head':
+        # RM head can see requests from their team
+        accessible_users = user.get_accessible_users() if hasattr(user, 'get_accessible_users') else []
+        service_requests = base_queryset.filter(
+            Q(raised_by__in=accessible_users) | 
+            Q(client__user__in=accessible_users)
         ).distinct()
+    elif user.role in ['rm', 'ops_exec']:
+        # RM and Ops Exec can see their own requests
+        service_requests = base_queryset.filter(
+            Q(raised_by=user) | 
+            Q(assigned_to=user) |
+            Q(current_owner=user) |
+            Q(client__user=user)
+        ).distinct()
+    else:
+        service_requests = base_queryset.none()
     
-    # Add filtering options
-    status_filter = request.GET.get('status')
+    # Enhanced filtering options
+    status_filter = request.GET.get('status', '')
+    priority_filter = request.GET.get('priority', '')
+    request_type_filter = request.GET.get('request_type', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    assigned_to_filter = request.GET.get('assigned_to', '')
+    
     if status_filter:
         service_requests = service_requests.filter(status=status_filter)
     
-    # Add search functionality
-    search_query = request.GET.get('search')
+    if priority_filter:
+        service_requests = service_requests.filter(priority=priority_filter)
+        
+    if request_type_filter:
+        service_requests = service_requests.filter(request_type_id=request_type_filter)
+    
+    if date_from:
+        try:
+            date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
+            service_requests = service_requests.filter(created_at__date__gte=date_from_obj)
+        except ValueError:
+            pass
+    
+    if date_to:
+        try:
+            date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
+            service_requests = service_requests.filter(created_at__date__lte=date_to_obj)
+        except ValueError:
+            pass
+    
+    if assigned_to_filter:
+        service_requests = service_requests.filter(assigned_to_id=assigned_to_filter)
+    
+    # Search functionality
+    search_query = request.GET.get('search', '')
     if search_query:
         service_requests = service_requests.filter(
+            Q(request_id__icontains=search_query) |
             Q(description__icontains=search_query) |
-            Q(client__name__icontains=search_query)
+            Q(client__name__icontains=search_query) |
+            Q(client__email__icontains=search_query) |
+            Q(request_type__name__icontains=search_query)
         )
-
+    
+    # Sorting
+    sort_by = request.GET.get('sort', '-created_at')
+    valid_sorts = [
+        'created_at', '-created_at', 'status', '-status',
+        'priority', '-priority', 'updated_at', '-updated_at'
+    ]
+    if sort_by in valid_sorts:
+        service_requests = service_requests.order_by(sort_by)
+    else:
+        service_requests = service_requests.order_by('-created_at')
+    
+    # Pagination
+    paginator = Paginator(service_requests, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Dashboard statistics
+    stats = get_service_request_stats(user, service_requests.model.objects)
+    
+    # Get filter options
+    request_types = ServiceRequestType.objects.filter(is_active=True)
+    assignable_users = get_assignable_users(user)
+    
     context = {
-        'service_requests': service_requests.order_by('-created_at'),
+        'page_obj': page_obj,
+        'service_requests': page_obj.object_list,
+        'stats': stats,
         'status_choices': ServiceRequest.STATUS_CHOICES,
+        'priority_choices': ServiceRequest.PRIORITY_CHOICES,
+        'request_types': request_types,
+        'assignable_users': assignable_users,
+        # Filter values
         'current_status': status_filter,
+        'current_priority': priority_filter,
+        'current_request_type': request_type_filter,
         'search_query': search_query,
+        'date_from': date_from,
+        'date_to': date_to,
+        'assigned_to_filter': assigned_to_filter,
+        'sort_by': sort_by,
+        'user_role': user.role,
     }
     
     return render(request, 'base/service_requests.html', context)
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse, HttpResponseForbidden
+from django.views.decorators.http import require_http_methods, require_POST
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+import json
+
+
+@login_required
+@require_POST
+def service_request_submit(request, pk):
+    """Submit a service request from draft to operations"""
+    service_request = get_object_or_404(ServiceRequest, pk=pk)
+    user = request.user
+    
+    # Check permissions - only the person who raised it can submit
+    if service_request.raised_by != user:
+        messages.error(request, 'You can only submit your own service requests.')
+        return redirect('service_request_detail', pk=pk)
+    
+    # Check if request can be submitted
+    if service_request.status != 'draft':
+        messages.error(request, f'Request cannot be submitted. Current status: {service_request.get_status_display()}')
+        return redirect('service_request_detail', pk=pk)
+    
+    try:
+        # Use the model method to submit
+        service_request.submit_request(user)
+        messages.success(request, f'Service request {service_request.request_id} submitted successfully to operations team.')
+        
+        # Check if it's an AJAX request
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'message': 'Request submitted successfully',
+                'new_status': service_request.get_status_display()
+            })
+            
+    except ValidationError as e:
+        messages.error(request, f'Error submitting request: {str(e)}')
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return redirect('service_request_detail', pk=pk)
+
+
+@login_required
+@require_POST
+def service_request_action(request, pk, action):
+    """Handle various service request workflow actions"""
+    service_request = get_object_or_404(ServiceRequest, pk=pk)
+    user = request.user
+    
+    # Parse request data
+    try:
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+        else:
+            data = request.POST.dict()
+    except:
+        data = {}
+    
+    try:
+        # Handle different workflow actions
+        if action == 'request_documents':
+            if not can_request_documents(user, service_request):
+                raise ValidationError('You do not have permission to request documents.')
+            
+            document_list = data.get('document_list', [])
+            if isinstance(document_list, str):
+                document_list = [doc.strip() for doc in document_list.split(',') if doc.strip()]
+            
+            service_request.request_documents(document_list, user)
+            message = 'Document request sent to RM successfully.'
+            
+        elif action == 'submit_documents':
+            if not can_submit_documents(user, service_request):
+                raise ValidationError('You do not have permission to submit documents.')
+            
+            service_request.submit_documents(user)
+            message = 'Documents submitted to operations team successfully.'
+            
+        elif action == 'start_processing':
+            if not can_start_processing(user, service_request):
+                raise ValidationError('You do not have permission to start processing.')
+            
+            service_request.start_processing(user)
+            message = 'Request processing started successfully.'
+            
+        elif action == 'resolve':
+            if not can_resolve_request(user, service_request):
+                raise ValidationError('You do not have permission to resolve this request.')
+            
+            resolution_summary = data.get('resolution_summary', data.get('remarks', ''))
+            if not resolution_summary:
+                raise ValidationError('Resolution summary is required.')
+            
+            service_request.resolve_request(resolution_summary, user)
+            message = 'Request resolved successfully. Sent to RM for verification.'
+            
+        elif action == 'verify_resolution':
+            if not can_verify_resolution(user, service_request):
+                raise ValidationError('You do not have permission to verify this resolution.')
+            
+            approved = data.get('approved', 'true').lower() == 'true'
+            service_request.client_verification_complete(approved, user)
+            
+            if approved:
+                message = 'Resolution verified successfully.'
+            else:
+                message = 'Resolution rejected. Request sent back for rework.'
+                
+        elif action == 'close':
+            if not can_close_request(user, service_request):
+                raise ValidationError('You do not have permission to close this request.')
+            
+            service_request.close_request(user)
+            message = 'Service request closed successfully.'
+            
+        elif action == 'escalate':
+            if not can_escalate_request(user, service_request):
+                raise ValidationError('You do not have permission to escalate this request.')
+            
+            reason = data.get('reason', 'Request escalated by user')
+            service_request.escalate_to_manager(user, reason)
+            message = 'Request escalated to manager successfully.'
+            
+        elif action == 'reassign':
+            if not can_reassign_request(user, service_request):
+                raise ValidationError('You do not have permission to reassign this request.')
+            
+            new_assignee_id = data.get('assigned_to')
+            if not new_assignee_id:
+                raise ValidationError('New assignee is required.')
+            
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            new_assignee = get_object_or_404(User, id=new_assignee_id)
+            
+            old_assignee = service_request.assigned_to
+            service_request.assigned_to = new_assignee
+            service_request.current_owner = new_assignee
+            service_request.save()
+            
+            # Add comment
+            ServiceRequestComment.objects.create(
+                service_request=service_request,
+                comment=f"Request reassigned from {old_assignee} to {new_assignee}",
+                commented_by=user,
+                is_internal=True
+            )
+            
+            message = f'Request reassigned to {new_assignee.get_full_name() or new_assignee.username} successfully.'
+            
+        else:
+            raise ValidationError(f'Unknown action: {action}')
+        
+        # Return response
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'message': message,
+                'new_status': service_request.get_status_display(),
+                'current_owner': service_request.current_owner.get_full_name() if service_request.current_owner else None
+            })
+        else:
+            messages.success(request, message)
+            return redirect('service_request_detail', pk=pk)
+            
+    except ValidationError as e:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': str(e)})
+        else:
+            messages.error(request, str(e))
+            return redirect('service_request_detail', pk=pk)
+    except Exception as e:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': f'An unexpected error occurred: {str(e)}'})
+        else:
+            messages.error(request, f'An unexpected error occurred: {str(e)}')
+            return redirect('service_request_detail', pk=pk)
+
+
+@login_required
+@require_POST
+def service_request_upload_document(request, pk):
+    """Upload documents for a service request"""
+    service_request = get_object_or_404(ServiceRequest, pk=pk)
+    user = request.user
+    
+    # Check permissions
+    if not can_upload_documents(user, service_request):
+        messages.error(request, 'You do not have permission to upload documents for this request.')
+        return redirect('service_request_detail', pk=pk)
+    
+    # Handle file uploads
+    uploaded_files = request.FILES.getlist('documents')
+    if not uploaded_files:
+        messages.error(request, 'No files were uploaded.')
+        return redirect('service_request_detail', pk=pk)
+    
+    try:
+        uploaded_count = 0
+        for uploaded_file in uploaded_files:
+            # Validate file
+            if uploaded_file.size > 10 * 1024 * 1024:  # 10MB limit
+                messages.warning(request, f'File {uploaded_file.name} is too large (max 10MB).')
+                continue
+            
+            # Check file type
+            allowed_extensions = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx', '.xls', '.xlsx']
+            file_extension = uploaded_file.name.lower().split('.')[-1]
+            if f'.{file_extension}' not in allowed_extensions:
+                messages.warning(request, f'File {uploaded_file.name} has an unsupported format.')
+                continue
+            
+            # Create document record
+            ServiceRequestDocument.objects.create(
+                service_request=service_request,
+                document=uploaded_file,
+                document_name=uploaded_file.name,
+                uploaded_by=user
+            )
+            uploaded_count += 1
+        
+        if uploaded_count > 0:
+            messages.success(request, f'{uploaded_count} document(s) uploaded successfully.')
+            
+            # Add comment
+            ServiceRequestComment.objects.create(
+                service_request=service_request,
+                comment=f"{uploaded_count} document(s) uploaded by {user.get_full_name() or user.username}",
+                commented_by=user,
+                is_internal=False
+            )
+            
+            # If this is in response to document request, update status
+            if service_request.status == 'documents_requested':
+                # You might want to automatically change status or let user do it manually
+                pass
+        else:
+            messages.error(request, 'No valid files were uploaded.')
+            
+    except Exception as e:
+        messages.error(request, f'Error uploading documents: {str(e)}')
+    
+    return redirect('service_request_detail', pk=pk)
+
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse
+
+
+@login_required
+def service_request_detail(request, pk):
+    """View service request details with comments and documents"""
+    service_request = get_object_or_404(
+        ServiceRequest.objects.select_related(
+            'client', 'raised_by', 'assigned_to', 'current_owner', 'request_type'
+        ).prefetch_related('comments', 'documents'),
+        pk=pk
+    )
+    
+    user = request.user
+    
+    # Check permission to view
+    if not can_view_service_request(user, service_request):
+        messages.error(request, 'You do not have permission to view this service request.')
+        return redirect('service_request_list')
+    
+    # Get comments (filter internal comments based on role)
+    if user.role in ['ops_exec', 'ops_team_lead', 'operations_head']:
+        comments = service_request.comments.all().order_by('-created_at')
+    else:
+        comments = service_request.comments.filter(is_internal=False).order_by('-created_at')
+    
+    # Get documents
+    documents = service_request.documents.all().order_by('-uploaded_at')
+    
+    # Get available actions
+    available_actions = []
+    if user == service_request.raised_by and service_request.status == 'draft':
+        available_actions.append('submit')
+    if user == service_request.assigned_to:
+        if service_request.status == 'submitted':
+            available_actions.extend(['request_documents', 'start_processing'])
+        elif service_request.status == 'in_progress':
+            available_actions.append('resolve')
+    if user == service_request.raised_by and service_request.status == 'resolved':
+        available_actions.append('verify')
+    
+    # User permissions
+    permissions = {
+        'can_edit': can_edit_service_request(user, service_request),
+        'can_delete': can_delete_service_request(user, service_request),
+        'can_add_comment': can_add_comment(user, service_request),
+        'can_upload_document': can_upload_documents(user, service_request),
+    }
+    
+    context = {
+        'service_request': service_request,
+        'comments': comments,
+        'documents': documents,
+        'available_actions': available_actions,
+        'permissions': permissions,
+        'status_choices': ServiceRequest.STATUS_CHOICES,
+    }
+    
+    return render(request, 'base/service_request_detail.html', context)
+
+
+# Permission helper functions (essential ones only)
+def can_view_service_request(user, service_request):
+    """Check if user can view the service request"""
+    return (user == service_request.raised_by or 
+            user == service_request.assigned_to or 
+            user == service_request.current_owner or
+            user.role in ['operations_head', 'business_head', 'top_management'])
+
+
+def can_edit_service_request(user, service_request):
+    """Check if user can edit the service request"""
+    return (user == service_request.raised_by and service_request.status in ['draft', 'submitted'] or
+            user.role in ['operations_head', 'business_head', 'top_management'])
+
+
+def can_delete_service_request(user, service_request):
+    """Check if user can delete the service request"""
+    return (user == service_request.raised_by and service_request.status == 'draft' or
+            user.role in ['operations_head', 'business_head', 'top_management'])
+
+
+def can_add_comment(user, service_request):
+    """Check if user can add comment"""
+    return (user == service_request.raised_by or
+            user == service_request.assigned_to or
+            user == service_request.current_owner or
+            user.role in ['operations_head', 'business_head', 'top_management'])
+
+
+def can_upload_documents(user, service_request):
+    """Check if user can upload documents"""
+    return (user == service_request.raised_by or
+            user == service_request.assigned_to or
+            user.role in ['operations_head', 'business_head', 'top_management'])
+
+
+def can_request_documents(user, service_request):
+    """Check if user can request documents"""
+    return (user == service_request.assigned_to or
+            user.role in ['ops_team_lead', 'operations_head'])
+
+
+def can_submit_documents(user, service_request):
+    """Check if user can submit documents"""
+    return user == service_request.raised_by
+
+
+def can_start_processing(user, service_request):
+    """Check if user can start processing"""
+    return (user == service_request.assigned_to or
+            user.role in ['ops_team_lead', 'operations_head'])
+
+
+def can_resolve_request(user, service_request):
+    """Check if user can resolve request"""
+    return (user == service_request.assigned_to or
+            user.role in ['ops_team_lead', 'operations_head'])
+
+
+def can_verify_resolution(user, service_request):
+    """Check if user can verify resolution"""
+    return user == service_request.raised_by
+
+
+def can_close_request(user, service_request):
+    """Check if user can close request"""
+    return user == service_request.raised_by
+
+
+def can_escalate_request(user, service_request):
+    """Check if user can escalate request"""
+    return (user == service_request.assigned_to or
+            user == service_request.raised_by or
+            user.role in ['ops_team_lead', 'operations_head'])
+
+
+def can_reassign_request(user, service_request):
+    """Check if user can reassign request"""
+    return user.role in ['ops_team_lead', 'operations_head', 'business_head', 'top_management']
+
+
+@login_required
+@require_POST
+def service_request_delete_document(request, doc_id):
+    """Delete a document from service request"""
+    document = get_object_or_404(ServiceRequestDocument, id=doc_id)
+    service_request = document.service_request
+    user = request.user
+    
+    # Check permissions
+    if not can_delete_document(user, document):
+        messages.error(request, 'You do not have permission to delete this document.')
+        return redirect('service_request_detail', pk=service_request.pk)
+    
+    try:
+        document_name = document.document_name
+        document.delete()
+        
+        # Add comment
+        ServiceRequestComment.objects.create(
+            service_request=service_request,
+            comment=f"Document '{document_name}' deleted by {user.get_full_name() or user.username}",
+            commented_by=user,
+            is_internal=True
+        )
+        
+        messages.success(request, f'Document "{document_name}" deleted successfully.')
+        
+    except Exception as e:
+        messages.error(request, f'Error deleting document: {str(e)}')
+    
+    return redirect('service_request_detail', pk=service_request.pk)
+
+
+@login_required
+@require_POST
+def service_request_add_comment(request, pk):
+    """Add a comment to service request"""
+    service_request = get_object_or_404(ServiceRequest, pk=pk)
+    user = request.user
+    
+    # Check permissions
+    if not can_add_comment(user, service_request):
+        messages.error(request, 'You do not have permission to add comments to this request.')
+        return redirect('service_request_detail', pk=pk)
+    
+    comment_text = request.POST.get('comment', '').strip()
+    is_internal = request.POST.get('is_internal') == 'on'
+    
+    if not comment_text:
+        messages.error(request, 'Comment cannot be empty.')
+        return redirect('service_request_detail', pk=pk)
+    
+    try:
+        ServiceRequestComment.objects.create(
+            service_request=service_request,
+            comment=comment_text,
+            commented_by=user,
+            is_internal=is_internal
+        )
+        
+        messages.success(request, 'Comment added successfully.')
+        
+        # Check if it's an AJAX request
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'message': 'Comment added successfully'
+            })
+            
+    except Exception as e:
+        messages.error(request, f'Error adding comment: {str(e)}')
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return redirect('service_request_detail', pk=pk)
+
+
+# Permission helper functions
+def can_request_documents(user, service_request):
+    """Check if user can request documents"""
+    return (user == service_request.assigned_to or 
+            user == service_request.current_owner or
+            user.role in ['ops_team_lead', 'operations_head', 'top_management'])
+
+
+def can_submit_documents(user, service_request):
+    """Check if user can submit documents"""
+    return (user == service_request.raised_by or
+            user.role in ['rm_head', 'business_head', 'top_management'])
+
+
+def can_start_processing(user, service_request):
+    """Check if user can start processing"""
+    return (user == service_request.assigned_to or
+            user == service_request.current_owner or
+            user.role in ['ops_team_lead', 'operations_head', 'top_management'])
+
+
+def can_resolve_request(user, service_request):
+    """Check if user can resolve request"""
+    return (user == service_request.assigned_to or
+            user == service_request.current_owner or
+            user.role in ['ops_team_lead', 'operations_head', 'top_management'])
+
+
+def can_verify_resolution(user, service_request):
+    """Check if user can verify resolution"""
+    return (user == service_request.raised_by or
+            user.role in ['rm_head', 'business_head', 'top_management'])
+
+
+def can_close_request(user, service_request):
+    """Check if user can close request"""
+    return (user == service_request.raised_by or
+            user.role in ['rm_head', 'business_head', 'top_management'])
+
+
+def can_escalate_request(user, service_request):
+    """Check if user can escalate request"""
+    return (user == service_request.assigned_to or
+            user == service_request.raised_by or
+            user == service_request.current_owner or
+            user.role in ['ops_team_lead', 'rm_head', 'operations_head', 'business_head'])
+
+
+def can_reassign_request(user, service_request):
+    """Check if user can reassign request"""
+    return user.role in ['ops_team_lead', 'operations_head', 'business_head', 'top_management']
+
+
+def can_upload_documents(user, service_request):
+    """Check if user can upload documents"""
+    return (user == service_request.raised_by or
+            user == service_request.assigned_to or
+            user == service_request.current_owner or
+            user.role in ['rm_head', 'ops_team_lead', 'operations_head', 'business_head', 'top_management'])
+
+
+def can_delete_document(user, document):
+    """Check if user can delete document"""
+    return (user == document.uploaded_by or
+            user == document.service_request.raised_by or
+            user == document.service_request.assigned_to or
+            user.role in ['ops_team_lead', 'operations_head', 'business_head', 'top_management'])
+
+
+def can_add_comment(user, service_request):
+    """Check if user can add comment"""
+    return (user == service_request.raised_by or
+            user == service_request.assigned_to or
+            user == service_request.current_owner or
+            user.role in ['rm_head', 'ops_team_lead', 'operations_head', 'business_head', 'top_management'])
+
+
+@login_required
+@user_passes_test(lambda u: u.role == 'ops_exec')
+def ops_service_requests(request):
+    """Enhanced Operations Executive view for service requests"""
+    user = request.user
+    
+    # Base queryset with optimized queries
+    base_queryset = ServiceRequest.objects.filter(
+        Q(assigned_to=user) | Q(current_owner=user)
+    ).select_related(
+        'client', 'raised_by', 'request_type'
+    ).prefetch_related('comments', 'documents')
+    
+    # Apply filters
+    status_filter = request.GET.get('status', '')
+    priority_filter = request.GET.get('priority', '')
+    request_type_filter = request.GET.get('request_type', '')
+    overdue_filter = request.GET.get('overdue', '')
+    
+    my_requests = base_queryset
+    
+    if status_filter:
+        my_requests = my_requests.filter(status=status_filter)
+    
+    if priority_filter:
+        my_requests = my_requests.filter(priority=priority_filter)
+        
+    if request_type_filter:
+        my_requests = my_requests.filter(request_type_id=request_type_filter)
+    
+    if overdue_filter == 'true':
+        my_requests = my_requests.filter(
+            expected_completion_date__lt=timezone.now(),
+            status__in=['submitted', 'documents_received', 'in_progress']
+        )
+    
+    # Search
+    search_query = request.GET.get('search', '')
+    if search_query:
+        my_requests = my_requests.filter(
+            Q(request_id__icontains=search_query) |
+            Q(description__icontains=search_query) |
+            Q(client__name__icontains=search_query)
+        )
+    
+    # Sorting with priority boost for urgent requests
+    sort_by = request.GET.get('sort', 'priority_sort')
+    if sort_by == 'priority_sort':
+        my_requests = my_requests.annotate(
+            priority_order=Case(
+                When(priority='urgent', then=1),
+                When(priority='high', then=2),
+                When(priority='medium', then=3),
+                When(priority='low', then=4),
+                default=5,
+                output_field=IntegerField()
+            )
+        ).order_by('priority_order', '-created_at')
+    else:
+        valid_sorts = ['created_at', '-created_at', 'status', '-status', 'updated_at', '-updated_at']
+        if sort_by in valid_sorts:
+            my_requests = my_requests.order_by(sort_by)
+        else:
+            my_requests = my_requests.order_by('-created_at')
+    
+    # Pagination
+    paginator = Paginator(my_requests, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Enhanced statistics
+    request_stats = get_ops_request_stats(user)
+    
+    # Performance metrics
+    performance_metrics = get_ops_performance_metrics(user)
+    
+    # Workload distribution
+    workload_stats = get_ops_workload_stats(user)
+    
+    # SLA tracking
+    sla_stats = get_ops_sla_stats(user)
+    
+    # Quick actions data
+    quick_actions = get_ops_quick_actions(user)
+    
+    context = {
+        'page_obj': page_obj,
+        'my_requests': page_obj.object_list,
+        'request_stats': request_stats,
+        'performance_metrics': performance_metrics,
+        'workload_stats': workload_stats,
+        'sla_stats': sla_stats,
+        'quick_actions': quick_actions,
+        'status_filter': status_filter,
+        'priority_filter': priority_filter,
+        'request_type_filter': request_type_filter,
+        'overdue_filter': overdue_filter,
+        'search_query': search_query,
+        'sort_by': sort_by,
+        'status_choices': ServiceRequest.STATUS_CHOICES,
+        'priority_choices': ServiceRequest.PRIORITY_CHOICES,
+        'request_types': ServiceRequestType.objects.filter(is_active=True),
+    }
+    
+    return render(request, 'operations/service_requests.html', context)
+
+
+@login_required
+def rm_service_requests(request):
+    """RM view for managing their service requests"""
+    user = request.user
+    
+    if user.role not in ['rm', 'rm_head']:
+        return HttpResponseForbidden("Access denied")
+    
+    # Get RM's service requests
+    if user.role == 'rm_head':
+        team_members = user.get_team_members() if hasattr(user, 'get_team_members') else [user]
+        my_requests = ServiceRequest.objects.filter(
+            raised_by__in=team_members
+        )
+    else:
+        my_requests = ServiceRequest.objects.filter(raised_by=user)
+    
+    my_requests = my_requests.select_related(
+        'client', 'assigned_to', 'current_owner', 'request_type'
+    ).prefetch_related('comments', 'documents')
+    
+    # Apply filters
+    status_filter = request.GET.get('status', '')
+    priority_filter = request.GET.get('priority', '')
+    
+    if status_filter:
+        my_requests = my_requests.filter(status=status_filter)
+    
+    if priority_filter:
+        my_requests = my_requests.filter(priority=priority_filter)
+    
+    # Search
+    search_query = request.GET.get('search', '')
+    if search_query:
+        my_requests = my_requests.filter(
+            Q(request_id__icontains=search_query) |
+            Q(description__icontains=search_query) |
+            Q(client__name__icontains=search_query)
+        )
+    
+    my_requests = my_requests.order_by('-created_at')
+    
+    # Pagination
+    paginator = Paginator(my_requests, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # RM-specific statistics
+    rm_stats = get_rm_request_stats(user)
+    
+    context = {
+        'page_obj': page_obj,
+        'my_requests': page_obj.object_list,
+        'rm_stats': rm_stats,
+        'status_filter': status_filter,
+        'priority_filter': priority_filter,
+        'search_query': search_query,
+        'status_choices': ServiceRequest.STATUS_CHOICES,
+        'priority_choices': ServiceRequest.PRIORITY_CHOICES,
+        'request_types': ServiceRequestType.objects.filter(is_active=True),
+    }
+    
+    return render(request, 'rm/service_requests.html', context)
+
+
+# Utility functions for statistics and data
+
+def get_service_request_stats(user, queryset):
+    """Get general service request statistics"""
+    if user.role in ['top_management']:
+        base_qs = queryset.all()
+    elif user.role in ['operations_head', 'business_head']:
+        accessible_users = user.get_accessible_users() if hasattr(user, 'get_accessible_users') else []
+        base_qs = queryset.filter(
+            Q(raised_by__in=accessible_users) | 
+            Q(assigned_to__in=accessible_users)
+        )
+    else:
+        base_qs = queryset.filter(
+            Q(raised_by=user) | 
+            Q(assigned_to=user) |
+            Q(current_owner=user)
+        )
+    
+    stats = {
+        'total_requests': base_qs.count(),
+        'open_requests': base_qs.filter(status__in=['submitted', 'documents_requested']).count(),
+        'in_progress': base_qs.filter(status__in=['documents_received', 'in_progress']).count(),
+        'resolved_requests': base_qs.filter(status='resolved').count(),
+        'closed_requests': base_qs.filter(status='closed').count(),
+        'urgent_requests': base_qs.filter(
+            priority='urgent',
+            status__in=['submitted', 'documents_requested', 'documents_received', 'in_progress']
+        ).count(),
+        'overdue_requests': base_qs.filter(
+            expected_completion_date__lt=timezone.now(),
+            status__in=['submitted', 'documents_requested', 'documents_received', 'in_progress']
+        ).count(),
+    }
+    
+    return stats
+
+
+def get_ops_request_stats(user):
+    """Get operations-specific statistics"""
+    base_qs = ServiceRequest.objects.filter(assigned_to=user)
+    
+    stats = {
+        'total_assigned': base_qs.count(),
+        'pending_documents': base_qs.filter(status='documents_requested').count(),
+        'ready_to_process': base_qs.filter(status='documents_received').count(),
+        'in_progress': base_qs.filter(status='in_progress').count(),
+        'awaiting_verification': base_qs.filter(status='resolved').count(),
+        'completed_today': base_qs.filter(
+            status__in=['resolved', 'closed'],
+            updated_at__date=timezone.now().date()
+        ).count(),
+        'urgent_pending': base_qs.filter(
+            priority='urgent',
+            status__in=['submitted', 'documents_received', 'in_progress']
+        ).count(),
+    }
+    
+    return stats
+
+
+def get_ops_performance_metrics(user):
+    """Get performance metrics for operations executive"""
+    last_30_days = timezone.now() - timedelta(days=30)
+    base_qs = ServiceRequest.objects.filter(assigned_to=user)
+    
+    recent_requests = base_qs.filter(created_at__gte=last_30_days)
+    resolved_requests = recent_requests.filter(
+        status__in=['resolved', 'closed'],
+        resolved_at__isnull=False
+    )
+    
+    metrics = {
+        'requests_last_30_days': recent_requests.count(),
+        'resolved_last_30_days': resolved_requests.count(),
+        'resolution_rate': 0,
+        'avg_resolution_time_hours': 0,
+        'client_satisfaction': 0,  # Can be calculated from feedback if available
+    }
+    
+    if recent_requests.exists():
+        metrics['resolution_rate'] = round(
+            (metrics['resolved_last_30_days'] / metrics['requests_last_30_days']) * 100, 2
+        )
+    
+    if resolved_requests.exists():
+        avg_resolution_time = resolved_requests.aggregate(
+            avg_time=Avg(
+                Extract('epoch', F('resolved_at')) - Extract('epoch', F('created_at'))
+            )
+        )['avg_time']
+        metrics['avg_resolution_time_hours'] = round(
+            avg_resolution_time / 3600, 2
+        ) if avg_resolution_time else 0
+    
+    return metrics
+
+
+def get_ops_workload_stats(user):
+    """Get current workload statistics"""
+    base_qs = ServiceRequest.objects.filter(assigned_to=user)
+    
+    workload = {
+        'total_active': base_qs.filter(
+            status__in=['submitted', 'documents_received', 'in_progress']
+        ).count(),
+        'high_priority': base_qs.filter(
+            priority__in=['urgent', 'high'],
+            status__in=['submitted', 'documents_received', 'in_progress']
+        ).count(),
+        'due_today': base_qs.filter(
+            expected_completion_date__date=timezone.now().date(),
+            status__in=['submitted', 'documents_received', 'in_progress']
+        ).count(),
+        'overdue': base_qs.filter(
+            expected_completion_date__lt=timezone.now(),
+            status__in=['submitted', 'documents_received', 'in_progress']
+        ).count(),
+    }
+    
+    return workload
+
+
+def get_ops_sla_stats(user):
+    """Get SLA-related statistics"""
+    base_qs = ServiceRequest.objects.filter(assigned_to=user)
+    
+    sla_stats = {
+        'sla_breached': base_qs.filter(sla_breached=True).count(),
+        'at_risk': base_qs.filter(
+            expected_completion_date__lte=timezone.now() + timedelta(hours=4),
+            expected_completion_date__gt=timezone.now(),
+            status__in=['submitted', 'documents_received', 'in_progress']
+        ).count(),
+        'compliance_rate': 0,
+    }
+    
+    total_completed = base_qs.filter(status__in=['resolved', 'closed']).count()
+    if total_completed > 0:
+        breached_completed = base_qs.filter(
+            status__in=['resolved', 'closed'],
+            sla_breached=True
+        ).count()
+        sla_stats['compliance_rate'] = round(
+            ((total_completed - breached_completed) / total_completed) * 100, 2
+        )
+    
+    return sla_stats
+
+
+def get_ops_quick_actions(user):
+    """Get data for quick action buttons"""
+    base_qs = ServiceRequest.objects.filter(assigned_to=user)
+    
+    actions = {
+        'document_requests_to_send': base_qs.filter(
+            status='submitted'
+        ).count(),
+        'ready_to_process': base_qs.filter(
+            status='documents_received'
+        ).count(),
+        'pending_resolution': base_qs.filter(
+            status='in_progress'
+        ).count(),
+    }
+    
+    return actions
+
+
+def get_rm_request_stats(user):
+    """Get RM-specific statistics"""
+    if user.role == 'rm_head':
+        team_members = user.get_team_members() if hasattr(user, 'get_team_members') else [user]
+        base_qs = ServiceRequest.objects.filter(raised_by__in=team_members)
+    else:
+        base_qs = ServiceRequest.objects.filter(raised_by=user)
+    
+    stats = {
+        'total_raised': base_qs.count(),
+        'pending_documents': base_qs.filter(status='documents_requested').count(),
+        'with_operations': base_qs.filter(
+            status__in=['documents_received', 'in_progress']
+        ).count(),
+        'awaiting_client_approval': base_qs.filter(status='resolved').count(),
+        'completed_this_month': base_qs.filter(
+            status='closed',
+            closed_at__month=timezone.now().month,
+            closed_at__year=timezone.now().year
+        ).count(),
+        'client_satisfaction_pending': base_qs.filter(
+            status='client_verification'
+        ).count(),
+    }
+    
+    return stats
+
+
+def get_assignable_users(user):
+    """Get list of users that can be assigned requests based on hierarchy"""
+    # This should implement your actual hierarchy logic
+    # For now, returning a basic implementation
+    if user.role in ['top_management', 'operations_head']:
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        return User.objects.filter(role='ops_exec', is_active=True)
+    elif user.role == 'ops_team_lead':
+        # Return team members
+        return user.get_team_members() if hasattr(user, 'get_team_members') else []
+    else:
+        return []
+
+
+# API Views for AJAX requests
+
+@login_required
+@require_http_methods(["POST"])
+def update_service_request_status(request, request_id):
+    """API endpoint to update service request status"""
+    service_request = get_object_or_404(ServiceRequest, request_id=request_id)
+    
+    # Check permissions
+    if not can_update_service_request(request.user, service_request):
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+    
+    data = json.loads(request.body)
+    new_status = data.get('status')
+    remarks = data.get('remarks', '')
+    
+    try:
+        # Handle status transitions based on workflow
+        if new_status == 'documents_requested':
+            document_list = data.get('document_list', [])
+            service_request.request_documents(document_list, request.user)
+        elif new_status == 'documents_received':
+            service_request.submit_documents(request.user)
+        elif new_status == 'in_progress':
+            service_request.start_processing(request.user)
+        elif new_status == 'resolved':
+            resolution_summary = data.get('resolution_summary', remarks)
+            service_request.resolve_request(resolution_summary, request.user)
+        elif new_status == 'closed':
+            service_request.close_request(request.user)
+        else:
+            # Direct status update for other cases
+            service_request.status = new_status
+            service_request.save()
+            
+            # Add comment
+            ServiceRequestComment.objects.create(
+                service_request=service_request,
+                comment=f"Status updated to {new_status}. {remarks}",
+                commented_by=request.user,
+                is_internal=True
+            )
+        
+        return JsonResponse({
+            'success': True,
+            'new_status': service_request.get_status_display(),
+            'message': 'Status updated successfully'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+def can_update_service_request(user, service_request):
+    """Check if user can update the service request"""
+    # Implement your permission logic here
+    if user.role in ['top_management', 'operations_head']:
+        return True
+    elif user == service_request.assigned_to or user == service_request.current_owner:
+        return True
+    elif user == service_request.raised_by and service_request.status in ['documents_requested', 'resolved']:
+        return True
+    else:
+        return False
 
 @login_required
 def service_request_create(request):

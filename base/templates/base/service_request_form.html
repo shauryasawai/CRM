@@ -4,352 +4,699 @@
     {% if service_request %}Edit Service Request{% else %}Add Service Request{% endif %}
 {% endblock %}
 
-{% block extra_css %}
-<style>
-:root {
-  --primary-color: #4a6cf7;
-  --secondary-color: #6c757d;
-  --success-color: #28a745;
-  --danger-color: #dc3545;
-  --light-color: #f8f9fa;
-  --dark-color: #343a40;
-  --border-color: #e9ecef;
-  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  --transition: all 0.3s ease;
-}
-
-.service-form-container {
-  max-width: 800px;
-  margin: 2rem auto;
-  padding: 0 1.5rem;
-}
-
-.service-form-card {
-  border: none;
-  border-radius: 12px;
-  box-shadow: var(--card-shadow);
-  overflow: hidden;
-  transition: var(--transition);
-}
-
-.service-form-header {
-  background: linear-gradient(135deg, #2c3e50, #4a6cf7);
-  padding: 2.5rem;
-  text-align: center;
-  color: white;
-}
-
-.service-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-  display: inline-block;
-}
-
-.service-form-title {
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-  font-size: 2rem;
-}
-
-.service-form-subtitle {
-  opacity: 0.9;
-  font-weight: 400;
-}
-
-.service-form-body {
-  padding: 2.5rem;
-}
-
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-.form-label {
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  display: block;
-}
-
-.form-control, .form-select {
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  transition: var(--transition);
-}
-
-.form-control:focus, .form-select:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 0.25rem rgba(74, 108, 247, 0.15);
-}
-
-textarea.form-control {
-  min-height: 120px;
-  resize: vertical;
-}
-
-.error-list {
-  list-style: none;
-  padding: 0;
-  margin: 0.5rem 0 0 0;
-  color: var(--danger-color);
-  font-size: 0.875rem;
-}
-
-.status-indicator {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  margin-bottom: 1.5rem;
-}
-
-.status-new {
-  background-color: #e3f2fd;
-  color: #1976d2;
-}
-
-.status-in-progress {
-  background-color: #fff3e0;
-  color: #f57c00;
-}
-
-.status-completed {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-}
-
-.priority-badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  margin-left: 0.5rem;
-}
-
-.priority-low {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-}
-
-.priority-medium {
-  background-color: #fff3e0;
-  color: #f57c00;
-}
-
-.priority-high {
-  background-color: #ffebee;
-  color: #d32f2f;
-}
-
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border-color);
-}
-
-.btn {
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: var(--transition);
-}
-
-.btn-primary {
-  background-color: var(--primary-color);
-  border-color: var(--primary-color);
-}
-
-.btn-primary:hover {
-  background-color: #3a5bd9;
-  border-color: #3a5bd9;
-  transform: translateY(-2px);
-}
-
-.btn-secondary {
-  background-color: var(--secondary-color);
-  border-color: var(--secondary-color);
-}
-
-.btn-secondary:hover {
-  background-color: #5a6268;
-  border-color: #5a6268;
-}
-
-@media (max-width: 768px) {
-  .service-form-container {
-    padding: 0 1rem;
-  }
-  
-  .service-form-header {
-    padding: 1.5rem;
-  }
-  
-  .service-form-body {
-    padding: 1.5rem;
-  }
-  
-  .form-actions {
-    flex-direction: column;
-  }
-  
-  .btn {
-    width: 100%;
-  }
-}
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="service-form-container">
-  <div class="service-form-card">
-    <div class="service-form-header">
-      <div class="service-icon">🛠️</div>
-      <h1 class="service-form-title">
-        {% if service_request %}
-          Edit Service Request
-        {% else %}
-          New Service Request
-        {% endif %}
-      </h1>
-      <p class="service-form-subtitle">
-        {% if service_request %}
-          Update service request #{{ service_request.id }}
-        {% else %}
-          Create a new service request to track client needs
-        {% endif %}
-      </p>
-    </div>
-    
-    <div class="service-form-body">
-      {% if service_request and service_request.status %}
-        <div class="status-indicator status-{{ service_request.status|lower }}">
-          Status: {{ service_request.get_status_display }}
-          {% if service_request.priority %}
-            <span class="priority-badge priority-{{ service_request.priority|lower }}">
-              {{ service_request.get_priority_display }}
-            </span>
-          {% endif %}
-        </div>
-      {% endif %}
-      
-      <form method="post" novalidate>
-        {% csrf_token %}
-        
-        {% if form.non_field_errors %}
-          <div class="alert alert-danger mb-4">
-            {% for error in form.non_field_errors %}
-              {{ error }}
-            {% endfor %}
-          </div>
-        {% endif %}
-        
-        <!-- Client Field -->
-        <div class="form-group">
-          <label for="{{ form.client.id_for_label }}" class="form-label">Client</label>
-          {{ form.client }}
-          {% if form.client.errors %}
-            <ul class="error-list">
-              {% for error in form.client.errors %}
-                <li>{{ error }}</li>
-              {% endfor %}
-            </ul>
-          {% endif %}
-        </div>
-        
-        <!-- Description Field -->
-        <div class="form-group">
-          <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
-          {{ form.description }}
-          {% if form.description.errors %}
-            <ul class="error-list">
-              {% for error in form.description.errors %}
-                <li>{{ error }}</li>
-              {% endfor %}
-            </ul>
-          {% endif %}
-        </div>
-        
-        <!-- Priority Field -->
-        <div class="form-group">
-          <label for="{{ form.priority.id_for_label }}" class="form-label">Priority</label>
-          {{ form.priority }}
-          {% if form.priority.errors %}
-            <ul class="error-list">
-              {% for error in form.priority.errors %}
-                <li>{{ error }}</li>
-              {% endfor %}
-            </ul>
-          {% endif %}
-        </div>
-        
-        <!-- Assigned To Field -->
-        <div class="form-group">
-          <label for="{{ form.assigned_to.id_for_label }}" class="form-label">Assigned To</label>
-          {{ form.assigned_to }}
-          {% if form.assigned_to.errors %}
-            <ul class="error-list">
-              {% for error in form.assigned_to.errors %}
-                <li>{{ error }}</li>
-              {% endfor %}
-            </ul>
-          {% endif %}
-        </div>
-        
-        <div class="form-actions">
-          <a href="{% url 'service_request_list' %}" class="btn btn-secondary">
-            Cancel
-          </a>
-          <button type="submit" class="btn btn-primary">
+<style>
+    :root {
+        --primary-bg: #D3FF61;
+        --card-bg: rgba(255, 255, 255, 0.95);
+        --text-primary: #000000;
+        --text-secondary: #333333;
+        --text-muted: #666666;
+        --border-color: rgba(0, 0, 0, 0.1);
+        --shadow-light: 0 2px 10px rgba(0, 0, 0, 0.08);
+        --shadow-medium: 0 4px 20px rgba(0, 0, 0, 0.12);
+        --shadow-heavy: 0 8px 40px rgba(0, 0, 0, 0.16);
+        --gradient-accent: linear-gradient(135deg, #D3FF61 0%, #B8E639 100%);
+        --gradient-dark: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+        --success-color: #059669;
+        --warning-color: #d97706;
+        --danger-color: #dc2626;
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        background: var(--primary-bg);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        line-height: 1.6;
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+    }
+
+    .form-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 2rem;
+        animation: slideInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .form-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .form-title {
+        font-size: clamp(2rem, 4vw, 3rem);
+        font-weight: 800;
+        color: var(--text-primary);
+        margin: 0 0 1rem 0;
+        letter-spacing: -0.02em;
+        position: relative;
+    }
+
+    .form-title::after {
+        content: '';
+        position: absolute;
+        bottom: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60px;
+        height: 4px;
+        background: var(--gradient-dark);
+        border-radius: 2px;
+    }
+
+    .form-subtitle {
+        color: var(--text-muted);
+        font-size: 1.1rem;
+        font-weight: 500;
+    }
+
+    .form-card {
+        background: var(--card-bg);
+        border-radius: 20px;
+        box-shadow: var(--shadow-medium);
+        overflow: hidden;
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--border-color);
+    }
+
+    .card-header {
+        background: var(--gradient-dark);
+        padding: 2rem;
+        text-align: center;
+        color: white;
+        position: relative;
+    }
+
+    .card-header::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(211, 255, 97, 0.5), transparent);
+    }
+
+    .card-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        display: inline-block;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    }
+
+    .card-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .card-subtitle {
+        opacity: 0.9;
+        font-weight: 400;
+        font-size: 1rem;
+    }
+
+    .card-body {
+        padding: 2.5rem;
+    }
+
+    .status-indicator {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.75rem 1.5rem;
+        border-radius: 50px;
+        font-size: 0.9rem;
+        font-weight: 700;
+        margin-bottom: 2rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .status-draft {
+        background: rgba(107, 114, 128, 0.1);
+        color: #6b7280;
+        border: 1px solid rgba(107, 114, 128, 0.2);
+    }
+
+    .status-submitted {
+        background: rgba(37, 99, 235, 0.1);
+        color: #2563eb;
+        border: 1px solid rgba(37, 99, 235, 0.2);
+    }
+
+    .status-in-progress {
+        background: rgba(124, 58, 237, 0.1);
+        color: #7c3aed;
+        border: 1px solid rgba(124, 58, 237, 0.2);
+    }
+
+    .status-resolved {
+        background: rgba(5, 150, 105, 0.1);
+        color: var(--success-color);
+        border: 1px solid rgba(5, 150, 105, 0.2);
+    }
+
+    .priority-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-left: 1rem;
+        text-transform: uppercase;
+    }
+
+    .priority-low {
+        background: rgba(5, 150, 105, 0.1);
+        color: var(--success-color);
+    }
+
+    .priority-medium {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--warning-color);
+    }
+
+    .priority-high {
+        background: rgba(220, 38, 38, 0.1);
+        color: var(--danger-color);
+    }
+
+    .priority-urgent {
+        background: rgba(124, 45, 18, 0.1);
+        color: #7c2d12;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+
+    .form-grid {
+        display: grid;
+        gap: 2rem;
+    }
+
+    .form-group {
+        margin-bottom: 0;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.75rem;
+        font-size: 0.95rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .form-control, .form-select {
+        width: 100%;
+        padding: 1rem 1.25rem;
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        font-size: 1rem;
+        font-weight: 500;
+        background: white;
+        color: var(--text-secondary);
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .form-control:focus, .form-select:focus {
+        outline: none;
+        border-color: var(--text-primary);
+        box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.1);
+        transform: translateY(-1px);
+    }
+
+    .form-control::placeholder {
+        color: var(--text-muted);
+        font-weight: 400;
+    }
+
+    textarea.form-control {
+        min-height: 120px;
+        resize: vertical;
+        font-family: inherit;
+    }
+
+    .form-help {
+        margin-top: 0.5rem;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        font-weight: 500;
+    }
+
+    .error-messages {
+        margin-top: 0.75rem;
+    }
+
+    .error-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .error-list li {
+        background: rgba(220, 38, 38, 0.1);
+        color: var(--danger-color);
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        border-left: 4px solid var(--danger-color);
+    }
+
+    .alert {
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        font-weight: 600;
+        border: none;
+    }
+
+    .alert-danger {
+        background: rgba(220, 38, 38, 0.1);
+        color: var(--danger-color);
+        border-left: 4px solid var(--danger-color);
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-top: 3rem;
+        padding-top: 2rem;
+        border-top: 2px solid var(--border-color);
+    }
+
+    .btn {
+        padding: 1rem 2rem;
+        border-radius: 50px;
+        font-weight: 700;
+        font-size: 0.95rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .btn-primary {
+        background: var(--gradient-dark);
+        color: white;
+        box-shadow: var(--shadow-medium);
+    }
+
+    .btn-primary:active {
+        transform: translateY(1px);
+        box-shadow: var(--shadow-light);
+    }
+
+    .btn-secondary {
+        background: var(--card-bg);
+        color: var(--text-secondary);
+        border: 2px solid var(--border-color);
+        box-shadow: var(--shadow-light);
+    }
+
+    .btn-secondary:active {
+        transform: translateY(1px);
+        background: rgba(0, 0, 0, 0.05);
+    }
+
+    .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+    }
+
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+        border: 0.125em solid;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: spinner-border 0.75s linear infinite;
+    }
+
+    @keyframes spinner-border {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Two column layout for larger screens */
+    @media (min-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+        .form-container {
+            padding: 1rem;
+        }
+
+        .card-header {
+            padding: 1.5rem;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        .form-actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            justify-content: center;
+            width: 100%;
+        }
+
+        .status-indicator {
+            flex-direction: column;
+            text-align: center;
+            gap: 0.5rem;
+        }
+
+        .priority-badge {
+            margin-left: 0;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .card-icon {
+            font-size: 2rem;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+        }
+
+        .form-control, .form-select {
+            padding: 0.875rem 1rem;
+        }
+    }
+</style>
+
+<div class="form-container">
+    <!-- Header -->
+    <div class="form-header">
+        <h1 class="form-title">
+            {% if service_request %}Edit Service Request{% else %}New Service Request{% endif %}
+        </h1>
+        <p class="form-subtitle">
             {% if service_request %}
-              Update Request
+                Update service request {{ service_request.request_id|default:service_request.id }}
             {% else %}
-              Create Request
+                Create a new service request to track client needs
             {% endif %}
-          </button>
-        </div>
-      </form>
+        </p>
     </div>
-  </div>
+
+    <!-- Form Card -->
+    <div class="form-card">
+        <div class="card-header">
+            <div class="card-icon">🛠️</div>
+            <h2 class="card-title">
+                {% if service_request %}Service Request Details{% else %}Request Information{% endif %}
+            </h2>
+            <p class="card-subtitle">
+                {% if service_request %}
+                    Request ID: {{ service_request.request_id|default:service_request.id }}
+                {% else %}
+                    Fill in the details below to create your request
+                {% endif %}
+            </p>
+        </div>
+        
+        <div class="card-body">
+            <!-- Status Indicator -->
+            {% if service_request and service_request.status %}
+                <div class="status-indicator status-{{ service_request.status|lower|slugify }}">
+                    <i class="fas fa-info-circle"></i>
+                    Status: {{ service_request.get_status_display|default:service_request.status }}
+                    {% if service_request.priority %}
+                        <span class="priority-badge priority-{{ service_request.priority|lower }}">
+                            {{ service_request.get_priority_display|default:service_request.priority }}
+                        </span>
+                    {% endif %}
+                </div>
+            {% endif %}
+            
+            <!-- Form -->
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                <!-- Non-field errors -->
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                
+                <div class="form-grid">
+                    <!-- Client Field -->
+                    <div class="form-group">
+                        <label for="{{ form.client.id_for_label }}" class="form-label">
+                            <i class="fas fa-user"></i> Client
+                        </label>
+                        {{ form.client }}
+                        {% if form.client.help_text %}
+                            <div class="form-help">{{ form.client.help_text }}</div>
+                        {% endif %}
+                        {% if form.client.errors %}
+                            <div class="error-messages">
+                                <ul class="error-list">
+                                    {% for error in form.client.errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Request Type Field -->
+                    <div class="form-group">
+                        <label for="{{ form.request_type.id_for_label }}" class="form-label">
+                            <i class="fas fa-tags"></i> Request Type
+                        </label>
+                        {{ form.request_type }}
+                        {% if form.request_type.errors %}
+                            <div class="error-messages">
+                                <ul class="error-list">
+                                    {% for error in form.request_type.errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Priority Field -->
+                    <div class="form-group">
+                        <label for="{{ form.priority.id_for_label }}" class="form-label">
+                            <i class="fas fa-flag"></i> Priority
+                        </label>
+                        {{ form.priority }}
+                        {% if form.priority.errors %}
+                            <div class="error-messages">
+                                <ul class="error-list">
+                                    {% for error in form.priority.errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Assigned To Field -->
+                    <div class="form-group">
+                        <label for="{{ form.assigned_to.id_for_label }}" class="form-label">
+                            <i class="fas fa-user-tie"></i> Assigned To
+                        </label>
+                        {{ form.assigned_to }}
+                        {% if form.assigned_to.help_text %}
+                            <div class="form-help">{{ form.assigned_to.help_text }}</div>
+                        {% endif %}
+                        {% if form.assigned_to.errors %}
+                            <div class="error-messages">
+                                <ul class="error-list">
+                                    {% for error in form.assigned_to.errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Description Field (Full Width) -->
+                    <div class="form-group full-width">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">
+                            <i class="fas fa-align-left"></i> Description
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.help_text %}
+                            <div class="form-help">{{ form.description.help_text }}</div>
+                        {% endif %}
+                        {% if form.description.errors %}
+                            <div class="error-messages">
+                                <ul class="error-list">
+                                    {% for error in form.description.errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Form Actions -->
+                <div class="form-actions">
+                    <a href="{% url 'service_request_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <i class="fas fa-save"></i>
+                        {% if service_request %}
+                            Update Request
+                        {% else %}
+                            Create Request
+                        {% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  // Add priority badge to selected option
-  const prioritySelect = document.querySelector('select[name="priority"]');
-  if (prioritySelect) {
-    prioritySelect.addEventListener('change', function() {
-      // Remove all badge classes first
-      this.classList.remove('priority-low', 'priority-medium', 'priority-high');
-      
-      // Add appropriate class based on selection
-      if (this.value) {
-        this.classList.add(`priority-${this.value.toLowerCase()}`);
-      }
+    // Priority visual feedback
+    const prioritySelect = document.querySelector('select[name="priority"]');
+    if (prioritySelect) {
+        function updatePriorityClass() {
+            // Remove existing priority classes
+            prioritySelect.classList.remove('priority-low', 'priority-medium', 'priority-high', 'priority-urgent');
+            
+            // Add class based on current value
+            if (prioritySelect.value) {
+                prioritySelect.classList.add(`priority-${prioritySelect.value.toLowerCase()}`);
+            }
+        }
+        
+        prioritySelect.addEventListener('change', updatePriorityClass);
+        updatePriorityClass(); // Initialize
+    }
+    
+    // Request type visual feedback
+    const requestTypeSelect = document.querySelector('select[name="request_type"]');
+    if (requestTypeSelect) {
+        requestTypeSelect.addEventListener('change', function() {
+            if (this.value) {
+                this.style.borderColor = 'var(--success-color)';
+                this.style.borderWidth = '2px';
+            }
+        });
+    }
+    
+    // Form submission handling
+    const form = document.querySelector('form');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    if (form && submitBtn) {
+        form.addEventListener('submit', function(e) {
+            // Disable submit button and show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `
+                <span class="spinner-border-sm" role="status" aria-hidden="true"></span>
+                Processing...
+            `;
+            
+            // Re-enable after 5 seconds (fallback)
+            setTimeout(function() {
+                if (submitBtn.disabled) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = `
+                        <i class="fas fa-save"></i>
+                        {% if service_request %}Update Request{% else %}Create Request{% endif %}
+                    `;
+                }
+            }, 5000);
+        });
+    }
+    
+    // Auto-resize textarea
+    const textarea = document.querySelector('textarea[name="description"]');
+    if (textarea) {
+        function autoResize() {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+        }
+        
+        textarea.addEventListener('input', autoResize);
+        autoResize(); // Initialize
+    }
+    
+    // Form validation feedback
+    const formInputs = document.querySelectorAll('.form-control, .form-select');
+    formInputs.forEach(function(input) {
+        input.addEventListener('blur', function() {
+            if (this.value.trim()) {
+                this.style.borderColor = 'var(--success-color)';
+            } else if (this.hasAttribute('required')) {
+                this.style.borderColor = 'var(--danger-color)';
+            }
+        });
+        
+        input.addEventListener('focus', function() {
+            this.style.borderColor = 'var(--text-primary)';
+        });
     });
     
-    // Initialize on page load
-    if (prioritySelect.value) {
-      prioritySelect.classList.add(`priority-${prioritySelect.value.toLowerCase()}`);
-    }
-  }
-  
-  // Form submission loading state
-  const form = document.querySelector('form');
-  const submitBtn = form.querySelector('button[type="submit"]');
-  
-  form.addEventListener('submit', function() {
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = `
-      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-      Processing...
-    `;
-  });
+    // Auto-hide alerts after 5 seconds
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(function(alert) {
+        setTimeout(function() {
+            alert.style.opacity = '0';
+            setTimeout(function() {
+                alert.remove();
+            }, 300);
+        }, 5000);
+    });
 });
 </script>
 {% endblock %}

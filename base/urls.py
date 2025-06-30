@@ -112,10 +112,26 @@ path('clients/', include([
     path('service-requests/', include([
         path('', views.service_request_list, name='service_request_list'),
         path('create/', views.service_request_create, name='service_request_create'),
+        path('<int:pk>/', views.service_request_detail, name='service_request_detail'),
         path('<int:pk>/edit/', views.service_request_update, name='service_request_update'),
         path('<int:pk>/delete/', views.service_request_delete, name='service_request_delete'),
+        
+        # Essential workflow actions
+        path('<int:pk>/submit/', views.service_request_submit, name='service_request_submit'),
+        path('<int:pk>/action/<str:action>/', views.service_request_action, name='service_request_action'),
+        
+        # Document handling
+        path('<int:pk>/upload-document/', views.service_request_upload_document, name='service_request_upload_document'),
+        path('document/<int:doc_id>/delete/', views.service_request_delete_document, name='service_request_delete_document'),
+        
+        # Comments
+        path('<int:pk>/add-comment/', views.service_request_add_comment, name='service_request_add_comment'),
     ])),
     
+    # Role-specific views
+    path('operations/service-requests/', views.ops_service_requests, name='ops_service_requests'),
+    path('rm/service-requests/', views.rm_service_requests, name='rm_service_requests'),
+
     # Investment Plan Reviews
     path('investment-plans/', include([
         path('', views.investment_plan_review_list, name='investment_plan_review_list'),

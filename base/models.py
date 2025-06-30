@@ -1056,19 +1056,122 @@ class Reminder(models.Model):
     def __str__(self):
         return f"Reminder for {self.user.username}: {self.message}"
 
-class ServiceRequest(models.Model):
-    STATUS_CHOICES = (
-        ('open', 'Open'),
-        ('in_progress', 'In Progress'),
-        ('resolved', 'Resolved'),
-        ('closed', 'Closed'),
+from django.db import models
+from django.conf import settings
+from django.utils import timezone
+from django.core.exceptions import ValidationError
+
+
+class ServiceRequestType(models.Model):
+    """
+    Service Request Type categorization
+    """
+    CATEGORY_CHOICES = (
+        ('personal_details', 'Personal Details Modification'),
+        ('account_creation', 'Account Creation'),
+        ('account_closure', 'Account Closure Request'),
+        ('adhoc_mf', 'Adhoc Requests - Mutual Fund'),
+        ('adhoc_demat', 'Adhoc Requests - Demat'),
+        ('report_request', 'Report Request'),
     )
     
+    name = models.CharField(max_length=100)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    code = models.CharField(max_length=20, unique=True)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    required_documents = models.JSONField(default=list, blank=True)
+    
+    def __str__(self):
+        return f"{self.name} ({self.get_category_display()})"
+
+
+class ServiceRequestDocument(models.Model):
+    """
+    Documents attached to service requests
+    """
+    service_request = models.ForeignKey(
+        'ServiceRequest',
+        on_delete=models.CASCADE,
+        related_name='documents'
+    )
+    document = models.FileField(upload_to='service_requests/documents/')
+    document_name = models.CharField(max_length=255)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"Document: {self.document_name}"
+
+
+class ServiceRequestComment(models.Model):
+    """
+    Comments/remarks for service requests
+    """
+    service_request = models.ForeignKey(
+        'ServiceRequest',
+        on_delete=models.CASCADE,
+        related_name='comments'
+    )
+    comment = models.TextField()
+    commented_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_internal = models.BooleanField(default=False)  # Internal ops comments vs client-facing
+    
+    def __str__(self):
+        return f"Comment by {self.commented_by} on {self.created_at}"
+
+
+class ServiceRequest(models.Model):
+    """
+    Enhanced Service Request Model with complete workflow support
+    """
+    STATUS_CHOICES = (
+        ('draft', 'Draft'),
+        ('submitted', 'Submitted'),
+        ('documents_requested', 'Documents Requested'),
+        ('documents_received', 'Documents Received'),
+        ('in_progress', 'In Progress'),
+        ('resolved', 'Resolved'),
+        ('client_verification', 'Client Verification'),
+        ('closed', 'Closed'),
+        ('on_hold', 'On Hold'),
+        ('rejected', 'Rejected'),
+    )
+    
+    PRIORITY_CHOICES = (
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('urgent', 'Urgent'),
+    )
+    
+    # Basic Information
+    request_id = models.CharField(max_length=20, unique=True, editable=False)
     client = models.ForeignKey(
-        Client,
+        'Client',  # Assuming you have a Client model
         on_delete=models.CASCADE,
         related_name='service_requests'
     )
+    
+    # Request Type and Details
+    request_type = models.ForeignKey(
+        ServiceRequestType,
+        on_delete=models.PROTECT,
+        related_name='service_requests'
+    )
+    description = models.TextField()
+    additional_details = models.JSONField(default=dict, blank=True)  # For type-specific data
+    
+    # Assignment and Hierarchy
     raised_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -1083,15 +1186,302 @@ class ServiceRequest(models.Model):
         blank=True,
         related_name='assigned_service_requests'
     )
-    description = models.TextField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
-    priority = models.CharField(max_length=10, choices=Task.PRIORITY_CHOICES, default='medium')
+    current_owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='owned_service_requests',
+        help_text="Current person responsible for the request"
+    )
+    
+    # Status and Priority
+    status = models.CharField(max_length=25, choices=STATUS_CHOICES, default='draft')
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
+    
+    # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    documents_requested_at = models.DateTimeField(null=True, blank=True)
+    documents_received_at = models.DateTimeField(null=True, blank=True)
     resolved_at = models.DateTimeField(null=True, blank=True)
-
+    closed_at = models.DateTimeField(null=True, blank=True)
+    
+    # Document Requirements
+    required_documents_list = models.JSONField(default=list, blank=True)
+    documents_complete = models.BooleanField(default=False)
+    
+    # Resolution Details
+    resolution_summary = models.TextField(blank=True)
+    client_approved = models.BooleanField(default=False)
+    client_approval_date = models.DateTimeField(null=True, blank=True)
+    
+    # SLA and Tracking
+    expected_completion_date = models.DateTimeField(null=True, blank=True)
+    sla_breached = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', 'assigned_to']),
+            models.Index(fields=['client', 'status']),
+            models.Index(fields=['raised_by', 'created_at']),
+        ]
+    
+    def save(self, *args, **kwargs):
+        if not self.request_id:
+            self.request_id = self.generate_request_id()
+        super().save(*args, **kwargs)
+    
+    def generate_request_id(self):
+        """Generate unique request ID"""
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        return f"SR{timestamp}"
+    
+    def submit_request(self, user=None):
+        """Submit the request and move to operations tray"""
+        if self.status == 'draft':
+            self.status = 'submitted'
+            self.submitted_at = timezone.now()
+            if user:
+                self.current_owner = self.assigned_to  # Move to ops
+            self.save()
+            
+            # Add comment
+            ServiceRequestComment.objects.create(
+                service_request=self,
+                comment="Service request submitted to operations team",
+                commented_by=user,
+                is_internal=True
+            )
+    
+    def request_documents(self, document_list, user=None):
+        """Request documents from RM"""
+        self.status = 'documents_requested'
+        self.documents_requested_at = timezone.now()
+        self.required_documents_list = document_list
+        self.current_owner = self.raised_by  # Back to RM
+        self.save()
+        
+        # Add comment with document requirements
+        comment_text = f"Documents requested: {', '.join(document_list)}"
+        ServiceRequestComment.objects.create(
+            service_request=self,
+            comment=comment_text,
+            commented_by=user,
+            is_internal=False
+        )
+    
+    def submit_documents(self, user=None):
+        """Submit documents back to operations"""
+        if self.status == 'documents_requested':
+            self.status = 'documents_received'
+            self.documents_received_at = timezone.now()
+            self.current_owner = self.assigned_to  # Back to ops
+            self.save()
+            
+            ServiceRequestComment.objects.create(
+                service_request=self,
+                comment="Documents submitted to operations team",
+                commented_by=user,
+                is_internal=True
+            )
+    
+    def start_processing(self, user=None):
+        """Start processing the request"""
+        self.status = 'in_progress'
+        self.save()
+        
+        ServiceRequestComment.objects.create(
+            service_request=self,
+            comment="Request processing started",
+            commented_by=user,
+            is_internal=True
+        )
+    
+    def resolve_request(self, resolution_summary, user=None):
+        """Resolve the request and send back to RM for verification"""
+        self.status = 'resolved'
+        self.resolved_at = timezone.now()
+        self.resolution_summary = resolution_summary
+        self.current_owner = self.raised_by  # Back to RM for verification
+        self.save()
+        
+        ServiceRequestComment.objects.create(
+            service_request=self,
+            comment=f"Request resolved: {resolution_summary}",
+            commented_by=user,
+            is_internal=False
+        )
+    
+    def client_verification_complete(self, approved=True, user=None):
+        """RM confirms client approval"""
+        if approved:
+            self.status = 'client_verification'
+            self.client_approved = True
+            self.client_approval_date = timezone.now()
+            
+            ServiceRequestComment.objects.create(
+                service_request=self,
+                comment="Client verification completed - approved",
+                commented_by=user,
+                is_internal=True
+            )
+        else:
+            self.status = 'in_progress'  # Back to processing
+            self.current_owner = self.assigned_to
+            
+            ServiceRequestComment.objects.create(
+                service_request=self,
+                comment="Client verification failed - requires rework",
+                commented_by=user,
+                is_internal=True
+            )
+        
+        self.save()
+    
+    def close_request(self, user=None):
+        """Close the request after client approval"""
+        if self.client_approved:
+            self.status = 'closed'
+            self.closed_at = timezone.now()
+            self.save()
+            
+            ServiceRequestComment.objects.create(
+                service_request=self,
+                comment="Service request closed successfully",
+                commented_by=user,
+                is_internal=True
+            )
+        else:
+            raise ValidationError("Cannot close request without client approval")
+    
+    def escalate_to_manager(self, user=None, reason=""):
+        """Escalate request to line manager"""
+        # Logic to find and assign to manager
+        # This would depend on your user hierarchy model
+        ServiceRequestComment.objects.create(
+            service_request=self,
+            comment=f"Request escalated to manager. Reason: {reason}",
+            commented_by=user,
+            is_internal=True
+        )
+        self.save()
+    
+    def can_be_raised_by(self, user):
+        """Check if user can raise request for this client"""
+        # Implement your mapping logic here
+        # RM can only raise to mapped ops exec
+        return True  # Placeholder
+    
+    def can_be_assigned_to(self, user):
+        """Check if request can be assigned to this user"""
+        # Implement hierarchy and mapping validation
+        return True  # Placeholder
+    
+    def get_next_assignee_if_on_leave(self):
+        """Get next assignee if current assignee is on leave"""
+        # Implement leave handling logic based on hierarchy
+        pass
+    
+    def is_sla_breached(self):
+        """Check if SLA is breached"""
+        if self.expected_completion_date and timezone.now() > self.expected_completion_date:
+            self.sla_breached = True
+            self.save()
+            return True
+        return False
+    
     def __str__(self):
-        return f"ServiceRequest ({self.status}) for {self.client.name}"
+        return f"{self.request_id} - {self.request_type.name} for {self.client.name}"
+
+
+class ServiceRequestWorkflow(models.Model):
+    """
+    Track workflow transitions for audit trail
+    """
+    service_request = models.ForeignKey(
+        ServiceRequest,
+        on_delete=models.CASCADE,
+        related_name='workflow_history'
+    )
+    from_status = models.CharField(max_length=25, choices=ServiceRequest.STATUS_CHOICES)
+    to_status = models.CharField(max_length=25, choices=ServiceRequest.STATUS_CHOICES)
+    from_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='workflow_from_transitions'
+    )
+    to_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='workflow_to_transitions'
+    )
+    transition_date = models.DateTimeField(auto_now_add=True)
+    remarks = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-transition_date']
+    
+    def __str__(self):
+        return f"{self.service_request.request_id}: {self.from_status} → {self.to_status}"
+
+
+# Pre-populate ServiceRequestType with your specified types
+def populate_service_request_types():
+    """
+    Function to populate initial service request types
+    Call this in a data migration or management command
+    """
+    types_data = [
+        # Personal Details Modification
+        {'name': 'Email Modification', 'category': 'personal_details', 'code': 'PDM_EMAIL'},
+        {'name': 'Mobile Modification', 'category': 'personal_details', 'code': 'PDM_MOBILE'},
+        {'name': 'Address Modification', 'category': 'personal_details', 'code': 'PDM_ADDRESS'},
+        {'name': 'Bank Details Modification', 'category': 'personal_details', 'code': 'PDM_BANK'},
+        {'name': 'Nominee Modification', 'category': 'personal_details', 'code': 'PDM_NOMINEE'},
+        {'name': 'Name Change', 'category': 'personal_details', 'code': 'PDM_NAME'},
+        {'name': 'Re-KYC', 'category': 'personal_details', 'code': 'PDM_REKYC'},
+        
+        # Account Creation
+        {'name': 'Mutual Fund CAN', 'category': 'account_creation', 'code': 'AC_MF_CAN'},
+        {'name': 'MOSL Demat', 'category': 'account_creation', 'code': 'AC_MOSL_DEMAT'},
+        {'name': 'PL Demat', 'category': 'account_creation', 'code': 'AC_PL_DEMAT'},
+        
+        # Account Closure
+        {'name': 'MOSL Demat Closure', 'category': 'account_closure', 'code': 'ACL_MOSL_DEMAT'},
+        {'name': 'PL Demat Closure', 'category': 'account_closure', 'code': 'ACL_PL_DEMAT'},
+        
+        # Adhoc Requests - MF
+        {'name': 'ARN Change', 'category': 'adhoc_mf', 'code': 'AH_MF_ARN'},
+        {'name': 'RI to NRI Conversion', 'category': 'adhoc_mf', 'code': 'AH_MF_RI_NRI'},
+        {'name': 'NRI to RI Conversion', 'category': 'adhoc_mf', 'code': 'AH_MF_NRI_RI'},
+        {'name': 'Mandate Request Physical', 'category': 'adhoc_mf', 'code': 'AH_MF_MANDATE_PHY'},
+        {'name': 'Mandate Request Online', 'category': 'adhoc_mf', 'code': 'AH_MF_MANDATE_ONL'},
+        {'name': 'Change of Mapping', 'category': 'adhoc_mf', 'code': 'AH_MF_MAPPING'},
+        
+        # Adhoc Requests - Demat
+        {'name': 'Brokerage Change', 'category': 'adhoc_demat', 'code': 'AH_DM_BROKERAGE'},
+        {'name': 'DP Scheme Modification', 'category': 'adhoc_demat', 'code': 'AH_DM_DP_SCHEME'},
+        {'name': 'Stock Transfer', 'category': 'adhoc_demat', 'code': 'AH_DM_STOCK_TRANSFER'},
+        
+        # Report Requests
+        {'name': 'Capital Gain Set - MF', 'category': 'report_request', 'code': 'RPT_CG_MF'},
+        {'name': 'Capital Gain Set - MOSL', 'category': 'report_request', 'code': 'RPT_CG_MOSL'},
+        {'name': 'Capital Gain Set - PL', 'category': 'report_request', 'code': 'RPT_CG_PL'},
+        {'name': 'MF SOA', 'category': 'report_request', 'code': 'RPT_MF_SOA'},
+        {'name': 'CAS Upload', 'category': 'report_request', 'code': 'RPT_CAS_UPLOAD'},
+    ]
+    
+    for type_data in types_data:
+        ServiceRequestType.objects.get_or_create(
+            code=type_data['code'],
+            defaults=type_data
+        )
 
 class BusinessTracker(models.Model):
     month = models.DateField()
