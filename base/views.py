@@ -1,3 +1,4 @@
+import os
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import authenticate, login, logout
@@ -5,7 +6,7 @@ from django.urls import reverse
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Sum, Count, Q, Avg
-from django.http import JsonResponse, HttpResponseForbidden
+from django.http import HttpResponse, JsonResponse, HttpResponseForbidden
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Sum, Avg, F, Q
 from django.db.models.functions import Extract
@@ -29,8 +30,10 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
 from django.urls import reverse
 from datetime import datetime, timedelta
+from django.core.mail import send_mail
+from project import settings
 from .models import (
-    ServiceRequestComment, ServiceRequestDocument, ServiceRequestType, User, Lead, Client, Task, ServiceRequest, BusinessTracker, 
+    ClientPortfolio, ExecutionMetrics, ExecutionPlan, MutualFundScheme, PlanAction, PlanComment, PlanTemplate, PlanWorkflowHistory, ServiceRequestComment, ServiceRequestDocument, ServiceRequestType, User, Lead, Client, Task, ServiceRequest, BusinessTracker, 
     InvestmentPlanReview, Team, ProductDiscussion, ClientProfile,
     Note, NoteList
 )
@@ -38,6 +41,11 @@ from .forms import (
     ClientSearchForm, LeadForm, OperationsTaskAssignmentForm, TaskForm, ServiceRequestForm, InvestmentPlanReviewForm,
     ClientProfileForm, NoteForm, NoteListForm, QuickNoteForm
 )
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.utils import get_column_letter
+from decimal import Decimal
+from django.template.loader import render_to_string
 
 # Helper functions for role checks
 def is_top_management(user):
@@ -111,6 +119,13 @@ def dashboard(request):
     user = request.user
     context = {}
 
+    # Check if execution plans models are available
+    try:
+        from .models import ExecutionPlan, PlanAction, ExecutionMetrics
+        EXECUTION_PLANS_AVAILABLE = True
+    except ImportError:
+        EXECUTION_PLANS_AVAILABLE = False
+
     if user.role == 'top_management':
         # Aggregate KPIs across entire system
         total_aum = Client.objects.aggregate(total=Sum('aum'))['total'] or 0
@@ -133,6 +148,23 @@ def dashboard(request):
         recent_service_requests = ServiceRequest.objects.order_by('-created_at')[:5]
         recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
 
+        # Execution Plans metrics (if available)
+        execution_plans_stats = {}
+        if EXECUTION_PLANS_AVAILABLE:
+            current_month_start = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            monthly_plans = ExecutionPlan.objects.filter(created_at__gte=current_month_start)
+            completed_monthly = monthly_plans.filter(status='completed')
+            
+            execution_plans_stats = {
+                'total_plans': ExecutionPlan.objects.count(),
+                'pending_approval': ExecutionPlan.objects.filter(status='pending_approval').count(),
+                'in_execution': ExecutionPlan.objects.filter(status='in_execution').count(),
+                'completed_plans': ExecutionPlan.objects.filter(status='completed').count(),
+                'recent_plans': ExecutionPlan.objects.order_by('-created_at')[:5],
+                'monthly_completion_rate': round((completed_monthly.count() / monthly_plans.count()) * 100, 2) if monthly_plans.count() > 0 else 0,
+                'plans_this_month': monthly_plans.count(),
+            }
+
         context.update({
             'total_aum': total_aum,
             'total_sip': total_sip,
@@ -149,6 +181,7 @@ def dashboard(request):
             'recent_leads': recent_leads,
             'recent_service_requests': recent_service_requests,
             'recent_notes': recent_notes,
+            'execution_plans_stats': execution_plans_stats,
         })
         template_name = 'base/dashboard_top_management.html'
 
@@ -186,6 +219,32 @@ def dashboard(request):
 
         recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
 
+        # Execution Plans for business head
+        execution_plans_stats = {}
+        if EXECUTION_PLANS_AVAILABLE:
+            current_month = timezone.now().month
+            current_year = timezone.now().year
+            
+            execution_plans_stats = {
+                'pending_approval': ExecutionPlan.objects.filter(status='pending_approval').count(),
+                'approved_plans': ExecutionPlan.objects.filter(status='approved').count(),
+                'recent_approvals': ExecutionPlan.objects.filter(
+                    approved_by=user
+                ).order_by('-approved_at')[:5],
+                'plans_this_month': ExecutionPlan.objects.filter(
+                    created_at__month=current_month,
+                    created_at__year=current_year
+                ).count(),
+                'approval_pending_count': ExecutionPlan.objects.filter(
+                    status='pending_approval'
+                ).count(),
+                'completed_this_month': ExecutionPlan.objects.filter(
+                    status='completed',
+                    completed_at__month=current_month,
+                    completed_at__year=current_year
+                ).count(),
+            }
+
         context.update({
             'rm_heads': rm_heads,
             'all_rms': all_rms,
@@ -195,6 +254,7 @@ def dashboard(request):
             'open_service_requests': open_service_requests,
             'avg_response_time': round(avg_response_time_days, 2),
             'recent_notes': recent_notes,
+            'execution_plans_stats': execution_plans_stats,
         })
         template_name = 'base/dashboard_business_head.html'
 
@@ -241,6 +301,28 @@ def dashboard(request):
 
         recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
 
+        # Execution Plans for operations head
+        execution_plans_stats = {}
+        if EXECUTION_PLANS_AVAILABLE:
+            today = timezone.now().date()
+            
+            execution_plans_stats = {
+                'ready_for_execution': ExecutionPlan.objects.filter(status='client_approved').count(),
+                'in_execution': ExecutionPlan.objects.filter(status='in_execution').count(),
+                'completed_today': ExecutionPlan.objects.filter(
+                    status='completed',
+                    completed_at__date=today
+                ).count(),
+                'pending_actions': PlanAction.objects.filter(
+                    execution_plan__status='in_execution',
+                    status='pending'
+                ).count(),
+                'total_value_in_execution': PlanAction.objects.filter(
+                    execution_plan__status='in_execution',
+                    status='pending'
+                ).aggregate(total=Sum('amount'))['total'] or 0,
+            }
+
         context.update({
             'ops_team_leads': ops_team_leads,
             'ops_execs': ops_execs,
@@ -252,6 +334,7 @@ def dashboard(request):
             'overdue_ops_tasks': overdue_ops_tasks,
             'team_performance': team_performance,
             'recent_notes': recent_notes,
+            'execution_plans_stats': execution_plans_stats,
         })
         template_name = 'base/dashboard_business_head_ops.html'
 
@@ -284,6 +367,17 @@ def dashboard(request):
             member_clients = team_clients.filter(user=member)
             member_tasks = team_tasks.filter(assigned_to=member)
             
+            # Add execution plans data for each member
+            member_execution_stats = {}
+            if EXECUTION_PLANS_AVAILABLE:
+                member_plans = ExecutionPlan.objects.filter(created_by=member)
+                member_execution_stats = {
+                    'total_plans': member_plans.count(),
+                    'pending_approval': member_plans.filter(status='pending_approval').count(),
+                    'approved_plans': member_plans.filter(status='approved').count(),
+                    'completed_plans': member_plans.filter(status='completed').count(),
+                }
+            
             team_members_data.append({
                 'member': member,
                 'lead_count': member_leads.count(),
@@ -292,10 +386,30 @@ def dashboard(request):
                 'sip': member_clients.aggregate(total=Sum('sip_amount'))['total'] or 0,
                 'pending_tasks': member_tasks.filter(completed=False).count(),
                 'overdue_tasks': member_tasks.filter(completed=False, due_date__lt=timezone.now()).count(),
-                'performance_score': getattr(member, 'performance_score', 0)
+                'performance_score': getattr(member, 'performance_score', 0),
+                'execution_plans': member_execution_stats,
             })
 
         recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
+
+        # Execution Plans for RM Head
+        execution_plans_stats = {}
+        if EXECUTION_PLANS_AVAILABLE:
+            # Plans created by team members that need approval
+            team_plans = ExecutionPlan.objects.filter(created_by__in=accessible_users)
+            my_approvals_pending = team_plans.filter(
+                status='pending_approval',
+                created_by__manager=user
+            )
+            
+            execution_plans_stats = {
+                'team_plans': team_plans.count(),
+                'pending_approval': team_plans.filter(status='pending_approval').count(),
+                'approved_plans': team_plans.filter(status='approved').count(),
+                'recent_team_plans': team_plans.order_by('-created_at')[:5],
+                'my_approvals_pending': my_approvals_pending.count(),
+                'team_completion_rate': round((team_plans.filter(status='completed').count() / team_plans.count()) * 100, 2) if team_plans.count() > 0 else 0,
+            }
 
         context.update({
             'team_members': team_members,
@@ -311,6 +425,7 @@ def dashboard(request):
             'clients_count': team_clients.count(),
             'team_members_data': team_members_data,
             'recent_notes': recent_notes,
+            'execution_plans_stats': execution_plans_stats,
         })
         template_name = 'base/dashboard_rm_head.html'
 
@@ -350,6 +465,26 @@ def dashboard(request):
             )
             member_client_profiles = team_client_profiles.filter(mapped_ops_exec=member)
             
+            # Add execution plans data for ops members
+            member_execution_stats = {}
+            if EXECUTION_PLANS_AVAILABLE:
+                today = timezone.now().date()
+                member_actions = PlanAction.objects.filter(
+                    execution_plan__status__in=['client_approved', 'in_execution']
+                )
+                member_execution_stats = {
+                    'pending_actions': member_actions.filter(status='pending').count(),
+                    'completed_actions': PlanAction.objects.filter(
+                        executed_by=member,
+                        status='completed'
+                    ).count(),
+                    'actions_today': PlanAction.objects.filter(
+                        executed_by=member,
+                        executed_at__date=today,
+                        status='completed'
+                    ).count(),
+                }
+            
             team_members_data.append({
                 'member': member,
                 'task_count': member_tasks.count(),
@@ -357,9 +492,30 @@ def dashboard(request):
                 'service_requests': member_service_requests.count(),
                 'open_requests': member_service_requests.filter(status='open').count(),
                 'client_profiles': member_client_profiles.count(),
+                'execution_stats': member_execution_stats,
             })
 
         recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
+
+        # Execution Plans for Ops Team Lead
+        execution_plans_stats = {}
+        if EXECUTION_PLANS_AVAILABLE:
+            today = timezone.now().date()
+            
+            execution_plans_stats = {
+                'ready_for_execution': ExecutionPlan.objects.filter(status='client_approved').count(),
+                'in_execution': ExecutionPlan.objects.filter(status='in_execution').count(),
+                'pending_actions': PlanAction.objects.filter(
+                    execution_plan__status='in_execution',
+                    status='pending'
+                ).count(),
+                'team_actions_today': PlanAction.objects.filter(
+                    executed_by__in=team_members,
+                    executed_at__date=today,
+                    status='completed'
+                ).count(),
+                'team_efficiency': 0,  # Can calculate based on completion rate
+            }
 
         context.update({
             'team_members': team_members,
@@ -372,6 +528,7 @@ def dashboard(request):
             'in_progress_requests': in_progress_requests,
             'team_members_data': team_members_data,
             'recent_notes': recent_notes,
+            'execution_plans_stats': execution_plans_stats,
         })
         template_name = 'base/dashboard_ops_team_lead.html'
 
@@ -394,6 +551,37 @@ def dashboard(request):
         recent_client_profiles = my_client_profiles.order_by('-updated_at')[:5]
         recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
 
+        # Execution Plans for Ops Exec
+        execution_plans_stats = {}
+        if EXECUTION_PLANS_AVAILABLE:
+            today = timezone.now().date()
+            last_30_days = timezone.now() - timedelta(days=30)
+            
+            my_actions = PlanAction.objects.filter(
+                execution_plan__status__in=['client_approved', 'in_execution']
+            )
+            
+            execution_plans_stats = {
+                'pending_actions': my_actions.filter(status='pending').count(),
+                'completed_today': PlanAction.objects.filter(
+                    executed_by=user,
+                    executed_at__date=today,
+                    status='completed'
+                ).count(),
+                'total_completed': PlanAction.objects.filter(
+                    executed_by=user,
+                    status='completed'
+                ).count(),
+                'recent_actions': PlanAction.objects.filter(
+                    executed_by=user
+                ).order_by('-executed_at')[:5],
+                'monthly_performance': PlanAction.objects.filter(
+                    executed_by=user,
+                    executed_at__gte=last_30_days,
+                    status='completed'
+                ).count(),
+            }
+
         context.update({
             'my_tasks': my_tasks,
             'my_service_requests': my_service_requests,
@@ -405,6 +593,7 @@ def dashboard(request):
             'recent_service_requests': recent_service_requests,
             'recent_client_profiles': recent_client_profiles,
             'recent_notes': recent_notes,
+            'execution_plans_stats': execution_plans_stats,
         })
         template_name = 'base/dashboard_ops_exec.html'
 
@@ -426,6 +615,40 @@ def dashboard(request):
         recent_clients = clients.order_by('-created_at')[:3]
         recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
 
+        # Execution Plans for RM
+        execution_plans_stats = {}
+        if EXECUTION_PLANS_AVAILABLE:
+            current_month = timezone.now().month
+            current_year = timezone.now().year
+            last_90_days = timezone.now() - timedelta(days=90)
+            
+            my_plans = ExecutionPlan.objects.filter(created_by=user)
+            
+            # Calculate approval success rate
+            submitted_plans = my_plans.filter(created_at__gte=last_90_days)
+            approved_plans = submitted_plans.filter(status__in=['approved', 'client_approved', 'in_execution', 'completed'])
+            approval_success_rate = round((approved_plans.count() / submitted_plans.count()) * 100, 2) if submitted_plans.count() > 0 else 0
+            
+            execution_plans_stats = {
+                'my_plans': my_plans.count(),
+                'draft_plans': my_plans.filter(status='draft').count(),
+                'pending_approval': my_plans.filter(status='pending_approval').count(),
+                'approved_plans': my_plans.filter(status='approved').count(),
+                'in_execution': my_plans.filter(status='in_execution').count(),
+                'completed_plans': my_plans.filter(status='completed').count(),
+                'recent_plans': my_plans.order_by('-created_at')[:5],
+                'plans_this_month': my_plans.filter(
+                    created_at__month=current_month,
+                    created_at__year=current_year
+                ).count(),
+                'approval_success_rate': approval_success_rate,
+                'total_plan_value': my_plans.filter(
+                    status__in=['approved', 'client_approved', 'in_execution', 'completed']
+                ).aggregate(
+                    total=Sum('actions__amount')
+                )['total'] or 0,
+            }
+
         context.update({
             'leads': leads,
             'clients': clients,
@@ -440,9 +663,13 @@ def dashboard(request):
             'recent_notes': recent_notes,
             'leads_count': leads.count(),
             'clients_count': clients.count(),
+            'execution_plans_stats': execution_plans_stats,
         })
         template_name = 'base/dashboard_rm.html'
 
+    # Add global execution plans availability flag
+    context['execution_plans_available'] = EXECUTION_PLANS_AVAILABLE
+    
     return render(request, template_name, context)
 
 # Notes System Views
@@ -5468,3 +5695,1204 @@ def analytics_dashboard(request):
     
     template_name = f'base/analytics_{user.role}.html'
     return render(request, template_name, context)
+
+
+@login_required
+def create_plan(request):
+    """Create new execution plan - Step 1: Choose client"""
+    if request.user.role not in ['rm', 'rm_head']:
+        messages.error(request, "Only RMs and RM Heads can create execution plans.")
+        return redirect('dashboard')
+    
+    # Get clients accessible to this RM
+    if request.user.role == 'rm':
+        # RM can see their own clients
+        clients = Client.objects.filter(user=request.user).order_by('name')
+    else:
+        # RM Head can see all clients under their team
+        team_rms = User.objects.filter(manager=request.user, role='rm')
+        clients = Client.objects.filter(user__in=team_rms).order_by('name')
+    
+    context = {
+        'clients': clients,
+    }
+    
+    return render(request, 'execution_plans/create_plan.html', context)
+
+
+@login_required
+def client_portfolio_ajax(request, client_id):
+    """AJAX endpoint to get client portfolio"""
+    try:
+        client = get_object_or_404(Client, id=client_id)
+        
+        # Check access permission
+        if request.user.role == 'rm' and client.user != request.user:
+            return JsonResponse({'error': 'Access denied'}, status=403)
+        elif request.user.role == 'rm_head':
+            if client.user.manager != request.user:
+                return JsonResponse({'error': 'Access denied'}, status=403)
+        
+        # Get client portfolio
+        portfolio = ClientPortfolio.objects.filter(client=client).select_related('scheme')
+        
+        portfolio_data = []
+        for holding in portfolio:
+            portfolio_data.append({
+                'id': holding.id,
+                'scheme_name': holding.scheme.scheme_name,
+                'amc_name': holding.scheme.amc_name,
+                'folio_number': holding.folio_number,
+                'units': float(holding.units),
+                'current_value': float(holding.current_value),
+                'cost_value': float(holding.cost_value),
+                'sip_amount': float(holding.sip_amount),
+                'sip_date': holding.sip_date,
+                'gain_loss': float(holding.gain_loss),
+                'gain_loss_percentage': round(holding.gain_loss_percentage, 2),
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'portfolio': portfolio_data,
+            'client_name': client.name,
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def create_plan_step2(request, client_id):
+    """Create execution plan - Step 2: Design plan"""
+    try:
+        client = get_object_or_404(Client, id=client_id)
+        
+        # Check access permission
+        if request.user.role == 'rm' and client.user != request.user:
+            messages.error(request, "Access denied")
+            return redirect('create_plan')
+        elif request.user.role == 'rm_head':
+            if client.user.manager != request.user:
+                messages.error(request, "Access denied")
+                return redirect('create_plan')
+        
+        # Get client portfolio
+        portfolio = ClientPortfolio.objects.filter(client=client).select_related('scheme')
+        
+        # Get all available schemes for adding new investments
+        all_schemes = MutualFundScheme.objects.filter(is_active=True).order_by('amc_name', 'scheme_name')
+        
+        # Get plan templates accessible to user
+        templates = PlanTemplate.objects.filter(
+            Q(is_public=True) | Q(created_by=request.user)
+        ).filter(is_active=True)
+        
+        context = {
+            'client': client,
+            'portfolio': portfolio,
+            'all_schemes': all_schemes,
+            'templates': templates,
+            'action_types': PlanAction.ACTION_TYPES,
+        }
+        
+        return render(request, 'execution_plans/create_plan_step2.html', context)
+        
+    except Exception as e:
+        messages.error(request, f"Error: {str(e)}")
+        return redirect('create_plan')
+
+
+@login_required
+@require_http_methods(["POST"])
+def save_execution_plan(request):
+    """Save execution plan with actions"""
+    try:
+        data = json.loads(request.body)
+        client_id = data.get('client_id')
+        plan_name = data.get('plan_name')
+        description = data.get('description', '')
+        actions_data = data.get('actions', [])
+        
+        if not client_id or not plan_name or not actions_data:
+            return JsonResponse({'error': 'Missing required data'}, status=400)
+        
+        client = get_object_or_404(Client, id=client_id)
+        
+        # Check access permission
+        if request.user.role == 'rm' and client.user != request.user:
+            return JsonResponse({'error': 'Access denied'}, status=403)
+        elif request.user.role == 'rm_head':
+            if client.user.manager != request.user:
+                return JsonResponse({'error': 'Access denied'}, status=403)
+        
+        # Create execution plan
+        execution_plan = ExecutionPlan.objects.create(
+            client=client,
+            plan_name=plan_name,
+            description=description,
+            created_by=request.user,
+            status='draft'
+        )
+        
+        # Create plan actions
+        for action_data in actions_data:
+            scheme = get_object_or_404(MutualFundScheme, id=action_data['scheme_id'])
+            
+            action = PlanAction.objects.create(
+                execution_plan=execution_plan,
+                action_type=action_data['action_type'],
+                scheme=scheme,
+                amount=Decimal(str(action_data.get('amount', 0))) if action_data.get('amount') else None,
+                units=Decimal(str(action_data.get('units', 0))) if action_data.get('units') else None,
+                sip_date=action_data.get('sip_date'),
+                target_scheme_id=action_data.get('target_scheme_id'),
+                priority=action_data.get('priority', 1),
+                notes=action_data.get('notes', '')
+            )
+        
+        # Generate Excel file
+        excel_file_path = generate_execution_plan_excel(execution_plan)
+        execution_plan.excel_file = excel_file_path
+        execution_plan.save()
+        
+        # Create workflow history
+        PlanWorkflowHistory.objects.create(
+            execution_plan=execution_plan,
+            from_status='',
+            to_status='draft',
+            changed_by=request.user,
+            comments='Execution plan created'
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'plan_id': execution_plan.id,
+            'message': 'Execution plan created successfully'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def generate_execution_plan_excel(execution_plan):
+    """Generate Excel file for execution plan"""
+    try:
+        # Create workbook
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Execution Plan"
+        
+        # Styling
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+        border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        # Title
+        ws.merge_cells('A1:H1')
+        ws['A1'] = f"EXECUTION PLAN - {execution_plan.client.name.upper()}"
+        ws['A1'].font = Font(bold=True, size=16)
+        ws['A1'].alignment = Alignment(horizontal='center')
+        
+        # Plan details
+        ws['A3'] = "Plan ID:"
+        ws['B3'] = execution_plan.plan_id
+        ws['A4'] = "Client Name:"
+        ws['B4'] = execution_plan.client.name
+        ws['A5'] = "Plan Name:"
+        ws['B5'] = execution_plan.plan_name
+        ws['A6'] = "Created Date:"
+        ws['B6'] = execution_plan.created_at.strftime('%d/%m/%Y')
+        ws['A7'] = "Created By:"
+        ws['B7'] = execution_plan.created_by.get_full_name() or execution_plan.created_by.username
+        
+        if execution_plan.description:
+            ws['A8'] = "Description:"
+            ws['B8'] = execution_plan.description
+            start_row = 10
+        else:
+            start_row = 9
+        
+        # Headers
+        headers = ['Sr.', 'Action Type', 'Scheme Name', 'AMC', 'Amount (₹)', 'Units', 'SIP Date', 'Target Scheme', 'Notes']
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=start_row, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.border = border
+            cell.alignment = Alignment(horizontal='center')
+        
+        # Actions data
+        actions = execution_plan.actions.all().select_related('scheme', 'target_scheme')
+        for row, action in enumerate(actions, start_row + 1):
+            ws.cell(row=row, column=1, value=row - start_row).border = border
+            ws.cell(row=row, column=2, value=action.get_action_type_display()).border = border
+            ws.cell(row=row, column=3, value=action.scheme.scheme_name).border = border
+            ws.cell(row=row, column=4, value=action.scheme.amc_name).border = border
+            
+            amount_cell = ws.cell(row=row, column=5, value=float(action.amount) if action.amount else '')
+            amount_cell.border = border
+            amount_cell.number_format = '#,##0.00'
+            
+            units_cell = ws.cell(row=row, column=6, value=float(action.units) if action.units else '')
+            units_cell.border = border
+            units_cell.number_format = '#,##0.0000'
+            
+            ws.cell(row=row, column=7, value=action.sip_date or '').border = border
+            ws.cell(row=row, column=8, value=action.target_scheme.scheme_name if action.target_scheme else '').border = border
+            ws.cell(row=row, column=9, value=action.notes or '').border = border
+        
+        # Adjust column widths
+        column_widths = [5, 15, 30, 20, 15, 12, 10, 25, 30]
+        for col, width in enumerate(column_widths, 1):
+            ws.column_dimensions[get_column_letter(col)].width = width
+        
+        # Save file
+        filename = execution_plan.get_filename()
+        file_path = os.path.join('media', 'execution_plans', 'excel', filename)
+        
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        
+        wb.save(file_path)
+        
+        # Return relative path for storing in database
+        return f'execution_plans/excel/{filename}'
+        
+    except Exception as e:
+        print(f"Error generating Excel: {str(e)}")
+        return None
+
+
+@login_required
+def plan_detail(request, plan_id):
+    """View execution plan details"""
+    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+    
+    # Check access permission
+    if not can_access_plan(request.user, execution_plan):
+        messages.error(request, "Access denied")
+        return redirect('dashboard')
+    
+    # Get plan actions
+    actions = execution_plan.actions.all().select_related('scheme', 'target_scheme', 'executed_by')
+    
+    # Get workflow history
+    workflow_history = execution_plan.workflow_history.all().select_related('changed_by')
+    
+    # Get comments
+    comments = execution_plan.comments.all().select_related('commented_by')
+    
+    # Calculate metrics if plan is completed
+    metrics = None
+    if execution_plan.status == 'completed':
+        metrics, created = ExecutionMetrics.objects.get_or_create(execution_plan=execution_plan)
+        if created or not metrics.updated_at:
+            metrics.calculate_metrics()
+    
+    # Check permissions
+    can_approve = can_approve_plan(request.user, execution_plan)
+    can_execute = can_execute_plan(request.user, execution_plan)
+    can_edit = can_edit_plan(request.user, execution_plan)
+    
+    context = {
+        'execution_plan': execution_plan,
+        'actions': actions,
+        'workflow_history': workflow_history,
+        'comments': comments,
+        'metrics': metrics,
+        'can_approve': can_approve,
+        'can_execute': can_execute,
+        'can_edit': can_edit,
+    }
+    
+    return render(request, 'execution_plans/plan_detail.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def submit_for_approval(request, plan_id):
+    """Submit execution plan for approval"""
+    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+    
+    # Check permission
+    if execution_plan.created_by != request.user:
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    if execution_plan.status != 'draft':
+        return JsonResponse({'error': 'Plan cannot be submitted for approval'}, status=400)
+    
+    # Submit for approval
+    if execution_plan.submit_for_approval():
+        # Create workflow history
+        PlanWorkflowHistory.objects.create(
+            execution_plan=execution_plan,
+            from_status='draft',
+            to_status='pending_approval',
+            changed_by=request.user,
+            comments='Plan submitted for approval'
+        )
+        
+        # Notify line manager
+        notify_approval_required(execution_plan)
+        
+        return JsonResponse({'success': True, 'message': 'Plan submitted for approval successfully'})
+    else:
+        return JsonResponse({'error': 'Failed to submit plan for approval'}, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def approve_plan(request, plan_id):
+    """Approve execution plan"""
+    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+    
+    # Check permission
+    if not can_approve_plan(request.user, execution_plan):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    comments = request.POST.get('comments', '')
+    
+    if execution_plan.approve(request.user):
+        # Create workflow history
+        PlanWorkflowHistory.objects.create(
+            execution_plan=execution_plan,
+            from_status='pending_approval',
+            to_status='approved',
+            changed_by=request.user,
+            comments=comments or 'Plan approved'
+        )
+        
+        # Add comment if provided
+        if comments:
+            PlanComment.objects.create(
+                execution_plan=execution_plan,
+                comment=comments,
+                commented_by=request.user,
+                is_internal=True
+            )
+        
+        messages.success(request, 'Plan approved successfully')
+        return JsonResponse({'success': True, 'message': 'Plan approved successfully'})
+    else:
+        return JsonResponse({'error': 'Failed to approve plan'}, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def reject_plan(request, plan_id):
+    """Reject execution plan"""
+    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+    
+    # Check permission
+    if not can_approve_plan(request.user, execution_plan):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    reason = request.POST.get('reason', '')
+    if not reason:
+        return JsonResponse({'error': 'Rejection reason is required'}, status=400)
+    
+    if execution_plan.reject(request.user, reason):
+        # Create workflow history
+        PlanWorkflowHistory.objects.create(
+            execution_plan=execution_plan,
+            from_status='pending_approval',
+            to_status='rejected',
+            changed_by=request.user,
+            comments=f'Plan rejected: {reason}'
+        )
+        
+        messages.success(request, 'Plan rejected')
+        return JsonResponse({'success': True, 'message': 'Plan rejected'})
+    else:
+        return JsonResponse({'error': 'Failed to reject plan'}, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def send_to_client(request, plan_id):
+    """Send execution plan to client via email"""
+    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+    
+    # Check permission
+    if execution_plan.created_by != request.user and not can_approve_plan(request.user, execution_plan):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    if execution_plan.status != 'approved':
+        return JsonResponse({'error': 'Only approved plans can be sent to client'}, status=400)
+    
+    try:
+        # Send email to client
+        client_email = execution_plan.client.contact_info  # Adjust based on your client model
+        if '@' not in client_email:
+            return JsonResponse({'error': 'Client email not found'}, status=400)
+        
+        subject = f"Investment Execution Plan - {execution_plan.plan_name}"
+        
+        # Prepare email content
+        email_content = render_to_string('execution_plans/emails/client_plan.html', {
+            'execution_plan': execution_plan,
+            'client': execution_plan.client,
+            'rm': execution_plan.created_by,
+        })
+        
+        # Attach Excel file if available
+        attachments = []
+        if execution_plan.excel_file:
+            file_path = os.path.join(settings.MEDIA_ROOT, execution_plan.excel_file.name)
+            if os.path.exists(file_path):
+                with open(file_path, 'rb') as f:
+                    attachments.append((execution_plan.get_filename(), f.read(), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'))
+        
+        send_mail(
+            subject=subject,
+            message='',
+            html_message=email_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[client_email],
+            attachments=attachments,
+        )
+        
+        # Update plan status
+        execution_plan.client_communication_sent = True
+        execution_plan.save()
+        
+        # Add comment
+        PlanComment.objects.create(
+            execution_plan=execution_plan,
+            comment='Execution plan sent to client via email',
+            commented_by=request.user,
+            is_internal=True
+        )
+        
+        return JsonResponse({'success': True, 'message': 'Plan sent to client successfully'})
+        
+    except Exception as e:
+        return JsonResponse({'error': f'Failed to send email: {str(e)}'}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def mark_client_approved(request, plan_id):
+    """Mark plan as client approved"""
+    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+    
+    # Check permission - only RM who created the plan can mark as client approved
+    if execution_plan.created_by != request.user:
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    if execution_plan.mark_client_approved():
+        # Create workflow history
+        PlanWorkflowHistory.objects.create(
+            execution_plan=execution_plan,
+            from_status='approved',
+            to_status='client_approved',
+            changed_by=request.user,
+            comments='Client approval confirmed'
+        )
+        
+        # Notify operations team
+        notify_ops_team(execution_plan)
+        
+        return JsonResponse({'success': True, 'message': 'Plan marked as client approved'})
+    else:
+        return JsonResponse({'error': 'Failed to mark as client approved'}, status=400)
+
+
+@login_required
+def ongoing_plans(request):
+    """View ongoing execution plans"""
+    # Get plans based on user role
+    if request.user.role == 'rm':
+        plans = ExecutionPlan.objects.filter(
+            created_by=request.user,
+            status__in=['pending_approval', 'approved', 'client_approved', 'in_execution']
+        )
+    elif request.user.role == 'rm_head':
+        subordinate_rms = User.objects.filter(manager=request.user, role='rm')
+        plans = ExecutionPlan.objects.filter(
+            Q(created_by__in=subordinate_rms) | Q(created_by=request.user),
+            status__in=['pending_approval', 'approved', 'client_approved', 'in_execution']
+        )
+    elif request.user.role in ['ops_exec', 'ops_team_lead']:
+        plans = ExecutionPlan.objects.filter(
+            status__in=['client_approved', 'in_execution']
+        )
+    else:
+        plans = ExecutionPlan.objects.filter(
+            status__in=['pending_approval', 'approved', 'client_approved', 'in_execution']
+        )
+    
+    # Filter by status if requested
+    status_filter = request.GET.get('status')
+    if status_filter:
+        plans = plans.filter(status=status_filter)
+    
+    # Search
+    search = request.GET.get('search')
+    if search:
+        plans = plans.filter(
+            Q(plan_name__icontains=search) |
+            Q(client__name__icontains=search) |
+            Q(plan_id__icontains=search)
+        )
+    
+    # Pagination
+    paginator = Paginator(plans.order_by('-created_at'), 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'status_filter': status_filter,
+        'search': search,
+        'user_role': request.user.role,
+    }
+    
+    return render(request, 'execution_plans/ongoing_plans.html', context)
+
+
+@login_required
+def completed_plans(request):
+    """View completed execution plans"""
+    # Get plans based on user role
+    if request.user.role == 'rm':
+        plans = ExecutionPlan.objects.filter(
+            created_by=request.user,
+            status__in=['completed', 'cancelled', 'rejected']
+        )
+    elif request.user.role == 'rm_head':
+        subordinate_rms = User.objects.filter(manager=request.user, role='rm')
+        plans = ExecutionPlan.objects.filter(
+            Q(created_by__in=subordinate_rms) | Q(created_by=request.user),
+            status__in=['completed', 'cancelled', 'rejected']
+        )
+    else:
+        plans = ExecutionPlan.objects.filter(
+            status__in=['completed', 'cancelled', 'rejected']
+        )
+    
+    # Filter by status if requested
+    status_filter = request.GET.get('status')
+    if status_filter:
+        plans = plans.filter(status=status_filter)
+    
+    # Date range filter
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    if date_from:
+        plans = plans.filter(created_at__gte=date_from)
+    if date_to:
+        plans = plans.filter(created_at__lte=date_to)
+    
+    # Search
+    search = request.GET.get('search')
+    if search:
+        plans = plans.filter(
+            Q(plan_name__icontains=search) |
+            Q(client__name__icontains=search) |
+            Q(plan_id__icontains=search)
+        )
+    
+    # Pagination
+    paginator = Paginator(plans.order_by('-completed_at', '-created_at'), 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'status_filter': status_filter,
+        'search': search,
+        'date_from': date_from,
+        'date_to': date_to,
+        'user_role': request.user.role,
+    }
+    
+    return render(request, 'execution_plans/completed_plans.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def start_execution(request, plan_id):
+    """Start plan execution"""
+    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+    
+    if not can_execute_plan(request.user, execution_plan):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    if execution_plan.start_execution(request.user):
+        # Create workflow history
+        PlanWorkflowHistory.objects.create(
+            execution_plan=execution_plan,
+            from_status='client_approved',
+            to_status='in_execution',
+            changed_by=request.user,
+            comments='Plan execution started'
+        )
+        
+        return JsonResponse({'success': True, 'message': 'Plan execution started'})
+    else:
+        return JsonResponse({'error': 'Failed to start execution'}, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def execute_action(request, action_id):
+    """Execute individual plan action"""
+    action = get_object_or_404(PlanAction, id=action_id)
+    
+    if not can_execute_plan(request.user, action.execution_plan):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    try:
+        # Get transaction details from request
+        transaction_details = {
+            'transaction_id': request.POST.get('transaction_id', ''),
+            'amount': request.POST.get('executed_amount'),
+            'units': request.POST.get('executed_units'),
+            'nav_price': request.POST.get('nav_price'),
+        }
+        
+        # Convert string values to Decimal where needed
+        if transaction_details['amount']:
+            transaction_details['amount'] = Decimal(str(transaction_details['amount']))
+        if transaction_details['units']:
+            transaction_details['units'] = Decimal(str(transaction_details['units']))
+        if transaction_details['nav_price']:
+            transaction_details['nav_price'] = Decimal(str(transaction_details['nav_price']))
+        
+        notes = request.POST.get('notes', '')
+        if notes:
+            action.notes = notes
+            action.save()
+        
+        if action.execute(request.user, transaction_details):
+            return JsonResponse({'success': True, 'message': 'Action executed successfully'})
+        else:
+            return JsonResponse({'error': 'Failed to execute action'}, status=400)
+            
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def mark_action_failed(request, action_id):
+    """Mark action as failed"""
+    action = get_object_or_404(PlanAction, id=action_id)
+    
+    if not can_execute_plan(request.user, action.execution_plan):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    reason = request.POST.get('reason', '')
+    if not reason:
+        return JsonResponse({'error': 'Failure reason is required'}, status=400)
+    
+    action.mark_failed(reason, request.user)
+    
+    return JsonResponse({'success': True, 'message': 'Action marked as failed'})
+
+
+@login_required
+def download_excel(request, plan_id):
+    """Download execution plan Excel file"""
+    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+    
+    # Check access permission
+    if not can_access_plan(request.user, execution_plan):
+        raise Http404("Access denied")
+    
+    if not execution_plan.excel_file:
+        messages.error(request, "Excel file not available")
+        return redirect('plan_detail', plan_id=plan_id)
+    
+    try:
+        file_path = os.path.join(settings.MEDIA_ROOT, execution_plan.excel_file.name)
+        
+        if not os.path.exists(file_path):
+            # Regenerate Excel file if missing
+            excel_file_path = generate_execution_plan_excel(execution_plan)
+            if excel_file_path:
+                execution_plan.excel_file = excel_file_path
+                execution_plan.save()
+                file_path = os.path.join(settings.MEDIA_ROOT, execution_plan.excel_file.name)
+            else:
+                messages.error(request, "Unable to generate Excel file")
+                return redirect('plan_detail', plan_id=plan_id)
+        
+        with open(file_path, 'rb') as f:
+            response = HttpResponse(
+                f.read(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            response['Content-Disposition'] = f'attachment; filename="{execution_plan.get_filename()}"'
+            return response
+            
+    except Exception as e:
+        messages.error(request, f"Error downloading file: {str(e)}")
+        return redirect('plan_detail', plan_id=plan_id)
+
+
+@login_required
+@require_http_methods(["POST"])
+def add_comment(request, plan_id):
+    """Add comment to execution plan"""
+    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+    
+    if not can_access_plan(request.user, execution_plan):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    comment_text = request.POST.get('comment', '').strip()
+    is_internal = request.POST.get('is_internal', 'true').lower() == 'true'
+    
+    if not comment_text:
+        return JsonResponse({'error': 'Comment cannot be empty'}, status=400)
+    
+    comment = PlanComment.objects.create(
+        execution_plan=execution_plan,
+        comment=comment_text,
+        commented_by=request.user,
+        is_internal=is_internal
+    )
+    
+    return JsonResponse({
+        'success': True,
+        'comment': {
+            'id': comment.id,
+            'comment': comment.comment,
+            'commented_by': comment.commented_by.get_full_name() or comment.commented_by.username,
+            'created_at': comment.created_at.strftime('%d/%m/%Y %H:%M'),
+            'is_internal': comment.is_internal,
+        }
+    })
+
+
+@login_required
+def search_schemes_ajax(request):
+    """AJAX endpoint to search mutual fund schemes"""
+    query = request.GET.get('q', '').strip()
+    
+    if len(query) < 2:
+        return JsonResponse({'schemes': []})
+    
+    schemes = MutualFundScheme.objects.filter(
+        Q(scheme_name__icontains=query) | Q(amc_name__icontains=query),
+        is_active=True
+    ).order_by('amc_name', 'scheme_name')[:20]
+    
+    schemes_data = []
+    for scheme in schemes:
+        schemes_data.append({
+            'id': scheme.id,
+            'scheme_name': scheme.scheme_name,
+            'amc_name': scheme.amc_name,
+            'scheme_type': scheme.get_scheme_type_display(),
+            'minimum_investment': float(scheme.minimum_investment),
+            'minimum_sip': float(scheme.minimum_sip),
+        })
+    
+    return JsonResponse({'schemes': schemes_data})
+
+
+@login_required
+def execution_reports(request):
+    """Execution plans reports dashboard"""
+    if request.user.role not in ['rm_head', 'business_head', 'business_head_ops', 'top_management']:
+        messages.error(request, "Access denied")
+        return redirect('dashboard')
+    
+    # Date range filter
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    
+    if not date_from:
+        date_from = (timezone.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+    if not date_to:
+        date_to = timezone.now().strftime('%Y-%m-%d')
+    
+    # Get plans in date range
+    plans = ExecutionPlan.objects.filter(
+        created_at__date__gte=date_from,
+        created_at__date__lte=date_to
+    )
+    
+    # Filter by RM if specified
+    rm_filter = request.GET.get('rm')
+    if rm_filter:
+        plans = plans.filter(created_by_id=rm_filter)
+    
+    # Calculate statistics
+    stats = {
+        'total_plans': plans.count(),
+        'draft_plans': plans.filter(status='draft').count(),
+        'pending_approval': plans.filter(status='pending_approval').count(),
+        'approved_plans': plans.filter(status='approved').count(),
+        'completed_plans': plans.filter(status='completed').count(),
+        'rejected_plans': plans.filter(status='rejected').count(),
+    }
+    
+    # Get RMs for filter
+    rms = User.objects.filter(role='rm').order_by('first_name', 'last_name', 'username')
+    
+    # Performance metrics
+    completed_plans = plans.filter(status='completed')
+    metrics_data = []
+    
+    for plan in completed_plans:
+        try:
+            metrics = ExecutionMetrics.objects.get(execution_plan=plan)
+            metrics_data.append({
+                'plan': plan,
+                'metrics': metrics,
+            })
+        except ExecutionMetrics.DoesNotExist:
+            continue
+    
+    # Average metrics
+    avg_metrics = {}
+    if metrics_data:
+        avg_metrics = {
+            'avg_time_to_approval': sum(m['metrics'].time_to_approval or 0 for m in metrics_data) / len(metrics_data),
+            'avg_time_to_execution': sum(m['metrics'].time_to_execution or 0 for m in metrics_data) / len(metrics_data),
+            'avg_execution_time': sum(m['metrics'].total_execution_time or 0 for m in metrics_data) / len(metrics_data),
+            'avg_success_rate': sum(m['metrics'].success_rate for m in metrics_data) / len(metrics_data),
+        }
+    
+    context = {
+        'stats': stats,
+        'date_from': date_from,
+        'date_to': date_to,
+        'rm_filter': rm_filter,
+        'rms': rms,
+        'metrics_data': metrics_data,
+        'avg_metrics': avg_metrics,
+    }
+    
+    return render(request, 'execution_plans/reports.html', context)
+
+
+@login_required
+def plan_templates(request):
+    """Manage plan templates"""
+    if request.user.role not in ['rm', 'rm_head', 'business_head']:
+        messages.error(request, "Access denied")
+        return redirect('dashboard')
+    
+    # Get templates accessible to user
+    templates = PlanTemplate.objects.filter(
+        Q(is_public=True) | Q(created_by=request.user)
+    ).filter(is_active=True).order_by('-created_at')
+    
+    context = {
+        'templates': templates,
+    }
+    
+    return render(request, 'execution_plans/templates.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def save_template(request):
+    """Save plan as template"""
+    try:
+        data = json.loads(request.body)
+        
+        template_name = data.get('template_name')
+        description = data.get('description', '')
+        is_public = data.get('is_public', False)
+        template_data = data.get('template_data', {})
+        
+        if not template_name:
+            return JsonResponse({'error': 'Template name is required'}, status=400)
+        
+        # Check if user can create public templates
+        if is_public and request.user.role not in ['rm_head', 'business_head', 'top_management']:
+            is_public = False
+        
+        template = PlanTemplate.objects.create(
+            name=template_name,
+            description=description,
+            created_by=request.user,
+            is_public=is_public,
+            template_data=template_data
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'template_id': template.id,
+            'message': 'Template saved successfully'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def load_template_ajax(request, template_id):
+    """AJAX endpoint to load template data"""
+    template = get_object_or_404(PlanTemplate, id=template_id)
+    
+    # Check access permission
+    if not template.can_be_used_by(request.user):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    return JsonResponse({
+        'success': True,
+        'template_data': template.template_data,
+        'template_name': template.name,
+        'description': template.description,
+    })
+
+
+# Utility functions
+
+def can_access_plan(user, execution_plan):
+    """Check if user can access the execution plan"""
+    if user.role == 'top_management':
+        return True
+    elif user.role in ['business_head', 'business_head_ops']:
+        return True
+    elif user.role == 'rm_head':
+        # Can access plans from subordinate RMs and own plans
+        return (execution_plan.created_by == user or 
+                execution_plan.created_by.manager == user)
+    elif user.role == 'rm':
+        # Can only access own plans
+        return execution_plan.created_by == user
+    elif user.role in ['ops_exec', 'ops_team_lead']:
+        # Can access plans that are ready for or in execution
+        return execution_plan.status in ['client_approved', 'in_execution', 'completed']
+    
+    return False
+
+
+def can_approve_plan(user, execution_plan):
+    """Check if user can approve the execution plan"""
+    if execution_plan.status != 'pending_approval':
+        return False
+    
+    return execution_plan.can_be_approved_by(user)
+
+
+def can_execute_plan(user, execution_plan):
+    """Check if user can execute the plan"""
+    if user.role not in ['ops_exec', 'ops_team_lead']:
+        return False
+    
+    return execution_plan.status in ['client_approved', 'in_execution']
+
+
+def can_edit_plan(user, execution_plan):
+    """Check if user can edit the plan"""
+    if execution_plan.status not in ['draft', 'rejected']:
+        return False
+    
+    return execution_plan.created_by == user
+
+
+def notify_approval_required(execution_plan):
+    """Notify line manager about approval requirement"""
+    try:
+        # Find the appropriate approver
+        line_manager = execution_plan.created_by.get_line_manager()
+        
+        if line_manager and hasattr(line_manager, 'email'):
+            subject = f"Execution Plan Approval Required - {execution_plan.plan_id}"
+            
+            email_content = render_to_string('execution_plans/emails/approval_required.html', {
+                'execution_plan': execution_plan,
+                'approver': line_manager,
+                'rm': execution_plan.created_by,
+            })
+            
+            send_mail(
+                subject=subject,
+                message='',
+                html_message=email_content,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[line_manager.email],
+            )
+            
+    except Exception as e:
+        print(f"Error sending approval notification: {str(e)}")
+
+
+def notify_ops_team(execution_plan):
+    """Notify operations team about plan ready for execution"""
+    try:
+        # Get operations team members
+        ops_users = User.objects.filter(
+            role__in=['ops_exec', 'ops_team_lead', 'business_head_ops']
+        ).exclude(email='')
+        
+        if ops_users.exists():
+            subject = f"New Execution Plan Ready - {execution_plan.plan_id}"
+            
+            email_content = render_to_string('execution_plans/emails/ops_notification.html', {
+                'execution_plan': execution_plan,
+                'client': execution_plan.client,
+                'rm': execution_plan.created_by,
+            })
+            
+            recipient_list = [user.email for user in ops_users if user.email]
+            
+            send_mail(
+                subject=subject,
+                message='',
+                html_message=email_content,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=recipient_list,
+            )
+            
+    except Exception as e:
+        print(f"Error sending ops notification: {str(e)}")
+
+
+@login_required
+def bulk_action_plans(request):
+    """Bulk actions on execution plans"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        plan_ids = data.get('plan_ids', [])
+        action = data.get('action')
+        
+        if not plan_ids or not action:
+            return JsonResponse({'error': 'Missing required data'}, status=400)
+        
+        plans = ExecutionPlan.objects.filter(id__in=plan_ids)
+        
+        # Check permissions for all plans
+        for plan in plans:
+            if not can_access_plan(request.user, plan):
+                return JsonResponse({'error': 'Access denied for one or more plans'}, status=403)
+        
+        success_count = 0
+        error_count = 0
+        
+        if action == 'approve' and request.user.role in ['rm_head', 'business_head', 'top_management']:
+            for plan in plans:
+                if plan.status == 'pending_approval' and plan.can_be_approved_by(request.user):
+                    if plan.approve(request.user):
+                        PlanWorkflowHistory.objects.create(
+                            execution_plan=plan,
+                            from_status='pending_approval',
+                            to_status='approved',
+                            changed_by=request.user,
+                            comments='Bulk approval'
+                        )
+                        success_count += 1
+                    else:
+                        error_count += 1
+                else:
+                    error_count += 1
+        
+        elif action == 'start_execution' and request.user.role in ['ops_exec', 'ops_team_lead']:
+            for plan in plans:
+                if plan.status == 'client_approved':
+                    if plan.start_execution(request.user):
+                        PlanWorkflowHistory.objects.create(
+                            execution_plan=plan,
+                            from_status='client_approved',
+                            to_status='in_execution',
+                            changed_by=request.user,
+                            comments='Bulk execution start'
+                        )
+                        success_count += 1
+                    else:
+                        error_count += 1
+                else:
+                    error_count += 1
+        
+        else:
+            return JsonResponse({'error': 'Invalid action or insufficient permissions'}, status=400)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Action completed. Success: {success_count}, Errors: {error_count}'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def plan_analytics(request, plan_id):
+    """Detailed analytics for a specific plan"""
+    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+    
+    if not can_access_plan(request.user, execution_plan):
+        messages.error(request, "Access denied")
+        return redirect('dashboard')
+    
+    # Get or create metrics
+    metrics, created = ExecutionMetrics.objects.get_or_create(execution_plan=execution_plan)
+    if created or not metrics.updated_at:
+        metrics.calculate_metrics()
+    
+    # Get action-wise performance
+    actions = execution_plan.actions.all().select_related('scheme', 'executed_by')
+    
+    # Calculate timeline data
+    timeline_data = []
+    
+    if execution_plan.created_at:
+        timeline_data.append({
+            'event': 'Plan Created',
+            'timestamp': execution_plan.created_at,
+            'user': execution_plan.created_by.get_full_name() or execution_plan.created_by.username,
+        })
+    
+    if execution_plan.submitted_at:
+        timeline_data.append({
+            'event': 'Submitted for Approval',
+            'timestamp': execution_plan.submitted_at,
+            'user': execution_plan.created_by.get_full_name() or execution_plan.created_by.username,
+        })
+    
+    if execution_plan.approved_at:
+        timeline_data.append({
+            'event': 'Approved',
+            'timestamp': execution_plan.approved_at,
+            'user': execution_plan.approved_by.get_full_name() if execution_plan.approved_by else 'Unknown',
+        })
+    
+    if execution_plan.client_approved_at:
+        timeline_data.append({
+            'event': 'Client Approved',
+            'timestamp': execution_plan.client_approved_at,
+            'user': execution_plan.created_by.get_full_name() or execution_plan.created_by.username,
+        })
+    
+    if execution_plan.execution_started_at:
+        timeline_data.append({
+            'event': 'Execution Started',
+            'timestamp': execution_plan.execution_started_at,
+            'user': 'Operations Team',
+        })
+    
+    if execution_plan.completed_at:
+        timeline_data.append({
+            'event': 'Execution Completed',
+            'timestamp': execution_plan.completed_at,
+            'user': 'Operations Team',
+        })
+    
+    # Sort timeline by timestamp
+    timeline_data.sort(key=lambda x: x['timestamp'])
+    
+    context = {
+        'execution_plan': execution_plan,
+        'metrics': metrics,
+        'actions': actions,
+        'timeline_data': timeline_data,
+    }
+    
+    return render(request, 'execution_plans/plan_analytics.html', context)

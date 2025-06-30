@@ -1157,7 +1157,7 @@ class ServiceRequest(models.Model):
     # Basic Information
     request_id = models.CharField(max_length=20, unique=True, editable=False)
     client = models.ForeignKey(
-        'Client',  # Assuming you have a Client model
+        'base.Client',  # Assuming you have a Client model
         on_delete=models.CASCADE,
         related_name='service_requests'
     )
@@ -1554,3 +1554,662 @@ class InvestmentPlanReview(models.Model):
 
     def __str__(self):
         return f"{self.goal or 'No Goal'} for {self.client.name}"
+    
+# execution_plans/models.py
+from django.db import models
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
+from decimal import Decimal
+import os
+
+User = get_user_model()
+
+class MutualFundScheme(models.Model):
+    """Master data for mutual fund schemes"""
+    scheme_name = models.CharField(max_length=200)
+    amc_name = models.CharField(max_length=100)
+    scheme_code = models.CharField(max_length=50, unique=True)
+    scheme_type = models.CharField(max_length=50, choices=[
+        ('equity', 'Equity'),
+        ('debt', 'Debt'),
+        ('hybrid', 'Hybrid'),
+        ('liquid', 'Liquid'),
+        ('elss', 'ELSS'),
+        ('index', 'Index'),
+        ('etf', 'ETF'),
+    ])
+    risk_category = models.CharField(max_length=20, choices=[
+        ('low', 'Low'),
+        ('moderate', 'Moderate'),
+        ('high', 'High'),
+        ('very_high', 'Very High'),
+    ], default='moderate')
+    minimum_investment = models.DecimalField(max_digits=10, decimal_places=2, default=500.00)
+    minimum_sip = models.DecimalField(max_digits=10, decimal_places=2, default=500.00)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['amc_name', 'scheme_name']
+        verbose_name = 'Mutual Fund Scheme'
+        verbose_name_plural = 'Mutual Fund Schemes'
+    
+    def __str__(self):
+        return f"{self.amc_name} - {self.scheme_name}"
+
+class ClientPortfolio(models.Model):
+    """Current portfolio holdings for clients"""
+    client = models.ForeignKey(
+        'base.Client',  # Reference to your existing Client model
+        on_delete=models.CASCADE,
+        related_name='portfolio_holdings'
+    )
+    scheme = models.ForeignKey(
+        MutualFundScheme,
+        on_delete=models.CASCADE,
+        related_name='client_holdings'
+    )
+    folio_number = models.CharField(max_length=50, blank=True)
+    units = models.DecimalField(max_digits=15, decimal_places=4, default=0)
+    current_value = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    cost_value = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    sip_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    sip_date = models.PositiveIntegerField(null=True, blank=True, help_text="SIP date (1-28)")
+    last_updated = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['client', 'scheme', 'folio_number']
+        ordering = ['client', 'scheme']
+        verbose_name = 'Client Portfolio'
+        verbose_name_plural = 'Client Portfolios'
+    
+    def __str__(self):
+        return f"{self.client.name} - {self.scheme.scheme_name}"
+    
+    @property
+    def gain_loss(self):
+        return self.current_value - self.cost_value
+    
+    @property
+    def gain_loss_percentage(self):
+        if self.cost_value > 0:
+            return ((self.current_value - self.cost_value) / self.cost_value) * 100
+        return 0
+
+class ExecutionPlan(models.Model):
+    """Main execution plan model"""
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('pending_approval', 'Pending Approval'),
+        ('approved', 'Approved'),
+        ('client_approved', 'Client Approved'),
+        ('in_execution', 'In Execution'),
+        ('completed', 'Completed'),
+        ('rejected', 'Rejected'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    # Basic Information
+    plan_id = models.CharField(max_length=20, unique=True, editable=False)
+    client = models.ForeignKey(
+        'base.Client',
+        on_delete=models.CASCADE,
+        related_name='execution_plans'
+    )
+    plan_name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    
+    # Assignment and Approval
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='created_execution_plans',
+        limit_choices_to={'role__in': ['rm', 'rm_head']}
+    )
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_execution_plans',
+        limit_choices_to={'role__in': ['rm_head', 'business_head']}
+    )
+    
+    # Status and Timeline
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    client_approved_at = models.DateTimeField(null=True, blank=True)
+    execution_started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    
+    # File Management
+    excel_file = models.FileField(
+        upload_to='execution_plans/excel/',
+        null=True,
+        blank=True,
+        help_text="Generated Excel file for the plan"
+    )
+    
+    # Metadata
+    notes = models.TextField(blank=True)
+    rejection_reason = models.TextField(blank=True)
+    client_communication_sent = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Execution Plan'
+        verbose_name_plural = 'Execution Plans'
+        permissions = [
+            ('can_approve_execution_plan', 'Can approve execution plans'),
+            ('can_execute_plan', 'Can execute approved plans'),
+        ]
+    
+    def save(self, *args, **kwargs):
+        if not self.plan_id:
+            self.plan_id = self.generate_plan_id()
+        super().save(*args, **kwargs)
+    
+    def generate_plan_id(self):
+        """Generate unique plan ID in format EPYYYYMMDDXXXX"""
+        from datetime import datetime
+        date_part = datetime.now().strftime("%Y%m%d")
+        last_plan = ExecutionPlan.objects.filter(
+            plan_id__startswith=f"EP{date_part}"
+        ).order_by('-plan_id').first()
+        
+        if last_plan:
+            last_num = int(last_plan.plan_id[-4:])
+            new_num = last_num + 1
+        else:
+            new_num = 1
+            
+        return f"EP{date_part}{new_num:04d}"
+    
+    def __str__(self):
+        return f"{self.plan_id} - {self.plan_name} ({self.client.name})"
+    
+    def get_filename(self):
+        """Generate Excel filename"""
+        date_str = self.created_at.strftime('%d%m%Y')
+        return f"{self.client.name}_ExecutionPlan_{date_str}.xlsx"
+    
+    def can_be_approved_by(self, user):
+        """Check if user can approve this plan"""
+        if user.role not in ['rm_head', 'business_head', 'top_management']:
+            return False
+        
+        # RM Head can approve plans created by their team RMs
+        if user.role == 'rm_head':
+            return self.created_by.manager == user
+        
+        # Business Head and Top Management can approve any plan
+        return True
+    
+    def can_be_executed_by(self, user):
+        """Check if user can execute this plan"""
+        return user.role in ['ops_exec', 'ops_team_lead'] and self.status == 'client_approved'
+    
+    def submit_for_approval(self):
+        """Submit plan for approval"""
+        if self.status == 'draft':
+            self.status = 'pending_approval'
+            self.submitted_at = timezone.now()
+            self.save()
+            return True
+        return False
+    
+    def approve(self, approved_by):
+        """Approve the plan"""
+        if self.status == 'pending_approval' and self.can_be_approved_by(approved_by):
+            self.status = 'approved'
+            self.approved_by = approved_by
+            self.approved_at = timezone.now()
+            self.save()
+            return True
+        return False
+    
+    def reject(self, rejected_by, reason):
+        """Reject the plan"""
+        if self.status == 'pending_approval' and self.can_be_approved_by(rejected_by):
+            self.status = 'rejected'
+            self.rejection_reason = reason
+            self.approved_by = rejected_by
+            self.approved_at = timezone.now()
+            self.save()
+            return True
+        return False
+    
+    def mark_client_approved(self):
+        """Mark as client approved"""
+        if self.status == 'approved':
+            self.status = 'client_approved'
+            self.client_approved_at = timezone.now()
+            self.save()
+            return True
+        return False
+    
+    def start_execution(self, executor):
+        """Start plan execution"""
+        if self.status == 'client_approved' and self.can_be_executed_by(executor):
+            self.status = 'in_execution'
+            self.execution_started_at = timezone.now()
+            self.save()
+            return True
+        return False
+    
+    def complete_execution(self):
+        """Complete plan execution"""
+        if self.status == 'in_execution':
+            # Check if all actions are completed
+            pending_actions = self.actions.filter(status__in=['pending', 'in_progress'])
+            if not pending_actions.exists():
+                self.status = 'completed'
+                self.completed_at = timezone.now()
+                self.save()
+                return True
+        return False
+
+class PlanAction(models.Model):
+    """Individual actions within an execution plan"""
+    ACTION_TYPES = [
+        ('purchase', 'Purchase'),
+        ('redemption', 'Redemption'),
+        ('sip_start', 'SIP Start'),
+        ('sip_modify', 'SIP Modify'),
+        ('sip_stop', 'SIP Stop'),
+        ('switch', 'Switch'),
+        ('stp_start', 'STP Start'),
+        ('stp_stop', 'STP Stop'),
+        ('swp_start', 'SWP Start'),
+        ('swp_stop', 'SWP Stop'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    execution_plan = models.ForeignKey(
+        ExecutionPlan,
+        on_delete=models.CASCADE,
+        related_name='actions'
+    )
+    action_type = models.CharField(max_length=20, choices=ACTION_TYPES)
+    scheme = models.ForeignKey(
+        MutualFundScheme,
+        on_delete=models.CASCADE,
+        related_name='plan_actions'
+    )
+    
+    # Action Details
+    amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.01'))]
+    )
+    units = models.DecimalField(
+        max_digits=15,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.0001'))]
+    )
+    sip_date = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="SIP date (1-28)"
+    )
+    
+    # For Switch/STP operations
+    target_scheme = models.ForeignKey(
+        MutualFundScheme,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='target_actions',
+        help_text="Target scheme for switch/STP"
+    )
+    
+    # Execution Details
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='pending')
+    priority = models.PositiveIntegerField(default=1, help_text="Execution priority (1=highest)")
+    executed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='executed_actions',
+        limit_choices_to={'role__in': ['ops_exec', 'ops_team_lead']}
+    )
+    executed_at = models.DateTimeField(null=True, blank=True)
+    
+    # Transaction Details (post-execution)
+    transaction_id = models.CharField(max_length=100, blank=True)
+    executed_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+    executed_units = models.DecimalField(
+        max_digits=15,
+        decimal_places=4,
+        null=True,
+        blank=True
+    )
+    nav_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=4,
+        null=True,
+        blank=True
+    )
+    
+    # Notes and Documentation
+    notes = models.TextField(blank=True)
+    failure_reason = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['priority', 'created_at']
+        verbose_name = 'Plan Action'
+        verbose_name_plural = 'Plan Actions'
+    
+    def __str__(self):
+        return f"{self.get_action_type_display()} - {self.scheme.scheme_name}"
+    
+    def clean(self):
+        """Validate action data"""
+        super().clean()
+        
+        # Validate amount or units is provided
+        if not self.amount and not self.units:
+            raise ValidationError("Either amount or units must be specified")
+        
+        # Validate SIP actions have SIP date
+        if self.action_type in ['sip_start', 'sip_modify'] and not self.sip_date:
+            raise ValidationError("SIP date is required for SIP actions")
+        
+        # Validate switch/STP actions have target scheme
+        if self.action_type in ['switch', 'stp_start'] and not self.target_scheme:
+            raise ValidationError("Target scheme is required for switch/STP actions")
+        
+        # Validate SIP date range
+        if self.sip_date and not (1 <= self.sip_date <= 28):
+            raise ValidationError("SIP date must be between 1 and 28")
+    
+    def execute(self, executor, transaction_details=None):
+        """Execute the action"""
+        if self.status != 'pending':
+            return False
+        
+        if not self.execution_plan.can_be_executed_by(executor):
+            return False
+        
+        self.status = 'in_progress'
+        self.executed_by = executor
+        self.save()
+        
+        # Here you would integrate with actual transaction systems
+        # For now, we'll simulate execution
+        try:
+            # Simulate transaction processing
+            self.status = 'completed'
+            self.executed_at = timezone.now()
+            
+            if transaction_details:
+                self.transaction_id = transaction_details.get('transaction_id', '')
+                self.executed_amount = transaction_details.get('amount', self.amount)
+                self.executed_units = transaction_details.get('units', self.units)
+                self.nav_price = transaction_details.get('nav_price')
+            
+            self.save()
+            
+            # Check if all actions in plan are completed
+            self.execution_plan.complete_execution()
+            
+            return True
+            
+        except Exception as e:
+            self.status = 'failed'
+            self.failure_reason = str(e)
+            self.save()
+            return False
+    
+    def mark_failed(self, reason, failed_by=None):
+        """Mark action as failed"""
+        self.status = 'failed'
+        self.failure_reason = reason
+        if failed_by:
+            self.executed_by = failed_by
+        self.executed_at = timezone.now()
+        self.save()
+    
+    def can_be_cancelled(self):
+        """Check if action can be cancelled"""
+        return self.status in ['pending', 'in_progress']
+    
+    def cancel(self, cancelled_by, reason=""):
+        """Cancel the action"""
+        if self.can_be_cancelled():
+            self.status = 'cancelled'
+            self.failure_reason = reason
+            self.executed_by = cancelled_by
+            self.executed_at = timezone.now()
+            self.save()
+            return True
+        return False
+
+class PlanWorkflowHistory(models.Model):
+    """Track workflow history for audit trail"""
+    execution_plan = models.ForeignKey(
+        ExecutionPlan,
+        on_delete=models.CASCADE,
+        related_name='workflow_history'
+    )
+    from_status = models.CharField(max_length=20, choices=ExecutionPlan.STATUS_CHOICES)
+    to_status = models.CharField(max_length=20, choices=ExecutionPlan.STATUS_CHOICES)
+    changed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='plan_status_changes'
+    )
+    changed_at = models.DateTimeField(auto_now_add=True)
+    comments = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-changed_at']
+        verbose_name = 'Plan Workflow History'
+        verbose_name_plural = 'Plan Workflow Histories'
+    
+    def __str__(self):
+        return f"{self.execution_plan.plan_id}: {self.from_status} → {self.to_status}"
+
+class PlanComment(models.Model):
+    """Comments and discussions on execution plans"""
+    execution_plan = models.ForeignKey(
+        ExecutionPlan,
+        on_delete=models.CASCADE,
+        related_name='comments'
+    )
+    comment = models.TextField()
+    commented_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='plan_comments'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_internal = models.BooleanField(
+        default=True,
+        help_text="Internal comment (not visible to client)"
+    )
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Plan Comment'
+        verbose_name_plural = 'Plan Comments'
+    
+    def __str__(self):
+        return f"Comment by {self.commented_by.username} on {self.execution_plan.plan_id}"
+
+class PlanTemplate(models.Model):
+    """Pre-defined plan templates for common scenarios"""
+    name = models.CharField(max_length=200)
+    description = models.TextField()
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='created_templates'
+    )
+    is_active = models.BooleanField(default=True)
+    is_public = models.BooleanField(
+        default=False,
+        help_text="Available to all RMs"
+    )
+    template_data = models.JSONField(
+        help_text="Template structure and default values"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Plan Template'
+        verbose_name_plural = 'Plan Templates'
+    
+    def __str__(self):
+        return self.name
+    
+    def can_be_used_by(self, user):
+        """Check if user can use this template"""
+        return self.is_public or self.created_by == user or user.role in ['rm_head', 'business_head']
+
+class ExecutionMetrics(models.Model):
+    """Track execution metrics for reporting"""
+    execution_plan = models.OneToOneField(
+        ExecutionPlan,
+        on_delete=models.CASCADE,
+        related_name='metrics'
+    )
+    
+    # Time Metrics (in hours)
+    time_to_approval = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Hours from creation to approval"
+    )
+    time_to_client_approval = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Hours from approval to client approval"
+    )
+    time_to_execution = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Hours from client approval to execution start"
+    )
+    total_execution_time = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Hours from execution start to completion"
+    )
+    
+    # Business Metrics
+    total_investment_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0
+    )
+    total_redemption_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0
+    )
+    net_investment = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0
+    )
+    sip_count = models.PositiveIntegerField(default=0)
+    total_monthly_sip = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+    
+    # Execution Success Rate
+    total_actions = models.PositiveIntegerField(default=0)
+    successful_actions = models.PositiveIntegerField(default=0)
+    failed_actions = models.PositiveIntegerField(default=0)
+    
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Execution Metrics'
+        verbose_name_plural = 'Execution Metrics'
+    
+    def __str__(self):
+        return f"Metrics for {self.execution_plan.plan_id}"
+    
+    def calculate_metrics(self):
+        """Calculate all metrics for the execution plan"""
+        plan = self.execution_plan
+        
+        # Time metrics
+        if plan.submitted_at and plan.approved_at:
+            self.time_to_approval = (plan.approved_at - plan.submitted_at).total_seconds() / 3600
+        
+        if plan.approved_at and plan.client_approved_at:
+            self.time_to_client_approval = (plan.client_approved_at - plan.approved_at).total_seconds() / 3600
+        
+        if plan.client_approved_at and plan.execution_started_at:
+            self.time_to_execution = (plan.execution_started_at - plan.client_approved_at).total_seconds() / 3600
+        
+        if plan.execution_started_at and plan.completed_at:
+            self.total_execution_time = (plan.completed_at - plan.execution_started_at).total_seconds() / 3600
+        
+        # Business metrics
+        purchase_actions = plan.actions.filter(action_type='purchase', status='completed')
+        redemption_actions = plan.actions.filter(action_type='redemption', status='completed')
+        sip_actions = plan.actions.filter(action_type__in=['sip_start', 'sip_modify'], status='completed')
+        
+        self.total_investment_amount = sum(action.executed_amount or action.amount or 0 for action in purchase_actions)
+        self.total_redemption_amount = sum(action.executed_amount or action.amount or 0 for action in redemption_actions)
+        self.net_investment = self.total_investment_amount - self.total_redemption_amount
+        
+        self.sip_count = sip_actions.count()
+        self.total_monthly_sip = sum(action.executed_amount or action.amount or 0 for action in sip_actions)
+        
+        # Success metrics
+        all_actions = plan.actions.all()
+        self.total_actions = all_actions.count()
+        self.successful_actions = all_actions.filter(status='completed').count()
+        self.failed_actions = all_actions.filter(status='failed').count()
+        
+        self.save()
+    
+    @property
+    def success_rate(self):
+        """Calculate success rate percentage"""
+        if self.total_actions > 0:
+            return (self.successful_actions / self.total_actions) * 100
+        return 0

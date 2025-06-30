@@ -172,6 +172,21 @@
             opacity: 1;
         }
 
+        /* Special styling for Execution Plans button */
+        nav a.execution-plans {
+            background: linear-gradient(135deg, rgba(211, 255, 97, 0.15), rgba(184, 232, 74, 0.1));
+            border-color: rgba(211, 255, 97, 0.3);
+            color: var(--primary-green);
+            font-weight: 600;
+        }
+
+        nav a.execution-plans:hover {
+            background: var(--gradient-primary);
+            color: var(--bg-primary);
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 8px 32px rgba(211, 255, 97, 0.4);
+        }
+
         nav a[style*="color: var(--accent-danger)"] {
             color: #ff4757 !important;
             border-color: rgba(255, 71, 87, 0.3);
@@ -533,6 +548,7 @@
                 <a href="{% url 'task_list' %}"><i class="fas fa-tasks"></i> Tasks</a>
                 <a href="{% url 'service_request_list' %}"><i class="fas fa-headset"></i> Service</a>
                 <a href="{% url 'investment_plan_review_list' %}"><i class="fas fa-chart-pie"></i> Investments</a>
+                <a href="{% url 'ongoing_plans' %}" class="execution-plans"><i class="fas fa-clipboard-list"></i> Execution Plans</a>
                 <a href="{% url 'notes_dashboard' %}"><i class="fas fa-sticky-note"></i> Notes</a>
                 <a href="{% url 'logout' %}" style="color: #ff4757;"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </nav>

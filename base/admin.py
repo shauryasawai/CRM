@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
 from .models import (
-    ClientInteraction, ServiceRequestComment, ServiceRequestDocument, ServiceRequestType, ServiceRequestWorkflow, User, Team, TeamMembership, NoteList, Note,
+    ClientInteraction, ClientPortfolio, ExecutionMetrics, ExecutionPlan, MutualFundScheme, PlanAction, PlanComment, PlanTemplate, PlanWorkflowHistory, ServiceRequestComment, ServiceRequestDocument, ServiceRequestType, ServiceRequestWorkflow, User, Team, TeamMembership, NoteList, Note,
     ClientProfile, MFUCANAccount, MotilalDematAccount, PrabhudasDematAccount,
     ClientProfileModification, Lead, LeadInteraction, ProductDiscussion, 
     LeadStatusChange, Client, Task, Reminder, ServiceRequest, 
@@ -1763,6 +1763,538 @@ class ClientInteractionAdmin(admin.ModelAdmin):
             ])
         
         return response
+    
+    
+class StatusFilter(SimpleListFilter):
+    """Custom filter for execution plan status"""
+    title = 'status'
+    parameter_name = 'status'
+
+    def lookups(self, request, model_admin):
+        return ExecutionPlan.STATUS_CHOICES
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(status=self.value())
+        return queryset
+
+
+class CreatedByFilter(SimpleListFilter):
+    """Filter by creator role"""
+    title = 'created by role'
+    parameter_name = 'creator_role'
+
+    def lookups(self, request, model_admin):
+        return [
+            ('rm', 'Relationship Manager'),
+            ('rm_head', 'RM Head'),
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(created_by__role=self.value())
+        return queryset
+
+
+class PlanActionInline(admin.TabularInline):
+    """Inline for plan actions"""
+    model = PlanAction
+    extra = 0
+    readonly_fields = ('executed_at', 'transaction_id', 'executed_amount', 'executed_units', 'nav_price')
+    fields = (
+        'action_type', 'scheme', 'amount', 'units', 'sip_date', 
+        'target_scheme', 'priority', 'status', 'executed_by',
+        'transaction_id', 'executed_amount', 'executed_units', 'notes'
+    )
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('scheme', 'target_scheme', 'executed_by')
+
+
+class PlanCommentInline(admin.TabularInline):
+    """Inline for plan comments"""
+    model = PlanComment
+    extra = 0
+    readonly_fields = ('commented_by', 'created_at')
+    fields = ('comment', 'is_internal', 'commented_by', 'created_at')
+    
+    def save_model(self, request, obj, form, change):
+        if not obj.pk:
+            obj.commented_by = request.user
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(MutualFundScheme)
+class MutualFundSchemeAdmin(admin.ModelAdmin):
+    list_display = (
+        'scheme_name', 'amc_name', 'scheme_code', 'scheme_type', 
+        'risk_category', 'minimum_investment', 'minimum_sip', 'is_active'
+    )
+    list_filter = ('scheme_type', 'risk_category', 'amc_name', 'is_active')
+    search_fields = ('scheme_name', 'amc_name', 'scheme_code')
+    ordering = ('amc_name', 'scheme_name')
+    list_editable = ('is_active',)
+    list_per_page = 50
+    
+    readonly_fields = ('created_at',)
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('scheme_name', 'amc_name', 'scheme_code')
+        }),
+        ('Classification', {
+            'fields': ('scheme_type', 'risk_category')
+        }),
+        ('Investment Limits', {
+            'fields': ('minimum_investment', 'minimum_sip')
+        }),
+        ('Status', {
+            'fields': ('is_active', 'created_at')
+        }),
+    )
+
+
+@admin.register(ClientPortfolio)
+class ClientPortfolioAdmin(admin.ModelAdmin):
+    list_display = (
+        'client', 'scheme', 'folio_number', 'units', 
+        'current_value', 'cost_value', 'gain_loss_display', 'sip_amount'
+    )
+    list_filter = ('scheme__scheme_type', 'scheme__amc_name', 'sip_amount')
+    search_fields = ('client__name', 'scheme__scheme_name', 'folio_number')
+    ordering = ('client', 'scheme')
+    list_per_page = 50
+    
+    readonly_fields = ('gain_loss', 'gain_loss_percentage', 'last_updated')
+    
+    def gain_loss_display(self, obj):
+        gain_loss = obj.gain_loss
+        percentage = obj.gain_loss_percentage
+        color = 'green' if gain_loss >= 0 else 'red'
+        return format_html(
+            '<span style="color: {};">₹{:,.2f} ({:.2f}%)</span>',
+            color, gain_loss, percentage
+        )
+    gain_loss_display.short_description = 'Gain/Loss'
+    
+    fieldsets = (
+        ('Portfolio Details', {
+            'fields': ('client', 'scheme', 'folio_number')
+        }),
+        ('Holdings', {
+            'fields': ('units', 'current_value', 'cost_value', 'gain_loss', 'gain_loss_percentage')
+        }),
+        ('SIP Details', {
+            'fields': ('sip_amount', 'sip_date')
+        }),
+        ('Metadata', {
+            'fields': ('last_updated',)
+        }),
+    )
+
+
+@admin.register(ExecutionPlan)
+class ExecutionPlanAdmin(admin.ModelAdmin):
+    list_display = (
+        'plan_id', 'plan_name', 'client', 'status_display', 'created_by',
+        'approved_by', 'created_at', 'actions_count', 'total_amount'
+    )
+    list_filter = (StatusFilter, CreatedByFilter, 'created_at', 'approved_at')
+    search_fields = ('plan_id', 'plan_name', 'client__name', 'created_by__username')
+    ordering = ('-created_at',)
+    list_per_page = 25
+    
+    readonly_fields = (
+        'plan_id', 'created_at', 'updated_at', 'submitted_at', 
+        'approved_at', 'client_approved_at', 'execution_started_at', 
+        'completed_at', 'actions_count', 'total_amount'
+    )
+    
+    inlines = [PlanActionInline, PlanCommentInline]
+    
+    actions = ['submit_for_approval', 'approve_plans', 'reject_plans', 'mark_client_approved']
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            'client', 'created_by', 'approved_by'
+        ).prefetch_related('actions')
+    
+    def status_display(self, obj):
+        status_colors = {
+            'draft': '#6c757d',
+            'pending_approval': '#ffc107',
+            'approved': '#17a2b8',
+            'client_approved': '#28a745',
+            'in_execution': '#fd7e14',
+            'completed': '#28a745',
+            'rejected': '#dc3545',
+            'cancelled': '#6c757d',
+        }
+        color = status_colors.get(obj.status, '#6c757d')
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color, obj.get_status_display()
+        )
+    status_display.short_description = 'Status'
+    
+    def actions_count(self, obj):
+        return obj.actions.count()
+    actions_count.short_description = 'Actions'
+    
+    def total_amount(self, obj):
+        total = obj.actions.aggregate(
+            total=Sum('amount', filter=Q(action_type__in=['purchase', 'redemption']))
+        )['total'] or 0
+        return f"₹{total:,.2f}"
+    total_amount.short_description = 'Total Amount'
+    
+    def get_readonly_fields(self, request, obj=None):
+        readonly = list(self.readonly_fields)
+        
+        # Make certain fields readonly based on status
+        if obj and obj.status != 'draft':
+            readonly.extend(['client', 'plan_name', 'description'])
+        
+        if obj and obj.status in ['completed', 'rejected', 'cancelled']:
+            readonly.extend(['status', 'notes'])
+        
+        return readonly
+    
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        
+        # Remove actions based on user role
+        if request.user.role not in ['rm_head', 'business_head', 'top_management']:
+            if 'approve_plans' in actions:
+                del actions['approve_plans']
+            if 'reject_plans' in actions:
+                del actions['reject_plans']
+        
+        return actions
+    
+    def submit_for_approval(self, request, queryset):
+        """Submit selected plans for approval"""
+        count = 0
+        for plan in queryset:
+            if plan.submit_for_approval():
+                count += 1
+        
+        if count:
+            messages.success(request, f"{count} plan(s) submitted for approval.")
+        else:
+            messages.warning(request, "No plans were submitted. Check if they are in draft status.")
+    
+    submit_for_approval.short_description = "Submit selected plans for approval"
+    
+    def approve_plans(self, request, queryset):
+        """Approve selected plans"""
+        if request.user.role not in ['rm_head', 'business_head', 'top_management']:
+            messages.error(request, "You don't have permission to approve plans.")
+            return
+        
+        count = 0
+        for plan in queryset:
+            if plan.approve(request.user):
+                count += 1
+        
+        if count:
+            messages.success(request, f"{count} plan(s) approved.")
+        else:
+            messages.warning(request, "No plans were approved. Check permissions and status.")
+    
+    approve_plans.short_description = "Approve selected plans"
+    
+    def reject_plans(self, request, queryset):
+        """Reject selected plans"""
+        if request.user.role not in ['rm_head', 'business_head', 'top_management']:
+            messages.error(request, "You don't have permission to reject plans.")
+            return
+        
+        # This would ideally open a form to collect rejection reason
+        # For now, using a default reason
+        count = 0
+        for plan in queryset:
+            if plan.reject(request.user, "Rejected via admin action"):
+                count += 1
+        
+        if count:
+            messages.success(request, f"{count} plan(s) rejected.")
+        else:
+            messages.warning(request, "No plans were rejected. Check permissions and status.")
+    
+    reject_plans.short_description = "Reject selected plans"
+    
+    def mark_client_approved(self, request, queryset):
+        """Mark selected plans as client approved"""
+        count = 0
+        for plan in queryset:
+            if plan.mark_client_approved():
+                count += 1
+        
+        if count:
+            messages.success(request, f"{count} plan(s) marked as client approved.")
+        else:
+            messages.warning(request, "No plans were updated. Check if they are in approved status.")
+    
+    mark_client_approved.short_description = "Mark as client approved"
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('plan_id', 'client', 'plan_name', 'description')
+        }),
+        ('Assignment', {
+            'fields': ('created_by', 'approved_by')
+        }),
+        ('Status & Timeline', {
+            'fields': (
+                'status', 'created_at', 'updated_at', 'submitted_at',
+                'approved_at', 'client_approved_at', 'execution_started_at', 'completed_at'
+            )
+        }),
+        ('Summary', {
+            'fields': ('actions_count', 'total_amount')
+        }),
+        ('Documentation', {
+            'fields': ('notes', 'rejection_reason', 'excel_file', 'client_communication_sent')
+        }),
+    )
+
+
+@admin.register(PlanAction)
+class PlanActionAdmin(admin.ModelAdmin):
+    list_display = (
+        'execution_plan', 'action_type', 'scheme', 'amount', 
+        'status_display', 'priority', 'executed_by', 'executed_at'
+    )
+    list_filter = ('action_type', 'status', 'executed_at', 'scheme__scheme_type')
+    search_fields = (
+        'execution_plan__plan_id', 'scheme__scheme_name', 
+        'transaction_id', 'executed_by__username'
+    )
+    ordering = ('execution_plan', 'priority', 'created_at')
+    list_per_page = 50
+    
+    readonly_fields = ('executed_at', 'created_at', 'updated_at')
+    
+    actions = ['mark_as_completed', 'mark_as_failed', 'cancel_actions']
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            'execution_plan', 'scheme', 'target_scheme', 'executed_by'
+        )
+    
+    def status_display(self, obj):
+        status_colors = {
+            'pending': '#ffc107',
+            'in_progress': '#fd7e14',
+            'completed': '#28a745',
+            'failed': '#dc3545',
+            'cancelled': '#6c757d',
+        }
+        color = status_colors.get(obj.status, '#6c757d')
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color, obj.get_status_display()
+        )
+    status_display.short_description = 'Status'
+    
+    def mark_as_completed(self, request, queryset):
+        """Mark selected actions as completed"""
+        count = queryset.filter(status__in=['pending', 'in_progress']).update(
+            status='completed',
+            executed_at=timezone.now(),
+            executed_by=request.user
+        )
+        messages.success(request, f"{count} action(s) marked as completed.")
+    
+    mark_as_completed.short_description = "Mark as completed"
+    
+    def mark_as_failed(self, request, queryset):
+        """Mark selected actions as failed"""
+        count = 0
+        for action in queryset.filter(status__in=['pending', 'in_progress']):
+            action.mark_failed("Marked as failed via admin", request.user)
+            count += 1
+        messages.success(request, f"{count} action(s) marked as failed.")
+    
+    mark_as_failed.short_description = "Mark as failed"
+    
+    def cancel_actions(self, request, queryset):
+        """Cancel selected actions"""
+        count = 0
+        for action in queryset:
+            if action.cancel(request.user, "Cancelled via admin"):
+                count += 1
+        messages.success(request, f"{count} action(s) cancelled.")
+    
+    cancel_actions.short_description = "Cancel actions"
+    
+    fieldsets = (
+        ('Plan Details', {
+            'fields': ('execution_plan', 'action_type', 'priority')
+        }),
+        ('Scheme Information', {
+            'fields': ('scheme', 'target_scheme')
+        }),
+        ('Transaction Details', {
+            'fields': ('amount', 'units', 'sip_date')
+        }),
+        ('Execution Status', {
+            'fields': ('status', 'executed_by', 'executed_at')
+        }),
+        ('Post-Execution Details', {
+            'fields': (
+                'transaction_id', 'executed_amount', 'executed_units', 
+                'nav_price', 'notes', 'failure_reason'
+            )
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at')
+        }),
+    )
+
+
+@admin.register(PlanWorkflowHistory)
+class PlanWorkflowHistoryAdmin(admin.ModelAdmin):
+    list_display = (
+        'execution_plan', 'from_status', 'to_status', 
+        'changed_by', 'changed_at'
+    )
+    list_filter = ('from_status', 'to_status', 'changed_at')
+    search_fields = ('execution_plan__plan_id', 'changed_by__username')
+    ordering = ('-changed_at',)
+    readonly_fields = ('changed_at',)
+    
+    def has_add_permission(self, request):
+        return False  # Workflow history should be auto-generated
+    
+    def has_change_permission(self, request, obj=None):
+        return False  # Workflow history should be immutable
+
+
+@admin.register(PlanComment)
+class PlanCommentAdmin(admin.ModelAdmin):
+    list_display = (
+        'execution_plan', 'commented_by', 'created_at', 
+        'is_internal', 'comment_preview'
+    )
+    list_filter = ('is_internal', 'created_at', 'commented_by')
+    search_fields = ('execution_plan__plan_id', 'comment', 'commented_by__username')
+    ordering = ('-created_at',)
+    readonly_fields = ('created_at',)
+    
+    def comment_preview(self, obj):
+        return obj.comment[:50] + '...' if len(obj.comment) > 50 else obj.comment
+    comment_preview.short_description = 'Comment Preview'
+    
+    def save_model(self, request, obj, form, change):
+        if not obj.pk:
+            obj.commented_by = request.user
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(PlanTemplate)
+class PlanTemplateAdmin(admin.ModelAdmin):
+    list_display = (
+        'name', 'created_by', 'is_active', 'is_public', 
+        'created_at', 'updated_at'
+    )
+    list_filter = ('is_active', 'is_public', 'created_at')
+    search_fields = ('name', 'description', 'created_by__username')
+    ordering = ('name',)
+    readonly_fields = ('created_at', 'updated_at')
+    
+    actions = ['make_public', 'make_private', 'activate_templates', 'deactivate_templates']
+    
+    def make_public(self, request, queryset):
+        count = queryset.update(is_public=True)
+        messages.success(request, f"{count} template(s) made public.")
+    make_public.short_description = "Make selected templates public"
+    
+    def make_private(self, request, queryset):
+        count = queryset.update(is_public=False)
+        messages.success(request, f"{count} template(s) made private.")
+    make_private.short_description = "Make selected templates private"
+    
+    def activate_templates(self, request, queryset):
+        count = queryset.update(is_active=True)
+        messages.success(request, f"{count} template(s) activated.")
+    activate_templates.short_description = "Activate selected templates"
+    
+    def deactivate_templates(self, request, queryset):
+        count = queryset.update(is_active=False)
+        messages.success(request, f"{count} template(s) deactivated.")
+    deactivate_templates.short_description = "Deactivate selected templates"
+    
+    def save_model(self, request, obj, form, change):
+        if not obj.pk:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(ExecutionMetrics)
+class ExecutionMetricsAdmin(admin.ModelAdmin):
+    list_display = (
+        'execution_plan', 'total_investment_amount', 'total_redemption_amount',
+        'net_investment', 'sip_count', 'success_rate_display', 'updated_at'
+    )
+    list_filter = ('updated_at',)
+    search_fields = ('execution_plan__plan_id', 'execution_plan__client__name')
+    ordering = ('-updated_at',)
+    readonly_fields = (
+        'time_to_approval', 'time_to_client_approval', 'time_to_execution',
+        'total_execution_time', 'success_rate', 'updated_at'
+    )
+    
+    actions = ['recalculate_metrics']
+    
+    def success_rate_display(self, obj):
+        rate = obj.success_rate
+        color = 'green' if rate >= 90 else 'orange' if rate >= 70 else 'red'
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{:.1f}%</span>',
+            color, rate
+        )
+    success_rate_display.short_description = 'Success Rate'
+    
+    def recalculate_metrics(self, request, queryset):
+        """Recalculate metrics for selected plans"""
+        count = 0
+        for metrics in queryset:
+            metrics.calculate_metrics()
+            count += 1
+        messages.success(request, f"Metrics recalculated for {count} plan(s).")
+    
+    recalculate_metrics.short_description = "Recalculate metrics"
+    
+    def has_add_permission(self, request):
+        return False  # Metrics should be auto-generated
+    
+    fieldsets = (
+        ('Plan Information', {
+            'fields': ('execution_plan',)
+        }),
+        ('Time Metrics (Hours)', {
+            'fields': (
+                'time_to_approval', 'time_to_client_approval',
+                'time_to_execution', 'total_execution_time'
+            )
+        }),
+        ('Business Metrics', {
+            'fields': (
+                'total_investment_amount', 'total_redemption_amount',
+                'net_investment', 'sip_count', 'total_monthly_sip'
+            )
+        }),
+        ('Execution Metrics', {
+            'fields': (
+                'total_actions', 'successful_actions', 'failed_actions', 'success_rate'
+            )
+        }),
+        ('Metadata', {
+            'fields': ('updated_at',)
+        }),
+    )
     
 # Register all models
 admin.site.register(User, CustomUserAdmin)

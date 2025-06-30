@@ -1,0 +1,118 @@
+{% extends 'execution_plans/base.html' %}
+
+{% block title %}Create Execution Plan{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item active">Create Execution Plan</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3">
+        <i class="fas fa-plus-circle text-primary me-2"></i>
+        Create New Execution Plan
+    </h1>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-user me-2"></i>
+                    Step 1: Select Client
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="get" id="clientSelectionForm">
+                    <div class="mb-3">
+                        <label for="clientSelect" class="form-label">Choose Client</label>
+                        <select class="form-control select2" id="clientSelect" name="client_id" required>
+                            <option value="">Search and select a client...</option>
+                            {% for client in clients %}
+                                <option value="{{ client.id }}" 
+                                        data-aum="{{ client.aum|default:0 }}" 
+                                        data-sip="{{ client.sip_amount|default:0 }}">
+                                    {{ client.name }}
+                                    {% if client.aum %} - AUM: ₹{{ client.aum|floatformat:2 }}{% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Select the client for whom you want to create an execution plan.</div>
+                    </div>
+                    
+                    <div id="clientInfo" class="mb-3" style="display: none;">
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle me-2"></i>Client Information</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Current AUM:</strong> <span id="clientAUM">₹0</span>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Monthly SIP:</strong> <span id="clientSIP">₹0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="proceedBtn" disabled>
+                            <i class="fas fa-arrow-right me-2"></i>Proceed to Plan Design
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        {% if clients.count == 0 %}
+        <div class="alert alert-warning mt-4">
+            <h5><i class="fas fa-exclamation-triangle me-2"></i>No Clients Available</h5>
+            <p class="mb-0">You don't have any clients assigned to create execution plans for. Please contact your manager to assign clients.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    $('#clientSelect').on('change', function() {
+        const selectedOption = $(this).find('option:selected');
+        const clientId = selectedOption.val();
+        
+        if (clientId) {
+            const aum = selectedOption.data('aum') || 0;
+            const sip = selectedOption.data('sip') || 0;
+            
+            $('#clientAUM').text('₹' + parseFloat(aum).toLocaleString('en-IN', {minimumFractionDigits: 2}));
+            $('#clientSIP').text('₹' + parseFloat(sip).toLocaleString('en-IN', {minimumFractionDigits: 2}));
+            
+            $('#clientInfo').show();
+            $('#proceedBtn').prop('disabled', false);
+        } else {
+            $('#clientInfo').hide();
+            $('#proceedBtn').prop('disabled', true);
+        }
+    });
+    
+    $('#clientSelectionForm').on('submit', function(e) {
+        const clientId = $('#clientSelect').val();
+        if (clientId) {
+            this.action = "{% url 'create_plan_step2' 0 %}".replace('0', clientId);
+        } else {
+            e.preventDefault();
+            alert('Please select a client first.');
+        }
+    });
+});
+</script>
+{% endblock %}

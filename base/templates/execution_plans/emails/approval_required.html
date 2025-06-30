@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Execution Plan Approval Required</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .logo {
+            max-height: 50px;
+            margin-bottom: 15px;
+        }
+        .content {
+            padding: 20px;
+        }
+        .plan-card {
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+            background-color: #f8f9fa;
+        }
+        .btn-approve {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+            font-size: 12px;
+            color: #6c757d;
+            text-align: center;
+        }
+        .badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .badge-warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        {% if company_logo_url %}
+        <img src="{{ company_logo_url }}" alt="Company Logo" class="logo">
+        {% endif %}
+        <h2>Execution Plan Approval Required</h2>
+    </div>
+    
+    <div class="content">
+        <p>Dear {{ approver.get_full_name }},</p>
+        
+        <p>Your approval is required for the following execution plan submitted by {{ rm.get_full_name }}:</p>
+        
+        <div class="plan-card">
+            <h3>{{ execution_plan.plan_name }}</h3>
+            <p><strong>Plan ID:</strong> {{ execution_plan.plan_id }}</p>
+            <p><strong>Client:</strong> {{ execution_plan.client.name }}</p>
+            <p><strong>Created:</strong> {{ execution_plan.created_at|date:"F j, Y H:i" }}</p>
+            <p>
+                <strong>Status:</strong> 
+                <span class="badge badge-warning">{{ execution_plan.get_status_display }}</span>
+            </p>
+            <p><strong>Description:</strong></p>
+            <p>{{ execution_plan.description|linebreaksbr }}</p>
+        </div>
+        
+        <p>Please review this plan and take appropriate action:</p>
+        
+        <div style="text-align: center; margin: 25px 0;">
+            <a href="{{ approval_link }}" class="btn-approve">Review & Approve Plan</a>
+        </div>
+        
+        <p>If the button above doesn't work, you can copy and paste this link into your browser:</p>
+        <p style="word-break: break-all;"><small>{{ approval_link }}</small></p>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated notification. Please do not reply to this email.</p>
+        <p>&copy; {% now "Y" %} {{ company_name }}. All rights reserved.</p>
+    </div>
+</body>
+</html>

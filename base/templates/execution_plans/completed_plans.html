@@ -1,0 +1,560 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Completed Plans{% endblock %}
+
+{% block extra_css %}
+<style>
+    .plan-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border-left: 4px solid #10b981;
+    }
+    
+    .plan-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+    
+    .plan-header {
+        display: flex;
+        justify-content: between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+    
+    .plan-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 0.5rem;
+    }
+    
+    .plan-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+        color: #6b7280;
+    }
+    
+    .plan-description {
+        color: #4b5563;
+        margin-bottom: 1rem;
+        line-height: 1.5;
+    }
+    
+    .completion-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 0.75rem;
+        background: #f8fafc;
+        border-radius: 8px;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #10b981;
+        display: block;
+    }
+    
+    .stat-label {
+        font-size: 0.8rem;
+        color: #6b7280;
+        margin-top: 0.25rem;
+    }
+    
+    .plan-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .priority-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    
+    .priority-high { background: #fee2e2; color: #dc2626; }
+    .priority-medium { background: #fed7aa; color: #c2410c; }
+    .priority-low { background: #dbeafe; color: #1e40af; }
+    
+    .search-filters {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #6b7280;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        color: #d1d5db;
+    }
+    
+    .pagination-wrapper {
+        display: flex;
+        justify-content: center;
+        margin-top: 2rem;
+    }
+    
+    .table-view .plan-row {
+        background: white;
+        border: 1px solid #e5e7eb;
+        margin-bottom: 0;
+    }
+    
+    .table-view .plan-row:hover {
+        background: #f9fafb;
+    }
+    
+    .view-toggle {
+        display: flex;
+        background: #f3f4f6;
+        border-radius: 8px;
+        padding: 0.25rem;
+    }
+    
+    .view-toggle button {
+        flex: 1;
+        padding: 0.5rem 1rem;
+        border: none;
+        background: transparent;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+    }
+    
+    .view-toggle button.active {
+        background: white;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    @media (max-width: 768px) {
+        .plan-header {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .plan-meta {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .completion-stats {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'rm_dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item active">Completed Plans</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Completed Execution Plans</h2>
+            <p class="text-muted">Successfully completed execution plans and their performance metrics</p>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <!-- View Toggle -->
+            <div class="view-toggle">
+                <button type="button" class="active" onclick="toggleView('card')">
+                    <i class="fas fa-th-large"></i> Cards
+                </button>
+                <button type="button" onclick="toggleView('table')">
+                    <i class="fas fa-list"></i> Table
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="search-filters">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Search Plans</label>
+                <input type="text" class="form-control" name="search" value="{{ request.GET.search }}" 
+                       placeholder="Search by title, description...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Priority</label>
+                <select class="form-select" name="priority">
+                    <option value="">All Priorities</option>
+                    <option value="high" {% if request.GET.priority == 'high' %}selected{% endif %}>High</option>
+                    <option value="medium" {% if request.GET.priority == 'medium' %}selected{% endif %}>Medium</option>
+                    <option value="low" {% if request.GET.priority == 'low' %}selected{% endif %}>Low</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Date Range</label>
+                <select class="form-select" name="date_range">
+                    <option value="">All Time</option>
+                    <option value="30" {% if request.GET.date_range == '30' %}selected{% endif %}>Last 30 days</option>
+                    <option value="90" {% if request.GET.date_range == '90' %}selected{% endif %}>Last 3 months</option>
+                    <option value="180" {% if request.GET.date_range == '180' %}selected{% endif %}>Last 6 months</option>
+                    <option value="365" {% if request.GET.date_range == '365' %}selected{% endif %}>Last year</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Sort By</label>
+                <select class="form-select" name="sort">
+                    <option value="-completed_at" {% if request.GET.sort == '-completed_at' %}selected{% endif %}>Recently Completed</option>
+                    <option value="completed_at" {% if request.GET.sort == 'completed_at' %}selected{% endif %}>Oldest First</option>
+                    <option value="title" {% if request.GET.sort == 'title' %}selected{% endif %}>Title A-Z</option>
+                    <option value="-title" {% if request.GET.sort == '-title' %}selected{% endif %}>Title Z-A</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="fas fa-search"></i> Filter
+                </button>
+                <a href="{% url 'completed_plans' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Plans List -->
+    <div id="plans-container">
+        {% if execution_plans %}
+            <!-- Card View -->
+            <div id="card-view" class="row">
+                {% for plan in execution_plans %}
+                <div class="col-lg-6 col-xl-4">
+                    <div class="plan-card">
+                        <div class="plan-header">
+                            <div class="flex-grow-1">
+                                <h5 class="plan-title">{{ plan.title }}</h5>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <span class="status-badge">
+                                        <i class="fas fa-check-circle"></i> Completed
+                                    </span>
+                                    {% if plan.priority %}
+                                    <span class="priority-badge priority-{{ plan.priority|lower }}">
+                                        {{ plan.get_priority_display }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted">#{{ plan.id }}</small>
+                            </div>
+                        </div>
+
+                        <div class="plan-meta">
+                            <span><i class="fas fa-user"></i> {{ plan.created_by.get_full_name|default:plan.created_by.username }}</span>
+                            <span><i class="fas fa-calendar"></i> Completed: {{ plan.completed_at|date:"M d, Y" }}</span>
+                            {% if plan.target_completion_date %}
+                            <span><i class="fas fa-clock"></i> Target: {{ plan.target_completion_date|date:"M d" }}</span>
+                            {% endif %}
+                        </div>
+
+                        {% if plan.description %}
+                        <p class="plan-description">{{ plan.description|truncatewords:20 }}</p>
+                        {% endif %}
+
+                        <!-- Completion Statistics -->
+                        <div class="completion-stats">
+                            <div class="stat-item">
+                                <span class="stat-value">{{ plan.total_actions|default:0 }}</span>
+                                <div class="stat-label">Total Actions</div>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value">{{ plan.completion_percentage|default:0|floatformat:0 }}%</span>
+                                <div class="stat-label">Success Rate</div>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value">
+                                    {% if plan.execution_duration %}
+                                        {{ plan.execution_duration }}
+                                    {% else %}
+                                        --
+                                    {% endif %}
+                                </span>
+                                <div class="stat-label">Duration (days)</div>
+                            </div>
+                        </div>
+
+                        <div class="plan-actions">
+                            <a href="{% url 'plan_detail' plan.id %}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-eye"></i> View Details
+                            </a>
+                            <a href="{% url 'plan_analytics' plan.id %}" class="btn btn-sm btn-outline-info">
+                                <i class="fas fa-chart-bar"></i> Analytics
+                            </a>
+                            {% if user.role in 'rm,rm_head' %}
+                            <button class="btn btn-sm btn-outline-success" onclick="clonePlan({{ plan.id }})">
+                                <i class="fas fa-copy"></i> Clone
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Table View -->
+            <div id="table-view" class="d-none">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Plan</th>
+                                <th>Created By</th>
+                                <th>Completed Date</th>
+                                <th>Actions</th>
+                                <th>Success Rate</th>
+                                <th>Duration</th>
+                                <th>Priority</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for plan in execution_plans %}
+                            <tr>
+                                <td>
+                                    <div>
+                                        <strong>{{ plan.title }}</strong>
+                                        <br><small class="text-muted">#{{ plan.id }}</small>
+                                    </div>
+                                </td>
+                                <td>{{ plan.created_by.get_full_name|default:plan.created_by.username }}</td>
+                                <td>{{ plan.completed_at|date:"M d, Y" }}</td>
+                                <td>{{ plan.total_actions|default:0 }}</td>
+                                <td>
+                                    <span class="badge bg-success">{{ plan.completion_percentage|default:0|floatformat:0 }}%</span>
+                                </td>
+                                <td>
+                                    {% if plan.execution_duration %}
+                                        {{ plan.execution_duration }} days
+                                    {% else %}
+                                        --
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if plan.priority %}
+                                    <span class="priority-badge priority-{{ plan.priority|lower }}">
+                                        {{ plan.get_priority_display }}
+                                    </span>
+                                    {% else %}
+                                    --
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'plan_detail' plan.id %}" class="btn btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'plan_analytics' plan.id %}" class="btn btn-outline-info">
+                                            <i class="fas fa-chart-bar"></i>
+                                        </a>
+                                        {% if user.role in 'rm,rm_head' %}
+                                        <button class="btn btn-outline-success" onclick="clonePlan({{ plan.id }})">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <div class="pagination-wrapper">
+                <nav aria-label="Plans pagination">
+                    <ul class="pagination">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}{% if request.GET.date_range %}&date_range={{ request.GET.date_range }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">First</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}{% if request.GET.date_range %}&date_range={{ request.GET.date_range }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">Previous</a>
+                            </li>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}{% if request.GET.date_range %}&date_range={{ request.GET.date_range }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}{% if request.GET.date_range %}&date_range={{ request.GET.date_range }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">Next</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}{% if request.GET.date_range %}&date_range={{ request.GET.date_range }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">Last</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+
+        {% else %}
+            <!-- Empty State -->
+            <div class="empty-state">
+                <i class="fas fa-check-circle"></i>
+                <h4>No Completed Plans</h4>
+                <p>There are no completed execution plans to display.</p>
+                {% if user.role in 'rm,rm_head' %}
+                <a href="{% url 'create_plan' %}" class="btn btn-primary mt-3">
+                    <i class="fas fa-plus"></i> Create Your First Plan
+                </a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Summary Statistics -->
+    {% if execution_plans %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="search-filters">
+                <h5 class="mb-3">Summary Statistics</h5>
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="stat-item">
+                            <span class="stat-value">{{ total_completed_plans|default:0 }}</span>
+                            <div class="stat-label">Total Completed Plans</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-item">
+                            <span class="stat-value">{{ average_completion_rate|default:0|floatformat:1 }}%</span>
+                            <div class="stat-label">Average Success Rate</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-item">
+                            <span class="stat-value">{{ average_duration|default:0|floatformat:0 }}</span>
+                            <div class="stat-label">Avg Duration (days)</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-item">
+                            <span class="stat-value">{{ total_actions_completed|default:0 }}</span>
+                            <div class="stat-label">Total Actions Completed</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleView(viewType) {
+    const cardView = document.getElementById('card-view');
+    const tableView = document.getElementById('table-view');
+    const buttons = document.querySelectorAll('.view-toggle button');
+    
+    // Remove active class from all buttons
+    buttons.forEach(btn => btn.classList.remove('active'));
+    
+    if (viewType === 'card') {
+        cardView.classList.remove('d-none');
+        tableView.classList.add('d-none');
+        buttons[0].classList.add('active');
+    } else {
+        cardView.classList.add('d-none');
+        tableView.classList.remove('d-none');
+        buttons[1].classList.add('active');
+    }
+    
+    // Store preference
+    localStorage.setItem('completed_plans_view', viewType);
+}
+
+function clonePlan(planId) {
+    if (confirm('Are you sure you want to clone this plan? This will create a new draft plan with the same structure.')) {
+        // Create a form and submit it
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/execution-plans/clone/${planId}/`;
+        
+        // Add CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = csrfToken.value;
+            form.appendChild(csrfInput);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Load saved view preference
+document.addEventListener('DOMContentLoaded', function() {
+    const savedView = localStorage.getItem('completed_plans_view');
+    if (savedView === 'table') {
+        toggleView('table');
+    }
+});
+
+// Auto-submit form on select change
+document.querySelectorAll('select[name="priority"], select[name="date_range"], select[name="sort"]').forEach(select => {
+    select.addEventListener('change', function() {
+        this.form.submit();
+    });
+});
+</script>
+{% endblock %}

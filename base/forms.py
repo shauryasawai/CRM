@@ -4023,3 +4023,228 @@ class BulkInteractionActionForm(forms.Form):
             raise ValidationError("Priority is required when changing priority.")
         
         return cleaned_data
+    
+    
+# execution_plans/forms.py
+from django import forms
+from django.core.exceptions import ValidationError
+from decimal import Decimal
+from .models import ExecutionPlan, PlanAction, PlanComment
+
+
+class PlanApprovalForm(forms.Form):
+    """Form for approving/rejecting plans"""
+    
+    ACTION_CHOICES = [
+        ('approve', 'Approve'),
+        ('reject', 'Reject')
+    ]
+    
+    action = forms.ChoiceField(
+        choices=ACTION_CHOICES,
+        widget=forms.RadioSelect(attrs={
+            'class': 'form-check-input'
+        }),
+        required=True
+    )
+    
+    comments = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'Add comments (required for rejection)'
+        })
+    )
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        action = cleaned_data.get('action')
+        comments = cleaned_data.get('comments', '').strip()
+        
+        if action == 'reject' and not comments:
+            raise ValidationError("Comments are required when rejecting a plan.")
+        
+        return cleaned_data
+
+
+class PlanCommentForm(forms.ModelForm):
+    """Form for adding comments to plans"""
+    
+    class Meta:
+        model = PlanComment
+        fields = ['comment', 'is_internal']
+        widgets = {
+            'comment': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Enter your comment...',
+                'required': True
+            }),
+            'is_internal': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            })
+        }
+    
+    def clean_comment(self):
+        comment = self.cleaned_data.get('comment', '').strip()
+        if len(comment) < 5:
+            raise ValidationError("Comment must be at least 5 characters long.")
+        return comment
+
+
+class ActionExecutionForm(forms.Form):
+    """Form for executing plan actions"""
+    
+    transaction_id = forms.CharField(
+        required=False,
+        max_length=100,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Transaction ID (optional)'
+        })
+    )
+    
+    executed_amount = forms.DecimalField(
+        required=False,
+        max_digits=15,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Executed amount',
+            'step': '0.01'
+        })
+    )
+    
+    executed_units = forms.DecimalField(
+        required=False,
+        max_digits=15,
+        decimal_places=4,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Executed units',
+            'step': '0.0001'
+        })
+    )
+    
+    nav_price = forms.DecimalField(
+        required=False,
+        max_digits=10,
+        decimal_places=4,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'NAV price',
+            'step': '0.0001'
+        })
+    )
+    
+    notes = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 2,
+            'placeholder': 'Execution notes (optional)'
+        })
+    )
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        executed_amount = cleaned_data.get('executed_amount')
+        executed_units = cleaned_data.get('executed_units')
+        
+        if not executed_amount and not executed_units:
+            raise ValidationError("Either executed amount or executed units must be provided.")
+        
+        return cleaned_data
+
+
+class ActionFailureForm(forms.Form):
+    """Form for marking actions as failed"""
+    
+    reason = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'Enter reason for failure...',
+            'required': True
+        })
+    )
+    
+    def clean_reason(self):
+        reason = self.cleaned_data.get('reason', '').strip()
+        if len(reason) < 10:
+            raise ValidationError("Failure reason must be at least 10 characters long.")
+        return reason
+
+
+class ClientSelectionForm(forms.Form):
+    """Form for selecting client in plan creation"""
+    
+    client = forms.ModelChoiceField(
+        queryset=Client.objects.none(),
+        widget=forms.Select(attrs={
+            'class': 'form-control',
+            'required': True
+        }),
+        empty_label="Select a client..."
+    )
+    
+    def __init__(self, *args, current_user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        if current_user:
+            # Filter clients based on user role
+            if current_user.role == 'rm':
+                self.fields['client'].queryset = Client.objects.filter(user=current_user)
+            elif current_user.role == 'rm_head':
+                team_rms = User.objects.filter(manager=current_user, role='rm')
+                self.fields['client'].queryset = Client.objects.filter(user__in=team_rms)
+            elif current_user.role in ['business_head', 'top_management']:
+                self.fields['client'].queryset = Client.objects.all()
+
+
+class PlanFilterForm(forms.Form):
+    """Form for filtering execution plans"""
+    
+    STATUS_CHOICES = [
+        ('', 'All Statuses'),
+        ('draft', 'Draft'),
+        ('pending_approval', 'Pending Approval'),
+        ('approved', 'Approved'),
+        ('client_approved', 'Client Approved'),
+        ('in_execution', 'In Execution'),
+        ('completed', 'Completed'),
+        ('rejected', 'Rejected'),
+    ]
+    
+    status = forms.ChoiceField(
+        choices=STATUS_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={
+            'class': 'form-control'
+        })
+    )
+    
+    search = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Search by plan name, client name, or plan ID...'
+        })
+    )
+    
+    date_from = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        })
+    )
+    
+    date_to = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'date'
+        })
+    )

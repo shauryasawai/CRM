@@ -1,0 +1,395 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Plan Analytics - {{ execution_plan.title }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js" rel="preload" as="script">
+<style>
+    .analytics-card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .metric-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+    
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .metric-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    
+    .timeline-item {
+        border-left: 3px solid #667eea;
+        padding-left: 1rem;
+        margin-bottom: 1.5rem;
+        position: relative;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -6px;
+        top: 0;
+        width: 12px;
+        height: 12px;
+        background: #667eea;
+        border-radius: 50%;
+    }
+    
+    .timeline-event {
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 0.25rem;
+    }
+    
+    .timeline-meta {
+        font-size: 0.85rem;
+        color: #666;
+    }
+    
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    
+    .status-draft { background: #fef3c7; color: #92400e; }
+    .status-submitted { background: #dbeafe; color: #1e40af; }
+    .status-approved { background: #dcfce7; color: #166534; }
+    .status-in-progress { background: #fed7aa; color: #c2410c; }
+    .status-completed { background: #d1fae5; color: #065f46; }
+    .status-cancelled { background: #fee2e2; color: #dc2626; }
+    
+    .action-row {
+        padding: 0.75rem;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    
+    .action-row:last-child {
+        border-bottom: none;
+    }
+    
+    .progress-bar {
+        background: #f3f4f6;
+        border-radius: 10px;
+        height: 8px;
+        overflow: hidden;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #10b981, #059669);
+        border-radius: 10px;
+        transition: width 0.3s ease;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin: 1rem 0;
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'execution_plans:rm_dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'execution_plans:ongoing_plans' %}">Execution Plans</a></li>
+        <li class="breadcrumb-item active">{{ execution_plan.title }} - Analytics</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Plan Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="analytics-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h2 class="mb-2">{{ execution_plan.title }}</h2>
+                        <p class="text-muted mb-3">{{ execution_plan.description|truncatewords:20 }}</p>
+                        <span class="status-badge status-{{ execution_plan.status|lower }}">
+                            {{ execution_plan.get_status_display }}
+                        </span>
+                    </div>
+                    <div class="text-end">
+                        <small class="text-muted">Plan ID: #{{ execution_plan.id }}</small><br>
+                        <small class="text-muted">Created: {{ execution_plan.created_at|date:"M d, Y" }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value">{{ metrics.total_actions }}</div>
+                <div class="metric-label">Total Actions</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value">{{ metrics.completed_actions }}</div>
+                <div class="metric-label">Completed</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value">{{ metrics.completion_percentage|floatformat:1 }}%</div>
+                <div class="metric-label">Progress</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-value">
+                    {% if metrics.days_to_completion %}
+                        {{ metrics.days_to_completion }}
+                    {% else %}
+                        --
+                    {% endif %}
+                </div>
+                <div class="metric-label">Days to Complete</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Progress Chart -->
+        <div class="col-lg-8">
+            <div class="analytics-card">
+                <h4 class="mb-3">Progress Overview</h4>
+                <div class="chart-container">
+                    <canvas id="progressChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Actions List -->
+            <div class="analytics-card">
+                <h4 class="mb-3">Action Details</h4>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Action</th>
+                                <th>Scheme</th>
+                                <th>Assigned To</th>
+                                <th>Status</th>
+                                <th>Progress</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for action in actions %}
+                            <tr>
+                                <td>
+                                    <strong>{{ action.title }}</strong>
+                                    {% if action.description %}
+                                    <br><small class="text-muted">{{ action.description|truncatewords:10 }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if action.scheme %}
+                                        <span class="badge bg-info">{{ action.scheme.name }}</span>
+                                    {% else %}
+                                        <span class="text-muted">--</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if action.executed_by %}
+                                        {{ action.executed_by.get_full_name|default:action.executed_by.username }}
+                                    {% else %}
+                                        <span class="text-muted">Unassigned</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="status-badge status-{{ action.status|lower }}">
+                                        {{ action.get_status_display }}
+                                    </span>
+                                </td>
+                                <td style="width: 150px;">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: {{ action.progress_percentage|default:0 }}%"></div>
+                                    </div>
+                                    <small class="text-muted">{{ action.progress_percentage|default:0|floatformat:0 }}%</small>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    No actions found for this plan.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="col-lg-4">
+            <div class="analytics-card">
+                <h4 class="mb-3">Execution Timeline</h4>
+                {% if timeline_data %}
+                    {% for item in timeline_data %}
+                    <div class="timeline-item">
+                        <div class="timeline-event">{{ item.event }}</div>
+                        <div class="timeline-meta">
+                            {{ item.timestamp|date:"M d, Y H:i" }}<br>
+                            by {{ item.user }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No timeline events recorded yet.</p>
+                {% endif %}
+            </div>
+
+            <!-- Additional Metrics -->
+            <div class="analytics-card">
+                <h5 class="mb-3">Additional Insights</h5>
+                
+                {% if metrics.average_completion_time %}
+                <div class="mb-3">
+                    <strong>Avg. Completion Time:</strong><br>
+                    <span class="text-primary">{{ metrics.average_completion_time }} days</span>
+                </div>
+                {% endif %}
+                
+                {% if execution_plan.target_completion_date %}
+                <div class="mb-3">
+                    <strong>Target Date:</strong><br>
+                    <span class="text-primary">{{ execution_plan.target_completion_date|date:"M d, Y" }}</span>
+                </div>
+                {% endif %}
+                
+                {% if execution_plan.priority %}
+                <div class="mb-3">
+                    <strong>Priority:</strong><br>
+                    <span class="badge bg-warning">{{ execution_plan.get_priority_display }}</span>
+                </div>
+                {% endif %}
+                
+                <div class="mb-3">
+                    <strong>Last Updated:</strong><br>
+                    <span class="text-muted">{{ metrics.updated_at|date:"M d, Y H:i" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="analytics-card">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <a href="{% url 'execution_plans:plan_detail' execution_plan.id %}" class="btn btn-primary">
+                            <i class="fas fa-eye"></i> View Plan Details
+                        </a>
+                        {% if user.role in 'rm,rm_head' and execution_plan.status == 'draft' %}
+                        <a href="{% url 'execution_plans:edit_plan' execution_plan.id %}" class="btn btn-outline-primary">
+                            <i class="fas fa-edit"></i> Edit Plan
+                        </a>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <button class="btn btn-outline-secondary" onclick="window.print()">
+                            <i class="fas fa-print"></i> Print Report
+                        </button>
+                        <button class="btn btn-outline-success" onclick="exportData()">
+                            <i class="fas fa-download"></i> Export Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Progress Chart
+    const ctx = document.getElementById('progressChart').getContext('2d');
+    
+    const chartData = {
+        labels: ['Completed', 'In Progress', 'Pending'],
+        datasets: [{
+            data: [
+                {{ metrics.completed_actions }},
+                {{ metrics.in_progress_actions|default:0 }},
+                {{ metrics.pending_actions|default:0 }}
+            ],
+            backgroundColor: [
+                '#10b981',
+                '#f59e0b',
+                '#ef4444'
+            ],
+            borderWidth: 0
+        }]
+    };
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: chartData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        font: {
+                            size: 12
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+
+function exportData() {
+    // Simple CSV export functionality
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Action,Scheme,Assigned To,Status,Progress\n";
+    
+    {% for action in actions %}
+    csvContent += "{{ action.title|escapejs }},{{ action.scheme.name|default:'--'|escapejs }},{{ action.executed_by.get_full_name|default:'Unassigned'|escapejs }},{{ action.get_status_display|escapejs }},{{ action.progress_percentage|default:0 }}%\n";
+    {% endfor %}
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "plan_{{ execution_plan.id }}_analytics.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+</script>
+{% endblock %}
