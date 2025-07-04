@@ -1626,6 +1626,288 @@ class PortfolioUpload(models.Model):
     
     def __str__(self):
         return f"{self.upload_id} - {self.file.name} ({self.get_status_display()})"
+    
+    def create_log(self, row_number, status, message, client_name='', client_pan='', scheme_name='', portfolio_entry=None):
+        """
+        Create a log entry for this upload
+        """
+        return PortfolioUploadLog.objects.create(
+            upload=self,
+            row_number=row_number,
+            client_name=client_name,
+            client_pan=client_pan,
+            scheme_name=scheme_name,
+            status=status,
+            message=message,
+            portfolio_entry=portfolio_entry
+        )
+    
+    def process_upload_with_logging(self):
+        """
+        Main method to process the uploaded portfolio file with comprehensive logging
+        """
+        try:
+            self.status = 'processing'
+            self.save()
+            
+            # Log start of processing
+            self.create_log(
+                row_number=0,
+                status='success',
+                message=f"Started processing upload {self.upload_id} at {timezone.now()}"
+            )
+            
+            # Process the file
+            success = self._process_file_with_logging()
+            
+            if success:
+                self.status = 'completed' if self.failed_rows == 0 else 'partial'
+                final_message = f"Processing completed. Total: {self.total_rows}, Success: {self.successful_rows}, Failed: {self.failed_rows}"
+            else:
+                self.status = 'failed'
+                final_message = f"Processing failed. Check error logs for details."
+            
+            self.processed_at = timezone.now()
+            self.save()
+            
+            # Log completion
+            self.create_log(
+                row_number=0,
+                status='success' if success else 'error',
+                message=final_message
+            )
+            
+            return success
+            
+        except Exception as e:
+            self.status = 'failed'
+            self.error_details = str(e)
+            self.processed_at = timezone.now()
+            self.save()
+            
+            # Log the error
+            self.create_log(
+                row_number=0,
+                status='error',
+                message=f"Upload processing failed: {str(e)}"
+            )
+            return False
+    
+    def _process_file_with_logging(self):
+        """
+        Process the uploaded CSV/Excel file with detailed logging
+        """
+        import pandas as pd
+        import os
+        from django.db import transaction
+        
+        try:
+            # Determine file type and read accordingly
+            file_ext = os.path.splitext(self.file.name)[1].lower()
+            
+            if file_ext == '.csv':
+                df = pd.read_csv(self.file.path)
+            elif file_ext in ['.xlsx', '.xls']:
+                df = pd.read_excel(self.file.path, engine='openpyxl')
+            else:
+                raise ValueError(f"Unsupported file format: {file_ext}")
+            
+            self.total_rows = len(df)
+            self.save()
+            
+            # Log file validation success
+            self.create_log(
+                row_number=0,
+                status='success',
+                message=f"File validation successful. Found {self.total_rows} rows to process"
+            )
+            
+            # Clean column names
+            df.columns = df.columns.str.strip()
+            
+            # Log column structure
+            column_info = f"Columns found: {', '.join(df.columns.tolist())}"
+            self.create_log(
+                row_number=0,
+                status='success',
+                message=column_info
+            )
+            
+            # Process each row with individual logging
+            with transaction.atomic():
+                for index, row in df.iterrows():
+                    row_number = index + 1
+                    self._process_single_row_with_logging(row, row_number)
+                    
+                    self.processed_rows += 1
+                    
+                    # Update progress every 50 rows
+                    if self.processed_rows % 50 == 0:
+                        self.save()
+                        self.create_log(
+                            row_number=0,
+                            status='success',
+                            message=f"Progress update: {self.processed_rows}/{self.total_rows} rows processed"
+                        )
+            
+            # Final save
+            self.save()
+            
+            return True
+            
+        except Exception as e:
+            error_msg = f"File processing error: {str(e)}"
+            self.create_log(
+                row_number=0,
+                status='error',
+                message=error_msg
+            )
+            raise Exception(error_msg)
+    
+    def _process_single_row_with_logging(self, row, row_number):
+        """
+        Process a single row and create detailed logs
+        """
+        try:
+            # Extract basic info for logging
+            client_name = ClientPortfolio.safe_string_convert(row.get('CLIENT', ''))
+            client_pan = ClientPortfolio.safe_string_convert(row.get('CLIENT PAN', ''))
+            scheme_name = ClientPortfolio.safe_string_convert(row.get('SCHEME', ''))
+            
+            # Validate required fields
+            if not client_name or not scheme_name:
+                self.failed_rows += 1
+                self.create_log(
+                    row_number=row_number,
+                    client_name=client_name,
+                    client_pan=client_pan,
+                    scheme_name=scheme_name,
+                    status='error',
+                    message="Missing required fields: client name or scheme name"
+                )
+                return
+            
+            if not client_pan or len(client_pan) != 10:
+                self.create_log(
+                    row_number=row_number,
+                    client_name=client_name,
+                    client_pan=client_pan,
+                    scheme_name=scheme_name,
+                    status='warning',
+                    message=f"Invalid PAN format: '{client_pan}' (should be 10 characters)"
+                )
+            
+            # Column mapping for portfolio data
+            column_mapping = {
+                'CLIENT': 'client_name',
+                'CLIENT PAN': 'client_pan',
+                'SCHEME': 'scheme_name',
+                'DEBT': 'debt_value',
+                'EQUITY': 'equity_value',
+                'HYBRID': 'hybrid_value',
+                'LIQUID AND ULTRA SHORT': 'liquid_ultra_short_value',
+                'OTHER': 'other_value',
+                'ARBITRAGE': 'arbitrage_value',
+                'TOTAL': 'total_value',
+                'ALLOCATION': 'allocation_percentage',
+                'UNITS': 'units',
+                'FAMILY HEAD': 'family_head',
+                'APP CODE': 'app_code',
+                'EQUITY CODE': 'equity_code',
+                'OPERATIONS': 'operations_personnel',
+                'OPERATIONS CODE': 'operations_code',
+                'RELATIONSHIP MANAGER': 'relationship_manager',
+                'RELATIONSHIP MANAGER CODE': 'rm_code',
+                'SUB BROKER': 'sub_broker',
+                'SUB BROKER CODE': 'sub_broker_code',
+                'ISIN NO': 'isin_number',
+                'CLIENT IWELL CODE': 'client_iwell_code',
+                'FAMILY HEAD IWELL CODE': 'family_head_iwell_code'
+            }
+            
+            # Prepare portfolio data
+            portfolio_data = {
+                'upload_batch': self,
+                'data_as_of_date': timezone.now().date(),
+                'is_active': True,
+                'is_mapped': False
+            }
+            
+            # Map columns with safe conversion
+            for excel_col, model_field in column_mapping.items():
+                if excel_col in row.index and pd.notna(row[excel_col]):
+                    value = row[excel_col]
+                    
+                    if model_field in [
+                        'debt_value', 'equity_value', 'hybrid_value', 
+                        'liquid_ultra_short_value', 'other_value', 'arbitrage_value',
+                        'total_value', 'allocation_percentage', 'units'
+                    ]:
+                        portfolio_data[model_field] = ClientPortfolio.safe_decimal_convert(value)
+                    else:
+                        portfolio_data[model_field] = ClientPortfolio.safe_string_convert(value)
+            
+            # Create portfolio entry
+            portfolio_entry = ClientPortfolio.objects.create(**portfolio_data)
+            
+            # Log successful creation
+            total_value = portfolio_data.get('total_value', 0)
+            self.create_log(
+                row_number=row_number,
+                client_name=client_name,
+                client_pan=client_pan,
+                scheme_name=scheme_name,
+                status='success',
+                message=f"Portfolio entry created successfully. Total value: ₹{total_value}",
+                portfolio_entry=portfolio_entry
+            )
+            
+            # Try to map to client profile
+            mapping_logs = []
+            try:
+                mapped, message = portfolio_entry.map_to_client_profile()
+                if mapped:
+                    mapping_logs.append(f"Client mapping: {message}")
+                else:
+                    mapping_logs.append(f"Client mapping failed: {message}")
+                    
+                # Try to map personnel
+                personnel_mapped = portfolio_entry.map_personnel()
+                if personnel_mapped > 0:
+                    mapping_logs.append(f"Personnel mapped: {personnel_mapped} users")
+                    
+            except Exception as mapping_error:
+                mapping_logs.append(f"Mapping error: {str(mapping_error)}")
+            
+            # Log mapping results if any
+            if mapping_logs:
+                self.create_log(
+                    row_number=row_number,
+                    client_name=client_name,
+                    client_pan=client_pan,
+                    scheme_name=scheme_name,
+                    status='success',
+                    message=f"Mapping results: {'; '.join(mapping_logs)}",
+                    portfolio_entry=portfolio_entry
+                )
+            
+            self.successful_rows += 1
+            
+        except Exception as e:
+            self.failed_rows += 1
+            error_message = f"Row processing error: {str(e)}"
+            
+            # Log the specific error
+            self.create_log(
+                row_number=row_number,
+                client_name=client_name if 'client_name' in locals() else '',
+                client_pan=client_pan if 'client_pan' in locals() else '',
+                scheme_name=scheme_name if 'scheme_name' in locals() else '',
+                status='error',
+                message=error_message
+            )
+            
+            logger.error(f"Error processing row {row_number}: {e}")
 
 class ClientPortfolio(models.Model):
     """Enhanced client portfolio model with Excel upload support"""
@@ -2022,13 +2304,15 @@ class ClientPortfolio(models.Model):
         return results
 
 class PortfolioUploadLog(models.Model):
-    """Detailed log for portfolio upload processing"""
+    """Enhanced log model with auto row number generation"""
     upload = models.ForeignKey(
         PortfolioUpload,
         on_delete=models.CASCADE,
         related_name='processing_logs'
     )
-    row_number = models.PositiveIntegerField()
+    row_number = models.PositiveIntegerField(
+        help_text="Row number in the uploaded file (0 for system messages)"
+    )
     client_name = models.CharField(max_length=255, blank=True)
     client_pan = models.CharField(max_length=50, blank=True)
     scheme_name = models.CharField(max_length=300, blank=True)
@@ -2051,11 +2335,17 @@ class PortfolioUploadLog(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     
     class Meta:
-        ordering = ['upload', 'row_number']
+        ordering = ['upload', 'row_number', 'created_at']
         verbose_name = 'Portfolio Upload Log'
         verbose_name_plural = 'Portfolio Upload Logs'
+        indexes = [
+            models.Index(fields=['upload', 'status']),
+            models.Index(fields=['upload', 'row_number']),
+        ]
     
     def __str__(self):
+        if self.row_number == 0:
+            return f"{self.upload.upload_id} - System Log ({self.get_status_display()})"
         return f"{self.upload.upload_id} - Row {self.row_number} ({self.get_status_display()})"
 
 class MutualFundScheme(models.Model):
@@ -2768,3 +3058,34 @@ class ExecutionMetrics(models.Model):
         if self.total_actions > 0:
             return (self.successful_actions / self.total_actions) * 100
         return 0
+    
+    
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.core.management import call_command
+from threading import Thread
+
+@receiver(post_save, sender=PortfolioUpload)
+def auto_process_portfolio_upload(sender, instance, created, **kwargs):
+    """
+    Automatically start processing when a new portfolio upload is created
+    """
+    if created and instance.status == 'pending':
+        # Log the trigger
+        instance.create_log(
+            row_number=0,
+            status='success',
+            message=f"Upload {instance.upload_id} queued for automatic processing"
+        )
+        
+        # Process in background thread to avoid blocking the request
+        def process_in_background():
+            try:
+                instance.process_upload_with_logging()
+            except Exception as e:
+                logger.error(f"Auto-processing failed for {instance.upload_id}: {e}")
+        
+        # Start background processing
+        thread = Thread(target=process_in_background)
+        thread.daemon = True
+        thread.start()

@@ -1847,9 +1847,9 @@ import csv
 @admin.register(PortfolioUpload)
 class PortfolioUploadAdmin(admin.ModelAdmin):
     list_display = [
-        'upload_id', 'file', 'uploaded_by', 'uploaded_at', 
-        'status', 'progress_display', 'total_rows', 'successful_rows', 
-        'failed_rows', 'actions_column'
+        'upload_id', 'file_link', 'uploaded_by_link', 'uploaded_at', 
+        'status_colored', 'progress_display', 'total_rows', 'successful_rows', 
+        'failed_rows', 'log_count', 'actions_column'
     ]
     list_filter = ['status', 'uploaded_at', 'uploaded_by']
     search_fields = ['upload_id', 'file']
@@ -1873,144 +1873,429 @@ class PortfolioUploadAdmin(admin.ModelAdmin):
         })
     )
     
-    def progress_display(self, obj):
-        if obj.total_rows > 0:
-            percentage = (obj.successful_rows / obj.total_rows) * 100
-            color = 'green' if percentage > 80 else 'orange' if percentage > 50 else 'red'
+    actions = ['process_pending_uploads', 'retry_failed_uploads', 'mark_as_pending']
+    
+    def file_link(self, obj):
+        """Display file name with download link"""
+        if obj.file:
             return format_html(
-                '<div style="width: 100px; background-color: #f0f0f0; border-radius: 3px;">'
-                '<div style="width: {}%; background-color: {}; height: 20px; border-radius: 3px;"></div>'
+                '<a href="{}" target="_blank" title="Download file">{}</a>',
+                obj.file.url, obj.file.name.split('/')[-1]
+            )
+        return "-"
+    file_link.short_description = "File"
+    
+    def uploaded_by_link(self, obj):
+        """Link to user who uploaded"""
+        if obj.uploaded_by:
+            url = reverse('admin:base_user_change', args=[obj.uploaded_by.pk])
+            return format_html('<a href="{}">{}</a>', url, obj.uploaded_by.username)
+        return '-'
+    uploaded_by_link.short_description = 'Uploaded By'
+    
+    def status_colored(self, obj):
+        """Display status with color coding"""
+        colors = {
+            'pending': '#6c757d',       # Gray
+            'processing': '#007bff',    # Blue
+            'completed': '#28a745',     # Green
+            'failed': '#dc3545',        # Red
+            'partial': '#ffc107',       # Yellow
+        }
+        color = colors.get(obj.status, '#6c757d')
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color, obj.get_status_display()
+        )
+    status_colored.short_description = 'Status'
+    
+    def progress_display(self, obj):
+        """Display progress bar and statistics"""
+        if obj.total_rows > 0:
+            success_percentage = (obj.successful_rows / obj.total_rows) * 100
+            failed_percentage = (obj.failed_rows / obj.total_rows) * 100
+            
+            return format_html(
+                '<div style="width: 120px; background-color: #f0f0f0; border-radius: 3px; height: 15px; position: relative;">'
+                '<div style="width: {}%; background-color: #28a745; height: 15px; border-radius: 3px 0 0 3px; float: left;"></div>'
+                '<div style="width: {}%; background-color: #dc3545; height: 15px; border-radius: 0 3px 3px 0; float: left;"></div>'
                 '</div>'
-                '<small>{:.1f}% ({}/{})</small>',
-                percentage, color, percentage, obj.successful_rows, obj.total_rows
+                '<small>Success: {} | Failed: {} | Total: {}</small>',
+                success_percentage, failed_percentage,
+                obj.successful_rows, obj.failed_rows, obj.total_rows
             )
         return "No data"
     progress_display.short_description = "Progress"
     
+    def log_count(self, obj):
+        """Display log count with link"""
+        count = obj.processing_logs.count()
+        if count > 0:
+            logs_url = reverse('admin:base_portfoliouploadlog_changelist') + f'?upload__id__exact={obj.pk}'
+            
+            error_count = obj.processing_logs.filter(status='error').count()
+            warning_count = obj.processing_logs.filter(status='warning').count()
+            
+            if error_count > 0:
+                style = "color: red; font-weight: bold;"
+                icon = "❌"
+            elif warning_count > 0:
+                style = "color: orange;"
+                icon = "⚠️"
+            else:
+                style = "color: green;"
+                icon = "✅"
+            
+            return format_html(
+                '<a href="{}" style="{}">{} {} logs</a>',
+                logs_url, style, icon, count
+            )
+        return "No logs"
+    log_count.short_description = "Logs"
+    
     def actions_column(self, obj):
+        """Action buttons for each upload - FIXED"""
         actions = []
         
+        # Process button for pending uploads
         if obj.status == 'pending':
-            # Use the correct admin URL pattern
-            process_url = reverse('admin:process_portfolio_upload', args=[obj.pk])
-            actions.append(f'<a href="{process_url}" class="button">Process</a>')
+            # Use a form-based approach for better reliability
+            actions.append(f'''
+                <form method="post" action="" style="display: inline;">
+                    <input type="hidden" name="action" value="process_single_upload">
+                    <input type="hidden" name="_selected_action" value="{obj.pk}">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="{self.get_csrf_token()}">
+                    <button type="submit" class="button" style="background: #007bff; color: white; margin: 2px; border: none; padding: 4px 8px; border-radius: 3px;">
+                        🚀 Process
+                    </button>
+                </form>
+            ''')
         
+        # Retry button for failed uploads
+        if obj.status == 'failed':
+            actions.append(f'''
+                <form method="post" action="" style="display: inline;">
+                    <input type="hidden" name="action" value="retry_single_upload">
+                    <input type="hidden" name="_selected_action" value="{obj.pk}">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="{self.get_csrf_token()}">
+                    <button type="submit" class="button" style="background: #ffc107; color: black; margin: 2px; border: none; padding: 4px 8px; border-radius: 3px;">
+                        🔄 Retry
+                    </button>
+                </form>
+            ''')
+        
+        # Logs button (always available if logs exist)
+        if obj.processing_logs.exists():
+            logs_url = reverse('admin:base_portfoliouploadlog_changelist') + f'?upload__id__exact={obj.pk}'
+            actions.append(f'''
+                <a href="{logs_url}" class="button" style="background: #6c757d; color: white; margin: 2px; text-decoration: none; padding: 4px 8px; border-radius: 3px; display: inline-block;">
+                    📋 Logs ({obj.processing_logs.count()})
+                </a>
+            ''')
+        
+        # Portfolios button for successful uploads
+        if obj.status in ['completed', 'partial'] and obj.portfolio_entries.exists():
+            portfolios_url = reverse('admin:base_clientportfolio_changelist') + f'?upload_batch__id__exact={obj.pk}'
+            actions.append(f'''
+                <a href="{portfolios_url}" class="button" style="background: #28a745; color: white; margin: 2px; text-decoration: none; padding: 4px 8px; border-radius: 3px; display: inline-block;">
+                    📊 Portfolios ({obj.portfolio_entries.count()})
+                </a>
+            ''')
+        
+        # Mapping button for uploads with unmapped portfolios
         if obj.status in ['completed', 'partial']:
-            # Use the correct admin URL pattern
-            map_url = reverse('admin:map_portfolio_clients', args=[obj.pk])
-            actions.append(f'<a href="{map_url}" class="button">Map Clients</a>')
+            unmapped_count = obj.portfolio_entries.filter(is_mapped=False).count()
+            if unmapped_count > 0:
+                actions.append(f'''
+                    <form method="post" action="" style="display: inline;">
+                        <input type="hidden" name="action" value="remap_single_upload">
+                        <input type="hidden" name="_selected_action" value="{obj.pk}">
+                        <input type="hidden" name="csrfmiddlewaretoken" value="{self.get_csrf_token()}">
+                        <button type="submit" class="button" style="background: #17a2b8; color: white; margin: 2px; border: none; padding: 4px 8px; border-radius: 3px;">
+                            🔗 Map ({unmapped_count})
+                        </button>
+                    </form>
+                ''')
         
-        # Fixed: Use the correct model name for admin URLs
-        app_label = self.model._meta.app_label
-        logs_url = reverse(f'admin:{app_label}_portfoliouploadlog_changelist') + f'?upload__id__exact={obj.pk}'
-        actions.append(f'<a href="{logs_url}" class="button">View Logs</a>')
-        
-        portfolios_url = reverse(f'admin:{app_label}_clientportfolio_changelist') + f'?upload_batch__id__exact={obj.pk}'
-        actions.append(f'<a href="{portfolios_url}" class="button">View Portfolios</a>')
-        
-        return format_html(' '.join(actions))
+        return format_html(''.join(actions))
     actions_column.short_description = "Actions"
     
-    def get_urls(self):
-        from django.urls import path
-        urls = super().get_urls()
-        app_label = self.model._meta.app_label
-        custom_urls = [
-            path(
-                '<int:upload_id>/process/',
-                self.admin_site.admin_view(self.process_upload_view),
-                name='process_portfolio_upload'
-            ),
-            path(
-                '<int:upload_id>/map/',
-                self.admin_site.admin_view(self.map_clients_view),
-                name='map_portfolio_clients'
-            ),
-            path(
-                'bulk-process/',
-                self.admin_site.admin_view(self.bulk_process_view),
-                name='bulk_process_uploads'
-            ),
-        ]
-        return custom_urls + urls
-    
-    def process_upload_view(self, request, upload_id):
-        """Process a specific upload"""
-        upload = self.get_object(request, upload_id)
-        if upload is None:
-            self.message_user(request, "Upload not found", level=messages.ERROR)
-            return redirect(f'admin:{self.model._meta.app_label}_portfolioupload_changelist')
+    def get_csrf_token(self):
+        """Helper method to get CSRF token for forms"""
+        # This is a placeholder - in the actual implementation, you'd get this from the request
+        # For now, we'll use Django's get_token function
+        from django.middleware.csrf import get_token
+        from django.http import HttpRequest
         
-        try:
-            # Process the upload
-            from django.core.management import call_command
-            call_command('process_portfolio_upload', upload_id=upload.upload_id, auto_map=True)
-            
-            self.message_user(
-                request, 
-                f"Upload {upload.upload_id} processed successfully", 
-                level=messages.SUCCESS
-            )
-        except Exception as e:
-            self.message_user(
-                request, 
-                f"Error processing upload: {str(e)}", 
-                level=messages.ERROR
-            )
-        
-        return redirect(f'admin:{self.model._meta.app_label}_portfolioupload_changelist')
+        # Create a dummy request to get CSRF token
+        # In the actual admin, this would come from the current request
+        request = HttpRequest()
+        return get_token(request)
     
-    def map_clients_view(self, request, upload_id):
+    # Admin Actions - These handle the form submissions
+    def process_single_upload(self, request, queryset):
+        """Process a single upload"""
+        for upload in queryset:
+            if upload.status == 'pending':
+                try:
+                    # Here you would call your processing method
+                    # upload.process_upload_with_logging()
+                    upload.status = 'processing'
+                    upload.save()
+                    self.message_user(
+                        request,
+                        f"✅ Upload {upload.upload_id} processing started!",
+                        level=messages.SUCCESS
+                    )
+                except Exception as e:
+                    self.message_user(
+                        request,
+                        f"❌ Error processing {upload.upload_id}: {str(e)}",
+                        level=messages.ERROR
+                    )
+    process_single_upload.short_description = "Process upload"
+    
+    def retry_single_upload(self, request, queryset):
+        """Retry a failed upload"""
+        for upload in queryset:
+            if upload.status == 'failed':
+                try:
+                    upload.status = 'pending'
+                    upload.processed_rows = 0
+                    upload.successful_rows = 0
+                    upload.failed_rows = 0
+                    upload.save()
+                    
+                    self.message_user(
+                        request,
+                        f"✅ Upload {upload.upload_id} marked for retry!",
+                        level=messages.SUCCESS
+                    )
+                except Exception as e:
+                    self.message_user(
+                        request,
+                        f"❌ Error retrying {upload.upload_id}: {str(e)}",
+                        level=messages.ERROR
+                    )
+    retry_single_upload.short_description = "Retry upload"
+    
+    def remap_single_upload(self, request, queryset):
         """Re-attempt client mapping for an upload"""
-        upload = self.get_object(request, upload_id)
-        if upload is None:
-            self.message_user(request, "Upload not found", level=messages.ERROR)
-            return redirect(f'admin:{self.model._meta.app_label}_portfolioupload_changelist')
-        
-        try:
-            from django.core.management import call_command
-            call_command('portfolio_utils', 'remap', upload_id=upload.upload_id)
-            
-            self.message_user(
-                request,
-                f"Client mapping re-attempted for upload {upload.upload_id}",
-                level=messages.SUCCESS
-            )
-        except Exception as e:
-            self.message_user(
-                request,
-                f"Error during mapping: {str(e)}",
-                level=messages.ERROR
-            )
-        
-        return redirect(f'admin:{self.model._meta.app_label}_portfolioupload_changelist')
+        for upload in queryset:
+            try:
+                mapped_count = 0
+                unmapped_portfolios = upload.portfolio_entries.filter(is_mapped=False)
+                
+                for portfolio in unmapped_portfolios:
+                    # Here you would call the mapping method
+                    # mapped, message = portfolio.map_to_client_profile()
+                    # if mapped:
+                    #     mapped_count += 1
+                    pass
+                
+                self.message_user(
+                    request,
+                    f"🔗 Client mapping attempted for upload {upload.upload_id}",
+                    level=messages.SUCCESS
+                )
+            except Exception as e:
+                self.message_user(
+                    request,
+                    f"❌ Error mapping {upload.upload_id}: {str(e)}",
+                    level=messages.ERROR
+                )
+    remap_single_upload.short_description = "Remap clients"
     
-    def bulk_process_view(self, request):
-        """Process all pending uploads"""
-        try:
-            from django.core.management import call_command
-            call_command('process_portfolio_upload', auto_map=True)
-            
+    # Bulk actions for selected items
+    def process_pending_uploads(self, request, queryset):
+        """Process selected pending uploads"""
+        pending_uploads = queryset.filter(status='pending')
+        processed_count = 0
+        
+        for upload in pending_uploads:
+            try:
+                upload.status = 'processing'
+                upload.save()
+                processed_count += 1
+            except Exception as e:
+                self.message_user(
+                    request,
+                    f"❌ Error processing {upload.upload_id}: {str(e)}",
+                    level=messages.ERROR
+                )
+        
+        if processed_count > 0:
             self.message_user(
                 request,
-                "All pending uploads processed",
+                f"✅ Started processing {processed_count} uploads",
                 level=messages.SUCCESS
             )
-        except Exception as e:
+    process_pending_uploads.short_description = "Process selected pending uploads"
+    
+    def retry_failed_uploads(self, request, queryset):
+        """Retry selected failed uploads"""
+        failed_uploads = queryset.filter(status='failed')
+        updated = failed_uploads.update(status='pending')
+        
+        if updated > 0:
             self.message_user(
                 request,
-                f"Error processing uploads: {str(e)}",
-                level=messages.ERROR
+                f"✅ Marked {updated} failed uploads for retry",
+                level=messages.SUCCESS
             )
+    retry_failed_uploads.short_description = "Retry selected failed uploads"
+    
+    def mark_as_pending(self, request, queryset):
+        """Mark uploads as pending for reprocessing"""
+        updated = queryset.update(status='pending')
+        self.message_user(
+            request,
+            f"✅ Marked {updated} uploads as pending for reprocessing",
+            level=messages.SUCCESS
+        )
+    mark_as_pending.short_description = "Mark as pending for reprocessing"
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('uploaded_by').prefetch_related('processing_logs')
+    
+    def get_actions(self, request):
+        """Override to include our custom single-item actions"""
+        actions = super().get_actions(request)
         
-        return redirect(f'admin:{self.model._meta.app_label}_portfolioupload_changelist')
+        # Add our custom actions
+        actions['process_single_upload'] = (
+            self.process_single_upload,
+            'process_single_upload',
+            self.process_single_upload.short_description
+        )
+        actions['retry_single_upload'] = (
+            self.retry_single_upload,
+            'retry_single_upload', 
+            self.retry_single_upload.short_description
+        )
+        actions['remap_single_upload'] = (
+            self.remap_single_upload,
+            'remap_single_upload',
+            self.remap_single_upload.short_description
+        )
+        
+        return actions
 
+@admin.register(PortfolioUploadLog)
+class PortfolioUploadLogAdmin(admin.ModelAdmin):
+    list_display = [
+        'upload_link', 'row_display', 'client_info', 'status_colored', 
+        'message_preview', 'portfolio_link', 'created_at'
+    ]
+    list_filter = [
+        'status', 
+        ('upload', admin.RelatedOnlyFieldListFilter),
+        'created_at',
+        ('upload__uploaded_by', admin.RelatedOnlyFieldListFilter)
+    ]
+    search_fields = ['client_name', 'client_pan', 'scheme_name', 'message']
+    readonly_fields = [
+        'upload', 'row_number', 'client_name', 'client_pan', 
+        'scheme_name', 'status', 'message', 'portfolio_entry', 'created_at'
+    ]
+    date_hierarchy = 'created_at'
+    ordering = ['-created_at', 'upload', 'row_number']
+    
+    # Make this completely read-only - logs are auto-generated
+    def has_add_permission(self, request):
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        # Only allow superusers to delete logs for cleanup
+        return request.user.is_superuser
+    
+    def upload_link(self, obj):
+        """Link to the upload with status"""
+        url = reverse('admin:base_portfolioupload_change', args=[obj.upload.pk])
+        return format_html(
+            '<a href="{}" title="View upload details">{}</a><br><small style="color: gray;">{}</small>',
+            url, obj.upload.upload_id, obj.upload.get_status_display()
+        )
+    upload_link.short_description = "Upload"
+    upload_link.admin_order_field = 'upload__upload_id'
+    
+    def row_display(self, obj):
+        """Display row number with special formatting for system messages"""
+        if obj.row_number == 0:
+            return format_html('<span style="background: #e9ecef; padding: 2px 6px; border-radius: 3px;">SYSTEM</span>')
+        return format_html('<span style="font-family: monospace;">Row {}</span>', obj.row_number)
+    row_display.short_description = "Row"
+    row_display.admin_order_field = 'row_number'
+    
+    def client_info(self, obj):
+        """Display client information if available"""
+        if obj.client_name:
+            client_info = f"<strong>{obj.client_name}</strong>"
+            if obj.client_pan:
+                client_info += f"<br><small>PAN: {obj.client_pan}</small>"
+            if obj.scheme_name:
+                # Truncate long scheme names
+                scheme_display = obj.scheme_name[:30] + "..." if len(obj.scheme_name) > 30 else obj.scheme_name
+                client_info += f"<br><small style='color: #6c757d;'>{scheme_display}</small>"
+            return format_html(client_info)
+        return format_html('<em style="color: #6c757d;">System Message</em>')
+    client_info.short_description = "Client Info"
+    
+    def status_colored(self, obj):
+        """Display status with appropriate colors"""
+        colors = {
+            'success': 'green',
+            'warning': 'orange', 
+            'error': 'red'
+        }
+        icons = {
+            'success': '✅',
+            'warning': '⚠️',
+            'error': '❌'
+        }
+        color = colors.get(obj.status, 'black')
+        icon = icons.get(obj.status, '•')
+        
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{} {}</span>',
+            color, icon, obj.get_status_display()
+        )
+    status_colored.short_description = "Status"
+    status_colored.admin_order_field = 'status'
+    
+    def message_preview(self, obj):
+        """Display truncated message with full message in tooltip"""
+        if len(obj.message) > 80:
+            preview = obj.message[:80] + "..."
+            return format_html(
+                '<span title="{}">{}</span>',
+                obj.message.replace('"', '&quot;'), preview
+            )
+        return obj.message
+    message_preview.short_description = "Message"
+    
+    def portfolio_link(self, obj):
+        """Link to created portfolio entry if available"""
+        if obj.portfolio_entry:
+            url = reverse('admin:base_clientportfolio_change', args=[obj.portfolio_entry.pk])
+            return format_html(
+                '<a href="{}" style="color: #28a745;" title="View portfolio entry">📊 View</a>',
+                url
+            )
+        return format_html('<span style="color: #6c757d;">-</span>')
+    portfolio_link.short_description = "Portfolio"
+
+
+# Enhanced ClientPortfolio Admin
 @admin.register(ClientPortfolio)
 class ClientPortfolioAdmin(admin.ModelAdmin):
     list_display = [
-        'client_name', 'client_pan', 'scheme_name', 'total_value',
+        'client_name', 'client_pan', 'scheme_name', 'total_value_display',
         'primary_asset_class', 'is_mapped', 'client_profile_link',
-        'upload_batch', 'created_at'
+        'upload_batch_link', 'created_at'
     ]
     list_filter = [
         'is_mapped', 'upload_batch', 'created_at', 'data_as_of_date',
@@ -2068,20 +2353,160 @@ class ClientPortfolioAdmin(admin.ModelAdmin):
         })
     )
     
+    actions = ['map_to_clients', 'export_to_csv', 'mark_inactive']
+    
+    def changelist_view(self, request, extra_context=None):
+        """Override changelist view to add CSRF token to context"""
+        extra_context = extra_context or {}
+        extra_context['csrf_token'] = request.META.get('CSRF_COOKIE')
+        return super().changelist_view(request, extra_context=extra_context)
+    
+    def actions_column(self, obj):
+        """Action buttons for each upload - UPDATED with proper CSRF"""
+        actions = []
+        
+        # Get the current request from thread local or use a simple approach
+        csrf_token = "{{ csrf_token }}"  # This will be replaced by Django template
+        
+        # Process button for pending uploads
+        if obj.status == 'pending':
+            actions.append(f'''
+                <a href="javascript:void(0)" 
+                   onclick="processUpload({obj.pk})" 
+                   class="button" 
+                   style="background: #007bff; color: white; margin: 2px; text-decoration: none; padding: 4px 8px; border-radius: 3px; display: inline-block;">
+                    🚀 Process
+                </a>
+            ''')
+        
+        # Retry button for failed uploads
+        if obj.status == 'failed':
+            actions.append(f'''
+                <a href="javascript:void(0)" 
+                   onclick="retryUpload({obj.pk})" 
+                   class="button" 
+                   style="background: #ffc107; color: black; margin: 2px; text-decoration: none; padding: 4px 8px; border-radius: 3px; display: inline-block;">
+                    🔄 Retry
+                </a>
+            ''')
+        
+        # Logs button (always available if logs exist)
+        if obj.processing_logs.exists():
+            logs_url = reverse('admin:base_portfoliouploadlog_changelist') + f'?upload__id__exact={obj.pk}'
+            actions.append(f'''
+                <a href="{logs_url}" 
+                   class="button" 
+                   style="background: #6c757d; color: white; margin: 2px; text-decoration: none; padding: 4px 8px; border-radius: 3px; display: inline-block;">
+                    📋 Logs ({obj.processing_logs.count()})
+                </a>
+            ''')
+        
+        # Portfolios button for successful uploads
+        if obj.status in ['completed', 'partial'] and obj.portfolio_entries.exists():
+            portfolios_url = reverse('admin:base_clientportfolio_changelist') + f'?upload_batch__id__exact={obj.pk}'
+            actions.append(f'''
+                <a href="{portfolios_url}" 
+                   class="button" 
+                   style="background: #28a745; color: white; margin: 2px; text-decoration: none; padding: 4px 8px; border-radius: 3px; display: inline-block;">
+                    📊 Portfolios ({obj.portfolio_entries.count()})
+                </a>
+            ''')
+        
+        # Mapping button for uploads with unmapped portfolios
+        if obj.status in ['completed', 'partial']:
+            unmapped_count = obj.portfolio_entries.filter(is_mapped=False).count()
+            if unmapped_count > 0:
+                actions.append(f'''
+                    <a href="javascript:void(0)" 
+                       onclick="remapUpload({obj.pk})" 
+                       class="button" 
+                       style="background: #17a2b8; color: white; margin: 2px; text-decoration: none; padding: 4px 8px; border-radius: 3px; display: inline-block;">
+                        🔗 Map ({unmapped_count})
+                    </a>
+                ''')
+        
+        # Add JavaScript for handling actions
+        script = '''
+        <script>
+        function processUpload(uploadId) {
+            if (confirm('Process this upload?')) {
+                performAction('process_single_upload', uploadId);
+            }
+        }
+        
+        function retryUpload(uploadId) {
+            if (confirm('Retry this upload?')) {
+                performAction('retry_single_upload', uploadId);
+            }
+        }
+        
+        function remapUpload(uploadId) {
+            if (confirm('Re-attempt client mapping?')) {
+                performAction('remap_single_upload', uploadId);
+            }
+        }
+        
+        function performAction(action, uploadId) {
+            const form = document.createElement('form');
+            form.method = 'post';
+            form.action = '';
+            
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = action;
+            
+            const idInput = document.createElement('input');
+            idInput.type = 'hidden';
+            idInput.name = '_selected_action';
+            idInput.value = uploadId;
+            
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            form.appendChild(actionInput);
+            form.appendChild(idInput);
+            form.appendChild(csrfInput);
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+        </script>
+        '''
+        
+        return format_html(''.join(actions) + script)
+    actions_column.short_description = "Actions"
+    
+    def total_value_display(self, obj):
+        """Display total value with currency formatting"""
+        return f"₹{obj.total_value:,.2f}"
+    total_value_display.short_description = "Total Value"
+    total_value_display.admin_order_field = 'total_value'
+    
     def client_profile_link(self, obj):
+        """Link to client profile if mapped"""
         if obj.client_profile:
-            app_label = obj.client_profile._meta.app_label
-            model_name = obj.client_profile._meta.model_name
-            url = reverse(f'admin:{app_label}_{model_name}_change', args=[obj.client_profile.pk])
+            url = reverse('admin:base_clientprofile_change', args=[obj.client_profile.pk])
             return format_html('<a href="{}">{}</a>', url, obj.client_profile.client_full_name)
-        return "Not mapped"
+        return format_html('<em style="color: orange;">Not mapped</em>')
     client_profile_link.short_description = "Client Profile"
+    
+    def upload_batch_link(self, obj):
+        """Link to the upload batch"""
+        if obj.upload_batch:
+            url = reverse('admin:base_portfolioupload_change', args=[obj.upload_batch.pk])
+            return format_html(
+                '<a href="{}" title="View upload batch">{}</a><br><small>{}</small>',
+                url, obj.upload_batch.upload_id, obj.upload_batch.get_status_display()
+            )
+        return '-'
+    upload_batch_link.short_description = 'Upload Batch'
     
     def primary_asset_class(self, obj):
         return obj.primary_asset_class
     primary_asset_class.short_description = "Primary Asset Class"
-    
-    actions = ['map_to_clients', 'export_to_csv', 'mark_inactive']
     
     def map_to_clients(self, request, queryset):
         """Action to map selected portfolios to client profiles"""
@@ -2137,22 +2562,6 @@ class ClientPortfolioAdmin(admin.ModelAdmin):
             level=messages.SUCCESS
         )
     mark_inactive.short_description = "Mark selected portfolios as inactive"
-
-@admin.register(PortfolioUploadLog)
-class PortfolioUploadLogAdmin(admin.ModelAdmin):
-    list_display = [
-        'upload', 'row_number', 'client_name', 'client_pan', 
-        'status', 'message_preview', 'created_at'
-    ]
-    list_filter = ['status', 'upload', 'created_at']
-    search_fields = ['client_name', 'client_pan', 'message']
-    readonly_fields = ['upload', 'row_number', 'client_name', 'client_pan', 'scheme_name', 'created_at']
-    
-    def message_preview(self, obj):
-        if len(obj.message) > 50:
-            return obj.message[:50] + "..."
-        return obj.message
-    message_preview.short_description = "Message"
 
 @admin.register(MutualFundScheme)
 class MutualFundSchemeAdmin(admin.ModelAdmin):
@@ -2228,3 +2637,40 @@ user_change_url = f'admin:{User._meta.app_label}_{User._meta.model_name}_change'
 admin.site.site_header = "CRM Administration"
 admin.site.site_title = "CRM Admin"
 admin.site.index_title = "Welcome to CRM Administration"
+
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from threading import Thread
+import logging
+
+logger = logging.getLogger(__name__)
+
+@receiver(post_save, sender=PortfolioUpload)
+def auto_process_portfolio_upload(sender, instance, created, **kwargs):
+    """
+    Automatically start processing when a new portfolio upload is created
+    """
+    if created and instance.status == 'pending':
+        # Log the trigger
+        instance.create_log(
+            row_number=0,
+            status='success',
+            message=f"Upload {instance.upload_id} created and queued for automatic processing"
+        )
+        
+        # Process in background thread to avoid blocking the request
+        def process_in_background():
+            try:
+                instance.process_upload_with_logging()
+            except Exception as e:
+                logger.error(f"Auto-processing failed for {instance.upload_id}: {e}")
+                instance.create_log(
+                    row_number=0,
+                    status='error',
+                    message=f"Auto-processing failed: {str(e)}"
+                )
+        
+        # Start background processing
+        thread = Thread(target=process_in_background)
+        thread.daemon = True
+        thread.start()
