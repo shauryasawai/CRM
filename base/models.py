@@ -1562,34 +1562,543 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from decimal import Decimal
-import os
+
+
+# models.py - Complete Updated Portfolio Models
+import pandas as pd
+from django.db import transaction
+import logging
+
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
+class PortfolioUpload(models.Model):
+    """Model to track portfolio file uploads"""
+    UPLOAD_STATUS_CHOICES = [
+        ('pending', 'Pending Processing'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('partial', 'Partially Processed'),
+    ]
+    
+    upload_id = models.CharField(max_length=20, unique=True, editable=False)
+    file = models.FileField(
+        upload_to='portfolio_uploads/',
+        validators=[FileExtensionValidator(allowed_extensions=['xlsx', 'xls'])]
+    )
+    uploaded_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='portfolio_uploads'
+    )
+    uploaded_at = models.DateTimeField(default=timezone.now)
+    processed_at = models.DateTimeField(null=True, blank=True)
+    
+    # Processing Status
+    status = models.CharField(max_length=15, choices=UPLOAD_STATUS_CHOICES, default='pending')
+    total_rows = models.PositiveIntegerField(default=0)
+    processed_rows = models.PositiveIntegerField(default=0)
+    successful_rows = models.PositiveIntegerField(default=0)
+    failed_rows = models.PositiveIntegerField(default=0)
+    
+    # Processing Details
+    processing_log = models.TextField(blank=True)
+    error_details = models.JSONField(default=dict, blank=True)
+    processing_summary = models.JSONField(default=dict, blank=True)
+    
+    class Meta:
+        ordering = ['-uploaded_at']
+        verbose_name = 'Portfolio Upload'
+        verbose_name_plural = 'Portfolio Uploads'
+    
+    def save(self, *args, **kwargs):
+        if not self.upload_id:
+            self.upload_id = self.generate_upload_id()
+        super().save(*args, **kwargs)
+    
+    def generate_upload_id(self):
+        """Generate unique upload ID"""
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        return f"PU{timestamp}"
+    
+    def __str__(self):
+        return f"{self.upload_id} - {self.file.name} ({self.get_status_display()})"
+
+class ClientPortfolio(models.Model):
+    """Enhanced client portfolio model with Excel upload support"""
+    # Link to client profile
+    client_profile = models.ForeignKey(
+        'ClientProfile',  # Reference to your existing ClientProfile model
+        on_delete=models.CASCADE,
+        related_name='portfolio_holdings',
+        null=True,
+        blank=True
+    )
+    
+    # Excel Data Fields (matching the uploaded structure)
+    client_name = models.CharField(max_length=255, help_text="Client name from Excel")
+    client_pan = models.CharField(max_length=50, help_text="Client PAN from Excel", db_index=True)
+    scheme_name = models.CharField(max_length=300, help_text="Mutual fund scheme name")
+    
+    # Asset Allocation Values
+    debt_value = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text="Debt allocation value")
+    equity_value = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text="Equity allocation value")
+    hybrid_value = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text="Hybrid allocation value")
+    liquid_ultra_short_value = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text="Liquid & Ultra Short value")
+    other_value = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text="Other category value")
+    arbitrage_value = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text="Arbitrage value")
+    
+    # Portfolio Details
+    total_value = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text="Total holding value")
+    allocation_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0, help_text="Portfolio allocation %")
+    units = models.DecimalField(max_digits=15, decimal_places=4, default=0, help_text="Number of units held")
+    
+    # Family and Personnel Information
+    family_head = models.CharField(max_length=255, blank=True, help_text="Family head name")
+    app_code = models.CharField(max_length=50, blank=True, help_text="Application code")
+    equity_code = models.CharField(max_length=50, blank=True, help_text="Equity code")
+    operations_personnel = models.CharField(max_length=255, blank=True, help_text="Operations personnel")
+    operations_code = models.CharField(max_length=50, blank=True, help_text="Operations code")
+    relationship_manager = models.CharField(max_length=255, blank=True, help_text="Relationship manager name")
+    rm_code = models.CharField(max_length=50, blank=True, help_text="RM code")
+    sub_broker = models.CharField(max_length=255, blank=True, help_text="Sub broker name")
+    sub_broker_code = models.CharField(max_length=50, blank=True, help_text="Sub broker code")
+    
+    # Scheme Information
+    isin_number = models.CharField(max_length=20, blank=True, help_text="ISIN number of the scheme")
+    client_iwell_code = models.CharField(max_length=50, blank=True, help_text="Client iWell code")
+    family_head_iwell_code = models.CharField(max_length=50, blank=True, help_text="Family head iWell code")
+    
+    # Folio Information (additional fields)
+    folio_number = models.CharField(max_length=50, blank=True, help_text="Folio number")
+    nav_date = models.DateField(null=True, blank=True, help_text="NAV date")
+    nav_price = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, help_text="NAV price")
+    cost_value = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text="Cost value of investment")
+    
+    # Upload Tracking
+    upload_batch = models.ForeignKey(
+        PortfolioUpload,
+        on_delete=models.CASCADE,
+        related_name='portfolio_entries',
+        null=True,
+        blank=True
+    )
+    
+    # Status and Metadata
+    is_active = models.BooleanField(default=True)
+    is_mapped = models.BooleanField(default=False, help_text="Is mapped to a client profile")
+    mapping_notes = models.TextField(blank=True, help_text="Notes about client mapping")
+    
+    # Timestamps
+    data_as_of_date = models.DateField(default=timezone.now, help_text="Date when this data was valid")
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Linked Personnel (FK relationships)
+    mapped_rm = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        limit_choices_to={'role': 'rm'},
+        related_name='portfolio_rm_clients',
+        help_text="Mapped RM from User model"
+    )
+    mapped_ops = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        limit_choices_to={'role__in': ['ops_exec', 'ops_team_lead']},
+        related_name='portfolio_ops_clients',
+        help_text="Mapped Operations person from User model"
+    )
+    
+    class Meta:
+        ordering = ['client_name', 'scheme_name']
+        verbose_name = 'Client Portfolio'
+        verbose_name_plural = 'Client Portfolios'
+        indexes = [
+            models.Index(fields=['client_pan', 'scheme_name']),
+            models.Index(fields=['client_name']),
+            models.Index(fields=['is_mapped', 'client_pan']),
+            models.Index(fields=['upload_batch', 'is_mapped']),
+        ]
+        # Allow multiple entries for same client-scheme combination from different uploads
+        # unique_together = ['client_pan', 'scheme_name', 'upload_batch']
+    
+    def __str__(self):
+        return f"{self.client_name} - {self.scheme_name} ({self.client_pan})"
+    
+    def clean(self):
+        """Validate portfolio data"""
+        super().clean()
+        
+        # Validate PAN format
+        if self.client_pan and len(self.client_pan) != 10:
+            raise ValidationError("PAN number must be 10 characters long")
+        
+        # Validate that total_value matches sum of category values
+        calculated_total = (
+            self.debt_value + self.equity_value + self.hybrid_value + 
+            self.liquid_ultra_short_value + self.other_value + self.arbitrage_value
+        )
+        if self.total_value and abs(self.total_value - calculated_total) > 0.01:
+            raise ValidationError(
+                f"Total value ({self.total_value}) doesn't match sum of category values ({calculated_total})"
+            )
+    
+    def map_to_client_profile(self):
+        """Map this portfolio entry to a client profile based on PAN"""
+        if self.client_pan:
+            try:
+                # Import here to avoid circular imports
+                from base.models import ClientProfile  # Adjust import based on your app structure
+                client_profile = ClientProfile.objects.get(pan_number=self.client_pan)
+                
+                self.client_profile = client_profile
+                self.is_mapped = True
+                self.mapping_notes = f"Auto-mapped to {client_profile.client_full_name} on {timezone.now().strftime('%Y-%m-%d %H:%M')}"
+                self.save()
+                
+                return True, f"Successfully mapped to {client_profile.client_full_name}"
+                
+            except Exception as e:
+                if 'DoesNotExist' in str(type(e)):
+                    self.mapping_notes = f"No client profile found with PAN {self.client_pan}"
+                    self.save()
+                    return False, f"No client profile found with PAN {self.client_pan}"
+                elif 'MultipleObjectsReturned' in str(type(e)):
+                    self.mapping_notes = f"Multiple client profiles found with PAN {self.client_pan}"
+                    self.save()
+                    return False, f"Multiple client profiles found with PAN {self.client_pan}"
+                else:
+                    logger.error(f"Error mapping client profile: {e}")
+                    return False, f"Error mapping client profile: {str(e)}"
+        
+        return False, "No PAN number provided"
+    
+    def map_personnel(self):
+        """Map RM and Operations personnel based on names"""
+        mapped_count = 0
+        
+        # Map RM
+        if self.relationship_manager:
+            try:
+                name_parts = self.relationship_manager.strip().split()
+                if len(name_parts) >= 1:
+                    rm_user = User.objects.filter(
+                        role='rm',
+                        first_name__icontains=name_parts[0]
+                    )
+                    if len(name_parts) > 1:
+                        rm_user = rm_user.filter(last_name__icontains=name_parts[-1])
+                    
+                    rm_user = rm_user.first()
+                    if rm_user:
+                        self.mapped_rm = rm_user
+                        mapped_count += 1
+            except Exception as e:
+                logger.warning(f"Error mapping RM {self.relationship_manager}: {e}")
+        
+        # Map Operations personnel
+        if self.operations_personnel:
+            try:
+                name_parts = self.operations_personnel.strip().split()
+                if len(name_parts) >= 1:
+                    ops_user = User.objects.filter(
+                        role__in=['ops_exec', 'ops_team_lead'],
+                        first_name__icontains=name_parts[0]
+                    )
+                    if len(name_parts) > 1:
+                        ops_user = ops_user.filter(last_name__icontains=name_parts[-1])
+                    
+                    ops_user = ops_user.first()
+                    if ops_user:
+                        self.mapped_ops = ops_user
+                        mapped_count += 1
+            except Exception as e:
+                logger.warning(f"Error mapping operations personnel {self.operations_personnel}: {e}")
+        
+        if mapped_count > 0:
+            self.save()
+        
+        return mapped_count
+    
+    @property
+    def gain_loss(self):
+        """Calculate gain/loss if cost value is available"""
+        if self.cost_value and self.cost_value > 0:
+            return self.total_value - self.cost_value
+        return None
+    
+    @property
+    def gain_loss_percentage(self):
+        """Calculate gain/loss percentage"""
+        if self.cost_value and self.cost_value > 0:
+            return ((self.total_value - self.cost_value) / self.cost_value) * 100
+        return None
+    
+    @property
+    def primary_asset_class(self):
+        """Determine primary asset class based on highest allocation"""
+        values = {
+            'Debt': self.debt_value,
+            'Equity': self.equity_value,
+            'Hybrid': self.hybrid_value,
+            'Liquid/Ultra Short': self.liquid_ultra_short_value,
+            'Other': self.other_value,
+            'Arbitrage': self.arbitrage_value,
+        }
+        
+        if max(values.values()) > 0:
+            return max(values, key=values.get)
+        return 'Unknown'
+    
+    @classmethod
+    def safe_decimal_convert(cls, value, default=0):
+        """Safely convert values to Decimal for Django DecimalField"""
+        if value is None or pd.isna(value):
+            return Decimal(str(default))
+        
+        # Handle string values
+        if isinstance(value, str):
+            # Remove common formatting characters
+            value = value.replace(',', '').replace('₹', '').replace('$', '').strip()
+            if not value:
+                return Decimal(str(default))
+        
+        try:
+            return Decimal(str(float(value)))
+        except (ValueError, TypeError):
+            logger.warning(f"Could not convert decimal value: {value} (type: {type(value)})")
+            return Decimal(str(default))
+    
+    @classmethod
+    def safe_string_convert(cls, value):
+        """Safely convert values to string, handling NaN and None"""
+        if value is None or pd.isna(value):
+            return ''
+        
+        if isinstance(value, (int, float)):
+            if pd.isna(value):
+                return ''
+            return str(value)
+        
+        return str(value).strip()
+    
+    @classmethod
+    def process_excel_file(cls, file_path, upload_instance):
+        """Process Excel file and create portfolio entries with enhanced error handling"""
+        results = {
+            'total_rows': 0,
+            'processed_rows': 0,
+            'successful_rows': 0,
+            'failed_rows': 0,
+            'errors': [],
+            'summary': {}
+        }
+        
+        try:
+            # Read Excel file with better handling
+            df = pd.read_excel(file_path, engine='openpyxl')
+            results['total_rows'] = len(df)
+            
+            # Clean column names (remove extra spaces)
+            df.columns = df.columns.str.strip()
+            
+            # Column mapping based on the Excel structure
+            column_mapping = {
+                'CLIENT': 'client_name',
+                'CLIENT PAN': 'client_pan',
+                'SCHEME': 'scheme_name',
+                'DEBT': 'debt_value',
+                ' DEBT': 'debt_value',
+                'EQUITY': 'equity_value',
+                ' EQUITY': 'equity_value',
+                'HYBRID': 'hybrid_value',
+                ' HYBRID': 'hybrid_value',
+                'LIQUID AND ULTRA SHORT': 'liquid_ultra_short_value',
+                ' LIQUID AND  ULTRA  SHORT': 'liquid_ultra_short_value',
+                'OTHER': 'other_value',
+                ' OTHER': 'other_value',
+                'ARBITRAGE': 'arbitrage_value',
+                ' ARBITRAGE': 'arbitrage_value',
+                'TOTAL': 'total_value',
+                'ALLOCATION': 'allocation_percentage',
+                'UNITS': 'units',
+                'FAMILY HEAD': 'family_head',
+                'APP CODE': 'app_code',
+                'EQUITY CODE': 'equity_code',
+                'OPERATIONS': 'operations_personnel',
+                ' OPERATIONS': 'operations_personnel',
+                'OPERATIONS CODE': 'operations_code',
+                ' OPERATIONS CODE': 'operations_code',
+                'RELATIONSHIP MANAGER': 'relationship_manager',
+                ' RELATIONSHIP  MANAGER': 'relationship_manager',
+                'RELATIONSHIP MANAGER CODE': 'rm_code',
+                ' RELATIONSHIP  MANAGER CODE': 'rm_code',
+                'SUB BROKER': 'sub_broker',
+                ' SUB  BROKER': 'sub_broker',
+                'SUB BROKER CODE': 'sub_broker_code',
+                ' SUB  BROKER CODE': 'sub_broker_code',
+                'ISIN NO': 'isin_number',
+                'CLIENT IWELL CODE': 'client_iwell_code',
+                'FAMILY HEAD IWELL CODE': 'family_head_iwell_code'
+            }
+            
+            # Process each row
+            with transaction.atomic():
+                for index, row in df.iterrows():
+                    try:
+                        results['processed_rows'] += 1
+                        
+                        # Prepare data for portfolio entry
+                        portfolio_data = {
+                            'upload_batch': upload_instance,
+                            'data_as_of_date': timezone.now().date(),
+                            'is_active': True,
+                            'is_mapped': False
+                        }
+                        
+                        # Map columns with safe conversion
+                        for excel_col, model_field in column_mapping.items():
+                            if excel_col in row.index and pd.notna(row[excel_col]):
+                                value = row[excel_col]
+                                
+                                # Handle different data types
+                                if model_field in [
+                                    'debt_value', 'equity_value', 'hybrid_value', 
+                                    'liquid_ultra_short_value', 'other_value', 'arbitrage_value',
+                                    'total_value', 'allocation_percentage', 'units'
+                                ]:
+                                    portfolio_data[model_field] = cls.safe_decimal_convert(value)
+                                else:
+                                    portfolio_data[model_field] = cls.safe_string_convert(value)
+                        
+                        # Validate required fields
+                        if not portfolio_data.get('client_name') or not portfolio_data.get('scheme_name'):
+                            results['failed_rows'] += 1
+                            results['errors'].append(f"Row {index + 2}: Missing client name or scheme name")
+                            continue
+                        
+                        # Create portfolio entry
+                        portfolio_entry = cls.objects.create(**portfolio_data)
+                        
+                        # Try to map to client profile
+                        try:
+                            mapped, message = portfolio_entry.map_to_client_profile()
+                            # Try to map personnel
+                            personnel_mapped = portfolio_entry.map_personnel()
+                        except Exception as mapping_error:
+                            logger.warning(f"Mapping failed for row {index + 2}: {mapping_error}")
+                        
+                        results['successful_rows'] += 1
+                        
+                    except Exception as e:
+                        results['failed_rows'] += 1
+                        error_msg = f"Row {index + 2}: {str(e)}"
+                        results['errors'].append(error_msg)
+                        logger.error(f"Error processing row {index + 2}: {e}")
+            
+            # Update summary
+            results['summary'] = {
+                'unique_clients': cls.objects.filter(upload_batch=upload_instance).values('client_pan').distinct().count(),
+                'unique_schemes': cls.objects.filter(upload_batch=upload_instance).values('scheme_name').distinct().count(),
+                'mapped_clients': cls.objects.filter(upload_batch=upload_instance, is_mapped=True).count(),
+                'total_aum': cls.objects.filter(upload_batch=upload_instance).aggregate(
+                    total=models.Sum('total_value')
+                )['total'] or 0
+            }
+            
+        except Exception as e:
+            results['errors'].append(f"File processing error: {str(e)}")
+            results['failed_rows'] = results.get('total_rows', 0)
+            logger.error(f"File processing failed: {e}")
+        
+        return results
+
+class PortfolioUploadLog(models.Model):
+    """Detailed log for portfolio upload processing"""
+    upload = models.ForeignKey(
+        PortfolioUpload,
+        on_delete=models.CASCADE,
+        related_name='processing_logs'
+    )
+    row_number = models.PositiveIntegerField()
+    client_name = models.CharField(max_length=255, blank=True)
+    client_pan = models.CharField(max_length=50, blank=True)
+    scheme_name = models.CharField(max_length=300, blank=True)
+    
+    STATUS_CHOICES = [
+        ('success', 'Success'),
+        ('error', 'Error'),
+        ('warning', 'Warning'),
+    ]
+    
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
+    message = models.TextField()
+    portfolio_entry = models.ForeignKey(
+        ClientPortfolio,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='upload_logs'
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+    
+    class Meta:
+        ordering = ['upload', 'row_number']
+        verbose_name = 'Portfolio Upload Log'
+        verbose_name_plural = 'Portfolio Upload Logs'
+    
+    def __str__(self):
+        return f"{self.upload.upload_id} - Row {self.row_number} ({self.get_status_display()})"
+
 class MutualFundScheme(models.Model):
-    """Master data for mutual fund schemes"""
-    scheme_name = models.CharField(max_length=200)
+    """Enhanced mutual fund scheme model"""
+    scheme_name = models.CharField(max_length=300)  # Increased length
     amc_name = models.CharField(max_length=100)
     scheme_code = models.CharField(max_length=50, unique=True)
+    isin_number = models.CharField(max_length=20, unique=True, null=True, blank=True)
+    
     scheme_type = models.CharField(max_length=50, choices=[
         ('equity', 'Equity'),
         ('debt', 'Debt'),
         ('hybrid', 'Hybrid'),
         ('liquid', 'Liquid'),
+        ('ultra_short', 'Ultra Short'),
         ('elss', 'ELSS'),
         ('index', 'Index'),
         ('etf', 'ETF'),
+        ('arbitrage', 'Arbitrage'),
+        ('other', 'Other'),
     ])
+    
+    # Asset allocation from portfolio data
+    primary_asset_class = models.CharField(max_length=50, blank=True)
     risk_category = models.CharField(max_length=20, choices=[
         ('low', 'Low'),
         ('moderate', 'Moderate'),
         ('high', 'High'),
         ('very_high', 'Very High'),
     ], default='moderate')
+    
+    # Investment limits
     minimum_investment = models.DecimalField(max_digits=10, decimal_places=2, default=500.00)
     minimum_sip = models.DecimalField(max_digits=10, decimal_places=2, default=500.00)
+    
+    # Status and tracking
     is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    last_nav_date = models.DateField(null=True, blank=True)
+    last_nav_price = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True)
+    
+    # Metadata
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         ordering = ['amc_name', 'scheme_name']
@@ -1598,18 +2107,64 @@ class MutualFundScheme(models.Model):
     
     def __str__(self):
         return f"{self.amc_name} - {self.scheme_name}"
+    
+    @classmethod
+    def create_from_portfolio_data(cls, scheme_name, isin_number=None):
+        """Create scheme from portfolio data if it doesn't exist"""
+        try:
+            if isin_number:
+                scheme = cls.objects.get(isin_number=isin_number)
+            else:
+                scheme = cls.objects.get(scheme_name=scheme_name)
+            return scheme
+        except cls.DoesNotExist:
+            # Try to parse AMC name and scheme type from scheme name
+            amc_name = scheme_name.split()[0] if scheme_name else 'Unknown'
+            
+            # Determine scheme type based on name
+            scheme_type = 'other'
+            name_lower = scheme_name.lower()
+            if any(word in name_lower for word in ['equity', 'growth', 'large', 'mid', 'small', 'cap']):
+                scheme_type = 'equity'
+            elif any(word in name_lower for word in ['debt', 'bond', 'income']):
+                scheme_type = 'debt'
+            elif any(word in name_lower for word in ['hybrid', 'balanced']):
+                scheme_type = 'hybrid'
+            elif any(word in name_lower for word in ['liquid']):
+                scheme_type = 'liquid'
+            elif any(word in name_lower for word in ['elss', 'tax']):
+                scheme_type = 'elss'
+            
+            # Generate scheme code
+            scheme_code = isin_number or f"AUTO_{scheme_name[:20].replace(' ', '_').upper()}"
+            
+            return cls.objects.create(
+                scheme_name=scheme_name,
+                amc_name=amc_name,
+                scheme_code=scheme_code,
+                isin_number=isin_number,
+                scheme_type=scheme_type,
+                primary_asset_class=scheme_type.title()
+            )
+        except cls.MultipleObjectsReturned:
+            # Return the first one if multiple exist
+            if isin_number:
+                return cls.objects.filter(isin_number=isin_number).first()
+            else:
+                return cls.objects.filter(scheme_name=scheme_name).first()
 
-class ClientPortfolio(models.Model):
-    """Current portfolio holdings for clients"""
+# Legacy ClientPortfolio compatibility for existing execution plans
+class LegacyClientPortfolio(models.Model):
+    """Legacy client portfolio model for backward compatibility"""
     client = models.ForeignKey(
-        'base.Client',  # Reference to your existing Client model
+        'Client',
         on_delete=models.CASCADE,
-        related_name='portfolio_holdings'
+        related_name='legacy_portfolio'
     )
     scheme = models.ForeignKey(
         MutualFundScheme,
         on_delete=models.CASCADE,
-        related_name='client_holdings'
+        related_name='legacy_holdings'
     )
     folio_number = models.CharField(max_length=50, blank=True)
     units = models.DecimalField(max_digits=15, decimal_places=4, default=0)
@@ -1622,8 +2177,8 @@ class ClientPortfolio(models.Model):
     class Meta:
         unique_together = ['client', 'scheme', 'folio_number']
         ordering = ['client', 'scheme']
-        verbose_name = 'Client Portfolio'
-        verbose_name_plural = 'Client Portfolios'
+        verbose_name = 'Legacy Client Portfolio'
+        verbose_name_plural = 'Legacy Client Portfolios'
     
     def __str__(self):
         return f"{self.client.name} - {self.scheme.scheme_name}"

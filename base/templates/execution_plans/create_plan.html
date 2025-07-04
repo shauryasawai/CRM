@@ -20,7 +20,7 @@
 </div>
 
 <div class="row justify-content-center">
-    <div class="col-lg-8">
+    <div class="col-lg-10">
         <div class="card shadow-sm">
             <div class="card-header bg-primary text-white">
                 <h5 class="card-title mb-0">
@@ -32,29 +32,65 @@
                 <form method="get" id="clientSelectionForm">
                     <div class="mb-3">
                         <label for="clientSelect" class="form-label">Choose Client</label>
-                        <select class="form-control select2" id="clientSelect" name="client_id" required>
-                            <option value="">Search and select a client...</option>
-                            {% for client in clients %}
-                                <option value="{{ client.id }}" 
-                                        data-aum="{{ client.aum|default:0 }}" 
-                                        data-sip="{{ client.sip_amount|default:0 }}">
-                                    {{ client.name }}
-                                    {% if client.aum %} - AUM: ₹{{ client.aum|floatformat:2 }}{% endif %}
-                                </option>
-                            {% endfor %}
-                        </select>
-                        <div class="form-text">Select the client for whom you want to create an execution plan.</div>
+                        <div class="position-relative">
+                            <input type="text" class="form-control mb-2" id="clientSearch" placeholder="🔍 Search clients by name or PAN...">
+                            <select class="form-control select2" id="clientSelect" name="client_id" required>
+                                <option value="">Search and select a client...</option>
+                                {% for client in clients %}
+                                    {% if client.type == 'profile' %}
+                                    <option value="{{ client.id }}" 
+                                            data-client-id="{{ client.profile_id }}"
+                                            data-client-name="{{ client.name }}"
+                                            data-pan="{{ client.pan|default:'' }}"
+                                            data-client-type="{{ client.type }}"
+                                            data-total-aum="{{ client.total_aum|default:0 }}"
+                                            data-scheme-count="{{ client.scheme_count|default:0 }}"
+                                            data-mapped-rm="{{ client.mapped_rm|default:'-' }}"
+                                            data-has-portfolio="{% if client.has_portfolio %}true{% else %}false{% endif %}"
+                                            data-profile-id="{{ client.profile_id }}"
+                                            data-search-text="{{ client.name|lower }} {{ client.pan|lower }}">
+                                        {{ client.name }}
+                                        {% if client.pan and client.pan != 'N/A' %}
+                                            (PAN: {{ client.pan }})
+                                        {% endif %}
+                                        {% if client.total_aum %}
+                                            - AUM: ₹{{ client.total_aum|floatformat:0 }}
+                                        {% endif %}
+                                        <span class="badge bg-success">Profile Client</span>
+                                    </option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-text">Search and select the client for whom you want to create an execution plan.</div>
                     </div>
                     
                     <div id="clientInfo" class="mb-3" style="display: none;">
                         <div class="alert alert-info">
-                            <h6><i class="fas fa-info-circle me-2"></i>Client Information</h6>
                             <div class="row">
-                                <div class="col-md-6">
-                                    <strong>Current AUM:</strong> <span id="clientAUM">₹0</span>
+                                <div class="col-md-8">
+                                    <h6><i class="fas fa-user-circle me-2"></i>Client Information</h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <strong>Name:</strong> <span id="clientNameDisplay" class="text-dark fw-bold">-</span>
+                                            <br><strong>PAN Number:</strong> <span id="clientPAN" class="text-primary font-monospace">-</span>
+                                            <br><strong>Client Type:</strong> <span id="clientType" class="badge">-</span>
+                                            <br><strong>Profile ID:</strong> <span id="clientProfileID" class="text-muted">-</span>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <strong>Assigned RM:</strong> <span id="clientRM">-</span>
+                                            <br><strong>Has Portfolio:</strong> <span id="portfolioStatus" class="badge">-</span>
+                                            <br><strong>Data Source:</strong> <span class="text-info">Portfolio System</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <strong>Monthly SIP:</strong> <span id="clientSIP">₹0</span>
+                                <div class="col-md-4">
+                                    <h6 class="text-success"><i class="fas fa-chart-line me-2"></i>Portfolio Summary</h6>
+                                    <div class="bg-light p-2 rounded">
+                                        <div><strong>Current AUM:</strong> <span id="clientAUM" class="text-success fw-bold">₹0</span></div>
+                                        <div><strong>Total Schemes:</strong> <span id="clientSchemes" class="text-info fw-bold">0</span></div>
+                                        <div><strong>Client ID:</strong> <span id="clientIDDisplay" class="text-muted">-</span></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -72,14 +108,57 @@
             </div>
         </div>
         
-        {% if clients.count == 0 %}
+        {% if clients|length == 0 %}
         <div class="alert alert-warning mt-4">
-            <h5><i class="fas fa-exclamation-triangle me-2"></i>No Clients Available</h5>
-            <p class="mb-0">You don't have any clients assigned to create execution plans for. Please contact your manager to assign clients.</p>
+            <h5><i class="fas fa-exclamation-triangle me-2"></i>No Profile Clients Available</h5>
+            <p class="mb-0">You don't have any profile clients assigned to create execution plans for. Only clients with detailed profiles can have execution plans created.</p>
         </div>
         {% endif %}
     </div>
 </div>
+
+<!-- Quick Stats Card -->
+{% if profile_clients_count > 0 %}
+<div class="row mt-4">
+    <div class="col-lg-10 offset-lg-1">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Quick Statistics
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="border-end">
+                            <h4 class="text-primary mb-1">{{ profile_clients_count|default:0 }}</h4>
+                            <small class="text-muted">Profile Clients</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border-end">
+                            <h4 class="text-success mb-1">{{ active_profiles|default:0 }}</h4>
+                            <small class="text-muted">Active Profiles</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border-end">
+                            <h4 class="text-info mb-1">₹{{ average_aum|default:0|floatformat:0 }}</h4>
+                            <small class="text-muted">Avg AUM</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div>
+                            <h4 class="text-warning mb-1">{{ total_schemes|default:0 }}</h4>
+                            <small class="text-muted">Total Schemes</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
@@ -90,12 +169,48 @@ $(document).ready(function() {
         const clientId = selectedOption.val();
         
         if (clientId) {
-            const aum = selectedOption.data('aum') || 0;
-            const sip = selectedOption.data('sip') || 0;
+            // Extract data based on your actual data structure
+            const clientName = selectedOption.data('client-name') || '-';
+            const pan = selectedOption.data('pan') || '-';
+            const clientType = selectedOption.data('client-type') || '-';
+            const totalAUM = selectedOption.data('total-aum') || 0;
+            const schemeCount = selectedOption.data('scheme-count') || 0;
+            const mappedRM = selectedOption.data('mapped-rm') || '-';
+            const hasPortfolio = selectedOption.data('has-portfolio');
+            const profileId = selectedOption.data('profile-id') || '-';
+            const clientIDValue = selectedOption.data('client-id') || clientId;
             
-            $('#clientAUM').text('₹' + parseFloat(aum).toLocaleString('en-IN', {minimumFractionDigits: 2}));
-            $('#clientSIP').text('₹' + parseFloat(sip).toLocaleString('en-IN', {minimumFractionDigits: 2}));
+            // Update client information display
+            $('#clientNameDisplay').text(clientName);
+            $('#clientPAN').text(pan);
+            $('#clientRM').text(mappedRM);
+            $('#clientProfileID').text(profileId);
+            $('#clientIDDisplay').text(clientIDValue);
             
+            // Update portfolio summary
+            $('#clientAUM').text('₹' + parseFloat(totalAUM).toLocaleString('en-IN', {minimumFractionDigits: 0}));
+            $('#clientSchemes').text(schemeCount);
+            
+            // Update client type badge
+            const typeBadge = $('#clientType');
+            if (clientType === 'profile') {
+                typeBadge.text('Profile Client').removeClass('bg-info bg-warning').addClass('bg-success');
+            } else {
+                typeBadge.text('Basic Client').removeClass('bg-success bg-warning').addClass('bg-info');
+            }
+            
+            // Update portfolio status badge
+            const portfolioBadge = $('#portfolioStatus');
+            // Check both has_portfolio flag AND actual scheme count
+            if ((hasPortfolio === 'true' || hasPortfolio === true) && schemeCount > 0) {
+                portfolioBadge.text('Available').removeClass('bg-warning bg-danger').addClass('bg-success');
+            } else if (hasPortfolio === 'true' || hasPortfolio === true) {
+                portfolioBadge.text('Profile Only').removeClass('bg-success bg-danger').addClass('bg-warning');
+            } else {
+                portfolioBadge.text('Not Available').removeClass('bg-success bg-warning').addClass('bg-danger');
+            }
+            
+            // Show client info section
             $('#clientInfo').show();
             $('#proceedBtn').prop('disabled', false);
         } else {
@@ -107,12 +222,76 @@ $(document).ready(function() {
     $('#clientSelectionForm').on('submit', function(e) {
         const clientId = $('#clientSelect').val();
         if (clientId) {
-            this.action = "{% url 'create_plan_step2' 0 %}".replace('0', clientId);
+            // Use the correct URL that accepts string client IDs
+            this.action = "{% url 'create_plan_step2' 'placeholder' %}".replace('placeholder', clientId);
         } else {
             e.preventDefault();
             alert('Please select a client first.');
         }
     });
+    
+    // Initialize Select2 if available
+    if (typeof $.fn.select2 !== 'undefined') {
+        $('#clientSelect').select2({
+            placeholder: 'Search and select a client...',
+            allowClear: true,
+            width: '100%',
+            templateResult: function(client) {
+                if (client.loading) return client.text;
+                
+                const $option = $(client.element);
+                const aum = $option.data('aum') || 0;
+                const dematCount = $option.data('demat-count') || 0;
+                const hasProfile = $option.data('has-profile');
+                
+                // Custom formatting for dropdown options
+                const $container = $(
+                    '<div class="select2-result-client">' +
+                        '<div class="select2-result-client__name fw-bold">' + client.text + '</div>' +
+                        '<div class="select2-result-client__details text-muted small d-flex justify-content-between">' +
+                            '<span>AUM: ₹' + parseFloat(aum).toLocaleString('en-IN') + '</span>' +
+                            '<span>Demat: ' + dematCount + '</span>' +
+                            '<span class="badge badge-sm ' + (hasProfile === 'true' ? 'bg-success' : 'bg-info') + '">' + 
+                                (hasProfile === 'true' ? 'Has Profile' : 'Basic Client') + 
+                            '</span>' +
+                        '</div>' +
+                    '</div>'
+                );
+                
+                return $container;
+            },
+            templateSelection: function(client) {
+                if (client.id === '') return client.text;
+                
+                const $option = $(client.element);
+                const hasProfile = $option.data('has-profile');
+                const typeIcon = hasProfile === 'true' ? 'fas fa-user-check' : 'fas fa-user';
+                
+                return $('<span><i class="' + typeIcon + ' me-1"></i>' + client.text + '</span>');
+            }
+        });
+    }
 });
 </script>
+
+<style>
+.select2-result-client__name {
+    font-weight: 600;
+    color: #495057;
+}
+
+.select2-result-client__details {
+    font-size: 0.85em;
+    margin-top: 2px;
+}
+
+.badge-sm {
+    font-size: 0.75em;
+    padding: 0.25em 0.5em;
+}
+
+.border-end {
+    border-right: 1px solid #dee2e6;
+}
+</style>
 {% endblock %}

@@ -12,6 +12,10 @@ from django.core.paginator import Paginator
 from django.template.loader import render_to_string
 import calendar
 import json
+import re
+
+# Import CRM User model and HRM models
+from base.models import User
 from .models import (
     Employee, LeaveRequest, LeaveType, Holiday, LeaveQuota,
     Attendance, Notification, Department, ReimbursementClaim,
@@ -26,32 +30,49 @@ from .utils import get_next_approver, auto_approve_pending_leaves
 
 @login_required
 def hrm_dashboard(request):
-    employee = get_object_or_404(Employee, user=request.user)
+    """Enhanced dashboard with CRM integration"""
+    try:
+        employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        # Create employee profile if doesn't exist
+        employee = Employee.objects.create(
+            user=request.user,
+            designation=request.user.get_role_display(),
+            date_of_joining=timezone.now().date(),
+            hierarchy_level=request.user.role
+        )
     
     # Auto-approve pending leaves (run this check)
     auto_approve_pending_leaves()
     
-    # Dashboard statistics
+    # Get subordinates using CRM hierarchy
+    subordinates = []
+    if request.user.role in ['rm_head', 'ops_team_lead', 'business_head', 'business_head_ops', 'top_management']:
+        # Get CRM subordinates and their employee profiles
+        crm_subordinates = request.user.get_team_members()
+        subordinates = Employee.objects.filter(user__in=crm_subordinates)
+    
+    # Dashboard statistics - items requiring approval
     pending_leaves = LeaveRequest.objects.filter(
-        employee__reporting_manager=employee,
+        employee__in=subordinates,
         status='P'
     ).count()
     
     pending_reimbursements = ReimbursementClaim.objects.filter(
-        employee__reporting_manager=employee,
+        employee__in=subordinates,
         status='P'
     ).count()
     
     # Get items requiring approval
     leaves_to_approve = LeaveRequest.objects.filter(
-        employee__reporting_manager=employee,
+        employee__in=subordinates,
         status='P'
-    ).order_by('-applied_on')[:5]
+    ).select_related('employee', 'leave_type').order_by('-applied_on')[:5]
     
     reimbursements_to_approve = ReimbursementClaim.objects.filter(
-        employee__reporting_manager=employee,
+        employee__in=subordinates,
         status='P'
-    ).order_by('-submitted_on')[:5]
+    ).select_related('employee').order_by('-submitted_on')[:5]
     
     # Get employee's recent activities
     recent_attendance = Attendance.objects.filter(
@@ -69,16 +90,25 @@ def hrm_dashboard(request):
     ).order_by('-created_at')[:5]
     
     # Monthly attendance summary
+    # Monthly attendance summary
+    # Monthly attendance summary
     today = timezone.now().date()
     current_month_attendance = Attendance.objects.filter(
         employee=employee,
         date__year=today.year,
-        date__month=today.month
-    )
-    
+        date__month=today.month)
     total_working_days = current_month_attendance.count()
     present_days = current_month_attendance.filter(login_time__isnull=False).count()
     remote_days = current_month_attendance.filter(is_remote=True).count()
+
+    # Get leave balance summary
+    leave_balance_summary = []
+    if hasattr(employee, 'annual_leave_balance'):
+        leave_balance_summary = [
+            {'type': 'Annual Leave', 'balance': employee.annual_leave_balance},
+            {'type': 'Casual Leave', 'balance': employee.casual_leave_balance},
+            {'type': 'Sick Leave', 'balance': employee.sick_leave_balance},
+        ]
     
     context = {
         'employee': employee,
@@ -92,13 +122,19 @@ def hrm_dashboard(request):
         'total_working_days': total_working_days,
         'present_days': present_days,
         'remote_days': remote_days,
+        'leave_balance_summary': leave_balance_summary,
+        'can_approve_leaves': request.user.role in ['rm_head', 'ops_team_lead', 'business_head', 'business_head_ops', 'top_management'],
     }
     return render(request, 'hrm/dashboard.html', context)
 
 @login_required
 def leave_calendar(request):
-    """Leave calendar view with holiday management"""
-    employee = get_object_or_404(Employee, user=request.user)
+    """Enhanced leave calendar with CRM integration"""
+    try:
+        employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        messages.error(request, 'Employee profile not found. Please contact HR.')
+        return redirect('hrm_dashboard')
     
     # Get current month/year or from request
     today = timezone.now().date()
@@ -154,9 +190,9 @@ def leave_calendar(request):
             week_data.append(day_info)
         calendar_data.append(week_data)
     
-    # Get leave quotas for the employee
+    # Get leave quotas for the employee using CRM role
     leave_quotas = LeaveQuota.objects.filter(
-        hierarchy_level=employee.hierarchy_level
+        hierarchy_level=employee.user.role  # Use CRM role directly
     ).select_related('leave_type')
     
     # Calculate used leaves
@@ -196,8 +232,12 @@ def leave_calendar(request):
 
 @login_required
 def apply_leave(request):
-    """Apply for leave with calendar integration"""
-    employee = get_object_or_404(Employee, user=request.user)
+    """Enhanced leave application with CRM hierarchy validation"""
+    try:
+        employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        messages.error(request, 'Employee profile not found. Please contact HR.')
+        return redirect('hrm_dashboard')
     
     if request.method == 'POST':
         form = LeaveRequestForm(request.POST)
@@ -209,10 +249,10 @@ def apply_leave(request):
             delta = leave.end_date - leave.start_date
             leave.total_days = delta.days + 1
             
-            # Check if employee has sufficient quota
+            # Check if employee has sufficient quota using CRM role
             try:
                 quota = LeaveQuota.objects.get(
-                    hierarchy_level=employee.hierarchy_level,
+                    hierarchy_level=employee.user.role,  # Use CRM role
                     leave_type=leave.leave_type
                 )
                 
@@ -229,19 +269,19 @@ def apply_leave(request):
                     return render(request, 'hrm/apply_leave.html', {'form': form, 'employee': employee})
                 
             except LeaveQuota.DoesNotExist:
-                messages.error(request, f'Leave quota not defined for your hierarchy level.')
+                messages.error(request, f'Leave quota not defined for your role: {employee.user.get_role_display()}.')
                 return render(request, 'hrm/apply_leave.html', {'form': form, 'employee': employee})
             
             leave.save()
             
-            # Send notification to manager or next approver
-            approver = get_next_approver(employee)
-            if approver:
-                Notification.objects.create(
-                    recipient=approver,
-                    message=f"{employee.user.get_full_name()} has applied for {leave.leave_type.name} leave from {leave.start_date} to {leave.end_date}",
-                    link=f"/hrm/leave/approve/{leave.id}/"
-                )
+            # Get approver using CRM hierarchy
+            approver_user = employee.user.get_approval_manager()
+            if approver_user:
+                try:
+                    approver_employee = Employee.objects.get(user=approver_user)
+                    Notification.create_leave_notification(leave, approver_employee, 'request')
+                except Employee.DoesNotExist:
+                    pass
             
             messages.success(request, 'Leave request submitted successfully!')
             return redirect('leave_calendar')
@@ -258,9 +298,9 @@ def apply_leave(request):
             
         form = LeaveRequestForm(initial=initial_data)
     
-    # Get leave types and quotas
+    # Get leave types and quotas using CRM role
     leave_quotas = LeaveQuota.objects.filter(
-        hierarchy_level=employee.hierarchy_level
+        hierarchy_level=employee.user.role
     ).select_related('leave_type')
     
     context = {
@@ -272,7 +312,7 @@ def apply_leave(request):
 
 @login_required
 def cancel_leave(request, leave_id):
-    """Cancel leave request"""
+    """Enhanced leave cancellation"""
     leave = get_object_or_404(LeaveRequest, id=leave_id, employee__user=request.user)
     
     if request.method == 'POST':
@@ -282,14 +322,14 @@ def cancel_leave(request, leave_id):
             leave.status = 'CR'  # Cancellation Requested
             leave.save()
             
-            # Send notification to manager
-            approver = get_next_approver(leave.employee)
-            if approver:
-                Notification.objects.create(
-                    recipient=approver,
-                    message=f"{leave.employee.user.get_full_name()} has requested cancellation of {leave.leave_type.name} leave",
-                    link=f"/hrm/leave/approve/{leave.id}/"
-                )
+            # Send notification to approver using CRM hierarchy
+            approver_user = leave.employee.user.get_approval_manager()
+            if approver_user:
+                try:
+                    approver_employee = Employee.objects.get(user=approver_user)
+                    Notification.create_leave_notification(leave, approver_employee, 'cancellation')
+                except Employee.DoesNotExist:
+                    pass
             
             messages.success(request, 'Leave cancellation request submitted successfully!')
             return redirect('leave_management')
@@ -304,8 +344,12 @@ def cancel_leave(request, leave_id):
 
 @login_required
 def leave_management(request):
-    """View all leave requests for the employee"""
-    employee = get_object_or_404(Employee, user=request.user)
+    """Enhanced leave management view"""
+    try:
+        employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        messages.error(request, 'Employee profile not found.')
+        return redirect('hrm_dashboard')
     
     # Get all leave requests for the employee
     leave_requests = LeaveRequest.objects.filter(
@@ -325,50 +369,51 @@ def leave_management(request):
 
 @login_required
 def approve_leave(request, leave_id):
-    """Approve or reject leave request"""
+    """Enhanced leave approval using CRM hierarchy"""
     leave = get_object_or_404(LeaveRequest, id=leave_id)
-    employee = get_object_or_404(Employee, user=request.user)
     
-    # Check authorization
-    if not (leave.employee.reporting_manager == employee or 
-            (leave.employee.reporting_manager and 
-             leave.employee.reporting_manager.reporting_manager == employee and
-             leave.employee.reporting_manager.is_on_leave())):
+    try:
+        approver_employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        messages.error(request, 'Employee profile not found.')
+        return redirect('hrm_dashboard')
+    
+    # Check authorization using CRM hierarchy
+    if not request.user.can_approve_conversion(leave.employee.user):
         messages.error(request, 'You are not authorized to approve this leave request.')
         return redirect('hrm_dashboard')
     
     if request.method == 'POST':
-        form = LeaveApprovalForm(request.POST, instance=leave)
-        if form.is_valid():
-            leave = form.save(commit=False)
-            leave.processed_by = employee
-            leave.processed_on = timezone.now()
-            leave.save()
-            
-            # Create notification for employee
-            status_text = "approved" if leave.status == 'A' else "rejected"
-            if leave.status == 'C':
-                status_text = "cancelled"
-                
-            Notification.objects.create(
-                recipient=leave.employee,
-                message=f"Your {leave.leave_type.name} leave request has been {status_text}",
-                link=f"/hrm/leave/view/{leave.id}/"
-            )
-            
-            messages.success(request, f'Leave request {status_text}.')
-            return redirect('hrm_dashboard')
-    else:
-        form = LeaveApprovalForm(instance=leave)
+        action = request.POST.get('action')
+        comments = request.POST.get('manager_comments', '')
+        
+        if action == 'approve':
+            if leave.approve(approver_employee, comments):
+                Notification.create_leave_notification(leave, leave.employee, 'approval')
+                messages.success(request, 'Leave request approved successfully.')
+            else:
+                messages.error(request, 'Failed to approve leave request.')
+        
+        elif action == 'reject':
+            if leave.reject(approver_employee, comments):
+                Notification.create_leave_notification(leave, leave.employee, 'rejection')
+                messages.success(request, 'Leave request rejected.')
+            else:
+                messages.error(request, 'Failed to reject leave request.')
+        
+        elif action == 'approve_cancellation' and leave.status == 'CR':
+            if leave.approve_cancellation(approver_employee):
+                messages.success(request, 'Leave cancellation approved.')
+            else:
+                messages.error(request, 'Failed to approve cancellation.')
+        
+        return redirect('hrm_dashboard')
     
     context = {
         'leave': leave,
-        'form': form,
+        'approver_employee': approver_employee,
     }
     return render(request, 'hrm/approve_leave.html', context)
-
-import re
-from geopy.distance import geodesic
 
 def parse_coordinate(coord_str):
     """
@@ -386,7 +431,6 @@ def parse_coordinate(coord_str):
     coord_str = coord_str.strip()
     
     # Extract numeric part using regex
-    # This pattern matches: optional minus, digits, optional decimal point and more digits
     numeric_match = re.search(r'-?\d+\.?\d*', coord_str)
     
     if numeric_match:
@@ -408,8 +452,12 @@ def parse_coordinate(coord_str):
 
 @login_required
 def attendance_tracking(request):
-    """Attendance tracking with location validation"""
-    employee = get_object_or_404(Employee, user=request.user)
+    """Enhanced attendance tracking with location validation"""
+    try:
+        employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        messages.error(request, 'Employee profile not found.')
+        return redirect('hrm_dashboard')
     
     # Handle attendance actions
     if request.method == 'POST':
@@ -427,11 +475,10 @@ def attendance_tracking(request):
                 # Validate location
                 office_location = (28.6139, 77.2090)  # Default office coordinates
                 
-                if hasattr(employee, 'office_location') and employee.office_location:
+                if employee.office_location:
                     try:
                         office_coords = employee.office_location.split(',')
                         if len(office_coords) >= 2:
-                            # Parse coordinates with the helper function
                             office_lat = parse_coordinate(office_coords[0])
                             office_lng = parse_coordinate(office_coords[1])
                             
@@ -444,7 +491,7 @@ def attendance_tracking(request):
                     except Exception as e:
                         messages.warning(request, f'Error parsing office location: {str(e)}. Using default coordinates.')
                 
-                is_remote = True
+                is_remote = False  # Default to office work
                 location_string = f"{latitude},{longitude}" if latitude and longitude else ""
                 
                 if latitude and longitude:
@@ -459,13 +506,12 @@ def attendance_tracking(request):
                             is_remote = distance > 500
                         else:
                             messages.warning(request, 'Invalid user location coordinates received.')
-                            # Assume remote if coordinates are invalid
                             is_remote = True
                     except Exception as e:
                         messages.warning(request, f'Error processing location: {str(e)}')
                         is_remote = True
                 
-                # Create attendance record
+                # Create attendance record without status field
                 attendance = Attendance.objects.create(
                     employee=employee,
                     date=today,
@@ -475,18 +521,25 @@ def attendance_tracking(request):
                     is_late=timezone.now().time() > datetime.strptime('09:30', '%H:%M').time()
                 )
                 
-                # Flag for remote work
+                # Set additional fields based on work mode
                 if is_remote:
                     attendance.notes = "Remote work - Outside 500m radius"
                     attendance.save()
                     
                     # Notify manager
-                    if employee.reporting_manager:
-                        Notification.objects.create(
-                            recipient=employee.reporting_manager,
-                            message=f"{employee.user.get_full_name()} logged in remotely (flagged as red)",
-                            link=f"/hrm/attendance/monthly/"
-                        )
+                    manager_user = employee.user.manager
+                    if manager_user:
+                        try:
+                            manager_employee = Employee.objects.get(user=manager_user)
+                            Notification.objects.create(
+                                recipient=manager_employee,
+                                sender=employee,
+                                message=f"{employee.user.get_full_name()} logged in remotely",
+                                notification_type='attendance',
+                                link="/hrm/attendance/monthly/"
+                            )
+                        except Employee.DoesNotExist:
+                            pass
                 
                 messages.success(request, 'Login recorded successfully!')
                 
@@ -501,6 +554,15 @@ def attendance_tracking(request):
             if attendance:
                 attendance.logout_time = timezone.now()
                 attendance.logout_location = f"{latitude},{longitude}" if latitude and longitude else ""
+                
+                # Check for early departure
+                if timezone.now().time() < datetime.strptime('17:30', '%H:%M').time():
+                    attendance.is_early_departure = True
+                    early_minutes = (datetime.strptime('17:30', '%H:%M').time().hour * 60 + 
+                                   datetime.strptime('17:30', '%H:%M').time().minute) - \
+                                  (timezone.now().time().hour * 60 + timezone.now().time().minute)
+                    attendance.early_departure_minutes = max(0, early_minutes)
+                
                 attendance.save()
                 messages.success(request, 'Logout recorded successfully!')
             else:
@@ -527,11 +589,11 @@ def attendance_tracking(request):
     late_days = monthly_attendance.filter(is_late=True).count()
     
     # Calculate total hours
-    total_hours = 0
-    for att in monthly_attendance:
-        if att.login_time and att.logout_time:
-            duration = att.logout_time - att.login_time
-            total_hours += duration.total_seconds() / 3600
+    total_hours = sum(
+        (att.logout_time - att.login_time).total_seconds() / 3600 
+        for att in monthly_attendance 
+        if att.login_time and att.logout_time
+    )
     
     context = {
         'employee': employee,
@@ -541,7 +603,7 @@ def attendance_tracking(request):
         'present_days': present_days,
         'remote_days': remote_days,
         'late_days': late_days,
-        'total_hours': round(total_hours, 2),
+        'total_hours': round(total_hours, 2) if total_hours else 0,
         'current_month': calendar.month_name[current_month],
         'current_year': current_year,
     }
@@ -549,13 +611,17 @@ def attendance_tracking(request):
 
 @login_required
 def reimbursement_claims(request):
-    """Manage reimbursement claims"""
-    employee = get_object_or_404(Employee, user=request.user)
+    """Enhanced reimbursement claims management"""
+    try:
+        employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        messages.error(request, 'Employee profile not found.')
+        return redirect('hrm_dashboard')
     
     # Get all claims for the employee
     claims = ReimbursementClaim.objects.filter(
         employee=employee
-    ).order_by('-submitted_on')
+    ).order_by('-created_at')
     
     # Get current month claim or create new one
     today = timezone.now().date()
@@ -564,7 +630,7 @@ def reimbursement_claims(request):
         month=today.month,
         year=today.year,
         defaults={
-            'status': 'D',  # Draft
+            'status': 'draft',
             'submitted_on': None
         }
     )
@@ -585,7 +651,11 @@ def reimbursement_claims(request):
 @login_required
 def add_expense(request):
     """Add expense to current month's claim"""
-    employee = get_object_or_404(Employee, user=request.user)
+    try:
+        employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        messages.error(request, 'Employee profile not found.')
+        return redirect('hrm_dashboard')
     
     if request.method == 'POST':
         form = ReimbursementExpenseForm(request.POST, request.FILES)
@@ -599,7 +669,7 @@ def add_expense(request):
                 month=today.month,
                 year=today.year,
                 defaults={
-                    'status': 'D',
+                    'status': 'draft',
                     'submitted_on': None
                 }
             )
@@ -608,10 +678,7 @@ def add_expense(request):
             expense.save()
             
             # Update claim total
-            claim.total_amount = claim.expenses.aggregate(
-                total=Sum('amount')
-            )['total'] or 0
-            claim.save()
+            claim.save()  # This will trigger the total calculation in the model
             
             messages.success(request, 'Expense added successfully!')
             return redirect('reimbursement_claims')
@@ -629,38 +696,35 @@ def submit_claim(request, claim_id):
     """Submit monthly reimbursement claim"""
     claim = get_object_or_404(ReimbursementClaim, id=claim_id, employee__user=request.user)
     
-    if claim.status != 'D':
-        messages.error(request, 'This claim has already been submitted.')
+    if not claim.submit_for_approval():
+        messages.error(request, 'Cannot submit this claim. Check status and expenses.')
         return redirect('reimbursement_claims')
     
-    if not claim.expenses.exists():
-        messages.error(request, 'Cannot submit claim without expenses.')
-        return redirect('reimbursement_claims')
-    
-    # Submit claim
-    claim.status = 'P'  # Pending
-    claim.submitted_on = timezone.now()
-    claim.save()
-    
-    # Send notification to manager
-    if claim.employee.reporting_manager:
-        Notification.objects.create(
-            recipient=claim.employee.reporting_manager,
-            message=f"{claim.employee.user.get_full_name()} has submitted reimbursement claim for {calendar.month_name[claim.month]} {claim.year}",
-            link=f"/hrm/reimbursement/approve/{claim.id}/"
-        )
+    # Send notification to approver using CRM hierarchy
+    approver_user = claim.employee.user.get_approval_manager()
+    if approver_user:
+        try:
+            approver_employee = Employee.objects.get(user=approver_user)
+            Notification.create_reimbursement_notification(claim, approver_employee, 'submission')
+        except Employee.DoesNotExist:
+            pass
     
     messages.success(request, 'Reimbursement claim submitted successfully!')
     return redirect('reimbursement_claims')
 
 @login_required
 def approve_reimbursement(request, claim_id):
-    """Approve reimbursement claim"""
+    """Enhanced reimbursement approval using CRM hierarchy"""
     claim = get_object_or_404(ReimbursementClaim, id=claim_id)
-    employee = get_object_or_404(Employee, user=request.user)
     
-    # Check authorization
-    if claim.employee.reporting_manager != employee:
+    try:
+        approver_employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        messages.error(request, 'Employee profile not found.')
+        return redirect('hrm_dashboard')
+    
+    # Check authorization using CRM hierarchy
+    if not request.user.can_approve_conversion(claim.employee.user):
         messages.error(request, 'You are not authorized to approve this claim.')
         return redirect('hrm_dashboard')
     
@@ -669,51 +733,58 @@ def approve_reimbursement(request, claim_id):
         comments = request.POST.get('comments', '')
         
         if action == 'approve':
-            claim.status = 'MA'  # Manager Approved
-            claim.manager_approved_by = employee
-            claim.manager_approved_on = timezone.now()
-            claim.manager_comments = comments
-            
-            # If manager approved, send to top management
-            if employee.hierarchy_level not in ['TM', 'BH']:
-                # Send to top management
-                top_managers = Employee.objects.filter(hierarchy_level__in=['TM', 'BH'])
-                for tm in top_managers:
-                    Notification.objects.create(
-                        recipient=tm,
-                        message=f"Reimbursement claim from {claim.employee.user.get_full_name()} approved by manager, awaiting final approval",
-                        link=f"/hrm/reimbursement/final-approve/{claim.id}/"
+            if claim.approve_by_manager(approver_employee, comments):
+                Notification.create_reimbursement_notification(claim, claim.employee, 'approval')
+                
+                # Check if needs final approval
+                if claim.status == 'manager_approved':
+                    # Send to top management
+                    top_managers = Employee.objects.filter(
+                        user__role__in=['top_management', 'business_head']
                     )
-                message_text = 'Claim approved and sent to top management for final approval.'
+                    for tm in top_managers:
+                        notification = Notification.objects.create(
+                            recipient=tm,
+                            sender=approver_employee,
+                            message=f"Reimbursement claim from {claim.employee.user.get_full_name()} requires final approval",
+                            notification_type='reimbursement',
+                            reference_id=str(claim.id),
+                            reference_model='ReimbursementClaim',
+                            link=f"/hrm/reimbursement/final-approve/{claim.id}/"
+                        )
+                    message_text = 'Claim approved and sent to top management for final approval.'
+                else:
+                    message_text = 'Claim approved for reimbursement.'
+                
+                messages.success(request, message_text)
             else:
-                # Top management approval - directly approved
-                claim.status = 'A'
-                claim.final_approved_by = employee
-                claim.final_approved_on = timezone.now()
-                message_text = 'Claim approved for reimbursement.'
-            
+                messages.error(request, 'Failed to approve claim.')
+        
         elif action == 'reject':
-            claim.status = 'R'
-            claim.manager_approved_by = employee
+            # Implement rejection logic
+            claim.status = 'rejected'
+            claim.manager_approved_by = approver_employee
             claim.manager_approved_on = timezone.now()
             claim.manager_comments = comments
-            message_text = 'Claim rejected.'
+            claim.save()
+            
+            Notification.objects.create(
+                recipient=claim.employee,
+                sender=approver_employee,
+                message=f"Your reimbursement claim has been rejected: {comments}",
+                notification_type='reimbursement',
+                reference_id=str(claim.id),
+                reference_model='ReimbursementClaim'
+            )
+            
+            messages.success(request, 'Claim rejected.')
         
-        claim.save()
-        
-        # Notify employee
-        Notification.objects.create(
-            recipient=claim.employee,
-            message=f"Your reimbursement claim has been {claim.get_status_display()}",
-            link=f"/hrm/reimbursement/view/{claim.id}/"
-        )
-        
-        messages.success(request, message_text)
         return redirect('hrm_dashboard')
     
     context = {
         'claim': claim,
         'expenses': claim.expenses.all(),
+        'approver_employee': approver_employee,
     }
     return render(request, 'hrm/approve_reimbursement.html', context)
 
@@ -721,14 +792,19 @@ def approve_reimbursement(request, claim_id):
 def final_approve_reimbursement(request, claim_id):
     """Final approval by top management"""
     claim = get_object_or_404(ReimbursementClaim, id=claim_id)
-    employee = get_object_or_404(Employee, user=request.user)
+    
+    try:
+        approver_employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        messages.error(request, 'Employee profile not found.')
+        return redirect('hrm_dashboard')
     
     # Check if user is top management
-    if employee.hierarchy_level not in ['TM', 'BH']:
+    if request.user.role not in ['top_management', 'business_head']:
         messages.error(request, 'You are not authorized for final approval.')
         return redirect('hrm_dashboard')
     
-    if claim.status != 'MA':
+    if claim.status not in ['manager_approved', 'finance_approved']:
         messages.error(request, 'This claim is not ready for final approval.')
         return redirect('hrm_dashboard')
     
@@ -737,43 +813,49 @@ def final_approve_reimbursement(request, claim_id):
         comments = request.POST.get('final_comments', '')
         
         if action == 'approve':
-            claim.status = 'A'
-            claim.final_approved_by = employee
-            claim.final_approved_on = timezone.now()
-            claim.final_comments = comments
-            message_text = 'Claim approved for reimbursement.'
-            
+            if claim.final_approve(approver_employee, comments):
+                Notification.create_reimbursement_notification(claim, claim.employee, 'approval')
+                messages.success(request, 'Claim approved for reimbursement.')
+            else:
+                messages.error(request, 'Failed to approve claim.')
+                
         elif action == 'reject':
-            claim.status = 'R'
-            claim.final_approved_by = employee
+            claim.status = 'rejected'
+            claim.final_approved_by = approver_employee
             claim.final_approved_on = timezone.now()
             claim.final_comments = comments
-            message_text = 'Claim rejected.'
+            claim.save()
+            
+            Notification.objects.create(
+                recipient=claim.employee,
+                sender=approver_employee,
+                message=f"Your reimbursement claim has been rejected by top management: {comments}",
+                notification_type='reimbursement',
+                reference_id=str(claim.id),
+                reference_model='ReimbursementClaim'
+            )
+            
+            messages.success(request, 'Claim rejected.')
         
-        claim.save()
-        
-        # Notify employee
-        Notification.objects.create(
-            recipient=claim.employee,
-            message=f"Your reimbursement claim has been {message_text.lower()}",
-            link=f"/hrm/reimbursement/view/{claim.id}/"
-        )
-        
-        messages.success(request, message_text)
         return redirect('hrm_dashboard')
     
     context = {
         'claim': claim,
         'expenses': claim.expenses.all(),
+        'approver_employee': approver_employee,
     }
     return render(request, 'hrm/final_approve_reimbursement.html', context)
 
 @login_required
 def manage_holidays(request):
     """Manage holidays - Top management only"""
-    employee = get_object_or_404(Employee, user=request.user)
+    try:
+        employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        messages.error(request, 'Employee profile not found.')
+        return redirect('hrm_dashboard')
     
-    if employee.hierarchy_level not in ['TM', 'BH']:
+    if request.user.role not in ['top_management', 'business_head']:
         messages.error(request, 'You are not authorized to manage holidays.')
         return redirect('hrm_dashboard')
     
@@ -794,21 +876,32 @@ def manage_holidays(request):
         'form': form,
         'holidays': holidays,
         'current_year': current_year,
+        'employee': employee,
     }
     return render(request, 'hrm/manage_holidays.html', context)
 
 @login_required
 def monthly_attendance_report(request):
-    """Monthly attendance report for managers"""
-    employee = get_object_or_404(Employee, user=request.user)
+    """Enhanced monthly attendance report for managers"""
+    try:
+        employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        messages.error(request, 'Employee profile not found.')
+        return redirect('hrm_dashboard')
+    
+    # Check if user can view reports
+    if request.user.role not in ['rm_head', 'ops_team_lead', 'business_head', 'business_head_ops', 'top_management']:
+        messages.error(request, 'You are not authorized to view attendance reports.')
+        return redirect('hrm_dashboard')
     
     # Get current month and year
     today = timezone.now().date()
     current_month = int(request.GET.get('month', today.month))
     current_year = int(request.GET.get('year', today.year))
     
-    # Get subordinates based on hierarchy
-    subordinates = Employee.objects.filter(reporting_manager=employee)
+    # Get subordinates using CRM hierarchy
+    subordinate_users = request.user.get_accessible_users()
+    subordinates = Employee.objects.filter(user__in=subordinate_users).exclude(user=request.user)
     
     # Get attendance data
     attendance_data = []
@@ -820,19 +913,16 @@ def monthly_attendance_report(request):
         ).order_by('date')
         
         # Calculate statistics
-        total_hours = 0
-        for att in monthly_attendance:
-            if att.login_time and att.logout_time:
-                duration = att.logout_time - att.login_time
-                total_hours += duration.total_seconds() / 3600
+        total_hours = sum(att.total_hours for att in monthly_attendance)
         
         attendance_data.append({
             'employee': emp,
             'attendance': monthly_attendance,
             'total_hours': round(total_hours, 2),
             'present_days': monthly_attendance.filter(login_time__isnull=False).count(),
-            'remote_days': monthly_attendance.filter(is_remote=True).count(),
+            'remote_days': monthly_attendance.filter(work_mode='remote').count(),
             'late_days': monthly_attendance.filter(is_late=True).count(),
+            'early_departures': monthly_attendance.filter(is_early_departure=True).count(),
         })
     
     context = {
@@ -840,6 +930,7 @@ def monthly_attendance_report(request):
         'current_month': current_month,
         'current_year': current_year,
         'month_name': calendar.month_name[current_month],
+        'employee': employee,
     }
     return render(request, 'hrm/monthly_attendance_report.html', context)
 
@@ -856,7 +947,10 @@ def get_calendar_day_details(request):
     except ValueError:
         return JsonResponse({'error': 'Invalid date format'})
     
-    employee = get_object_or_404(Employee, user=request.user)
+    try:
+        employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        return JsonResponse({'error': 'Employee profile not found'})
     
     # Get day details
     holiday = Holiday.objects.filter(date=day_date).first()
@@ -876,8 +970,9 @@ def get_calendar_day_details(request):
             'present': bool(attendance and attendance.login_time),
             'login_time': attendance.login_time.strftime('%H:%M') if attendance and attendance.login_time else None,
             'logout_time': attendance.logout_time.strftime('%H:%M') if attendance and attendance.logout_time else None,
-            'is_remote': attendance.is_remote if attendance else False,
+            'work_mode': attendance.work_mode if attendance else None,
             'is_late': attendance.is_late if attendance else False,
+            'total_hours': round(attendance.total_hours, 2) if attendance else 0,
         },
         'leaves': [
             {
@@ -895,9 +990,7 @@ def get_calendar_day_details(request):
 @login_required
 def delete_holiday(request, holiday_id):
     """Delete holiday - Top management only"""
-    employee = get_object_or_404(Employee, user=request.user)
-    
-    if employee.hierarchy_level not in ['TM', 'BH']:
+    if request.user.role not in ['top_management', 'business_head']:
         return JsonResponse({'error': 'Unauthorized'}, status=403)
     
     holiday = get_object_or_404(Holiday, id=holiday_id)
@@ -912,16 +1005,13 @@ def delete_expense(request, expense_id):
     expense = get_object_or_404(ReimbursementExpense, id=expense_id, claim__employee__user=request.user)
     
     # Can only delete if claim is in draft status
-    if expense.claim.status != 'D':
+    if expense.claim.status != 'draft':
         return JsonResponse({'error': 'Cannot delete expense from submitted claim'}, status=400)
     
     claim = expense.claim
     expense.delete()
     
-    # Update claim total
-    claim.total_amount = claim.expenses.aggregate(
-        total=Sum('amount')
-    )['total'] or 0
+    # Update claim total (this will be handled by the model's save method)
     claim.save()
     
     return JsonResponse({'success': True, 'new_total': float(claim.total_amount)})
@@ -930,21 +1020,25 @@ def delete_expense(request, expense_id):
 def view_notification(request, notification_id):
     """View and mark notification as read"""
     notification = get_object_or_404(Notification, id=notification_id, recipient__user=request.user)
-    notification.is_read = True
-    notification.save()
-    return redirect(notification.link) if notification.link else redirect('hrm_dashboard')
+    notification.mark_as_read()
+    return redirect(notification.action_url) if notification.action_url else redirect('hrm_dashboard')
 
 @require_POST
 @login_required
 def mark_all_notifications_read(request):
     """Mark all notifications as read"""
-    Notification.objects.filter(recipient__user=request.user, is_read=False).update(is_read=True)
-    return JsonResponse({'status': 'success'})
+    try:
+        employee = Employee.objects.get(user=request.user)
+        Notification.objects.filter(recipient=employee, is_read=False).update(is_read=True)
+        return JsonResponse({'status': 'success'})
+    except Employee.DoesNotExist:
+        return JsonResponse({'error': 'Employee profile not found'}, status=400)
 
 @login_required
 def employee_directory(request):
-    """Employee directory with search and filters"""
-    employees = Employee.objects.all().select_related('user', 'department', 'reporting_manager').order_by('hierarchy_level', 'user__last_name')
+    """Enhanced employee directory with CRM integration"""
+    # Get all employees with their CRM user data
+    employees = Employee.objects.all().select_related('user', 'department').order_by('user__role', 'user__last_name')
     departments = Department.objects.all()
     
     # Filtering
@@ -954,7 +1048,7 @@ def employee_directory(request):
     
     hierarchy_level = request.GET.get('hierarchy')
     if hierarchy_level:
-        employees = employees.filter(hierarchy_level=hierarchy_level)
+        employees = employees.filter(user__role=hierarchy_level)  # Use CRM role
     
     search_query = request.GET.get('search')
     if search_query:
@@ -962,7 +1056,8 @@ def employee_directory(request):
             Q(user__first_name__icontains=search_query) |
             Q(user__last_name__icontains=search_query) |
             Q(designation__icontains=search_query) |
-            Q(employee_id__icontains=search_query)
+            Q(employee_id__icontains=search_query) |
+            Q(user__username__icontains=search_query)
         )
     
     # Pagination
@@ -970,25 +1065,33 @@ def employee_directory(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
+    # Get role choices from CRM User model
+    from base.models import ROLE_CHOICES
+    
     context = {
         'page_obj': page_obj,
         'departments': departments,
-        'hierarchy_choices': Employee.HIERARCHY_CHOICES,
+        'hierarchy_choices': ROLE_CHOICES,  # Use CRM role choices
+        'current_user': request.user,
     }
     return render(request, 'hrm/employee_directory.html', context)
 
 @login_required
 def employee_profile(request, emp_id):
-    """View employee profile"""
+    """Enhanced employee profile view"""
     employee = get_object_or_404(Employee, id=emp_id)
-    current_employee = get_object_or_404(Employee, user=request.user)
     
-    # Check if current user can view this profile
+    try:
+        current_employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        messages.error(request, 'Your employee profile not found.')
+        return redirect('employee_directory')
+    
+    # Check if current user can view this profile using CRM hierarchy
     can_view = (
         employee == current_employee or  # Own profile
-        employee.reporting_manager == current_employee or  # Subordinate
-        current_employee.hierarchy_level in ['TM', 'BH'] or  # Top management
-        current_employee.reporting_manager == employee.reporting_manager  # Same manager
+        request.user.can_access_user_data(employee.user) or  # CRM access rules
+        request.user.role in ['top_management', 'business_head']  # Top management
     )
     
     if not can_view:
@@ -1017,14 +1120,22 @@ def employee_profile(request, emp_id):
     
     attendance_stats = {
         'present_days': monthly_attendance.filter(login_time__isnull=False).count(),
-        'remote_days': monthly_attendance.filter(is_remote=True).count(),
+        'remote_days': monthly_attendance.filter(work_mode='remote').count(),
         'late_days': monthly_attendance.filter(is_late=True).count(),
         'total_days': monthly_attendance.count(),
+        'total_hours': round(sum(att.total_hours for att in monthly_attendance), 2),
     }
     
     # Recent activities
     recent_leaves = LeaveRequest.objects.filter(employee=employee).order_by('-applied_on')[:5]
     recent_attendance = Attendance.objects.filter(employee=employee).order_by('-date')[:10]
+    recent_claims = ReimbursementClaim.objects.filter(employee=employee).order_by('-created_at')[:5]
+    
+    # Team information using CRM
+    team_members = []
+    if employee.user.role in ['rm_head', 'ops_team_lead', 'business_head', 'business_head_ops']:
+        team_member_users = employee.user.get_team_members()
+        team_members = Employee.objects.filter(user__in=team_member_users)
     
     context = {
         'employee': employee,
@@ -1033,6 +1144,8 @@ def employee_profile(request, emp_id):
         'attendance_stats': attendance_stats,
         'recent_leaves': recent_leaves,
         'recent_attendance': recent_attendance,
+        'recent_claims': recent_claims,
+        'team_members': team_members,
         'current_month': calendar.month_name[current_month],
         'current_year': current_year,
     }
@@ -1040,11 +1153,15 @@ def employee_profile(request, emp_id):
 
 @login_required
 def reports_dashboard(request):
-    """Reports dashboard for managers and top management"""
-    employee = get_object_or_404(Employee, user=request.user)
+    """Enhanced reports dashboard for managers and top management"""
+    try:
+        employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        messages.error(request, 'Employee profile not found.')
+        return redirect('hrm_dashboard')
     
-    # Check authorization
-    if employee.hierarchy_level not in ['TM', 'BH', 'RMH']:
+    # Check authorization using CRM roles
+    if request.user.role not in ['top_management', 'business_head', 'business_head_ops', 'rm_head', 'ops_team_lead']:
         messages.error(request, 'You are not authorized to access reports.')
         return redirect('hrm_dashboard')
     
@@ -1058,16 +1175,9 @@ def reports_dashboard(request):
     if isinstance(end_date, str):
         end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
     
-    # Get subordinates
-    if employee.hierarchy_level == 'TM':
-        subordinates = Employee.objects.all()
-    elif employee.hierarchy_level == 'BH':
-        subordinates = Employee.objects.filter(
-            Q(reporting_manager=employee) |
-            Q(reporting_manager__reporting_manager=employee)
-        )
-    else:
-        subordinates = Employee.objects.filter(reporting_manager=employee)
+    # Get subordinates using CRM hierarchy
+    accessible_users = request.user.get_accessible_users()
+    subordinates = Employee.objects.filter(user__in=accessible_users).exclude(user=request.user)
     
     # Leave statistics
     leave_data = LeaveRequest.objects.filter(
@@ -1084,8 +1194,9 @@ def reports_dashboard(request):
         date__range=[start_date, end_date]
     ).aggregate(
         total_records=models.Count('id'),
-        remote_count=models.Count('id', filter=Q(is_remote=True)),
-        late_count=models.Count('id', filter=Q(is_late=True))
+        remote_count=models.Count('id', filter=Q(work_mode='remote')),
+        late_count=models.Count('id', filter=Q(is_late=True)),
+        early_departure_count=models.Count('id', filter=Q(is_early_departure=True))
     )
     
     # Reimbursement statistics
@@ -1097,6 +1208,11 @@ def reports_dashboard(request):
         total_amount=Sum('total_amount')
     )
     
+    # Department-wise statistics
+    dept_stats = subordinates.values('department__name').annotate(
+        employee_count=models.Count('id')
+    )
+    
     context = {
         'employee': employee,
         'start_date': start_date,
@@ -1105,10 +1221,11 @@ def reports_dashboard(request):
         'leave_data': leave_data,
         'attendance_data': attendance_data,
         'reimbursement_data': reimbursement_data,
+        'dept_stats': dept_stats,
     }
     return render(request, 'hrm/reports_dashboard.html', context)
 
-# Utility function to check if manager is on leave
+# Utility functions
 def is_manager_on_leave(manager):
     """Check if manager is on approved leave today"""
     today = timezone.now().date()
@@ -1122,9 +1239,7 @@ def is_manager_on_leave(manager):
 @login_required
 def auto_approve_leaves_view(request):
     """Manual trigger for auto-approval (for testing/admin)"""
-    employee = get_object_or_404(Employee, user=request.user)
-    
-    if employee.hierarchy_level not in ['TM', 'BH']:
+    if request.user.role not in ['top_management', 'business_head']:
         messages.error(request, 'You are not authorized to trigger auto-approval.')
         return redirect('hrm_dashboard')
     
@@ -1134,11 +1249,15 @@ def auto_approve_leaves_view(request):
     messages.success(request, f'{approved_count} leave requests were auto-approved.')
     return redirect('hrm_dashboard')
 
-# Additional utility views for AJAX calls
+# Enhanced AJAX utility views
 @login_required
 def get_leave_quota(request):
-    """Get leave quota for employee"""
-    employee = get_object_or_404(Employee, user=request.user)
+    """Get leave quota for employee using CRM role"""
+    try:
+        employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        return JsonResponse({'error': 'Employee profile not found'})
+    
     leave_type_id = request.GET.get('leave_type_id')
     
     if not leave_type_id:
@@ -1146,7 +1265,7 @@ def get_leave_quota(request):
     
     try:
         quota = LeaveQuota.objects.get(
-            hierarchy_level=employee.hierarchy_level,
+            hierarchy_level=employee.user.role,  # Use CRM role
             leave_type_id=leave_type_id
         )
         
@@ -1169,7 +1288,7 @@ def get_leave_quota(request):
         return JsonResponse(data)
         
     except LeaveQuota.DoesNotExist:
-        return JsonResponse({'error': 'Leave quota not found for your hierarchy level'})
+        return JsonResponse({'error': f'Leave quota not found for your role: {employee.user.get_role_display()}'})
 
 @login_required
 def calculate_leave_days(request):
@@ -1216,3 +1335,101 @@ def calculate_leave_days(request):
     }
     
     return JsonResponse(data)
+
+@login_required
+def get_team_attendance_summary(request):
+    """Get attendance summary for team members"""
+    try:
+        employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        return JsonResponse({'error': 'Employee profile not found'})
+    
+    # Check if user can view team data
+    if request.user.role not in ['rm_head', 'ops_team_lead', 'business_head', 'business_head_ops', 'top_management']:
+        return JsonResponse({'error': 'Unauthorized'})
+    
+    # Get team members using CRM hierarchy
+    team_member_users = request.user.get_team_members()
+    team_members = Employee.objects.filter(user__in=team_member_users)
+    
+    today = timezone.now().date()
+    
+    # Get today's attendance for team
+    team_attendance = []
+    for member in team_members:
+        attendance = Attendance.objects.filter(employee=member, date=today).first()
+        team_attendance.append({
+            'employee_name': member.user.get_full_name(),
+            'employee_id': member.employee_id,
+            'status': attendance.get_status_display() if attendance else 'Absent',
+            'login_time': attendance.login_time.strftime('%H:%M') if attendance and attendance.login_time else None,
+            'work_mode': attendance.work_mode if attendance else None,
+            'is_late': attendance.is_late if attendance else False,
+        })
+    
+    return JsonResponse({'team_attendance': team_attendance})
+
+@login_required
+def update_employee_location(request):
+    """Update employee office location"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST method required'})
+    
+    try:
+        employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        return JsonResponse({'error': 'Employee profile not found'})
+    
+    latitude = request.POST.get('latitude')
+    longitude = request.POST.get('longitude')
+    
+    if latitude and longitude:
+        employee.office_location = f"{latitude},{longitude}"
+        employee.save()
+        return JsonResponse({'success': True, 'message': 'Office location updated'})
+    
+    return JsonResponse({'error': 'Invalid coordinates'})
+
+@login_required
+def get_notification_count(request):
+    """Get unread notification count"""
+    try:
+        employee = Employee.objects.get(user=request.user)
+        count = Notification.objects.filter(recipient=employee, is_read=False).count()
+        return JsonResponse({'count': count})
+    except Employee.DoesNotExist:
+        return JsonResponse({'count': 0})
+
+@login_required
+def leave_balance_summary(request):
+    """Get leave balance summary for current user"""
+    try:
+        employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        return JsonResponse({'error': 'Employee profile not found'})
+    
+    # Get leave quotas for employee's role
+    leave_quotas = LeaveQuota.objects.filter(
+        hierarchy_level=employee.user.role
+    ).select_related('leave_type')
+    
+    current_year = timezone.now().year
+    balance_data = []
+    
+    for quota in leave_quotas:
+        used = LeaveRequest.objects.filter(
+            employee=employee,
+            leave_type=quota.leave_type,
+            start_date__year=current_year,
+            status__in=['A', 'P']
+        ).aggregate(total=Sum('total_days'))['total'] or 0
+        
+        balance_data.append({
+            'leave_type': quota.leave_type.name,
+            'total_quota': quota.quota,
+            'used': used,
+            'remaining': quota.quota - used,
+            'percentage_used': round((used / quota.quota) * 100, 1) if quota.quota > 0 else 0
+        })
+    
+    return JsonResponse({'balance_data': balance_data})

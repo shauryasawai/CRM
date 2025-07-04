@@ -12,6 +12,29 @@ urlpatterns = [
     # Dashboard
     path('dashboard/', views.dashboard, name='dashboard'),
     
+    # Portfolio Management - ADD THIS NEW SECTION
+    path('portfolio/', include([
+        # Dashboard and main views
+        path('', views.portfolio_dashboard, name='portfolio_dashboard'),
+        path('list/', views.portfolio_list, name='portfolio_list'),
+        path('analytics/', views.portfolio_analytics, name='portfolio_analytics'),
+        path('unmapped/', views.unmapped_portfolios, name='unmapped_portfolios'),
+        
+        # Upload management
+        path('upload/', views.upload_portfolio, name='upload_portfolio'),
+        path('upload/<str:upload_id>/', views.upload_detail, name='upload_detail'),
+        
+        # Portfolio details
+        path('detail/<int:portfolio_id>/', views.portfolio_detail, name='portfolio_detail'),
+        
+        # AJAX endpoints
+        path('api/map-portfolio/<int:portfolio_id>/', views.map_portfolio_to_client, name='map_portfolio_to_client'),
+        
+        # Management actions
+        path('bulk-map/', views.bulk_map_portfolios, name='bulk_map_portfolios'),
+        path('export-csv/', views.export_portfolios_csv, name='export_portfolios_csv'),
+    ])),
+    
     # Notes System
     path('notes/', include([
         path('', views.notes_dashboard, name='notes_dashboard'),
@@ -180,11 +203,10 @@ urlpatterns = [
         path('lead-search/', views.quick_lead_search, name='quick_lead_search'),
     ])),
     
-    # Execution Plans
     path('execution-plans/', include([
         path('', views.ongoing_plans, name='ongoing_plans'),
         path('create/', views.create_plan, name='create_plan'),
-        path('create/<int:client_id>/', views.create_plan_step2, name='create_plan_step2'),
+        path('create/<str:client_id>/', views.create_plan_step2, name='create_plan_step2'),  # Changed to str
         path('save/', views.save_execution_plan, name='save_execution_plan'),
         path('<int:plan_id>/', views.plan_detail, name='plan_detail'),
         path('<int:plan_id>/submit/', views.submit_for_approval, name='submit_for_approval'),
@@ -205,8 +227,8 @@ urlpatterns = [
         path('templates/<int:template_id>/load/', views.load_template_ajax, name='load_template_ajax'),
         path('bulk-action/', views.bulk_action_plans, name='bulk_action_plans'),
         
-        # API endpoints for execution plans
-        path('api/client/<int:client_id>/portfolio/', views.client_portfolio_ajax, name='client_portfolio_ajax'),
+        # API endpoints for execution plans - UPDATED to handle string client IDs
+        path('api/client/<str:client_id>/portfolio/', views.client_portfolio_ajax, name='client_portfolio_ajax'),  # Changed to str
         path('api/schemes/search/', views.search_schemes_ajax, name='search_schemes_ajax'),
     ])),
 

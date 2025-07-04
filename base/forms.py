@@ -6,13 +6,14 @@ from django.utils import timezone
 from django.db.models import Q
 from django.core.validators import FileExtensionValidator
 from .models import (
-    ServiceRequestComment, ServiceRequestDocument, ServiceRequestType, User, Lead, Client, Task, ServiceRequest, InvestmentPlanReview, 
+    PortfolioUpload, ServiceRequestComment, ServiceRequestDocument, ServiceRequestType, User, Lead, Client, Task, ServiceRequest, InvestmentPlanReview, 
     Team, BusinessTracker, LeadInteraction, ProductDiscussion, 
     LeadStatusChange, TeamMembership, Reminder, ClientProfile,
     ClientProfileModification, MFUCANAccount, MotilalDematAccount,
     PrabhudasDematAccount, Note, NoteList
 )
 from base import models
+import pandas as pd
 
 # Updated Constants with new operations roles
 ROLE_CHOICES = (
@@ -4248,3 +4249,113 @@ class PlanFilterForm(forms.Form):
             'type': 'date'
         })
     )
+    
+    
+
+class PortfolioUploadForm(forms.ModelForm):
+    """Form for uploading portfolio Excel files"""
+    
+    process_immediately = forms.BooleanField(
+        required=False,
+        initial=True,
+        help_text="Process the file immediately after upload",
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+    
+    validate_data = forms.BooleanField(
+        required=False,
+        initial=True,
+        help_text="Validate data before processing",
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+    
+    class Meta:
+        model = PortfolioUpload
+        fields = ['file']
+        widgets = {
+            'file': forms.FileInput(attrs={
+                'accept': '.xlsx,.xls',
+                'class': 'form-control',
+                'id': 'portfolio-file-input'
+            })
+        }
+        labels = {
+            'file': 'Portfolio Excel File'
+        }
+        help_texts = {
+            'file': 'Upload an Excel file (.xlsx or .xls) containing portfolio data. Maximum file size: 25MB.'
+        }
+    
+    def clean_file(self):
+        file = self.cleaned_data['file']
+        
+        # Check if file is provided
+        if not file:
+            raise ValidationError("Please select a file to upload.")
+        
+        # Check file extension
+        if not file.name.lower().endswith(('.xlsx', '.xls')):
+            raise ValidationError("Please upload an Excel file (.xlsx or .xls)")
+        
+        # Check file size (max 25MB)
+        max_size = 25 * 1024 * 1024  # 25MB in bytes
+        if file.size > max_size:
+            raise ValidationError(f"File size cannot exceed 25MB. Your file is {file.size / (1024*1024):.1f}MB")
+        
+        # Validate file content if requested
+        if self.cleaned_data.get('validate_data', True):
+            try:
+                # Try to read the file
+                df = pd.read_excel(file)
+                
+                # Check if file has data
+                if df.empty:
+                    raise ValidationError("The Excel file appears to be empty")
+                
+                # Check for required columns
+                required_columns = ['CLIENT', 'CLIENT PAN', 'SCHEME', 'TOTAL']
+                missing_columns = []
+                
+                # Clean column names for comparison
+                df_columns = [col.strip() for col in df.columns]
+                
+                for col in required_columns:
+                    # Check exact match and variations with spaces
+                    if (col not in df_columns and 
+                        f' {col}' not in df_columns and 
+                        f'{col} ' not in df_columns):
+                        missing_columns.append(col)
+                
+                if missing_columns:
+                    available_cols = ', '.join(df_columns[:10])  # Show first 10 columns
+                    if len(df_columns) > 10:
+                        available_cols += f" ... and {len(df_columns) - 10} more"
+                    
+                    raise ValidationError(
+                        f"Missing required columns: {', '.join(missing_columns)}. "
+                        f"Available columns: {available_cols}"
+                    )
+                
+                # Check for minimum data
+                if len(df) < 1:
+                    raise ValidationError("File must contain at least one data row")
+                
+                # Reset file pointer for later use
+                file.seek(0)
+                
+            except pd.errors.ExcelFileError:
+                raise ValidationError("Invalid Excel file format. Please ensure the file is a valid Excel file.")
+            except Exception as e:
+                if "Missing required columns" in str(e) or "File must contain" in str(e):
+                    raise  # Re-raise our custom validation errors
+                raise ValidationError(f"Error validating file: {str(e)}")
+        
+        return file
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Add CSS classes and attributes
+        for field_name, field in self.fields.items():
+            if field_name != 'file':
+                field.widget.attrs.update({'class': 'form-control'})

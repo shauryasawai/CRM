@@ -48,8 +48,28 @@
                         <label class="form-label">Client Information</label>
                         <div class="bg-light p-3 rounded">
                             <div><strong>Name:</strong> {{ client.name }}</div>
-                            <div><strong>Current AUM:</strong> ₹{{ client.aum|default:0|floatformat:2 }}</div>
-                            <div><strong>Monthly SIP:</strong> ₹{{ client.sip_amount|default:0|floatformat:2 }}</div>
+                            {% if client.pan %}
+                                <div><strong>PAN:</strong> {{ client.pan }}</div>
+                            {% endif %}
+                            {% if client_total_aum %}
+                                <div><strong>Total AUM:</strong> ₹{{ client_total_aum|floatformat:2 }}</div>
+                            {% endif %}
+                            {% if asset_allocation %}
+                                <div class="mt-2">
+                                    <small><strong>Asset Allocation:</strong></small>
+                                    <div class="d-flex flex-wrap gap-1 mt-1">
+                                        {% if asset_allocation.total_equity %}
+                                            <span class="badge bg-success">Equity: ₹{{ asset_allocation.total_equity|floatformat:0 }}</span>
+                                        {% endif %}
+                                        {% if asset_allocation.total_debt %}
+                                            <span class="badge bg-info">Debt: ₹{{ asset_allocation.total_debt|floatformat:0 }}</span>
+                                        {% endif %}
+                                        {% if asset_allocation.total_hybrid %}
+                                            <span class="badge bg-warning">Hybrid: ₹{{ asset_allocation.total_hybrid|floatformat:0 }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -76,49 +96,200 @@
             {% endif %}
         </div>
         
-        <!-- Current Portfolio -->
-        <div class="col-lg-4">
+        <!-- Current Portfolio - Enhanced -->
+        <div class="col-lg-8">
             <div class="card shadow-sm mb-4">
-                <div class="card-header bg-success text-white">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                     <h6 class="card-title mb-0">
                         <i class="fas fa-wallet me-2"></i>Current Portfolio
+                        {% if portfolio.count > 0 %}
+                            <span class="badge bg-light text-dark ms-2">{{ portfolio.count }} Holdings</span>
+                        {% endif %}
                     </h6>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-light btn-sm" id="portfolioViewToggle" data-view="summary">
+                            <i class="fas fa-table me-1"></i>Detailed View
+                        </button>
+                        <button type="button" class="btn btn-light btn-sm" onclick="exportPortfolio()">
+                            <i class="fas fa-download me-1"></i>Export
+                        </button>
+                    </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-0">
                     {% if portfolio %}
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
+                        <!-- Portfolio Summary -->
+                        <div id="portfolioSummary" class="p-3 bg-light border-bottom">
+                            <div class="row text-center">
+                                <div class="col-md-3">
+                                    <div class="border-end">
+                                        <h6 class="mb-1 text-success">Total Value</h6>
+                                        <strong>₹{{ total_aum|default:0|floatformat:0 }}</strong>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="border-end">
+                                        <h6 class="mb-1 text-primary">Schemes</h6>
+                                        <strong>{{ portfolio.count }}</strong>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="border-end">
+                                        <h6 class="mb-1 text-info">Equity Exposure</h6>
+                                        <strong>{{ asset_allocation.equity_percentage|default:0|floatformat:1 }}%</strong>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div>
+                                        <h6 class="mb-1 text-warning">Debt Exposure</h6>
+                                        <strong>{{ asset_allocation.debt_percentage|default:0|floatformat:1 }}%</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Detailed Portfolio Table -->
+                        <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                            <table class="table table-hover table-sm mb-0" id="portfolioTable">
+                                <thead class="table-dark sticky-top">
                                     <tr>
-                                        <th>Scheme</th>
-                                        <th>Value</th>
-                                        <th>Action</th>
+                                        <th style="min-width: 200px;">Scheme Details</th>
+                                        <th class="text-end">Current Value</th>
+                                        <th class="text-end">Units</th>
+                                        <th class="text-center">Asset Class</th>
+                                        <th class="text-end">Allocation %</th>
+                                        <th class="text-center">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for holding in portfolio %}
-                                    <tr>
+                                    <tr data-scheme-id="{% if holding.scheme %}{{ holding.scheme.id }}{% else %}{{ holding.id }}{% endif %}" 
+                                        data-scheme-name="{% if holding.scheme %}{{ holding.scheme.scheme_name }}{% else %}{{ holding.scheme_name }}{% endif %}">
                                         <td>
-                                            <small>{{ holding.scheme.scheme_name|truncatechars:30 }}</small>
-                                            {% if holding.sip_amount %}
-                                                <br><span class="badge bg-info">SIP: ₹{{ holding.sip_amount }}</span>
+                                            <div>
+                                                <strong class="text-primary">
+                                                    {% if holding.scheme %}
+                                                        {{ holding.scheme.scheme_name|truncatechars:40 }}
+                                                    {% else %}
+                                                        {{ holding.scheme_name|truncatechars:40 }}
+                                                    {% endif %}
+                                                </strong>
+                                                {% if holding.scheme.amc_name %}
+                                                    <br><small class="text-muted">{{ holding.scheme.amc_name }}</small>
+                                                {% endif %}
+                                                {% if holding.isin_number %}
+                                                    <br><small class="text-muted">ISIN: {{ holding.isin_number }}</small>
+                                                {% endif %}
+                                                {% if holding.folio_number %}
+                                                    <br><small class="badge bg-secondary">Folio: {{ holding.folio_number }}</small>
+                                                {% endif %}
+                                                {% if holding.sip_amount and holding.sip_amount > 0 %}
+                                                    <br><span class="badge bg-info">SIP: ₹{{ holding.sip_amount|floatformat:0 }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td class="text-end">
+                                            <strong class="text-success">
+                                                ₹{% if holding.current_value %}{{ holding.current_value|floatformat:0 }}{% else %}{{ holding.total_value|floatformat:0 }}{% endif %}
+                                            </strong>
+                                            {% if holding.cost_value and holding.cost_value > 0 %}
+                                                <br><small class="text-muted">Cost: ₹{{ holding.cost_value|floatformat:0 }}</small>
+                                                {% if holding.gain_loss %}
+                                                    <br><small class="{% if holding.gain_loss >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                                        {{ holding.gain_loss|floatformat:0 }} ({{ holding.gain_loss_percentage|floatformat:1 }}%)
+                                                    </small>
+                                                {% endif %}
                                             {% endif %}
                                         </td>
-                                        <td>₹{{ holding.current_value|floatformat:0 }}</td>
-                                        <td>
+                                        <td class="text-end">
+                                            <span class="text-dark">{{ holding.units|floatformat:4 }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            {% if holding.primary_asset_class %}
+                                                <span class="badge 
+                                                    {% if holding.primary_asset_class == 'Equity' %}bg-success
+                                                    {% elif holding.primary_asset_class == 'Debt' %}bg-info
+                                                    {% elif holding.primary_asset_class == 'Hybrid' %}bg-warning
+                                                    {% elif holding.primary_asset_class == 'Liquid' %}bg-secondary
+                                                    {% else %}bg-light text-dark{% endif %}">
+                                                    {{ holding.primary_asset_class }}
+                                                </span>
+                                            {% else %}
+                                                <!-- Determine primary asset class from values -->
+                                                {% if holding.equity_value > holding.debt_value and holding.equity_value > holding.hybrid_value %}
+                                                    <span class="badge bg-success">Equity</span>
+                                                {% elif holding.debt_value > holding.equity_value and holding.debt_value > holding.hybrid_value %}
+                                                    <span class="badge bg-info">Debt</span>
+                                                {% elif holding.hybrid_value > 0 %}
+                                                    <span class="badge bg-warning">Hybrid</span>
+                                                {% else %}
+                                                    <span class="badge bg-light text-dark">Mixed</span>
+                                                {% endif %}
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            {% if holding.allocation_percentage %}
+                                                {{ holding.allocation_percentage|floatformat:2 }}%
+                                            {% else %}
+                                                <small class="text-muted">-</small>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
                                             <div class="btn-group btn-group-sm">
-                                                <button type="button" class="btn btn-outline-primary btn-sm add-action-btn" 
-                                                        data-scheme-id="{{ holding.scheme.id }}" 
-                                                        data-scheme-name="{{ holding.scheme.scheme_name }}"
-                                                        data-action="purchase">
+                                                <button type="button" class="btn btn-outline-success btn-sm add-action-btn" 
+                                                        data-scheme-id="{% if holding.scheme %}{{ holding.scheme.id }}{% else %}{{ holding.id }}{% endif %}" 
+                                                        data-scheme-name="{% if holding.scheme %}{{ holding.scheme.scheme_name }}{% else %}{{ holding.scheme_name }}{% endif %}"
+                                                        data-action="purchase"
+                                                        title="Add Investment">
                                                     <i class="fas fa-plus"></i>
                                                 </button>
                                                 <button type="button" class="btn btn-outline-warning btn-sm add-action-btn" 
-                                                        data-scheme-id="{{ holding.scheme.id }}" 
-                                                        data-scheme-name="{{ holding.scheme.scheme_name }}"
-                                                        data-action="redemption">
+                                                        data-scheme-id="{% if holding.scheme %}{{ holding.scheme.id }}{% else %}{{ holding.id }}{% endif %}" 
+                                                        data-scheme-name="{% if holding.scheme %}{{ holding.scheme.scheme_name }}{% else %}{{ holding.scheme_name }}{% endif %}"
+                                                        data-action="redemption"
+                                                        title="Add Redemption">
                                                     <i class="fas fa-minus"></i>
                                                 </button>
+                                                <button type="button" class="btn btn-outline-primary btn-sm add-action-btn" 
+                                                        data-scheme-id="{% if holding.scheme %}{{ holding.scheme.id }}{% else %}{{ holding.id }}{% endif %}" 
+                                                        data-scheme-name="{% if holding.scheme %}{{ holding.scheme.scheme_name }}{% else %}{{ holding.scheme_name }}{% endif %}"
+                                                        data-action="sip_start"
+                                                        title="Start SIP">
+                                                    <i class="fas fa-calendar-plus"></i>
+                                                </button>
+                                                <div class="btn-group">
+                                                    <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" 
+                                                            data-bs-toggle="dropdown" title="More Actions">
+                                                        <i class="fas fa-ellipsis-h"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a class="dropdown-item add-action-btn" href="#" 
+                                                               data-scheme-id="{% if holding.scheme %}{{ holding.scheme.id }}{% else %}{{ holding.id }}{% endif %}" 
+                                                               data-scheme-name="{% if holding.scheme %}{{ holding.scheme.scheme_name }}{% else %}{{ holding.scheme_name }}{% endif %}"
+                                                               data-action="switch">
+                                                            <i class="fas fa-exchange-alt me-2"></i>Switch
+                                                        </a></li>
+                                                        {% if holding.sip_amount and holding.sip_amount > 0 %}
+                                                        <li><a class="dropdown-item add-action-btn" href="#" 
+                                                               data-scheme-id="{% if holding.scheme %}{{ holding.scheme.id }}{% else %}{{ holding.id }}{% endif %}" 
+                                                               data-scheme-name="{% if holding.scheme %}{{ holding.scheme.scheme_name }}{% else %}{{ holding.scheme_name }}{% endif %}"
+                                                               data-action="sip_stop">
+                                                            <i class="fas fa-stop me-2"></i>Stop SIP
+                                                        </a></li>
+                                                        <li><a class="dropdown-item add-action-btn" href="#" 
+                                                               data-scheme-id="{% if holding.scheme %}{{ holding.scheme.id }}{% else %}{{ holding.id }}{% endif %}" 
+                                                               data-scheme-name="{% if holding.scheme %}{{ holding.scheme.scheme_name }}{% else %}{{ holding.scheme_name }}{% endif %}"
+                                                               data-action="sip_modify">
+                                                            <i class="fas fa-edit me-2"></i>Modify SIP
+                                                        </a></li>
+                                                        {% endif %}
+                                                        <li><a class="dropdown-item add-action-btn" href="#" 
+                                                               data-scheme-id="{% if holding.scheme %}{{ holding.scheme.id }}{% else %}{{ holding.id }}{% endif %}" 
+                                                               data-scheme-name="{% if holding.scheme %}{{ holding.scheme.scheme_name }}{% else %}{{ holding.scheme_name }}{% endif %}"
+                                                               data-action="stp_start">
+                                                            <i class="fas fa-arrow-right me-2"></i>Start STP
+                                                        </a></li>
+                                                    </ul>
+                                                </div>
                                             </div>
                                         </td>
                                     </tr>
@@ -126,16 +297,70 @@
                                 </tbody>
                             </table>
                         </div>
+
+                        <!-- Portfolio Statistics -->
+                        {% if asset_allocation %}
+                        <div class="p-3 border-top bg-light">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h6 class="mb-2">Asset Allocation Breakdown</h6>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        {% if asset_allocation.total_equity %}
+                                            <span class="badge bg-success">
+                                                Equity: ₹{{ asset_allocation.total_equity|floatformat:0 }} 
+                                                ({{ asset_allocation.equity_percentage|default:0|floatformat:1 }}%)
+                                            </span>
+                                        {% endif %}
+                                        {% if asset_allocation.total_debt %}
+                                            <span class="badge bg-info">
+                                                Debt: ₹{{ asset_allocation.total_debt|floatformat:0 }} 
+                                                ({{ asset_allocation.debt_percentage|default:0|floatformat:1 }}%)
+                                            </span>
+                                        {% endif %}
+                                        {% if asset_allocation.total_hybrid %}
+                                            <span class="badge bg-warning">
+                                                Hybrid: ₹{{ asset_allocation.total_hybrid|floatformat:0 }} 
+                                                ({{ asset_allocation.hybrid_percentage|default:0|floatformat:1 }}%)
+                                            </span>
+                                        {% endif %}
+                                        {% if asset_allocation.total_liquid %}
+                                            <span class="badge bg-secondary">
+                                                Liquid: ₹{{ asset_allocation.total_liquid|floatformat:0 }} 
+                                                ({{ asset_allocation.liquid_percentage|default:0|floatformat:1 }}%)
+                                            </span>
+                                        {% endif %}
+                                        {% if asset_allocation.total_other %}
+                                            <span class="badge bg-dark">
+                                                Other: ₹{{ asset_allocation.total_other|floatformat:0 }} 
+                                                ({{ asset_allocation.other_percentage|default:0|floatformat:1 }}%)
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addBulkActions()">
+                                        <i class="fas fa-layer-group me-1"></i>Bulk Actions
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                     {% else %}
-                        <div class="text-center text-muted">
-                            <i class="fas fa-inbox fa-2x mb-2"></i>
-                            <p>No current portfolio found</p>
+                        <div class="text-center text-muted p-5">
+                            <i class="fas fa-inbox fa-3x mb-3"></i>
+                            <h5>No Portfolio Data Found</h5>
+                            <p>No current portfolio found for this client. You can still create an execution plan by adding new investments.</p>
+                            <button type="button" class="btn btn-outline-primary" onclick="$('#schemeSearch').focus()">
+                                <i class="fas fa-plus me-1"></i>Add New Investment
+                            </button>
                         </div>
                     {% endif %}
                 </div>
             </div>
         </div>
-        
+    </div>
+    
+    <div class="row">
         <!-- Add New Investment -->
         <div class="col-lg-4">
             <div class="card shadow-sm mb-4">
@@ -148,54 +373,60 @@
                     <div class="mb-3">
                         <label for="schemeSearch" class="form-label">Search Schemes</label>
                         <input type="text" class="form-control" id="schemeSearch" 
-                               placeholder="Type to search schemes...">
+                               placeholder="Type scheme name, AMC, or ISIN...">
                         <div id="schemeResults" class="mt-2"></div>
                     </div>
+                    <div class="form-text">
+                        <i class="fas fa-lightbulb text-warning me-1"></i>
+                        Search by scheme name, AMC name, or ISIN number to find mutual fund schemes
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-    
-    <!-- Plan Actions -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-secondary text-white">
-            <h6 class="card-title mb-0">
-                <i class="fas fa-list me-2"></i>Plan Actions
-            </h6>
-        </div>
-        <div class="card-body">
-            <div id="actionsContainer">
-                <div class="text-center text-muted py-4" id="noActionsMessage">
-                    <i class="fas fa-clipboard-list fa-3x mb-3"></i>
-                    <h5>No Actions Added Yet</h5>
-                    <p>Add actions from the portfolio or search for new schemes to get started.</p>
+        
+        <!-- Plan Actions -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-list me-2"></i>Plan Actions
+                    </h6>
                 </div>
-            </div>
-            
-            <div id="actionsSummary" class="mt-3" style="display: none;">
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="text-center">
-                            <h6>Total Investment</h6>
-                            <span class="h5 text-success" id="totalInvestment">₹0</span>
+                <div class="card-body">
+                    <div id="actionsContainer">
+                        <div class="text-center text-muted py-4" id="noActionsMessage">
+                            <i class="fas fa-clipboard-list fa-3x mb-3"></i>
+                            <h5>No Actions Added Yet</h5>
+                            <p>Add actions from the portfolio or search for new schemes to get started.</p>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="text-center">
-                            <h6>Total Redemption</h6>
-                            <span class="h5 text-danger" id="totalRedemption">₹0</span>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="text-center">
-                            <h6>Net Investment</h6>
-                            <span class="h5 text-primary" id="netInvestment">₹0</span>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="text-center">
-                            <h6>Total Actions</h6>
-                            <span class="h5 text-info" id="totalActions">0</span>
+                    
+                    <div id="actionsSummary" class="mt-3" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h6>Total Investment</h6>
+                                    <span class="h5 text-success" id="totalInvestment">₹0</span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h6>Total Redemption</h6>
+                                    <span class="h5 text-danger" id="totalRedemption">₹0</span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h6>Net Investment</h6>
+                                    <span class="h5 text-primary" id="netInvestment">₹0</span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h6>Total Actions</h6>
+                                    <span class="h5 text-info" id="totalActions">0</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -226,7 +457,7 @@
 
 <!-- Action Modal -->
 <div class="modal fade" id="actionModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Add Action</h5>
@@ -239,7 +470,7 @@
                     
                     <div class="mb-3">
                         <label class="form-label">Scheme</label>
-                        <div class="form-control-plaintext" id="displaySchemeName"></div>
+                        <div class="form-control-plaintext bg-light p-2 rounded" id="displaySchemeName"></div>
                     </div>
                     
                     <div class="mb-3">
@@ -298,13 +529,29 @@
 
 {% block extra_js %}
 <script>
+// Fixed JavaScript for Plan Actions - Replace the existing script block
+
 let planActions = [];
 let actionCounter = 0;
 
 $(document).ready(function() {
-    // Action type change handler
+    // Initialize the form
+    initializeForm();
+    
+    // Portfolio view toggle
+    $('#portfolioViewToggle').on('click', function() {
+        const currentView = $(this).data('view');
+        if (currentView === 'summary') {
+            $(this).data('view', 'detailed').html('<i class="fas fa-list me-1"></i>Summary View');
+        } else {
+            $(this).data('view', 'summary').html('<i class="fas fa-table me-1"></i>Detailed View');
+        }
+    });
+
+    // Action type change handler - Fixed
     $('#actionType').on('change', function() {
         const actionType = $(this).val();
+        console.log('Action type changed to:', actionType); // Debug log
         
         // Show/hide SIP date for SIP actions
         if (['sip_start', 'sip_modify'].includes(actionType)) {
@@ -321,24 +568,41 @@ $(document).ready(function() {
         }
     });
     
-    // Add action from portfolio
-    $('.add-action-btn').on('click', function() {
+    // Add action from portfolio - Fixed event delegation
+    $(document).on('click', '.add-action-btn', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
         const schemeId = $(this).data('scheme-id');
         const schemeName = $(this).data('scheme-name');
-        const actionType = $(this).data('action');
+        const actionType = $(this).data('action') || 'purchase';
         
+        console.log('Adding action:', { schemeId, schemeName, actionType }); // Debug log
+        
+        if (!schemeId || !schemeName) {
+            alert('Missing scheme information. Please try again.');
+            return;
+        }
+        
+        // Clear previous form data
+        $('#actionForm')[0].reset();
+        
+        // Set form values
         $('#actionSchemeId').val(schemeId);
         $('#actionSchemeName').val(schemeName);
         $('#displaySchemeName').text(schemeName);
         $('#actionType').val(actionType).trigger('change');
         
+        // Reset edit mode
+        $('#addActionBtn').removeData('edit-index').text('Add Action');
+        
         $('#actionModal').modal('show');
     });
     
-    // Scheme search
+    // Scheme search with enhanced functionality - Fixed
     let searchTimeout;
     $('#schemeSearch').on('input', function() {
-        const query = $(this).val();
+        const query = $(this).val().trim();
         
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(function() {
@@ -350,157 +614,435 @@ $(document).ready(function() {
         }, 300);
     });
 
-    // Add action button
+    // Add action button - Fixed validation and processing
     $('#addActionBtn').on('click', function() {
-        const action = {
-            id: ++actionCounter,
+        const editIndex = $(this).data('edit-index');
+        const isEditing = editIndex !== undefined;
+        
+        // Collect form data
+        const formData = {
             scheme_id: $('#actionSchemeId').val(),
             scheme_name: $('#actionSchemeName').val(),
             action_type: $('#actionType').val(),
-            amount: $('#actionAmount').val() || null,
-            units: $('#actionUnits').val() || null,
-            sip_date: $('#sipDate').val() || null,
-            target_scheme_id: $('#targetScheme').data('scheme-id') || null,
-            target_scheme_name: $('#targetScheme').val() || null,
-            notes: $('#actionNotes').val() || '',
-            priority: planActions.length + 1
+            amount: $('#actionAmount').val(),
+            units: $('#actionUnits').val(),
+            sip_date: $('#sipDate').val(),
+            target_scheme_id: $('#targetScheme').data('scheme-id'),
+            target_scheme_name: $('#targetScheme').val(),
+            notes: $('#actionNotes').val()
         };
         
-        // Validation
-        if (!action.amount && !action.units) {
+        console.log('Form data:', formData); // Debug log
+        
+        // Validate required fields
+        if (!formData.scheme_id || !formData.scheme_name) {
+            alert('Please select a scheme');
+            return;
+        }
+        
+        if (!formData.action_type) {
+            alert('Please select an action type');
+            return;
+        }
+        
+        // Amount or units validation
+        if (!formData.amount && !formData.units) {
             alert('Please enter either amount or units');
             return;
         }
         
-        if (['sip_start', 'sip_modify'].includes(action.action_type) && !action.sip_date) {
-            alert('SIP date is required for SIP actions');
+        // SIP date validation
+        if (['sip_start', 'sip_modify'].includes(formData.action_type)) {
+            if (!formData.sip_date || formData.sip_date < 1 || formData.sip_date > 28) {
+                alert('Please enter a valid SIP date (1-28)');
+                return;
+            }
+        }
+        
+        // Target scheme validation
+        if (['switch', 'stp_start'].includes(formData.action_type) && !formData.target_scheme_name) {
+            alert('Please enter target scheme for switch/STP actions');
             return;
         }
         
-        planActions.push(action);
+        // Create action object
+        const action = {
+            id: isEditing ? planActions[editIndex].id : ++actionCounter,
+            scheme_id: formData.scheme_id,
+            scheme_name: formData.scheme_name,
+            action_type: formData.action_type,
+            amount: formData.amount ? parseFloat(formData.amount) : null,
+            units: formData.units ? parseFloat(formData.units) : null,
+            sip_date: formData.sip_date || null,
+            target_scheme_id: formData.target_scheme_id || null,
+            target_scheme_name: formData.target_scheme_name || null,
+            notes: formData.notes || '',
+            priority: isEditing ? planActions[editIndex].priority : planActions.length + 1
+        };
+        
+        console.log('Action object:', action); // Debug log
+        
+        // Add or update action
+        if (isEditing) {
+            planActions[editIndex] = action;
+        } else {
+            planActions.push(action);
+        }
+        
+        // Update UI
         renderActions();
         updateSummary();
         
+        // Close modal and reset form
         $('#actionModal').modal('hide');
         $('#actionForm')[0].reset();
+        $('#addActionBtn').removeData('edit-index').text('Add Action');
+        
+        // Clear scheme results
+        $('#schemeResults').empty();
+        $('#schemeSearch').val('');
     });
     
-    // Save draft
+    // Template selector - Only if templates are available
+    $('#templateSelect').on('change', function() {
+        const templateId = $(this).val();
+        if (templateId) {
+            loadTemplate(templateId);
+        }
+    });
+    
+    // Save functions
     $('#saveDraftBtn').on('click', function() {
         savePlan('draft');
     });
     
-    // Save and submit
     $('#saveAndSubmitBtn').on('click', function() {
         savePlan('submit');
     });
+    
+    // Save as template - Only if feature is available
+    $('#saveTemplateBtn').on('click', function() {
+        saveAsTemplate();
+    });
+    
+    // Load portfolio data if needed
+    const clientType = '{{ client.type|default:"" }}';
+    if (clientType === 'profile') {
+        loadClientPortfolio('{{ client.id }}');
+    }
 });
 
+// Initialize form
+function initializeForm() {
+    // Any initialization code
+    console.log('Form initialized');
+}
+
+// Enhanced scheme search - Fixed to match your URLs
 function searchSchemes(query) {
-    $.get('{% url "search_schemes_ajax" %}', {q: query}, function(response) {
-        const results = $('#schemeResults');
-        results.empty();
+    console.log('Searching schemes for:', query); // Debug log
+    
+    // Show loading
+    $('#schemeResults').html('<div class="text-center p-3"><i class="fas fa-spinner fa-spin"></i> Searching...</div>');
+    
+    try {
+        $.ajax({
+            url: '{% url "search_schemes_ajax" %}',
+            method: 'GET',
+            data: { q: query },
+            success: function(response) {
+                console.log('Search response:', response); // Debug log
+                displaySchemeResults(response);
+            },
+            error: function(xhr, status, error) {
+                console.error('Search error:', error);
+                $('#schemeResults').html('<div class="text-danger text-center p-3">Error searching schemes. Please try again.</div>');
+            }
+        });
+    } catch (e) {
+        console.error('Search URL error:', e);
+        $('#schemeResults').html('<div class="text-warning text-center p-3">Scheme search feature not available.</div>');
+    }
+}
+
+// Display scheme search results - Fixed
+function displaySchemeResults(response) {
+    const results = $('#schemeResults');
+    results.empty();
+    
+    if (response.schemes && response.schemes.length > 0) {
+        let resultsHtml = '<div class="list-group">';
         
-        if (response.schemes.length > 0) {
-            response.schemes.forEach(function(scheme) {
-                const schemeHtml = `
-                    <div class="border rounded p-2 mb-2 scheme-result" 
-                         data-scheme-id="${scheme.id}" 
-                         data-scheme-name="${scheme.scheme_name}">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <strong>${scheme.scheme_name}</strong><br>
-                                <small class="text-muted">${scheme.amc_name} | ${scheme.scheme_type}</small>
+        response.schemes.slice(0, 10).forEach(function(scheme) {
+            resultsHtml += `
+                <div class="list-group-item list-group-item-action scheme-result" 
+                     data-scheme-id="${scheme.id}" 
+                     data-scheme-name="${scheme.scheme_name}"
+                     data-amc-name="${scheme.amc_name || ''}"
+                     data-scheme-type="${scheme.scheme_type || ''}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">${scheme.scheme_name}</h6>
+                            <p class="mb-1 text-muted small">${scheme.amc_name || 'Unknown AMC'}</p>
+                            <div class="d-flex gap-1">
+                                <span class="badge bg-light text-dark">${scheme.scheme_type || 'Other'}</span>
+                                ${scheme.risk_category ? `<span class="badge bg-outline-secondary">${scheme.risk_category}</span>` : ''}
                             </div>
-                            <button type="button" class="btn btn-sm btn-primary add-new-scheme-btn">
+                            ${scheme.isin_number ? `<small class="text-muted">ISIN: ${scheme.isin_number}</small>` : ''}
+                        </div>
+                        <div class="btn-group-vertical btn-group-sm">
+                            <button type="button" class="btn btn-primary btn-sm add-new-scheme-btn" 
+                                    data-scheme-id="${scheme.id}"
+                                    data-scheme-name="${scheme.scheme_name}"
+                                    data-action="purchase" title="Purchase">
                                 <i class="fas fa-plus"></i>
+                            </button>
+                            <button type="button" class="btn btn-success btn-sm add-new-scheme-btn" 
+                                    data-scheme-id="${scheme.id}"
+                                    data-scheme-name="${scheme.scheme_name}"
+                                    data-action="sip_start" title="Start SIP">
+                                <i class="fas fa-calendar-plus"></i>
                             </button>
                         </div>
                     </div>
-                `;
-                results.append(schemeHtml);
-            });
-            
-            // Add click handler for new scheme actions
-            $('.add-new-scheme-btn').on('click', function() {
-                const schemeDiv = $(this).closest('.scheme-result');
-                const schemeId = schemeDiv.data('scheme-id');
-                const schemeName = schemeDiv.data('scheme-name');
-                
-                $('#actionSchemeId').val(schemeId);
-                $('#actionSchemeName').val(schemeName);
-                $('#displaySchemeName').text(schemeName);
-                $('#actionType').val('purchase').trigger('change');
-                
-                $('#actionModal').modal('show');
-            });
+                </div>
+            `;
+        });
+        
+        resultsHtml += '</div>';
+        
+        if (response.schemes.length > 10) {
+            resultsHtml += `<div class="text-center mt-2"><small class="text-muted">Showing 10 of ${response.schemes.length} results. Refine your search for better results.</small></div>`;
         }
-    });
+        
+        results.html(resultsHtml);
+        
+        // Add click handler for new scheme actions - Fixed event delegation
+        $(document).on('click', '.add-new-scheme-btn', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const schemeId = $(this).data('scheme-id');
+            const schemeName = $(this).data('scheme-name');
+            const actionType = $(this).data('action');
+            
+            console.log('New scheme action:', { schemeId, schemeName, actionType }); // Debug log
+            
+            // Clear previous form data
+            $('#actionForm')[0].reset();
+            
+            $('#actionSchemeId').val(schemeId);
+            $('#actionSchemeName').val(schemeName);
+            $('#displaySchemeName').text(schemeName);
+            $('#actionType').val(actionType).trigger('change');
+            
+            // Reset edit mode
+            $('#addActionBtn').removeData('edit-index').text('Add Action');
+            
+            $('#actionModal').modal('show');
+        });
+        
+    } else {
+        results.html('<div class="text-muted text-center p-3">No schemes found. Try different search terms.</div>');
+    }
 }
 
+// Enhanced action rendering - Fixed
 function renderActions() {
     const container = $('#actionsContainer');
+    
+    console.log('Rendering actions:', planActions); // Debug log
     
     if (planActions.length === 0) {
         $('#noActionsMessage').show();
         $('#actionsSummary').hide();
+        container.find('.table-responsive').remove(); // Remove existing table
         return;
     }
     
     $('#noActionsMessage').hide();
     $('#actionsSummary').show();
     
-    let html = '<div class="table-responsive"><table class="table table-striped">';
-    html += '<thead><tr><th>#</th><th>Action</th><th>Scheme</th><th>Amount</th><th>Units</th><th>Notes</th><th>Actions</th></tr></thead><tbody>';
+    let html = '<div class="table-responsive"><table class="table table-striped table-hover">';
+    html += `
+        <thead class="table-dark">
+            <tr>
+                <th>#</th>
+                <th>Action</th>
+                <th>Scheme</th>
+                <th class="text-end">Amount</th>
+                <th class="text-end">Units</th>
+                <th>Details</th>
+                <th>Notes</th>
+                <th class="text-center">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+    `;
     
     planActions.forEach(function(action, index) {
-        const actionTypeDisplay = $('#actionType option[value="' + action.action_type + '"]').text();
+        const actionTypeOptions = {
+            'purchase': 'Purchase',
+            'redemption': 'Redemption',
+            'sip_start': 'Start SIP',
+            'sip_modify': 'Modify SIP',
+            'sip_stop': 'Stop SIP',
+            'switch': 'Switch',
+            'stp_start': 'Start STP',
+            'stp_stop': 'Stop STP',
+            'swp_start': 'Start SWP',
+            'swp_stop': 'Stop SWP'
+        };
+        
+        const actionTypeDisplay = actionTypeOptions[action.action_type] || action.action_type;
+        const actionClass = getActionTypeClass(action.action_type);
         
         html += `
             <tr>
-                <td>${index + 1}</td>
+                <td><span class="badge bg-secondary">${index + 1}</span></td>
                 <td>
-                    <span class="badge bg-primary">${actionTypeDisplay}</span>
-                    ${action.sip_date ? '<br><small>SIP Date: ' + action.sip_date + '</small>' : ''}
+                    <span class="badge ${actionClass}">${actionTypeDisplay}</span>
+                    ${action.priority ? `<br><small class="text-muted">Priority: ${action.priority}</small>` : ''}
                 </td>
                 <td>
-                    <div>${action.scheme_name}</div>
-                    ${action.target_scheme_name ? '<small class="text-muted">→ ' + action.target_scheme_name + '</small>' : ''}
+                    <div class="fw-bold text-primary">${action.scheme_name}</div>
+                    ${action.target_scheme_name ? '<small class="text-muted"><i class="fas fa-arrow-right me-1"></i>' + action.target_scheme_name + '</small>' : ''}
                 </td>
-                <td>${action.amount ? '₹' + parseFloat(action.amount).toLocaleString('en-IN') : '-'}</td>
-                <td>${action.units ? parseFloat(action.units).toFixed(4) : '-'}</td>
-                <td>${action.notes || '-'}</td>
+                <td class="text-end">
+                    ${action.amount ? '<span class="fw-bold">₹' + parseFloat(action.amount).toLocaleString('en-IN') + '</span>' : '<span class="text-muted">-</span>'}
+                </td>
+                <td class="text-end">
+                    ${action.units ? '<span class="fw-bold">' + parseFloat(action.units).toFixed(4) + '</span>' : '<span class="text-muted">-</span>'}
+                </td>
                 <td>
-                    <button type="button" class="btn btn-sm btn-danger remove-action-btn" data-index="${index}">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    ${action.sip_date ? '<span class="badge bg-info">SIP Date: ' + action.sip_date + '</span>' : ''}
+                    ${getActionDetails(action)}
+                </td>
+                <td>
+                    ${action.notes ? '<small>' + action.notes + '</small>' : '<span class="text-muted">-</span>'}
+                </td>
+                <td class="text-center">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-outline-primary edit-action-btn" 
+                                data-index="${index}" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-action-btn" 
+                                data-index="${index}" title="Remove">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>
         `;
     });
     
     html += '</tbody></table></div>';
-    container.html(html);
     
-    // Add remove action handlers
-    $('.remove-action-btn').on('click', function() {
+    // Remove existing table and add new one
+    container.find('.table-responsive').remove();
+    container.append(html);
+    
+    // Add event handlers with proper event delegation
+    $(document).off('click', '.remove-action-btn').on('click', '.remove-action-btn', function(e) {
+        e.preventDefault();
         const index = $(this).data('index');
-        planActions.splice(index, 1);
-        renderActions();
-        updateSummary();
+        if (confirm('Are you sure you want to remove this action?')) {
+            planActions.splice(index, 1);
+            renderActions();
+            updateSummary();
+        }
+    });
+    
+    $(document).off('click', '.edit-action-btn').on('click', '.edit-action-btn', function(e) {
+        e.preventDefault();
+        const index = $(this).data('index');
+        editAction(index);
     });
 }
 
+// Get CSS class for action type
+function getActionTypeClass(actionType) {
+    const classMap = {
+        'purchase': 'bg-success',
+        'redemption': 'bg-danger',
+        'sip_start': 'bg-primary',
+        'sip_modify': 'bg-warning',
+        'sip_stop': 'bg-secondary',
+        'switch': 'bg-info',
+        'stp_start': 'bg-dark',
+        'stp_stop': 'bg-light text-dark',
+        'swp_start': 'bg-purple',
+        'swp_stop': 'bg-light text-dark'
+    };
+    return classMap[actionType] || 'bg-secondary';
+}
+
+// Get additional action details
+function getActionDetails(action) {
+    let details = '';
+    
+    if (action.action_type.includes('sip') && action.sip_date) {
+        details += `<br><small class="text-info">Monthly on ${action.sip_date}</small>`;
+    }
+    
+    if (action.action_type.includes('switch') || action.action_type.includes('stp')) {
+        details += '<br><small class="text-warning"><i class="fas fa-exchange-alt"></i> Transfer Action</small>';
+    }
+    
+    return details;
+}
+
+// Edit action function - Fixed
+function editAction(index) {
+    const action = planActions[index];
+    
+    console.log('Editing action:', action); // Debug log
+    
+    // Clear and populate form
+    $('#actionForm')[0].reset();
+    
+    $('#actionSchemeId').val(action.scheme_id);
+    $('#actionSchemeName').val(action.scheme_name);
+    $('#displaySchemeName').text(action.scheme_name);
+    $('#actionType').val(action.action_type).trigger('change');
+    $('#actionAmount').val(action.amount || '');
+    $('#actionUnits').val(action.units || '');
+    $('#sipDate').val(action.sip_date || '');
+    $('#targetScheme').val(action.target_scheme_name || '');
+    $('#actionNotes').val(action.notes || '');
+    
+    // Set target scheme data if exists
+    if (action.target_scheme_id) {
+        $('#targetScheme').data('scheme-id', action.target_scheme_id);
+    }
+    
+    // Store the index for updating
+    $('#addActionBtn').data('edit-index', index);
+    $('#addActionBtn').text('Update Action');
+    
+    $('#actionModal').modal('show');
+}
+
+// Enhanced summary calculation - Fixed
 function updateSummary() {
     let totalInvestment = 0;
     let totalRedemption = 0;
+    let totalSIP = 0;
+    let sipCount = 0;
     
     planActions.forEach(function(action) {
         if (action.amount) {
+            const amount = parseFloat(action.amount);
+            
             if (['purchase', 'sip_start'].includes(action.action_type)) {
-                totalInvestment += parseFloat(action.amount);
+                totalInvestment += amount;
+                if (action.action_type === 'sip_start') {
+                    totalSIP += amount;
+                    sipCount++;
+                }
             } else if (['redemption'].includes(action.action_type)) {
-                totalRedemption += parseFloat(action.amount);
+                totalRedemption += amount;
             }
         }
     });
@@ -511,8 +1053,22 @@ function updateSummary() {
     $('#totalRedemption').text('₹' + totalRedemption.toLocaleString('en-IN'));
     $('#netInvestment').text('₹' + netInvestment.toLocaleString('en-IN'));
     $('#totalActions').text(planActions.length);
+    
+    // Update net investment color based on value
+    const netElement = $('#netInvestment');
+    netElement.removeClass('text-success text-danger text-primary');
+    if (netInvestment > 0) {
+        netElement.addClass('text-success');
+    } else if (netInvestment < 0) {
+        netElement.addClass('text-danger');
+    } else {
+        netElement.addClass('text-primary');
+    }
+    
+    console.log('Summary updated:', { totalInvestment, totalRedemption, netInvestment, totalActions: planActions.length });
 }
 
+// Enhanced save plan function - Fixed to match your URLs
 function savePlan(action) {
     const planName = $('#planName').val().trim();
     const description = $('#planDescription').val().trim();
@@ -528,24 +1084,232 @@ function savePlan(action) {
         return;
     }
     
+    // Show loading state
+    const submitBtn = action === 'submit' ? $('#saveAndSubmitBtn') : $('#saveDraftBtn');
+    const originalText = submitBtn.html();
+    submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Saving...');
+    
     const data = {
-        client_id: {{ client.id }},
+        client_id: '{{ client.id }}',
         plan_name: planName,
         description: description,
         actions: planActions,
         submit_for_approval: action === 'submit'
     };
     
-    $.post('{% url "save_execution_plan" %}', JSON.stringify(data), function(response) {
-        if (response.success) {
-            alert('Plan saved successfully!');
-            window.location.href = '{% url "plan_detail" 0 %}'.replace('0', response.plan_id);
-        } else {
-            alert('Error saving plan: ' + response.error);
-        }
-    }, 'json').fail(function() {
-        alert('Error saving plan. Please try again.');
-    });
+    console.log('Saving plan:', data); // Debug log
+    
+    try {
+        $.ajax({
+            url: '{% url "save_execution_plan" %}',
+            method: 'POST',
+            data: JSON.stringify(data),
+            contentType: 'application/json',
+            headers: {
+                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                console.log('Save response:', response); // Debug log
+                
+                if (response.success) {
+                    const message = action === 'submit' ? 
+                        'Plan saved and submitted for approval successfully!' : 
+                        'Plan saved as draft successfully!';
+                    
+                    alert(message);
+                    
+                    // Redirect to plan detail page
+                    if (response.plan_id) {
+                        try {
+                            window.location.href = '{% url "plan_detail" 0 %}'.replace('0', response.plan_id);
+                        } catch (e) {
+                            // If plan_detail URL fails, go to ongoing plans
+                            window.location.href = '{% url "ongoing_plans" %}';
+                        }
+                    } else {
+                        window.location.href = '{% url "ongoing_plans" %}';
+                    }
+                } else {
+                    alert('Error saving plan: ' + (response.error || 'Unknown error'));
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Save error:', error);
+                let errorMessage = 'Error saving plan. Please try again.';
+                
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMessage = xhr.responseJSON.error;
+                } else if (xhr.responseText) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.error) {
+                            errorMessage = response.error;
+                        }
+                    } catch (e) {
+                        // Use default message
+                    }
+                }
+                
+                alert(errorMessage);
+            },
+            complete: function() {
+                // Restore button state
+                submitBtn.prop('disabled', false).html(originalText);
+            }
+        });
+    } catch (e) {
+        console.error('Save URL error:', e);
+        alert('Save functionality not available. Please check the configuration.');
+        submitBtn.prop('disabled', false).html(originalText);
+    }
 }
+
+// Template and portfolio functions - Fixed to match your URLs
+function loadTemplate(templateId) {
+    if (!templateId) return;
+    
+    try {
+        $.ajax({
+            url: '{% url "load_template_ajax" 0 %}'.replace('0', templateId),
+            method: 'GET',
+            success: function(response) {
+                if (response.success && response.actions) {
+                    planActions = response.actions;
+                    renderActions();
+                    updateSummary();
+                    alert('Template loaded successfully!');
+                } else {
+                    alert('Error loading template: ' + (response.error || 'Unknown error'));
+                }
+            },
+            error: function() {
+                alert('Error loading template. Please try again.');
+            }
+        });
+    } catch (e) {
+        console.error('Template loading error:', e);
+        alert('Template loading feature not available');
+    }
+}
+
+function saveAsTemplate() {
+    try {
+        const templateName = prompt('Enter template name:');
+        if (!templateName) return;
+        
+        if (planActions.length === 0) {
+            alert('Please add at least one action before saving as template');
+            return;
+        }
+        
+        $.ajax({
+            url: '{% url "save_template" %}',
+            method: 'POST',
+            data: JSON.stringify({
+                name: templateName,
+                actions: planActions
+            }),
+            contentType: 'application/json',
+            headers: {
+                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                if (response.success) {
+                    alert('Template saved successfully!');
+                    location.reload();
+                } else {
+                    alert('Error saving template: ' + (response.error || 'Unknown error'));
+                }
+            },
+            error: function() {
+                alert('Error saving template. Please try again.');
+            }
+        });
+    } catch (e) {
+        console.error('Template saving error:', e);
+        alert('Template saving feature not available');
+    }
+}
+
+// Load client portfolio data dynamically - Fixed to match your URLs
+function loadClientPortfolio(clientId) {
+    try {
+        const portfolioUrl = '{% url "client_portfolio_ajax" "placeholder" %}'.replace('placeholder', clientId);
+        
+        $.get(portfolioUrl, function(response) {
+            if (response.success && response.portfolio.length > 0) {
+                updatePortfolioDisplay(response);
+            }
+        }).fail(function() {
+            console.warn('Failed to load portfolio data');
+        });
+    } catch (e) {
+        console.warn('Portfolio loading URL error:', e);
+    }
+}
+
+// Update portfolio display with dynamic data
+function updatePortfolioDisplay(portfolioData) {
+    // Update summary statistics
+    $('#total-aum').text('₹' + parseFloat(portfolioData.total_aum || 0).toLocaleString('en-IN'));
+    
+    // Update asset allocation
+    if (portfolioData.asset_allocation) {
+        const allocation = portfolioData.asset_allocation;
+        let allocationHtml = '';
+        
+        if (allocation.total_equity) {
+            const equityPct = (allocation.total_equity / portfolioData.total_aum * 100).toFixed(1);
+            allocationHtml += `<span class="badge bg-success">Equity: ₹${parseFloat(allocation.total_equity).toLocaleString('en-IN')} (${equityPct}%)</span> `;
+        }
+        
+        if (allocation.total_debt) {
+            const debtPct = (allocation.total_debt / portfolioData.total_aum * 100).toFixed(1);
+            allocationHtml += `<span class="badge bg-info">Debt: ₹${parseFloat(allocation.total_debt).toLocaleString('en-IN')} (${debtPct}%)</span> `;
+        }
+        
+        if (allocation.total_hybrid) {
+            const hybridPct = (allocation.total_hybrid / portfolioData.total_aum * 100).toFixed(1);
+            allocationHtml += `<span class="badge bg-warning">Hybrid: ₹${parseFloat(allocation.total_hybrid).toLocaleString('en-IN')} (${hybridPct}%)</span>`;
+        }
+        
+        $('#asset-allocation-badges').html(allocationHtml);
+    }
+}
+
+// Export portfolio function
+function exportPortfolio() {
+    const portfolioData = [];
+    $('#portfolioTable tbody tr').each(function() {
+        const row = $(this);
+        portfolioData.push({
+            scheme: row.find('td:eq(0)').text().trim(),
+            value: row.find('td:eq(1)').text().trim(),
+            units: row.find('td:eq(2)').text().trim(),
+            assetClass: row.find('td:eq(3)').text().trim(),
+            allocation: row.find('td:eq(4)').text().trim()
+        });
+    });
+    
+    // Simple CSV export
+    let csv = 'Scheme,Current Value,Units,Asset Class,Allocation %\n';
+    portfolioData.forEach(function(row) {
+        csv += `"${row.scheme}","${row.value}","${row.units}","${row.assetClass}","${row.allocation}"\n`;
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '{{ client.name }}_portfolio.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+// Bulk actions function
+function addBulkActions() {
+    alert('Bulk actions feature coming soon!');
+}
+
 </script>
 {% endblock %}

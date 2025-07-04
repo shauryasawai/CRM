@@ -1824,484 +1824,369 @@ class PlanCommentInline(admin.TabularInline):
         super().save_model(request, obj, form, change)
 
 
-@admin.register(MutualFundScheme)
-class MutualFundSchemeAdmin(admin.ModelAdmin):
-    list_display = (
-        'scheme_name', 'amc_name', 'scheme_code', 'scheme_type', 
-        'risk_category', 'minimum_investment', 'minimum_sip', 'is_active'
-    )
-    list_filter = ('scheme_type', 'risk_category', 'amc_name', 'is_active')
-    search_fields = ('scheme_name', 'amc_name', 'scheme_code')
-    ordering = ('amc_name', 'scheme_name')
-    list_editable = ('is_active',)
-    list_per_page = 50
-    
-    readonly_fields = ('created_at',)
-    
-    fieldsets = (
-        ('Basic Information', {
-            'fields': ('scheme_name', 'amc_name', 'scheme_code')
-        }),
-        ('Classification', {
-            'fields': ('scheme_type', 'risk_category')
-        }),
-        ('Investment Limits', {
-            'fields': ('minimum_investment', 'minimum_sip')
-        }),
-        ('Status', {
-            'fields': ('is_active', 'created_at')
-        }),
-    )
-
-
-@admin.register(ClientPortfolio)
-class ClientPortfolioAdmin(admin.ModelAdmin):
-    list_display = (
-        'client', 'scheme', 'folio_number', 'units', 
-        'current_value', 'cost_value', 'gain_loss_display', 'sip_amount'
-    )
-    list_filter = ('scheme__scheme_type', 'scheme__amc_name', 'sip_amount')
-    search_fields = ('client__name', 'scheme__scheme_name', 'folio_number')
-    ordering = ('client', 'scheme')
-    list_per_page = 50
-    
-    readonly_fields = ('gain_loss', 'gain_loss_percentage', 'last_updated')
-    
-    def gain_loss_display(self, obj):
-        gain_loss = obj.gain_loss
-        percentage = obj.gain_loss_percentage
-        color = 'green' if gain_loss >= 0 else 'red'
-        return format_html(
-            '<span style="color: {};">₹{:,.2f} ({:.2f}%)</span>',
-            color, gain_loss, percentage
-        )
-    gain_loss_display.short_description = 'Gain/Loss'
-    
-    fieldsets = (
-        ('Portfolio Details', {
-            'fields': ('client', 'scheme', 'folio_number')
-        }),
-        ('Holdings', {
-            'fields': ('units', 'current_value', 'cost_value', 'gain_loss', 'gain_loss_percentage')
-        }),
-        ('SIP Details', {
-            'fields': ('sip_amount', 'sip_date')
-        }),
-        ('Metadata', {
-            'fields': ('last_updated',)
-        }),
-    )
-
-
-@admin.register(ExecutionPlan)
-class ExecutionPlanAdmin(admin.ModelAdmin):
-    list_display = (
-        'plan_id', 'plan_name', 'client', 'status_display', 'created_by',
-        'approved_by', 'created_at', 'actions_count', 'total_amount'
-    )
-    list_filter = (StatusFilter, CreatedByFilter, 'created_at', 'approved_at')
-    search_fields = ('plan_id', 'plan_name', 'client__name', 'created_by__username')
-    ordering = ('-created_at',)
-    list_per_page = 25
-    
-    readonly_fields = (
-        'plan_id', 'created_at', 'updated_at', 'submitted_at', 
-        'approved_at', 'client_approved_at', 'execution_started_at', 
-        'completed_at', 'actions_count', 'total_amount'
-    )
-    
-    inlines = [PlanActionInline, PlanCommentInline]
-    
-    actions = ['submit_for_approval', 'approve_plans', 'reject_plans', 'mark_client_approved']
-    
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related(
-            'client', 'created_by', 'approved_by'
-        ).prefetch_related('actions')
-    
-    def status_display(self, obj):
-        status_colors = {
-            'draft': '#6c757d',
-            'pending_approval': '#ffc107',
-            'approved': '#17a2b8',
-            'client_approved': '#28a745',
-            'in_execution': '#fd7e14',
-            'completed': '#28a745',
-            'rejected': '#dc3545',
-            'cancelled': '#6c757d',
-        }
-        color = status_colors.get(obj.status, '#6c757d')
-        return format_html(
-            '<span style="color: {}; font-weight: bold;">{}</span>',
-            color, obj.get_status_display()
-        )
-    status_display.short_description = 'Status'
-    
-    def actions_count(self, obj):
-        return obj.actions.count()
-    actions_count.short_description = 'Actions'
-    
-    def total_amount(self, obj):
-        total = obj.actions.aggregate(
-            total=Sum('amount', filter=Q(action_type__in=['purchase', 'redemption']))
-        )['total'] or 0
-        return f"₹{total:,.2f}"
-    total_amount.short_description = 'Total Amount'
-    
-    def get_readonly_fields(self, request, obj=None):
-        readonly = list(self.readonly_fields)
-        
-        # Make certain fields readonly based on status
-        if obj and obj.status != 'draft':
-            readonly.extend(['client', 'plan_name', 'description'])
-        
-        if obj and obj.status in ['completed', 'rejected', 'cancelled']:
-            readonly.extend(['status', 'notes'])
-        
-        return readonly
-    
-    def get_actions(self, request):
-        actions = super().get_actions(request)
-        
-        # Remove actions based on user role
-        if request.user.role not in ['rm_head', 'business_head', 'top_management']:
-            if 'approve_plans' in actions:
-                del actions['approve_plans']
-            if 'reject_plans' in actions:
-                del actions['reject_plans']
-        
-        return actions
-    
-    def submit_for_approval(self, request, queryset):
-        """Submit selected plans for approval"""
-        count = 0
-        for plan in queryset:
-            if plan.submit_for_approval():
-                count += 1
-        
-        if count:
-            messages.success(request, f"{count} plan(s) submitted for approval.")
-        else:
-            messages.warning(request, "No plans were submitted. Check if they are in draft status.")
-    
-    submit_for_approval.short_description = "Submit selected plans for approval"
-    
-    def approve_plans(self, request, queryset):
-        """Approve selected plans"""
-        if request.user.role not in ['rm_head', 'business_head', 'top_management']:
-            messages.error(request, "You don't have permission to approve plans.")
-            return
-        
-        count = 0
-        for plan in queryset:
-            if plan.approve(request.user):
-                count += 1
-        
-        if count:
-            messages.success(request, f"{count} plan(s) approved.")
-        else:
-            messages.warning(request, "No plans were approved. Check permissions and status.")
-    
-    approve_plans.short_description = "Approve selected plans"
-    
-    def reject_plans(self, request, queryset):
-        """Reject selected plans"""
-        if request.user.role not in ['rm_head', 'business_head', 'top_management']:
-            messages.error(request, "You don't have permission to reject plans.")
-            return
-        
-        # This would ideally open a form to collect rejection reason
-        # For now, using a default reason
-        count = 0
-        for plan in queryset:
-            if plan.reject(request.user, "Rejected via admin action"):
-                count += 1
-        
-        if count:
-            messages.success(request, f"{count} plan(s) rejected.")
-        else:
-            messages.warning(request, "No plans were rejected. Check permissions and status.")
-    
-    reject_plans.short_description = "Reject selected plans"
-    
-    def mark_client_approved(self, request, queryset):
-        """Mark selected plans as client approved"""
-        count = 0
-        for plan in queryset:
-            if plan.mark_client_approved():
-                count += 1
-        
-        if count:
-            messages.success(request, f"{count} plan(s) marked as client approved.")
-        else:
-            messages.warning(request, "No plans were updated. Check if they are in approved status.")
-    
-    mark_client_approved.short_description = "Mark as client approved"
-    
-    fieldsets = (
-        ('Basic Information', {
-            'fields': ('plan_id', 'client', 'plan_name', 'description')
-        }),
-        ('Assignment', {
-            'fields': ('created_by', 'approved_by')
-        }),
-        ('Status & Timeline', {
-            'fields': (
-                'status', 'created_at', 'updated_at', 'submitted_at',
-                'approved_at', 'client_approved_at', 'execution_started_at', 'completed_at'
-            )
-        }),
-        ('Summary', {
-            'fields': ('actions_count', 'total_amount')
-        }),
-        ('Documentation', {
-            'fields': ('notes', 'rejection_reason', 'excel_file', 'client_communication_sent')
-        }),
-    )
-
-
-@admin.register(PlanAction)
-class PlanActionAdmin(admin.ModelAdmin):
-    list_display = (
-        'execution_plan', 'action_type', 'scheme', 'amount', 
-        'status_display', 'priority', 'executed_by', 'executed_at'
-    )
-    list_filter = ('action_type', 'status', 'executed_at', 'scheme__scheme_type')
-    search_fields = (
-        'execution_plan__plan_id', 'scheme__scheme_name', 
-        'transaction_id', 'executed_by__username'
-    )
-    ordering = ('execution_plan', 'priority', 'created_at')
-    list_per_page = 50
-    
-    readonly_fields = ('executed_at', 'created_at', 'updated_at')
-    
-    actions = ['mark_as_completed', 'mark_as_failed', 'cancel_actions']
-    
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related(
-            'execution_plan', 'scheme', 'target_scheme', 'executed_by'
-        )
-    
-    def status_display(self, obj):
-        status_colors = {
-            'pending': '#ffc107',
-            'in_progress': '#fd7e14',
-            'completed': '#28a745',
-            'failed': '#dc3545',
-            'cancelled': '#6c757d',
-        }
-        color = status_colors.get(obj.status, '#6c757d')
-        return format_html(
-            '<span style="color: {}; font-weight: bold;">{}</span>',
-            color, obj.get_status_display()
-        )
-    status_display.short_description = 'Status'
-    
-    def mark_as_completed(self, request, queryset):
-        """Mark selected actions as completed"""
-        count = queryset.filter(status__in=['pending', 'in_progress']).update(
-            status='completed',
-            executed_at=timezone.now(),
-            executed_by=request.user
-        )
-        messages.success(request, f"{count} action(s) marked as completed.")
-    
-    mark_as_completed.short_description = "Mark as completed"
-    
-    def mark_as_failed(self, request, queryset):
-        """Mark selected actions as failed"""
-        count = 0
-        for action in queryset.filter(status__in=['pending', 'in_progress']):
-            action.mark_failed("Marked as failed via admin", request.user)
-            count += 1
-        messages.success(request, f"{count} action(s) marked as failed.")
-    
-    mark_as_failed.short_description = "Mark as failed"
-    
-    def cancel_actions(self, request, queryset):
-        """Cancel selected actions"""
-        count = 0
-        for action in queryset:
-            if action.cancel(request.user, "Cancelled via admin"):
-                count += 1
-        messages.success(request, f"{count} action(s) cancelled.")
-    
-    cancel_actions.short_description = "Cancel actions"
-    
-    fieldsets = (
-        ('Plan Details', {
-            'fields': ('execution_plan', 'action_type', 'priority')
-        }),
-        ('Scheme Information', {
-            'fields': ('scheme', 'target_scheme')
-        }),
-        ('Transaction Details', {
-            'fields': ('amount', 'units', 'sip_date')
-        }),
-        ('Execution Status', {
-            'fields': ('status', 'executed_by', 'executed_at')
-        }),
-        ('Post-Execution Details', {
-            'fields': (
-                'transaction_id', 'executed_amount', 'executed_units', 
-                'nav_price', 'notes', 'failure_reason'
-            )
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'updated_at')
-        }),
-    )
-
-
-@admin.register(PlanWorkflowHistory)
-class PlanWorkflowHistoryAdmin(admin.ModelAdmin):
-    list_display = (
-        'execution_plan', 'from_status', 'to_status', 
-        'changed_by', 'changed_at'
-    )
-    list_filter = ('from_status', 'to_status', 'changed_at')
-    search_fields = ('execution_plan__plan_id', 'changed_by__username')
-    ordering = ('-changed_at',)
-    readonly_fields = ('changed_at',)
-    
-    def has_add_permission(self, request):
-        return False  # Workflow history should be auto-generated
-    
-    def has_change_permission(self, request, obj=None):
-        return False  # Workflow history should be immutable
-
-
-@admin.register(PlanComment)
-class PlanCommentAdmin(admin.ModelAdmin):
-    list_display = (
-        'execution_plan', 'commented_by', 'created_at', 
-        'is_internal', 'comment_preview'
-    )
-    list_filter = ('is_internal', 'created_at', 'commented_by')
-    search_fields = ('execution_plan__plan_id', 'comment', 'commented_by__username')
-    ordering = ('-created_at',)
-    readonly_fields = ('created_at',)
-    
-    def comment_preview(self, obj):
-        return obj.comment[:50] + '...' if len(obj.comment) > 50 else obj.comment
-    comment_preview.short_description = 'Comment Preview'
-    
-    def save_model(self, request, obj, form, change):
-        if not obj.pk:
-            obj.commented_by = request.user
-        super().save_model(request, obj, form, change)
-
-
-@admin.register(PlanTemplate)
-class PlanTemplateAdmin(admin.ModelAdmin):
-    list_display = (
-        'name', 'created_by', 'is_active', 'is_public', 
-        'created_at', 'updated_at'
-    )
-    list_filter = ('is_active', 'is_public', 'created_at')
-    search_fields = ('name', 'description', 'created_by__username')
-    ordering = ('name',)
-    readonly_fields = ('created_at', 'updated_at')
-    
-    actions = ['make_public', 'make_private', 'activate_templates', 'deactivate_templates']
-    
-    def make_public(self, request, queryset):
-        count = queryset.update(is_public=True)
-        messages.success(request, f"{count} template(s) made public.")
-    make_public.short_description = "Make selected templates public"
-    
-    def make_private(self, request, queryset):
-        count = queryset.update(is_public=False)
-        messages.success(request, f"{count} template(s) made private.")
-    make_private.short_description = "Make selected templates private"
-    
-    def activate_templates(self, request, queryset):
-        count = queryset.update(is_active=True)
-        messages.success(request, f"{count} template(s) activated.")
-    activate_templates.short_description = "Activate selected templates"
-    
-    def deactivate_templates(self, request, queryset):
-        count = queryset.update(is_active=False)
-        messages.success(request, f"{count} template(s) deactivated.")
-    deactivate_templates.short_description = "Deactivate selected templates"
-    
-    def save_model(self, request, obj, form, change):
-        if not obj.pk:
-            obj.created_by = request.user
-        super().save_model(request, obj, form, change)
-
-
-@admin.register(ExecutionMetrics)
-class ExecutionMetricsAdmin(admin.ModelAdmin):
-    list_display = (
-        'execution_plan', 'total_investment_amount', 'total_redemption_amount',
-        'net_investment', 'sip_count', 'success_rate_display', 'updated_at'
-    )
-    list_filter = ('updated_at',)
-    search_fields = ('execution_plan__plan_id', 'execution_plan__client__name')
-    ordering = ('-updated_at',)
-    readonly_fields = (
-        'time_to_approval', 'time_to_client_approval', 'time_to_execution',
-        'total_execution_time', 'success_rate', 'updated_at'
-    )
-    
-    actions = ['recalculate_metrics']
-    
-    def success_rate_display(self, obj):
-        rate = obj.success_rate
-        color = 'green' if rate >= 90 else 'orange' if rate >= 70 else 'red'
-        return format_html(
-            '<span style="color: {}; font-weight: bold;">{:.1f}%</span>',
-            color, rate
-        )
-    success_rate_display.short_description = 'Success Rate'
-    
-    def recalculate_metrics(self, request, queryset):
-        """Recalculate metrics for selected plans"""
-        count = 0
-        for metrics in queryset:
-            metrics.calculate_metrics()
-            count += 1
-        messages.success(request, f"Metrics recalculated for {count} plan(s).")
-    
-    recalculate_metrics.short_description = "Recalculate metrics"
-    
-    def has_add_permission(self, request):
-        return False  # Metrics should be auto-generated
-    
-    fieldsets = (
-        ('Plan Information', {
-            'fields': ('execution_plan',)
-        }),
-        ('Time Metrics (Hours)', {
-            'fields': (
-                'time_to_approval', 'time_to_client_approval',
-                'time_to_execution', 'total_execution_time'
-            )
-        }),
-        ('Business Metrics', {
-            'fields': (
-                'total_investment_amount', 'total_redemption_amount',
-                'net_investment', 'sip_count', 'total_monthly_sip'
-            )
-        }),
-        ('Execution Metrics', {
-            'fields': (
-                'total_actions', 'successful_actions', 'failed_actions', 'success_rate'
-            )
-        }),
-        ('Metadata', {
-            'fields': ('updated_at',)
-        }),
-    )
     
 # Register all models
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(Team, TeamAdmin)
 admin.site.register(TeamMembership, TeamMembershipAdmin)
 
-# Notes System
+# Notes Systemfrom django.contrib import admin
+from django.utils.html import format_html
+from django.urls import reverse, path
+from django.utils.safestring import mark_safe
+from django.db.models import Sum, Count
+from django.shortcuts import redirect
+from django.contrib import messages
+from django.http import HttpResponse
+from .models import (
+    PortfolioUpload, ClientPortfolio, PortfolioUploadLog, 
+    MutualFundScheme
+)
+import csv
+
+@admin.register(PortfolioUpload)
+class PortfolioUploadAdmin(admin.ModelAdmin):
+    list_display = [
+        'upload_id', 'file', 'uploaded_by', 'uploaded_at', 
+        'status', 'progress_display', 'total_rows', 'successful_rows', 
+        'failed_rows', 'actions_column'
+    ]
+    list_filter = ['status', 'uploaded_at', 'uploaded_by']
+    search_fields = ['upload_id', 'file']
+    readonly_fields = [
+        'upload_id', 'uploaded_at', 'processed_at', 'total_rows',
+        'processed_rows', 'successful_rows', 'failed_rows',
+        'processing_summary', 'error_details'
+    ]
+    
+    fieldsets = (
+        ('Upload Information', {
+            'fields': ('upload_id', 'file', 'uploaded_by', 'uploaded_at')
+        }),
+        ('Processing Status', {
+            'fields': ('status', 'processed_at', 'total_rows', 'processed_rows', 
+                      'successful_rows', 'failed_rows')
+        }),
+        ('Details', {
+            'fields': ('processing_log', 'processing_summary', 'error_details'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def progress_display(self, obj):
+        if obj.total_rows > 0:
+            percentage = (obj.successful_rows / obj.total_rows) * 100
+            color = 'green' if percentage > 80 else 'orange' if percentage > 50 else 'red'
+            return format_html(
+                '<div style="width: 100px; background-color: #f0f0f0; border-radius: 3px;">'
+                '<div style="width: {}%; background-color: {}; height: 20px; border-radius: 3px;"></div>'
+                '</div>'
+                '<small>{:.1f}% ({}/{})</small>',
+                percentage, color, percentage, obj.successful_rows, obj.total_rows
+            )
+        return "No data"
+    progress_display.short_description = "Progress"
+    
+    def actions_column(self, obj):
+        actions = []
+        
+        if obj.status == 'pending':
+            # Use the correct admin URL pattern
+            process_url = reverse('admin:process_portfolio_upload', args=[obj.pk])
+            actions.append(f'<a href="{process_url}" class="button">Process</a>')
+        
+        if obj.status in ['completed', 'partial']:
+            # Use the correct admin URL pattern
+            map_url = reverse('admin:map_portfolio_clients', args=[obj.pk])
+            actions.append(f'<a href="{map_url}" class="button">Map Clients</a>')
+        
+        # Fixed: Use the correct model name for admin URLs
+        app_label = self.model._meta.app_label
+        logs_url = reverse(f'admin:{app_label}_portfoliouploadlog_changelist') + f'?upload__id__exact={obj.pk}'
+        actions.append(f'<a href="{logs_url}" class="button">View Logs</a>')
+        
+        portfolios_url = reverse(f'admin:{app_label}_clientportfolio_changelist') + f'?upload_batch__id__exact={obj.pk}'
+        actions.append(f'<a href="{portfolios_url}" class="button">View Portfolios</a>')
+        
+        return format_html(' '.join(actions))
+    actions_column.short_description = "Actions"
+    
+    def get_urls(self):
+        from django.urls import path
+        urls = super().get_urls()
+        app_label = self.model._meta.app_label
+        custom_urls = [
+            path(
+                '<int:upload_id>/process/',
+                self.admin_site.admin_view(self.process_upload_view),
+                name='process_portfolio_upload'
+            ),
+            path(
+                '<int:upload_id>/map/',
+                self.admin_site.admin_view(self.map_clients_view),
+                name='map_portfolio_clients'
+            ),
+            path(
+                'bulk-process/',
+                self.admin_site.admin_view(self.bulk_process_view),
+                name='bulk_process_uploads'
+            ),
+        ]
+        return custom_urls + urls
+    
+    def process_upload_view(self, request, upload_id):
+        """Process a specific upload"""
+        upload = self.get_object(request, upload_id)
+        if upload is None:
+            self.message_user(request, "Upload not found", level=messages.ERROR)
+            return redirect(f'admin:{self.model._meta.app_label}_portfolioupload_changelist')
+        
+        try:
+            # Process the upload
+            from django.core.management import call_command
+            call_command('process_portfolio_upload', upload_id=upload.upload_id, auto_map=True)
+            
+            self.message_user(
+                request, 
+                f"Upload {upload.upload_id} processed successfully", 
+                level=messages.SUCCESS
+            )
+        except Exception as e:
+            self.message_user(
+                request, 
+                f"Error processing upload: {str(e)}", 
+                level=messages.ERROR
+            )
+        
+        return redirect(f'admin:{self.model._meta.app_label}_portfolioupload_changelist')
+    
+    def map_clients_view(self, request, upload_id):
+        """Re-attempt client mapping for an upload"""
+        upload = self.get_object(request, upload_id)
+        if upload is None:
+            self.message_user(request, "Upload not found", level=messages.ERROR)
+            return redirect(f'admin:{self.model._meta.app_label}_portfolioupload_changelist')
+        
+        try:
+            from django.core.management import call_command
+            call_command('portfolio_utils', 'remap', upload_id=upload.upload_id)
+            
+            self.message_user(
+                request,
+                f"Client mapping re-attempted for upload {upload.upload_id}",
+                level=messages.SUCCESS
+            )
+        except Exception as e:
+            self.message_user(
+                request,
+                f"Error during mapping: {str(e)}",
+                level=messages.ERROR
+            )
+        
+        return redirect(f'admin:{self.model._meta.app_label}_portfolioupload_changelist')
+    
+    def bulk_process_view(self, request):
+        """Process all pending uploads"""
+        try:
+            from django.core.management import call_command
+            call_command('process_portfolio_upload', auto_map=True)
+            
+            self.message_user(
+                request,
+                "All pending uploads processed",
+                level=messages.SUCCESS
+            )
+        except Exception as e:
+            self.message_user(
+                request,
+                f"Error processing uploads: {str(e)}",
+                level=messages.ERROR
+            )
+        
+        return redirect(f'admin:{self.model._meta.app_label}_portfolioupload_changelist')
+
+@admin.register(ClientPortfolio)
+class ClientPortfolioAdmin(admin.ModelAdmin):
+    list_display = [
+        'client_name', 'client_pan', 'scheme_name', 'total_value',
+        'primary_asset_class', 'is_mapped', 'client_profile_link',
+        'upload_batch', 'created_at'
+    ]
+    list_filter = [
+        'is_mapped', 'upload_batch', 'created_at', 'data_as_of_date',
+        'mapped_rm', 'mapped_ops'
+    ]
+    search_fields = [
+        'client_name', 'client_pan', 'scheme_name', 'isin_number'
+    ]
+    readonly_fields = [
+        'primary_asset_class', 'gain_loss', 'gain_loss_percentage',
+        'created_at', 'updated_at'
+    ]
+    
+    fieldsets = (
+        ('Client Information', {
+            'fields': (
+                'client_name', 'client_pan', 'family_head',
+                'client_profile', 'is_mapped', 'mapping_notes'
+            )
+        }),
+        ('Scheme Information', {
+            'fields': (
+                'scheme_name', 'isin_number', 'folio_number'
+            )
+        }),
+        ('Portfolio Values', {
+            'fields': (
+                ('total_value', 'cost_value', 'units'),
+                ('debt_value', 'equity_value', 'hybrid_value'),
+                ('liquid_ultra_short_value', 'other_value', 'arbitrage_value'),
+                'allocation_percentage'
+            )
+        }),
+        ('Personnel Mapping', {
+            'fields': (
+                ('relationship_manager', 'mapped_rm'),
+                ('operations_personnel', 'mapped_ops'),
+                ('rm_code', 'operations_code')
+            )
+        }),
+        ('Additional Information', {
+            'fields': (
+                ('app_code', 'equity_code'),
+                ('sub_broker', 'sub_broker_code'),
+                ('client_iwell_code', 'family_head_iwell_code')
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Metadata', {
+            'fields': (
+                'upload_batch', 'data_as_of_date', 'is_active',
+                'created_at', 'updated_at'
+            ),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def client_profile_link(self, obj):
+        if obj.client_profile:
+            app_label = obj.client_profile._meta.app_label
+            model_name = obj.client_profile._meta.model_name
+            url = reverse(f'admin:{app_label}_{model_name}_change', args=[obj.client_profile.pk])
+            return format_html('<a href="{}">{}</a>', url, obj.client_profile.client_full_name)
+        return "Not mapped"
+    client_profile_link.short_description = "Client Profile"
+    
+    def primary_asset_class(self, obj):
+        return obj.primary_asset_class
+    primary_asset_class.short_description = "Primary Asset Class"
+    
+    actions = ['map_to_clients', 'export_to_csv', 'mark_inactive']
+    
+    def map_to_clients(self, request, queryset):
+        """Action to map selected portfolios to client profiles"""
+        mapped_count = 0
+        for portfolio in queryset.filter(is_mapped=False):
+            mapped, message = portfolio.map_to_client_profile()
+            if mapped:
+                mapped_count += 1
+        
+        self.message_user(
+            request,
+            f"Successfully mapped {mapped_count} out of {queryset.count()} portfolios",
+            level=messages.SUCCESS if mapped_count > 0 else messages.WARNING
+        )
+    map_to_clients.short_description = "Map selected portfolios to client profiles"
+    
+    def export_to_csv(self, request, queryset):
+        """Export selected portfolios to CSV"""
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="portfolios.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow([
+            'Client Name', 'Client PAN', 'Scheme Name', 'Total Value',
+            'Equity Value', 'Debt Value', 'Units', 'Is Mapped',
+            'Client Profile', 'RM', 'Operations'
+        ])
+        
+        for portfolio in queryset:
+            writer.writerow([
+                portfolio.client_name,
+                portfolio.client_pan,
+                portfolio.scheme_name,
+                portfolio.total_value,
+                portfolio.equity_value,
+                portfolio.debt_value,
+                portfolio.units,
+                portfolio.is_mapped,
+                portfolio.client_profile.client_full_name if portfolio.client_profile else '',
+                portfolio.relationship_manager,
+                portfolio.operations_personnel
+            ])
+        
+        return response
+    export_to_csv.short_description = "Export selected portfolios to CSV"
+    
+    def mark_inactive(self, request, queryset):
+        """Mark selected portfolios as inactive"""
+        updated = queryset.update(is_active=False)
+        self.message_user(
+            request,
+            f"Marked {updated} portfolios as inactive",
+            level=messages.SUCCESS
+        )
+    mark_inactive.short_description = "Mark selected portfolios as inactive"
+
+@admin.register(PortfolioUploadLog)
+class PortfolioUploadLogAdmin(admin.ModelAdmin):
+    list_display = [
+        'upload', 'row_number', 'client_name', 'client_pan', 
+        'status', 'message_preview', 'created_at'
+    ]
+    list_filter = ['status', 'upload', 'created_at']
+    search_fields = ['client_name', 'client_pan', 'message']
+    readonly_fields = ['upload', 'row_number', 'client_name', 'client_pan', 'scheme_name', 'created_at']
+    
+    def message_preview(self, obj):
+        if len(obj.message) > 50:
+            return obj.message[:50] + "..."
+        return obj.message
+    message_preview.short_description = "Message"
+
+@admin.register(MutualFundScheme)
+class MutualFundSchemeAdmin(admin.ModelAdmin):
+    list_display = [
+        'scheme_name', 'amc_name', 'scheme_type', 'primary_asset_class',
+        'risk_category', 'is_active', 'portfolio_count'
+    ]
+    list_filter = ['scheme_type', 'primary_asset_class', 'risk_category', 'is_active', 'amc_name']
+    search_fields = ['scheme_name', 'amc_name', 'scheme_code', 'isin_number']
+    readonly_fields = ['created_at', 'updated_at', 'portfolio_count']
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('scheme_name', 'amc_name', 'scheme_code', 'isin_number')
+        }),
+        ('Classification', {
+            'fields': ('scheme_type', 'primary_asset_class', 'risk_category')
+        }),
+        ('Investment Limits', {
+            'fields': ('minimum_investment', 'minimum_sip')
+        }),
+        ('Status & NAV', {
+            'fields': ('is_active', 'last_nav_date', 'last_nav_price')
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def portfolio_count(self, obj):
+        return ClientPortfolio.objects.filter(scheme_name=obj.scheme_name).count()
+    portfolio_count.short_description = "Portfolio Entries"
+    
 admin.site.register(NoteList, NoteListAdmin)
 admin.site.register(Note, NoteAdmin)
 

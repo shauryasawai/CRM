@@ -5704,17 +5704,68 @@ def create_plan(request):
         messages.error(request, "Only RMs and RM Heads can create execution plans.")
         return redirect('dashboard')
     
-    # Get clients accessible to this RM
+    # Get clients accessible to this RM - now using ClientProfile
     if request.user.role == 'rm':
-        # RM can see their own clients
-        clients = Client.objects.filter(user=request.user).order_by('name')
+        # RM can see their mapped clients from portfolio data
+        client_profiles = ClientProfile.objects.filter(
+            mapped_rm=request.user
+        ).distinct().order_by('client_full_name')
+        
+        # Also include clients from legacy Client model
+        legacy_clients = Client.objects.filter(user=request.user).order_by('name')
     else:
         # RM Head can see all clients under their team
         team_rms = User.objects.filter(manager=request.user, role='rm')
-        clients = Client.objects.filter(user__in=team_rms).order_by('name')
+        client_profiles = ClientProfile.objects.filter(
+            mapped_rm__in=team_rms
+        ).distinct().order_by('client_full_name')
+        
+        legacy_clients = Client.objects.filter(user__in=team_rms).order_by('name')
+    
+    # Combine portfolio-based clients and legacy clients
+    all_clients = []
+    
+    # Add clients from portfolio data
+    for profile in client_profiles:
+        portfolio_summary = ClientPortfolio.objects.filter(
+            client_profile=profile,
+            is_active=True
+        ).aggregate(
+            total_aum=Sum('total_value'),
+            scheme_count=Count('scheme_name', distinct=True)
+        )
+        
+        all_clients.append({
+            'id': f"profile_{profile.id}",
+            'name': profile.client_full_name,
+            'pan': profile.pan_number,
+            'type': 'profile',
+            'profile_id': profile.id,
+            'total_aum': portfolio_summary['total_aum'] or 0,
+            'scheme_count': portfolio_summary['scheme_count'] or 0,
+            'mapped_rm': profile.mapped_rm.get_full_name() if profile.mapped_rm else 'Not Mapped',
+            'has_portfolio': True
+        })
+    
+    # Add legacy clients
+    for client in legacy_clients:
+        all_clients.append({
+            'id': f"legacy_{client.id}",
+            'name': client.name,
+            'pan': getattr(client, 'pan_number', 'N/A'),
+            'type': 'legacy',
+            'client_id': client.id,
+            'total_aum': client.aum,
+            'scheme_count': 0,  # Legacy clients might not have detailed portfolio
+            'mapped_rm': client.user.get_full_name() if client.user else 'Not Mapped',
+            'has_portfolio': False
+        })
+    
+    # Sort by AUM descending
+    all_clients.sort(key=lambda x: x['total_aum'], reverse=True)
     
     context = {
-        'clients': clients,
+        'clients': all_clients,
     }
     
     return render(request, 'execution_plans/create_plan.html', context)
@@ -5722,41 +5773,126 @@ def create_plan(request):
 
 @login_required
 def client_portfolio_ajax(request, client_id):
-    """AJAX endpoint to get client portfolio"""
+    """AJAX endpoint to get client portfolio - Updated for new portfolio model"""
     try:
-        client = get_object_or_404(Client, id=client_id)
-        
-        # Check access permission
-        if request.user.role == 'rm' and client.user != request.user:
-            return JsonResponse({'error': 'Access denied'}, status=403)
-        elif request.user.role == 'rm_head':
-            if client.user.manager != request.user:
+        # Parse client_id to determine if it's profile or legacy
+        if client_id.startswith('profile_'):
+            profile_id = int(client_id.replace('profile_', ''))
+            client_profile = get_object_or_404(ClientProfile, id=profile_id)
+            
+            # Check access permission
+            if request.user.role == 'rm' and client_profile.mapped_rm != request.user:
                 return JsonResponse({'error': 'Access denied'}, status=403)
-        
-        # Get client portfolio
-        portfolio = ClientPortfolio.objects.filter(client=client).select_related('scheme')
-        
-        portfolio_data = []
-        for holding in portfolio:
-            portfolio_data.append({
-                'id': holding.id,
-                'scheme_name': holding.scheme.scheme_name,
-                'amc_name': holding.scheme.amc_name,
-                'folio_number': holding.folio_number,
-                'units': float(holding.units),
-                'current_value': float(holding.current_value),
-                'cost_value': float(holding.cost_value),
-                'sip_amount': float(holding.sip_amount),
-                'sip_date': holding.sip_date,
-                'gain_loss': float(holding.gain_loss),
-                'gain_loss_percentage': round(holding.gain_loss_percentage, 2),
+            elif request.user.role == 'rm_head':
+                if client_profile.mapped_rm and client_profile.mapped_rm.manager != request.user:
+                    return JsonResponse({'error': 'Access denied'}, status=403)
+            
+            # Get portfolio from ClientPortfolio model
+            portfolio_holdings = ClientPortfolio.objects.filter(
+                client_profile=client_profile,
+                is_active=True
+            ).order_by('scheme_name')
+            
+            portfolio_data = []
+            total_aum = 0
+            
+            for holding in portfolio_holdings:
+                portfolio_data.append({
+                    'id': holding.id,
+                    'scheme_name': holding.scheme_name,
+                    'isin_number': holding.isin_number,
+                    'folio_number': holding.folio_number or 'N/A',
+                    'units': float(holding.units),
+                    'current_value': float(holding.total_value),
+                    'cost_value': float(holding.cost_value) if holding.cost_value else 0,
+                    'equity_value': float(holding.equity_value),
+                    'debt_value': float(holding.debt_value),
+                    'hybrid_value': float(holding.hybrid_value),
+                    'liquid_value': float(holding.liquid_ultra_short_value),
+                    'other_value': float(holding.other_value),
+                    'arbitrage_value': float(holding.arbitrage_value),
+                    'allocation_percentage': float(holding.allocation_percentage),
+                    'gain_loss': float(holding.gain_loss) if holding.gain_loss else 0,
+                    'gain_loss_percentage': round(holding.gain_loss_percentage, 2) if holding.gain_loss_percentage else 0,
+                    'primary_asset_class': holding.primary_asset_class,
+                    'sip_amount': 0,  # Not available in current model
+                    'sip_date': None,  # Not available in current model
+                })
+                total_aum += holding.total_value
+            
+            # Asset allocation summary
+            asset_allocation = ClientPortfolio.objects.filter(
+                client_profile=client_profile,
+                is_active=True
+            ).aggregate(
+                total_equity=Sum('equity_value'),
+                total_debt=Sum('debt_value'),
+                total_hybrid=Sum('hybrid_value'),
+                total_liquid=Sum('liquid_ultra_short_value'),
+                total_other=Sum('other_value'),
+                total_arbitrage=Sum('arbitrage_value')
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'portfolio': portfolio_data,
+                'client_name': client_profile.client_full_name,
+                'client_pan': client_profile.pan_number,
+                'total_aum': total_aum,
+                'asset_allocation': asset_allocation,
+                'portfolio_count': len(portfolio_data),
+                'client_type': 'profile'
             })
-        
-        return JsonResponse({
-            'success': True,
-            'portfolio': portfolio_data,
-            'client_name': client.name,
-        })
+            
+        elif client_id.startswith('legacy_'):
+            # Handle legacy client
+            legacy_id = int(client_id.replace('legacy_', ''))
+            client = get_object_or_404(Client, id=legacy_id)
+            
+            # Check access permission
+            if request.user.role == 'rm' and client.user != request.user:
+                return JsonResponse({'error': 'Access denied'}, status=403)
+            elif request.user.role == 'rm_head':
+                if client.user.manager != request.user:
+                    return JsonResponse({'error': 'Access denied'}, status=403)
+            
+            # Try to get portfolio from legacy ClientPortfolio model
+            try:
+                portfolio = ClientPortfolio.objects.filter(client=client).select_related('scheme')
+                
+                portfolio_data = []
+                for holding in portfolio:
+                    portfolio_data.append({
+                        'id': holding.id,
+                        'scheme_name': holding.scheme.scheme_name,
+                        'amc_name': holding.scheme.amc_name,
+                        'folio_number': holding.folio_number,
+                        'units': float(holding.units),
+                        'current_value': float(holding.current_value),
+                        'cost_value': float(holding.cost_value),
+                        'sip_amount': float(holding.sip_amount),
+                        'sip_date': holding.sip_date,
+                        'gain_loss': float(holding.gain_loss),
+                        'gain_loss_percentage': round(holding.gain_loss_percentage, 2),
+                    })
+                
+                return JsonResponse({
+                    'success': True,
+                    'portfolio': portfolio_data,
+                    'client_name': client.name,
+                    'client_type': 'legacy'
+                })
+            except:
+                # No portfolio data available for legacy client
+                return JsonResponse({
+                    'success': True,
+                    'portfolio': [],
+                    'client_name': client.name,
+                    'client_type': 'legacy',
+                    'message': 'No detailed portfolio data available'
+                })
+        else:
+            return JsonResponse({'error': 'Invalid client ID format'}, status=400)
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
@@ -5766,19 +5902,63 @@ def client_portfolio_ajax(request, client_id):
 def create_plan_step2(request, client_id):
     """Create execution plan - Step 2: Design plan"""
     try:
-        client = get_object_or_404(Client, id=client_id)
-        
-        # Check access permission
-        if request.user.role == 'rm' and client.user != request.user:
-            messages.error(request, "Access denied")
-            return redirect('create_plan')
-        elif request.user.role == 'rm_head':
-            if client.user.manager != request.user:
+        # Parse client_id and get client data
+        if client_id.startswith('profile_'):
+            profile_id = int(client_id.replace('profile_', ''))
+            client_profile = get_object_or_404(ClientProfile, id=profile_id)
+            
+            # Check access permission
+            if request.user.role == 'rm' and client_profile.mapped_rm != request.user:
                 messages.error(request, "Access denied")
                 return redirect('create_plan')
-        
-        # Get client portfolio
-        portfolio = ClientPortfolio.objects.filter(client=client).select_related('scheme')
+            elif request.user.role == 'rm_head':
+                if client_profile.mapped_rm and client_profile.mapped_rm.manager != request.user:
+                    messages.error(request, "Access denied")
+                    return redirect('create_plan')
+            
+            # Get client portfolio from new model
+            portfolio = ClientPortfolio.objects.filter(
+                client_profile=client_profile,
+                is_active=True
+            ).order_by('scheme_name')
+            
+            client_data = {
+                'id': client_id,
+                'name': client_profile.client_full_name,
+                'pan': client_profile.pan_number,
+                'type': 'profile',
+                'profile_id': client_profile.id
+            }
+            
+        elif client_id.startswith('legacy_'):
+            legacy_id = int(client_id.replace('legacy_', ''))
+            client = get_object_or_404(Client, id=legacy_id)
+            
+            # Check access permission
+            if request.user.role == 'rm' and client.user != request.user:
+                messages.error(request, "Access denied")
+                return redirect('create_plan')
+            elif request.user.role == 'rm_head':
+                if client.user.manager != request.user:
+                    messages.error(request, "Access denied")
+                    return redirect('create_plan')
+            
+            # Get legacy portfolio if available
+            try:
+                portfolio = ClientPortfolio.objects.filter(client=client).select_related('scheme')
+            except:
+                portfolio = []
+            
+            client_data = {
+                'id': client_id,
+                'name': client.name,
+                'pan': getattr(client, 'pan_number', 'N/A'),
+                'type': 'legacy',
+                'client_id': client.id
+            }
+        else:
+            messages.error(request, "Invalid client ID")
+            return redirect('create_plan')
         
         # Get all available schemes for adding new investments
         all_schemes = MutualFundScheme.objects.filter(is_active=True).order_by('amc_name', 'scheme_name')
@@ -5788,12 +5968,31 @@ def create_plan_step2(request, client_id):
             Q(is_public=True) | Q(created_by=request.user)
         ).filter(is_active=True)
         
+        # Get asset allocation if portfolio exists
+        asset_allocation = None
+        if portfolio:
+            if hasattr(portfolio.first(), 'equity_value'):  # New portfolio model
+                asset_allocation = portfolio.aggregate(
+                    total_equity=Sum('equity_value'),
+                    total_debt=Sum('debt_value'),
+                    total_hybrid=Sum('hybrid_value'),
+                    total_liquid=Sum('liquid_ultra_short_value'),
+                    total_other=Sum('other_value'),
+                    total_arbitrage=Sum('arbitrage_value'),
+                    total_aum=Sum('total_value')
+                )
+            else:  # Legacy portfolio model
+                asset_allocation = {
+                    'total_aum': portfolio.aggregate(total=Sum('current_value'))['total'] or 0
+                }
+        
         context = {
-            'client': client,
+            'client': client_data,
             'portfolio': portfolio,
             'all_schemes': all_schemes,
             'templates': templates,
             'action_types': PlanAction.ACTION_TYPES,
+            'asset_allocation': asset_allocation,
         }
         
         return render(request, 'execution_plans/create_plan_step2.html', context)
@@ -5806,7 +6005,7 @@ def create_plan_step2(request, client_id):
 @login_required
 @require_http_methods(["POST"])
 def save_execution_plan(request):
-    """Save execution plan with actions"""
+    """Save execution plan with actions - Updated for new client model"""
     try:
         data = json.loads(request.body)
         client_id = data.get('client_id')
@@ -5817,14 +6016,45 @@ def save_execution_plan(request):
         if not client_id or not plan_name or not actions_data:
             return JsonResponse({'error': 'Missing required data'}, status=400)
         
-        client = get_object_or_404(Client, id=client_id)
-        
-        # Check access permission
-        if request.user.role == 'rm' and client.user != request.user:
-            return JsonResponse({'error': 'Access denied'}, status=403)
-        elif request.user.role == 'rm_head':
-            if client.user.manager != request.user:
+        # Get or create Client object based on client_id type
+        if client_id.startswith('profile_'):
+            profile_id = int(client_id.replace('profile_', ''))
+            client_profile = get_object_or_404(ClientProfile, id=profile_id)
+            
+            # Check access permission
+            if request.user.role == 'rm' and client_profile.mapped_rm != request.user:
                 return JsonResponse({'error': 'Access denied'}, status=403)
+            elif request.user.role == 'rm_head':
+                if client_profile.mapped_rm and client_profile.mapped_rm.manager != request.user:
+                    return JsonResponse({'error': 'Access denied'}, status=403)
+            
+            # Get or create Client object for ExecutionPlan
+            client, created = Client.objects.get_or_create(
+                client_profile=client_profile,
+                defaults={
+                    'name': client_profile.client_full_name,
+                    'user': client_profile.mapped_rm,
+                    'created_by': request.user,
+                    'contact_info': f"Email: {client_profile.email}, Mobile: {client_profile.mobile_number}",
+                    'aum': ClientPortfolio.objects.filter(
+                        client_profile=client_profile,
+                        is_active=True
+                    ).aggregate(total=Sum('total_value'))['total'] or 0
+                }
+            )
+            
+        elif client_id.startswith('legacy_'):
+            legacy_id = int(client_id.replace('legacy_', ''))
+            client = get_object_or_404(Client, id=legacy_id)
+            
+            # Check access permission
+            if request.user.role == 'rm' and client.user != request.user:
+                return JsonResponse({'error': 'Access denied'}, status=403)
+            elif request.user.role == 'rm_head':
+                if client.user.manager != request.user:
+                    return JsonResponse({'error': 'Access denied'}, status=403)
+        else:
+            return JsonResponse({'error': 'Invalid client ID format'}, status=400)
         
         # Create execution plan
         execution_plan = ExecutionPlan.objects.create(
@@ -5837,7 +6067,22 @@ def save_execution_plan(request):
         
         # Create plan actions
         for action_data in actions_data:
-            scheme = get_object_or_404(MutualFundScheme, id=action_data['scheme_id'])
+            # Get or create scheme based on provided data
+            if action_data.get('scheme_id'):
+                scheme = get_object_or_404(MutualFundScheme, id=action_data['scheme_id'])
+            elif action_data.get('scheme_name') and action_data.get('isin_number'):
+                # Create scheme from portfolio data if it doesn't exist
+                scheme = MutualFundScheme.create_from_portfolio_data(
+                    scheme_name=action_data['scheme_name'],
+                    isin_number=action_data['isin_number']
+                )
+            else:
+                continue  # Skip if no valid scheme data
+            
+            # Get target scheme if specified
+            target_scheme = None
+            if action_data.get('target_scheme_id'):
+                target_scheme = get_object_or_404(MutualFundScheme, id=action_data['target_scheme_id'])
             
             action = PlanAction.objects.create(
                 execution_plan=execution_plan,
@@ -5846,15 +6091,16 @@ def save_execution_plan(request):
                 amount=Decimal(str(action_data.get('amount', 0))) if action_data.get('amount') else None,
                 units=Decimal(str(action_data.get('units', 0))) if action_data.get('units') else None,
                 sip_date=action_data.get('sip_date'),
-                target_scheme_id=action_data.get('target_scheme_id'),
+                target_scheme=target_scheme,
                 priority=action_data.get('priority', 1),
                 notes=action_data.get('notes', '')
             )
         
         # Generate Excel file
         excel_file_path = generate_execution_plan_excel(execution_plan)
-        execution_plan.excel_file = excel_file_path
-        execution_plan.save()
+        if excel_file_path:
+            execution_plan.excel_file = excel_file_path
+            execution_plan.save()
         
         # Create workflow history
         PlanWorkflowHistory.objects.create(
@@ -5876,7 +6122,7 @@ def save_execution_plan(request):
 
 
 def generate_execution_plan_excel(execution_plan):
-    """Generate Excel file for execution plan"""
+    """Generate Excel file for execution plan - Enhanced version"""
     try:
         # Create workbook
         wb = openpyxl.Workbook()
@@ -5894,7 +6140,7 @@ def generate_execution_plan_excel(execution_plan):
         )
         
         # Title
-        ws.merge_cells('A1:H1')
+        ws.merge_cells('A1:I1')
         ws['A1'] = f"EXECUTION PLAN - {execution_plan.client.name.upper()}"
         ws['A1'].font = Font(bold=True, size=16)
         ws['A1'].alignment = Alignment(horizontal='center')
@@ -5904,22 +6150,33 @@ def generate_execution_plan_excel(execution_plan):
         ws['B3'] = execution_plan.plan_id
         ws['A4'] = "Client Name:"
         ws['B4'] = execution_plan.client.name
-        ws['A5'] = "Plan Name:"
-        ws['B5'] = execution_plan.plan_name
-        ws['A6'] = "Created Date:"
-        ws['B6'] = execution_plan.created_at.strftime('%d/%m/%Y')
-        ws['A7'] = "Created By:"
-        ws['B7'] = execution_plan.created_by.get_full_name() or execution_plan.created_by.username
+        
+        # Add PAN number if available
+        client_pan = 'N/A'
+        if hasattr(execution_plan.client, 'client_profile') and execution_plan.client.client_profile:
+            client_pan = execution_plan.client.client_profile.pan_number
+        ws['A5'] = "Client PAN:"
+        ws['B5'] = client_pan
+        
+        ws['A6'] = "Plan Name:"
+        ws['B6'] = execution_plan.plan_name
+        ws['A7'] = "Created Date:"
+        ws['B7'] = execution_plan.created_at.strftime('%d/%m/%Y')
+        ws['A8'] = "Created By:"
+        ws['B8'] = execution_plan.created_by.get_full_name() or execution_plan.created_by.username
         
         if execution_plan.description:
-            ws['A8'] = "Description:"
-            ws['B8'] = execution_plan.description
-            start_row = 10
+            ws['A9'] = "Description:"
+            ws['B9'] = execution_plan.description
+            start_row = 11
         else:
-            start_row = 9
+            start_row = 10
         
         # Headers
-        headers = ['Sr.', 'Action Type', 'Scheme Name', 'AMC', 'Amount (₹)', 'Units', 'SIP Date', 'Target Scheme', 'Notes']
+        headers = [
+            'Sr.', 'Action Type', 'Scheme Name', 'ISIN', 'Amount (₹)', 
+            'Units', 'SIP Date', 'Target Scheme', 'Priority', 'Notes'
+        ]
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=start_row, column=col, value=header)
             cell.font = header_font
@@ -5933,7 +6190,7 @@ def generate_execution_plan_excel(execution_plan):
             ws.cell(row=row, column=1, value=row - start_row).border = border
             ws.cell(row=row, column=2, value=action.get_action_type_display()).border = border
             ws.cell(row=row, column=3, value=action.scheme.scheme_name).border = border
-            ws.cell(row=row, column=4, value=action.scheme.amc_name).border = border
+            ws.cell(row=row, column=4, value=action.scheme.isin_number or '').border = border
             
             amount_cell = ws.cell(row=row, column=5, value=float(action.amount) if action.amount else '')
             amount_cell.border = border
@@ -5945,10 +6202,42 @@ def generate_execution_plan_excel(execution_plan):
             
             ws.cell(row=row, column=7, value=action.sip_date or '').border = border
             ws.cell(row=row, column=8, value=action.target_scheme.scheme_name if action.target_scheme else '').border = border
-            ws.cell(row=row, column=9, value=action.notes or '').border = border
+            ws.cell(row=row, column=9, value=action.priority).border = border
+            ws.cell(row=row, column=10, value=action.notes or '').border = border
+        
+        # Summary section
+        summary_row = start_row + len(actions) + 2
+        ws.merge_cells(f'A{summary_row}:I{summary_row}')
+        ws[f'A{summary_row}'] = "PLAN SUMMARY"
+        ws[f'A{summary_row}'].font = Font(bold=True, size=14)
+        ws[f'A{summary_row}'].alignment = Alignment(horizontal='center')
+        
+        # Calculate summary metrics
+        total_investment = sum(float(action.amount) for action in actions if action.amount and action.action_type in ['purchase', 'sip_start'])
+        total_redemption = sum(float(action.amount) for action in actions if action.amount and action.action_type == 'redemption')
+        sip_count = len([action for action in actions if action.action_type in ['sip_start', 'sip_modify']])
+        
+        summary_row += 2
+        ws[f'A{summary_row}'] = "Total Investment:"
+        ws[f'B{summary_row}'] = total_investment
+        ws[f'B{summary_row}'].number_format = '#,##0.00'
+        
+        summary_row += 1
+        ws[f'A{summary_row}'] = "Total Redemption:"
+        ws[f'B{summary_row}'] = total_redemption
+        ws[f'B{summary_row}'].number_format = '#,##0.00'
+        
+        summary_row += 1
+        ws[f'A{summary_row}'] = "Net Investment:"
+        ws[f'B{summary_row}'] = total_investment - total_redemption
+        ws[f'B{summary_row}'].number_format = '#,##0.00'
+        
+        summary_row += 1
+        ws[f'A{summary_row}'] = "SIP Count:"
+        ws[f'B{summary_row}'] = sip_count
         
         # Adjust column widths
-        column_widths = [5, 15, 30, 20, 15, 12, 10, 25, 30]
+        column_widths = [5, 15, 35, 15, 15, 12, 10, 25, 8, 30]
         for col, width in enumerate(column_widths, 1):
             ws.column_dimensions[get_column_letter(col)].width = width
         
@@ -5971,7 +6260,7 @@ def generate_execution_plan_excel(execution_plan):
 
 @login_required
 def plan_detail(request, plan_id):
-    """View execution plan details"""
+    """View execution plan details - Enhanced version"""
     execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
     
     # Check access permission
@@ -5981,6 +6270,14 @@ def plan_detail(request, plan_id):
     
     # Get plan actions
     actions = execution_plan.actions.all().select_related('scheme', 'target_scheme', 'executed_by')
+    
+    # Get current portfolio if client has one
+    current_portfolio = None
+    if hasattr(execution_plan.client, 'client_profile') and execution_plan.client.client_profile:
+        current_portfolio = ClientPortfolio.objects.filter(
+            client_profile=execution_plan.client.client_profile,
+            is_active=True
+        ).order_by('scheme_name')
     
     # Get workflow history
     workflow_history = execution_plan.workflow_history.all().select_related('changed_by')
@@ -6003,6 +6300,7 @@ def plan_detail(request, plan_id):
     context = {
         'execution_plan': execution_plan,
         'actions': actions,
+        'current_portfolio': current_portfolio,
         'workflow_history': workflow_history,
         'comments': comments,
         'metrics': metrics,
@@ -6896,3 +7194,499 @@ def plan_analytics(request, plan_id):
     }
     
     return render(request, 'execution_plans/plan_analytics.html', context)
+
+
+# views.py - Add these missing portfolio views to your existing views.py
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse, HttpResponse
+from django.views.decorators.http import require_http_methods
+from django.db.models import Sum, Count, Q
+from django.core.paginator import Paginator
+from django.utils import timezone
+from .models import PortfolioUpload, ClientPortfolio, ClientProfile
+from .forms import PortfolioUploadForm
+import csv
+import json
+
+# Portfolio Dashboard
+@login_required
+def portfolio_dashboard(request):
+    """Main portfolio dashboard"""
+    # Summary statistics
+    total_portfolios = ClientPortfolio.objects.filter(is_active=True).count()
+    mapped_portfolios = ClientPortfolio.objects.filter(is_active=True, is_mapped=True).count()
+    total_aum = ClientPortfolio.objects.filter(is_active=True).aggregate(
+        total=Sum('total_value')
+    )['total'] or 0
+    
+    # Recent uploads
+    recent_uploads = PortfolioUpload.objects.order_by('-uploaded_at')[:5]
+    
+    # Portfolio distribution by asset class
+    asset_distribution = ClientPortfolio.objects.filter(is_active=True).aggregate(
+        total_equity=Sum('equity_value'),
+        total_debt=Sum('debt_value'),
+        total_hybrid=Sum('hybrid_value'),
+        total_liquid=Sum('liquid_ultra_short_value'),
+        total_other=Sum('other_value'),
+        total_arbitrage=Sum('arbitrage_value')
+    )
+    
+    # Top schemes by AUM
+    top_schemes = ClientPortfolio.objects.filter(is_active=True).values(
+        'scheme_name'
+    ).annotate(
+        total_aum=Sum('total_value'),
+        investor_count=Count('client_pan', distinct=True)
+    ).order_by('-total_aum')[:10]
+    
+    # Unmapped portfolios needing attention
+    unmapped_portfolios = ClientPortfolio.objects.filter(
+        is_active=True, 
+        is_mapped=False
+    ).count()
+    
+    context = {
+        'total_portfolios': total_portfolios,
+        'mapped_portfolios': mapped_portfolios,
+        'mapping_percentage': (mapped_portfolios / total_portfolios * 100) if total_portfolios > 0 else 0,
+        'total_aum': total_aum,
+        'recent_uploads': recent_uploads,
+        'asset_distribution': asset_distribution,
+        'top_schemes': top_schemes,
+        'unmapped_portfolios': unmapped_portfolios,
+    }
+    
+    return render(request, 'portfolio/dashboard.html', context)
+
+# Portfolio Upload
+@login_required
+def upload_portfolio(request):
+    """Upload portfolio Excel file"""
+    if request.method == 'POST':
+        form = PortfolioUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            try:
+                upload = form.save(commit=False)
+                upload.uploaded_by = request.user
+                upload.save()
+                
+                messages.success(
+                    request, 
+                    f"Portfolio file uploaded successfully. Upload ID: {upload.upload_id}"
+                )
+                
+                # Process immediately if requested
+                if form.cleaned_data.get('process_immediately'):
+                    try:
+                        # CHANGED: Use utility function instead of management command
+                        from .utils import process_portfolio_upload
+                        
+                        results = process_portfolio_upload(upload_id=upload.upload_id, auto_map=True)
+                        
+                        # Refresh upload object to get updated status
+                        upload.refresh_from_db()
+                        
+                        if upload.status == 'completed':
+                            messages.success(
+                                request, 
+                                f"Portfolio processed successfully! {upload.successful_rows} rows processed, "
+                                f"{results.get('mapping_successful', 0)} clients mapped."
+                            )
+                        elif upload.status == 'partial':
+                            messages.warning(
+                                request, 
+                                f"Portfolio partially processed. {upload.successful_rows} of {upload.total_rows} "
+                                f"rows processed successfully. {results.get('mapping_successful', 0)} clients mapped."
+                            )
+                        else:
+                            messages.error(
+                                request, 
+                                "Portfolio processing failed. Please check the upload details for errors."
+                            )
+                            
+                    except Exception as e:
+                        messages.error(request, f"Error processing portfolio: {str(e)}")
+                
+                return redirect('upload_detail', upload_id=upload.upload_id)
+                
+            except Exception as e:
+                messages.error(request, f"Error saving upload: {str(e)}")
+                
+    else:
+        form = PortfolioUploadForm()
+    
+    # Get recent uploads for reference
+    recent_uploads = PortfolioUpload.objects.filter(
+        uploaded_by=request.user
+    ).order_by('-uploaded_at')[:5]
+    
+    context = {
+        'form': form,
+        'recent_uploads': recent_uploads,
+    }
+    
+    return render(request, 'portfolio/upload.html', context)
+
+# Upload Detail
+@login_required
+def upload_detail(request, upload_id):
+    """View details of a specific upload"""
+    upload = get_object_or_404(PortfolioUpload, upload_id=upload_id)
+    
+    # Get associated portfolios
+    portfolios = ClientPortfolio.objects.filter(upload_batch=upload)
+    
+    # Pagination
+    paginator = Paginator(portfolios, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Summary stats for this upload
+    upload_stats = {
+        'total_portfolios': portfolios.count(),
+        'mapped_portfolios': portfolios.filter(is_mapped=True).count(),
+        'total_aum': portfolios.aggregate(total=Sum('total_value'))['total'] or 0,
+        'unique_clients': portfolios.values('client_pan').distinct().count(),
+        'unique_schemes': portfolios.values('scheme_name').distinct().count(),
+    }
+    
+    context = {
+        'upload': upload,
+        'portfolios': page_obj,
+        'upload_stats': upload_stats,
+    }
+    
+    return render(request, 'portfolio/upload_detail.html', context)
+
+# Portfolio List
+@login_required
+def portfolio_list(request):
+    """List all portfolios with filtering"""
+    portfolios = ClientPortfolio.objects.filter(is_active=True).select_related(
+        'client_profile', 'upload_batch'
+    )
+    
+    # Filtering
+    search_query = request.GET.get('search')
+    if search_query:
+        portfolios = portfolios.filter(
+            Q(client_name__icontains=search_query) |
+            Q(client_pan__icontains=search_query) |
+            Q(scheme_name__icontains=search_query)
+        )
+    
+    mapped_filter = request.GET.get('mapped')
+    if mapped_filter:
+        portfolios = portfolios.filter(is_mapped=(mapped_filter == 'true'))
+    
+    asset_class_filter = request.GET.get('asset_class')
+    if asset_class_filter:
+        if asset_class_filter == 'equity':
+            portfolios = portfolios.filter(equity_value__gt=0)
+        elif asset_class_filter == 'debt':
+            portfolios = portfolios.filter(debt_value__gt=0)
+        elif asset_class_filter == 'hybrid':
+            portfolios = portfolios.filter(hybrid_value__gt=0)
+    
+    # Sorting
+    sort_by = request.GET.get('sort', '-total_value')
+    if sort_by in ['total_value', '-total_value', 'client_name', '-client_name', 'scheme_name', '-scheme_name']:
+        portfolios = portfolios.order_by(sort_by)
+    
+    # Pagination
+    paginator = Paginator(portfolios, 50)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'portfolios': page_obj,
+        'search_query': search_query,
+        'mapped_filter': mapped_filter,
+        'asset_class_filter': asset_class_filter,
+        'sort_by': sort_by,
+    }
+    
+    return render(request, 'portfolio/list.html', context)
+
+# Portfolio Detail
+@login_required
+def portfolio_detail(request, portfolio_id):
+    """View details of a specific portfolio"""
+    portfolio = get_object_or_404(ClientPortfolio, id=portfolio_id)
+    
+    # Get related portfolios for the same client
+    related_portfolios = ClientPortfolio.objects.filter(
+        client_pan=portfolio.client_pan,
+        is_active=True
+    ).exclude(id=portfolio.id)
+    
+    # Calculate client's total portfolio if mapped
+    if portfolio.client_profile:
+        client_total_aum = ClientPortfolio.objects.filter(
+            client_profile=portfolio.client_profile,
+            is_active=True
+        ).aggregate(total=Sum('total_value'))['total'] or 0
+    else:
+        client_total_aum = None
+    
+    context = {
+        'portfolio': portfolio,
+        'related_portfolios': related_portfolios,
+        'client_total_aum': client_total_aum,
+    }
+    
+    return render(request, 'portfolio/detail.html', context)
+
+# Map Portfolio to Client (AJAX)
+@login_required
+@require_http_methods(["POST"])
+def map_portfolio_to_client(request, portfolio_id):
+    """AJAX endpoint to map a portfolio to a client profile"""
+    portfolio = get_object_or_404(ClientPortfolio, id=portfolio_id)
+    
+    if portfolio.is_mapped:
+        return JsonResponse({'success': False, 'message': 'Portfolio is already mapped'})
+    
+    try:
+        mapped, message = portfolio.map_to_client_profile()
+        
+        if mapped:
+            # Also try to map personnel
+            personnel_mapped = portfolio.map_personnel()
+            
+            return JsonResponse({
+                'success': True, 
+                'message': f'{message}. Personnel mapped: {personnel_mapped}',
+                'client_name': portfolio.client_profile.client_full_name if portfolio.client_profile else None
+            })
+        else:
+            return JsonResponse({'success': False, 'message': message})
+            
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': str(e)})
+
+# Unmapped Portfolios
+@login_required
+def unmapped_portfolios(request):
+    """View for managing unmapped portfolios"""
+    unmapped = ClientPortfolio.objects.filter(
+        is_active=True, 
+        is_mapped=False
+    ).order_by('client_pan', 'scheme_name')
+    
+    # Group by PAN for easier management
+    pan_groups = {}
+    for portfolio in unmapped:
+        if portfolio.client_pan not in pan_groups:
+            pan_groups[portfolio.client_pan] = {
+                'client_name': portfolio.client_name,
+                'portfolios': [],
+                'total_aum': 0
+            }
+        pan_groups[portfolio.client_pan]['portfolios'].append(portfolio)
+        pan_groups[portfolio.client_pan]['total_aum'] += portfolio.total_value
+    
+    # Check which PANs exist in ClientProfile
+    existing_pans = set(ClientProfile.objects.values_list('pan_number', flat=True))
+    
+    for pan, data in pan_groups.items():
+        data['exists_in_system'] = pan in existing_pans
+    
+    context = {
+        'pan_groups': pan_groups,
+        'total_unmapped': unmapped.count(),
+        'total_unmapped_aum': unmapped.aggregate(total=Sum('total_value'))['total'] or 0,
+    }
+    
+    return render(request, 'portfolio/unmapped.html', context)
+
+# Portfolio Analytics
+@login_required
+def portfolio_analytics(request):
+    """Portfolio analytics and reporting"""
+    # Asset allocation summary
+    asset_allocation = ClientPortfolio.objects.filter(is_active=True).aggregate(
+        equity=Sum('equity_value'),
+        debt=Sum('debt_value'),
+        hybrid=Sum('hybrid_value'),
+        liquid=Sum('liquid_ultra_short_value'),
+        other=Sum('other_value'),
+        arbitrage=Sum('arbitrage_value')
+    )
+    
+    total_aum = sum(value for value in asset_allocation.values() if value)
+    
+    # Calculate percentages
+    asset_percentages = {}
+    for asset, value in asset_allocation.items():
+        asset_percentages[asset] = (value / total_aum * 100) if total_aum > 0 and value else 0
+    
+    # Top clients by AUM
+    top_clients = ClientPortfolio.objects.filter(
+        is_active=True, 
+        is_mapped=True
+    ).values(
+        'client_profile__client_full_name', 
+        'client_pan'
+    ).annotate(
+        total_aum=Sum('total_value'),
+        scheme_count=Count('scheme_name', distinct=True)
+    ).order_by('-total_aum')[:20]
+    
+    # RM-wise distribution
+    rm_distribution = ClientPortfolio.objects.filter(
+        is_active=True,
+        mapped_rm__isnull=False
+    ).values(
+        'mapped_rm__username',
+        'mapped_rm__first_name',
+        'mapped_rm__last_name'
+    ).annotate(
+        total_aum=Sum('total_value'),
+        client_count=Count('client_pan', distinct=True),
+        scheme_count=Count('scheme_name', distinct=True)
+    ).order_by('-total_aum')
+    
+    # Scheme-wise analysis
+    scheme_analysis = ClientPortfolio.objects.filter(is_active=True).values(
+        'scheme_name'
+    ).annotate(
+        total_aum=Sum('total_value'),
+        investor_count=Count('client_pan', distinct=True),
+        avg_investment=Sum('total_value') / Count('client_pan', distinct=True)
+    ).order_by('-total_aum')[:30]
+    
+    context = {
+        'asset_allocation': asset_allocation,
+        'asset_percentages': asset_percentages,
+        'total_aum': total_aum,
+        'top_clients': top_clients,
+        'rm_distribution': rm_distribution,
+        'scheme_analysis': scheme_analysis,
+    }
+    
+    return render(request, 'portfolio/analytics.html', context)
+
+# Bulk Map Portfolios
+@login_required
+@require_http_methods(["POST"])
+def bulk_map_portfolios(request):
+    """Bulk map portfolios to client profiles"""
+    try:
+        portfolio_ids = request.POST.getlist('portfolio_ids')
+        
+        if not portfolio_ids:
+            messages.error(request, "No portfolios selected")
+            return redirect('portfolio_list')
+        
+        portfolios = ClientPortfolio.objects.filter(
+            id__in=portfolio_ids,
+            is_mapped=False
+        )
+        
+        mapped_count = 0
+        for portfolio in portfolios:
+            mapped, message = portfolio.map_to_client_profile()
+            if mapped:
+                portfolio.map_personnel()
+                mapped_count += 1
+        
+        messages.success(
+            request,
+            f"Successfully mapped {mapped_count} out of {portfolios.count()} portfolios"
+        )
+        
+    except Exception as e:
+        messages.error(request, f"Error during bulk mapping: {str(e)}")
+    
+    return redirect('portfolio_list')
+
+# Export Portfolios CSV
+@login_required
+def export_portfolios_csv(request):
+    """Export portfolios to CSV"""
+    portfolios = ClientPortfolio.objects.filter(is_active=True)
+    
+    # Apply filters if provided
+    search = request.GET.get('search')
+    if search:
+        portfolios = portfolios.filter(
+            Q(client_name__icontains=search) |
+            Q(client_pan__icontains=search) |
+            Q(scheme_name__icontains=search)
+        )
+    
+    mapped_filter = request.GET.get('mapped')
+    if mapped_filter:
+        portfolios = portfolios.filter(is_mapped=(mapped_filter == 'true'))
+    
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="portfolios_export.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow([
+        'Client Name', 'Client PAN', 'Scheme Name', 'Total Value',
+        'Equity Value', 'Debt Value', 'Hybrid Value', 'Liquid Value',
+        'Other Value', 'Arbitrage Value', 'Units', 'Allocation %',
+        'Is Mapped', 'Client Profile', 'RM', 'Operations',
+        'Upload Batch', 'Created Date'
+    ])
+    
+    for portfolio in portfolios:
+        writer.writerow([
+            portfolio.client_name,
+            portfolio.client_pan,
+            portfolio.scheme_name,
+            portfolio.total_value,
+            portfolio.equity_value,
+            portfolio.debt_value,
+            portfolio.hybrid_value,
+            portfolio.liquid_ultra_short_value,
+            portfolio.other_value,
+            portfolio.arbitrage_value,
+            portfolio.units,
+            portfolio.allocation_percentage,
+            portfolio.is_mapped,
+            portfolio.client_profile.client_full_name if portfolio.client_profile else '',
+            portfolio.relationship_manager,
+            portfolio.operations_personnel,
+            portfolio.upload_batch.upload_id if portfolio.upload_batch else '',
+            portfolio.created_at.strftime('%Y-%m-%d')
+        ])
+    
+    return response
+
+# Add these to your forms.py file if you don't have PortfolioUploadForm
+class PortfolioUploadForm(forms.ModelForm):
+    process_immediately = forms.BooleanField(
+        required=False,
+        initial=True,
+        help_text="Process the file immediately after upload"
+    )
+    
+    class Meta:
+        model = PortfolioUpload
+        fields = ['file']
+        widgets = {
+            'file': forms.FileInput(attrs={
+                'accept': '.xlsx,.xls',
+                'class': 'form-control'
+            })
+        }
+    
+    def clean_file(self):
+        file = self.cleaned_data['file']
+        
+        # Check file extension
+        if not file.name.lower().endswith(('.xlsx', '.xls')):
+            raise forms.ValidationError("Please upload an Excel file (.xlsx or .xls)")
+        
+        # Check file size (max 10MB)
+        if file.size > 10 * 1024 * 1024:
+            raise forms.ValidationError("File size cannot exceed 10MB")
+        
+        return file
