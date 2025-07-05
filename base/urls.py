@@ -150,14 +150,6 @@ urlpatterns = [
     # Role-specific service request views
     path('operations/service-requests/', views.ops_service_requests, name='ops_service_requests'),
     path('rm/service-requests/', views.rm_service_requests, name='rm_service_requests'),
-
-    # Investment Plans
-    path('investment-plans/', include([
-        path('', views.investment_plan_review_list, name='investment_plan_review_list'),
-        path('create/', views.investment_plan_review_create, name='investment_plan_review_create'),
-        path('<int:pk>/edit/', views.investment_plan_review_update, name='investment_plan_review_update'),
-        path('<int:pk>/delete/', views.investment_plan_review_delete, name='investment_plan_review_delete'),
-    ])),
     
     # Team Management
     path('teams/', include([

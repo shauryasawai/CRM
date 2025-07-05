@@ -34,11 +34,11 @@ from django.core.mail import send_mail
 from project import settings
 from .models import (
     ClientPortfolio, ExecutionMetrics, ExecutionPlan, MutualFundScheme, PlanAction, PlanComment, PlanTemplate, PlanWorkflowHistory, ServiceRequestComment, ServiceRequestDocument, ServiceRequestType, User, Lead, Client, Task, ServiceRequest, BusinessTracker, 
-    InvestmentPlanReview, Team, ProductDiscussion, ClientProfile,
+    Team, ProductDiscussion, ClientProfile,
     Note, NoteList
 )
 from .forms import (
-    ClientSearchForm, LeadForm, OperationsTaskAssignmentForm, TaskForm, ServiceRequestForm, InvestmentPlanReviewForm,
+    ClientSearchForm, LeadForm, OperationsTaskAssignmentForm, TaskForm, ServiceRequestForm,
     ClientProfileForm, NoteForm, NoteListForm, QuickNoteForm
 )
 import openpyxl
@@ -5385,110 +5385,6 @@ def service_request_delete(request, pk):
     
     return render(request, 'base/service_request_confirm_delete.html', {'service_request': service_request})
 
-# Investment Plan Review Views with Hierarchy
-@login_required
-def investment_plan_review_list(request):
-    user = request.user
-    
-    if user.role in ['top_management', 'business_head']:
-        reviews = InvestmentPlanReview.objects.all()
-    elif user.role == 'rm_head':
-        accessible_users = user.get_accessible_users()
-        reviews = InvestmentPlanReview.objects.filter(client__user__in=accessible_users)
-    else:  # RM
-        reviews = InvestmentPlanReview.objects.filter(client__user=user)
-
-    # Add search functionality
-    search_query = request.GET.get('search')
-    if search_query:
-        reviews = reviews.filter(
-            Q(goal__icontains=search_query) |
-            Q(client__name__icontains=search_query)
-        )
-
-    context = {
-        'reviews': reviews.order_by('-created_at'),
-        'search_query': search_query,
-    }
-    
-    return render(request, 'base/investment_plans.html', context)
-
-@login_required
-def investment_plan_review_create(request):
-    if request.user.role not in ['rm', 'rm_head']:
-        messages.error(request, "You do not have permission to add investment plans.")
-        return redirect('investment_plan_review_list')
-
-    if request.method == 'POST':
-        form = InvestmentPlanReviewForm(request.POST, user=request.user)
-        if form.is_valid():
-            review = form.save(commit=False)
-            review.created_by = request.user
-            review.save()
-            messages.success(request, "Investment plan created successfully.")
-            return redirect('investment_plan_review_list')
-    else:
-        form = InvestmentPlanReviewForm(user=request.user)
-
-    return render(request, 'base/investment_plan_form.html', {'form': form, 'action': 'Create'})
-
-@login_required
-def investment_plan_review_update(request, pk):
-    user = request.user
-    review = get_object_or_404(InvestmentPlanReview, pk=pk)
-
-    # Check permissions based on hierarchy
-    if user.role == 'rm' and review.client.user != user:
-        messages.error(request, "You cannot edit this investment plan.")
-        return redirect('investment_plan_review_list')
-    elif user.role == 'rm_head':
-        accessible_users = user.get_accessible_users()
-        if review.client.user not in accessible_users:
-            messages.error(request, "You cannot edit this investment plan.")
-            return redirect('investment_plan_review_list')
-    elif user.role not in ['rm', 'rm_head', 'business_head', 'top_management']:
-        messages.error(request, "You do not have permission to edit investment plans.")
-        return redirect('investment_plan_review_list')
-
-    if request.method == 'POST':
-        form = InvestmentPlanReviewForm(request.POST, instance=review, user=user)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Investment plan updated successfully.")
-            return redirect('investment_plan_review_list')
-    else:
-        form = InvestmentPlanReviewForm(instance=review, user=user)
-
-    return render(request, 'base/investment_plan_form.html', {
-        'form': form, 
-        'action': 'Update', 
-        'review': review
-    })
-
-@login_required
-def investment_plan_review_delete(request, pk):
-    user = request.user
-    review = get_object_or_404(InvestmentPlanReview, pk=pk)
-
-    # Check permissions based on hierarchy
-    if user.role == 'rm' and review.client.user != user:
-        messages.error(request, "You cannot delete this investment plan.")
-        return redirect('investment_plan_review_list')
-    elif user.role == 'rm_head':
-        accessible_users = user.get_accessible_users()
-        if review.client.user not in accessible_users:
-            messages.error(request, "You cannot delete this investment plan.")
-            return redirect('investment_plan_review_list')
-    elif user.role not in ['rm', 'rm_head', 'business_head', 'top_management']:
-        messages.error(request, "You do not have permission to delete investment plans.")
-        return redirect('investment_plan_review_list')
-
-    if request.method == 'POST':
-        review.delete()
-        messages.success(request, "Investment plan deleted successfully.")
-        return redirect('investment_plan_review_list')
-    
-    return render(request, 'base/investment_plan_confirm_delete.html', {'review': review})
 
 # Team Management Views (for RM Heads and above)
 from django.shortcuts import render, redirect, get_object_or_404

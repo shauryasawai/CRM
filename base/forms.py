@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.db.models import Q
 from django.core.validators import FileExtensionValidator
 from .models import (
-    PortfolioUpload, ServiceRequestComment, ServiceRequestDocument, ServiceRequestType, User, Lead, Client, Task, ServiceRequest, InvestmentPlanReview, 
+    PortfolioUpload, ServiceRequestComment, ServiceRequestDocument, ServiceRequestType, User, Lead, Client, Task, ServiceRequest, 
     Team, BusinessTracker, LeadInteraction, ProductDiscussion, 
     LeadStatusChange, TeamMembership, Reminder, ClientProfile,
     ClientProfileModification, MFUCANAccount, MotilalDematAccount,
@@ -1030,72 +1030,6 @@ class ClientForm(forms.ModelForm):
         self.fields['lead'].required = False
 
 
-class InvestmentPlanReviewForm(forms.ModelForm):
-    """Form for creating/editing investment plan reviews"""
-    
-    class Meta:
-        model = InvestmentPlanReview
-        fields = ('client', 'goal', 'principal_amount', 'monthly_investment', 
-                 'tenure_years', 'expected_return_rate')
-        widgets = {
-            'client': forms.Select(attrs={'class': 'form-control'}),
-            'goal': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'e.g., Child Education, Retirement'
-            }),
-            'principal_amount': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01', 
-                'min': '0'
-            }),
-            'monthly_investment': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01', 
-                'min': '0'
-            }),
-            'tenure_years': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': '1', 
-                'max': '50'
-            }),
-            'expected_return_rate': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01', 
-                'min': '0', 
-                'max': '50'
-            }),
-        }
-    
-    def __init__(self, *args, **kwargs):
-        # Handle both current_user and user parameters for backward compatibility
-        self.current_user = kwargs.pop('current_user', None)
-        if not self.current_user:
-            self.current_user = kwargs.pop('user', None)
-        
-        super().__init__(*args, **kwargs)
-        
-        # Limit client choices based on user role
-        if self.current_user:
-            if self.current_user.role in ['top_management', 'business_head', 'business_head_ops']:
-                # Can create for any client
-                self.fields['client'].queryset = Client.objects.all()
-            elif self.current_user.role == 'rm_head':
-                # Can create for team clients
-                accessible_users = self.current_user.get_accessible_users()
-                self.fields['client'].queryset = Client.objects.filter(user__in=accessible_users)
-            else:  # RM
-                # Can only create for own clients
-                self.fields['client'].queryset = Client.objects.filter(user=self.current_user)
-
-    def save(self, commit=True):
-        plan = super().save(commit=False)
-        if self.current_user:
-            plan.created_by = self.current_user
-        if commit:
-            plan.save()
-        return plan
-
-
 # Additional Operations Forms
 class ConvertToClientForm(forms.ModelForm):
     """Form for converting client profile to full client"""
@@ -1222,7 +1156,7 @@ from django.utils import timezone
 from django.db.models import Q
 from django.core.validators import FileExtensionValidator
 from .models import (
-    User, Lead, Client, Task, ServiceRequest, InvestmentPlanReview, 
+    User, Lead, Client, Task, ServiceRequest, 
     Team, BusinessTracker, LeadInteraction, ProductDiscussion, 
     LeadStatusChange, TeamMembership, Reminder, ClientProfile,
     ClientProfileModification, MFUCANAccount, MotilalDematAccount,
@@ -2762,70 +2696,6 @@ class ClientForm(forms.ModelForm):
         self.fields['lead'].required = False
 
 
-class InvestmentPlanReviewForm(forms.ModelForm):
-    """Form for creating/editing investment plan reviews"""
-    
-    class Meta:
-        model = InvestmentPlanReview
-        fields = ('client', 'goal', 'principal_amount', 'monthly_investment', 
-                 'tenure_years', 'expected_return_rate')
-        widgets = {
-            'client': forms.Select(attrs={'class': 'form-control'}),
-            'goal': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'e.g., Child Education, Retirement'
-            }),
-            'principal_amount': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01', 
-                'min': '0'
-            }),
-            'monthly_investment': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01', 
-                'min': '0'
-            }),
-            'tenure_years': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': '1', 
-                'max': '50'
-            }),
-            'expected_return_rate': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'step': '0.01', 
-                'min': '0', 
-                'max': '50'
-            }),
-        }
-    
-    def __init__(self, *args, **kwargs):
-        # Handle both current_user and user parameters for backward compatibility
-        self.current_user = kwargs.pop('current_user', None)
-        if not self.current_user:
-            self.current_user = kwargs.pop('user', None)
-        
-        super().__init__(*args, **kwargs)
-        
-        # Limit client choices based on user role
-        if self.current_user:
-            if self.current_user.role in ['top_management', 'business_head', 'business_head_ops']:
-                # Can create for any client
-                self.fields['client'].queryset = Client.objects.all()
-            elif self.current_user.role == 'rm_head':
-                # Can create for team clients
-                accessible_users = self.current_user.get_accessible_users()
-                self.fields['client'].queryset = Client.objects.filter(user__in=accessible_users)
-            else:  # RM
-                # Can only create for own clients
-                self.fields['client'].queryset = Client.objects.filter(user=self.current_user)
-
-    def save(self, commit=True):
-        plan = super().save(commit=False)
-        if self.current_user:
-            plan.created_by = self.current_user
-        if commit:
-            plan.save()
-        return plan
 
 
 # Additional Operations Forms
@@ -2954,7 +2824,7 @@ from django.utils import timezone
 from django.db.models import Q
 from django.core.validators import FileExtensionValidator
 from .models import (
-    User, Lead, Client, Task, ServiceRequest, InvestmentPlanReview, 
+    User, Lead, Client, Task, ServiceRequest,
     Team, BusinessTracker, LeadInteraction, ProductDiscussion, 
     LeadStatusChange, TeamMembership, Reminder, ClientProfile,
     ClientProfileModification, MFUCANAccount, MotilalDematAccount,

@@ -1512,48 +1512,6 @@ class BusinessTracker(models.Model):
         user_str = f" - {self.user.username}" if self.user else ""
         return f"{self.month.strftime('%B %Y')}{user_str}"
 
-class InvestmentPlanReview(models.Model):
-    client = models.ForeignKey(
-        'Client',
-        on_delete=models.CASCADE,
-        related_name='investment_reviews'
-    )
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='created_investment_plans'
-    )
-    goal = models.CharField(max_length=255, null=True, blank=True)
-    principal_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0.00)
-    tenure_years = models.PositiveIntegerField(default=1)
-    monthly_investment = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
-    expected_return_rate = models.DecimalField(max_digits=5, decimal_places=2, default=12.00, help_text="Expected annual return percentage")
-    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
-    last_reviewed = models.DateTimeField(auto_now=True)
-
-    def total_investment(self):
-        return self.monthly_investment * 12 * self.tenure_years + self.principal_amount
-
-    def projected_value(self):
-        """Calculate projected value based on expected return rate"""
-        monthly_rate = self.expected_return_rate / 100 / 12
-        months = self.tenure_years * 12
-        
-        # Future value of lump sum
-        fv_lump = self.principal_amount * ((1 + monthly_rate) ** months)
-        
-        # Future value of monthly SIP
-        if monthly_rate > 0:
-            fv_sip = self.monthly_investment * (((1 + monthly_rate) ** months - 1) / monthly_rate)
-        else:
-            fv_sip = self.monthly_investment * months
-            
-        return fv_lump + fv_sip
-
-    def __str__(self):
-        return f"{self.goal or 'No Goal'} for {self.client.name}"
     
 # execution_plans/models.py
 from django.db import models

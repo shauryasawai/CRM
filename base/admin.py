@@ -13,7 +13,7 @@ from .models import (
     ClientProfile, MFUCANAccount, MotilalDematAccount, PrabhudasDematAccount,
     ClientProfileModification, Lead, LeadInteraction, ProductDiscussion, 
     LeadStatusChange, Client, Task, Reminder, ServiceRequest, 
-    BusinessTracker, InvestmentPlanReview
+    BusinessTracker
 )
 from django.contrib.auth.forms import UserChangeForm, UserCreationForm
 from django.contrib import messages
@@ -704,13 +704,6 @@ class LeadStatusChangeAdmin(admin.ModelAdmin):
         )
 
 
-# Legacy Client Admin (for backward compatibility)
-class InvestmentPlanReviewInline(admin.TabularInline):
-    model = InvestmentPlanReview
-    extra = 0
-    fields = ('goal', 'principal_amount', 'monthly_investment', 'tenure_years', 'expected_return_rate')
-
-
 class ServiceRequestInline(admin.TabularInline):
     model = ServiceRequest
     extra = 0
@@ -726,7 +719,7 @@ class ClientAdmin(admin.ModelAdmin):
     search_fields = ('name', 'contact_info', 'user__username', 'lead__lead_id')
     ordering = ('-aum', '-created_at')
     autocomplete_fields = ('user', 'lead', 'client_profile', 'created_by')
-    inlines = [InvestmentPlanReviewInline, ServiceRequestInline]
+    inlines = [ServiceRequestInline]
     
     def user_link(self, obj):
         if obj.user:
@@ -1285,46 +1278,6 @@ class ServiceRequestWorkflowAdmin(admin.ModelAdmin):
         return format_html('<a href="{}">{}</a>', url, obj.service_request.request_id)
     service_request_link.short_description = 'Service Request'
 
-
-# Business Tracking and Analytics Admin Classes
-class InvestmentPlanReviewAdmin(admin.ModelAdmin):
-    list_display = (
-        'goal', 'client_link', 'created_by_link', 'principal_amount_display', 
-        'monthly_investment_display', 'tenure_years', 'expected_return_rate', 
-        'projected_return', 'created_at'
-    )
-    list_filter = ('tenure_years', 'created_at', 'expected_return_rate')
-    search_fields = ('goal', 'client__name', 'created_by__username')
-    ordering = ('-created_at',)
-    autocomplete_fields = ('client', 'created_by')
-    date_hierarchy = 'created_at'
-    
-    def client_link(self, obj):
-        url = reverse('admin:base_client_change', args=[obj.client.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.client.name)
-    client_link.short_description = 'Client'
-    
-    def created_by_link(self, obj):
-        if obj.created_by:
-            url = reverse('admin:base_user_change', args=[obj.created_by.pk])
-            return format_html('<a href="{}">{}</a>', url, obj.created_by.username)
-        return '-'
-    created_by_link.short_description = 'Created By'
-    
-    def principal_amount_display(self, obj):
-        return f"₹{obj.principal_amount:,.2f}"
-    principal_amount_display.short_description = 'Principal'
-    
-    def monthly_investment_display(self, obj):
-        return f"₹{obj.monthly_investment:,.2f}"
-    monthly_investment_display.short_description = 'Monthly SIP'
-    
-    def projected_return(self, obj):
-        return f"₹{obj.projected_value():,.2f}"
-    projected_return.short_description = 'Projected Value'
-
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related('client', 'created_by')
 
 
 class BusinessTrackerAdmin(admin.ModelAdmin):
@@ -2621,7 +2574,6 @@ admin.site.register(Reminder, ReminderAdmin)
 admin.site.register(ServiceRequest, ServiceRequestAdmin)
 
 # Business Analytics
-admin.site.register(InvestmentPlanReview, InvestmentPlanReviewAdmin)
 admin.site.register(BusinessTracker, BusinessTrackerAdmin)
 
 # Unregister default Group admin and register custom one
