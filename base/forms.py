@@ -9,8 +9,7 @@ from .models import (
     PortfolioUpload, ServiceRequestComment, ServiceRequestDocument, ServiceRequestType, User, Lead, Client, Task, ServiceRequest, 
     Team, BusinessTracker, LeadInteraction, ProductDiscussion, 
     LeadStatusChange, TeamMembership, Reminder, ClientProfile,
-    ClientProfileModification, MFUCANAccount, MotilalDematAccount,
-    PrabhudasDematAccount, Note, NoteList
+    ClientProfileModification, MFUCANAccount, Note, NoteList
 )
 from base import models
 import pandas as pd
@@ -1098,32 +1097,6 @@ class DematAccountForm(forms.ModelForm):
         }
 
 
-class MotilalDematAccountForm(DematAccountForm):
-    """Form for Motilal Oswal Demat accounts"""
-    
-    class Meta(DematAccountForm.Meta):
-        model = MotilalDematAccount
-        fields = DematAccountForm.Meta.fields + ['trading_enabled', 'margin_enabled']
-        widgets = {
-            **DematAccountForm.Meta.widgets,
-            'trading_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'margin_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        }
-
-
-class PrabhudasDematAccountForm(DematAccountForm):
-    """Form for Prabhudas Lilladher Demat accounts"""
-    
-    class Meta(DematAccountForm.Meta):
-        model = PrabhudasDematAccount
-        fields = DematAccountForm.Meta.fields + ['commodity_enabled', 'currency_enabled']
-        widgets = {
-            **DematAccountForm.Meta.widgets,
-            'commodity_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'currency_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        }
-
-
 # Search and Filter Forms
 class ClientSearchForm(forms.Form):
     """Form for searching clients with operations support"""
@@ -1159,8 +1132,7 @@ from .models import (
     User, Lead, Client, Task, ServiceRequest, 
     Team, BusinessTracker, LeadInteraction, ProductDiscussion, 
     LeadStatusChange, TeamMembership, Reminder, ClientProfile,
-    ClientProfileModification, MFUCANAccount, MotilalDematAccount,
-    PrabhudasDematAccount, Note, NoteList
+    ClientProfileModification, MFUCANAccount, Note, NoteList
 )
 
 # Updated Constants with new operations roles
@@ -2766,32 +2738,6 @@ class DematAccountForm(forms.ModelForm):
         }
 
 
-class MotilalDematAccountForm(DematAccountForm):
-    """Form for Motilal Oswal Demat accounts"""
-    
-    class Meta(DematAccountForm.Meta):
-        model = MotilalDematAccount
-        fields = DematAccountForm.Meta.fields + ['trading_enabled', 'margin_enabled']
-        widgets = {
-            **DematAccountForm.Meta.widgets,
-            'trading_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'margin_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        }
-
-
-class PrabhudasDematAccountForm(DematAccountForm):
-    """Form for Prabhudas Lilladher Demat accounts"""
-    
-    class Meta(DematAccountForm.Meta):
-        model = PrabhudasDematAccount
-        fields = DematAccountForm.Meta.fields + ['commodity_enabled', 'currency_enabled']
-        widgets = {
-            **DematAccountForm.Meta.widgets,
-            'commodity_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'currency_enabled': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        }
-
-
 # Search and Filter Forms
 class ClientSearchForm(forms.Form):
     """Form for searching clients with operations support"""
@@ -2827,8 +2773,7 @@ from .models import (
     User, Lead, Client, Task, ServiceRequest,
     Team, BusinessTracker, LeadInteraction, ProductDiscussion, 
     LeadStatusChange, TeamMembership, Reminder, ClientProfile,
-    ClientProfileModification, MFUCANAccount, MotilalDematAccount,
-    PrabhudasDematAccount, Note, NoteList
+    ClientProfileModification, MFUCANAccount, Note, NoteList
 )
 
 # Updated Constants with new operations roles

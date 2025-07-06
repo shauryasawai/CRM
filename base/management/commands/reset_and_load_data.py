@@ -10,10 +10,9 @@ import random
 
 from base.models import (
     User, Team, TeamMembership, ClientProfile, Note, NoteList, 
-    Task, ServiceRequest, Lead, Client, BusinessTracker, 
-    InvestmentPlanReview, LeadInteraction, ProductDiscussion, 
-    LeadStatusChange, MFUCANAccount, MotilalDematAccount, 
-    PrabhudasDematAccount, ClientProfileModification
+    Task, ServiceRequest, ServiceRequestType, Lead, Client, BusinessTracker, 
+    LeadInteraction, ProductDiscussion, 
+    LeadStatusChange, MFUCANAccount, ClientProfileModification
 )
 
 User = get_user_model()
@@ -62,7 +61,6 @@ class Command(BaseCommand):
             
             # Business tracking and analytics
             BusinessTracker,
-            InvestmentPlanReview,
             
             # Service requests and tasks
             ServiceRequest,
@@ -75,8 +73,6 @@ class Command(BaseCommand):
             
             # Client accounts
             MFUCANAccount,
-            MotilalDematAccount,
-            PrabhudasDematAccount,
             
             # Client profile modifications
             ClientProfileModification,
@@ -89,6 +85,9 @@ class Command(BaseCommand):
             # Team memberships
             TeamMembership,
             Team,
+            
+            # Service request types
+            ServiceRequestType,
             
             # Users (except superusers)
         ]
@@ -115,15 +114,148 @@ class Command(BaseCommand):
         self.stdout.write('Creating fresh sample data...')
         
         # Create sample data in proper order
+        self.create_service_request_types()  # First, create service request types
         self.create_sample_users()
         self.create_sample_teams()
         self.create_sample_client_profiles()
         self.create_sample_leads()
         self.create_sample_clients()
         self.create_sample_tasks()
-        self.create_sample_service_requests()
-        self.create_sample_notes()
-        self.create_sample_business_data()
+        
+
+    def create_service_request_types(self):
+        """Create essential service request types"""
+        self.stdout.write('Creating service request types...')
+        
+        types_data = [
+            # Personal Details
+            {
+                'name': 'Email Modification',
+                'category': 'personal_details',
+                'code': 'PDM_EMAIL',
+                'description': 'Update client email address',
+                'sla_hours': 24,
+                'required_documents': ['email_change_request', 'identity_proof'],
+                'internal_instructions': 'Verify new email before updating'
+            },
+            {
+                'name': 'Mobile Modification',
+                'category': 'personal_details',
+                'code': 'PDM_MOBILE',
+                'description': 'Update client mobile number',
+                'sla_hours': 24,
+                'required_documents': ['identity_proof'],
+                'internal_instructions': 'Verify with OTP'
+            },
+            {
+                'name': 'Bank Details Modification',
+                'category': 'personal_details',
+                'code': 'PDM_BANK',
+                'description': 'Update bank account details',
+                'default_priority': 'high',
+                'sla_hours': 48,
+                'requires_approval': True,
+                'required_documents': ['bank_statement', 'cancelled_cheque'],
+                'internal_instructions': 'Verify bank details before updating'
+            },
+            {
+                'name': 'Address Modification',
+                'category': 'personal_details',
+                'code': 'PDM_ADDRESS',
+                'description': 'Update client address',
+                'sla_hours': 48,
+                'required_documents': ['address_proof', 'identity_proof'],
+            },
+            
+            # Account Creation
+            {
+                'name': 'Mutual Fund CAN',
+                'category': 'account_creation',
+                'code': 'AC_MF_CAN',
+                'description': 'Create new MF CAN account',
+                'sla_hours': 72,
+                'required_documents': ['kyc_documents', 'bank_proof'],
+                'internal_instructions': 'Complete KYC verification first'
+            },
+            {
+                'name': 'MOSL Demat Account',
+                'category': 'account_creation',
+                'code': 'AC_MOSL',
+                'description': 'Create MOSL demat account',
+                'sla_hours': 72,
+                'required_documents': ['kyc_documents', 'bank_proof', 'income_proof'],
+            },
+            
+            # Account Closure
+            {
+                'name': 'Demat Account Closure',
+                'category': 'account_closure',
+                'code': 'ACL_DEMAT',
+                'description': 'Close demat account',
+                'default_priority': 'high',
+                'sla_hours': 168,  # 7 days
+                'requires_approval': True,
+                'required_documents': ['closure_request', 'identity_proof'],
+            },
+            
+            # Adhoc MF
+            {
+                'name': 'ARN Change',
+                'category': 'adhoc_mf',
+                'code': 'AH_MF_ARN',
+                'description': 'Change ARN for mutual fund holdings',
+                'sla_hours': 48,
+                'required_documents': ['arn_change_request'],
+            },
+            {
+                'name': 'SIP Mandate',
+                'category': 'adhoc_mf',
+                'code': 'AH_MF_MANDATE',
+                'description': 'Set up SIP mandate',
+                'sla_hours': 48,
+                'required_documents': ['mandate_form', 'bank_statement'],
+            },
+            
+            # Report Requests
+            {
+                'name': 'Portfolio Statement',
+                'category': 'report_request',
+                'code': 'RPT_PORTFOLIO',
+                'description': 'Generate portfolio statement',
+                'default_priority': 'low',
+                'sla_hours': 24,
+            },
+            {
+                'name': 'Capital Gains Report',
+                'category': 'report_request',
+                'code': 'RPT_CAPITAL_GAINS',
+                'description': 'Generate capital gains report',
+                'sla_hours': 48,
+            },
+            
+            # General
+            {
+                'name': 'General Support',
+                'category': 'general',
+                'code': 'GEN_SUPPORT',
+                'description': 'General support request',
+                'sla_hours': 48,
+            }
+        ]
+        
+        created_count = 0
+        for type_data in types_data:
+            obj, created = ServiceRequestType.objects.get_or_create(
+                code=type_data['code'],
+                defaults=type_data
+            )
+            if created:
+                created_count += 1
+                self.stdout.write(f'  Created service request type: {obj.name}')
+            else:
+                self.stdout.write(f'  Service request type already exists: {obj.name}')
+        
+        self.stdout.write(f'Created {created_count} new service request types')
 
     def create_sample_users(self):
         """Create sample users for all roles"""
@@ -627,172 +759,6 @@ class Command(BaseCommand):
                 )
         
         self.stdout.write(f'  Created tasks for operations and RM users')
-
-    def create_sample_service_requests(self):
-        """Create sample service requests"""
-        clients = Client.objects.all()
-        ops_users = User.objects.filter(role__in=['ops_team_lead', 'ops_exec'])
         
-        service_request_templates = [
-            {
-                'description': 'Client requesting change in bank account details for SIP transactions.',
-                'priority': 'medium',
-                'status': 'open'
-            },
-            {
-                'description': 'Update client contact information and communication preferences.',
-                'priority': 'low',
-                'status': 'in_progress'
-            },
-            {
-                'description': 'Client wants to redeem partial units from equity mutual fund.',
-                'priority': 'high',
-                'status': 'open'
-            },
-            {
-                'description': 'Generate and send quarterly portfolio statement to client.',
-                'priority': 'medium',
-                'status': 'resolved'
-            },
-            {
-                'description': 'Process new SIP registration for diversified equity fund.',
-                'priority': 'high',
-                'status': 'open'
-            },
-            {
-                'description': 'Client complaint regarding delayed fund transfer.',
-                'priority': 'urgent',
-                'status': 'in_progress'
-            },
-        ]
-
-        for template in service_request_templates:
-            client = random.choice(clients)
-            raised_by = client.user  # RM who manages the client
-            assigned_to = random.choice(ops_users)  # Assign to operations team
-            
-            service_request = ServiceRequest.objects.create(
-                client=client,
-                raised_by=raised_by,
-                assigned_to=assigned_to,
-                **template
-            )
-            
-            # Set resolved_at for resolved requests
-            if template['status'] in ['resolved', 'closed']:
-                service_request.resolved_at = timezone.now() - timedelta(days=random.randint(1, 5))
-                service_request.save()
-        
-        self.stdout.write(f'  Created {len(service_request_templates)} sample service requests')
-
-    def create_sample_notes(self):
-        """Create sample notes for users"""
-        users = User.objects.all()
-        
-        note_list_templates = [
-            {'name': 'General', 'description': 'General notes and reminders'},
-            {'name': 'Client Follow-ups', 'description': 'Client related follow-up tasks'},
-            {'name': 'Team Tasks', 'description': 'Team coordination and tasks'},
-            {'name': 'Personal', 'description': 'Personal notes and ideas'},
-            {'name': 'Meeting Notes', 'description': 'Notes from meetings and discussions'},
-        ]
-        
-        note_templates = [
-            {
-                'heading': 'Weekly Team Meeting',
-                'content': 'Discuss weekly targets and performance metrics with team members.\n\nAgenda:\n- Review last week performance\n- Set new targets\n- Address team concerns',
-                'days_ahead': 2,
-                'due_days': 7
-            },
-            {
-                'heading': 'Client Portfolio Review',
-                'content': 'Review client portfolios and suggest rebalancing if needed.\n\nClients to review:\n- Rajesh Kumar\n- Priya Desai\n- Amit Patel',
-                'days_ahead': 1,
-                'due_days': 3
-            },
-            {
-                'heading': 'Compliance Training',
-                'content': 'Complete mandatory compliance training modules before deadline.\n\nModules pending:\n- Anti-money laundering\n- Data protection\n- Investment regulations',
-                'days_ahead': 5,
-                'due_days': 30
-            },
-            {
-                'heading': 'Market Analysis Report',
-                'content': 'Prepare monthly market analysis report for management review.\n\nKey points to cover:\n- Market trends\n- Performance analysis\n- Future outlook',
-                'days_ahead': 3,
-                'due_days': 15
-            },
-            {
-                'heading': 'Follow up with new leads',
-                'content': 'Contact new leads generated from recent marketing campaign.\n\nHot leads to prioritize:\n- Deepak Joshi (80% probability)\n- Neha Shah (65% probability)',
-                'days_ahead': 1,
-                'due_days': 2
-            },
-        ]
-
-        for user in users:
-            # Create note lists for each user
-            user_lists = []
-            for list_template in note_list_templates:
-                note_list = NoteList.objects.create(
-                    user=user,
-                    **list_template
-                )
-                user_lists.append(note_list)
-            
-            # Create sample notes
-            for i, note_template in enumerate(note_templates):
-                note_list = user_lists[i % len(user_lists)]
-                
-                # Calculate dates
-                reminder_date = timezone.now() + timedelta(days=note_template['days_ahead'])
-                due_date = timezone.now().date() + timedelta(days=note_template['due_days'])
-                
-                Note.objects.create(
-                    user=user,
-                    note_list=note_list,
-                    heading=note_template['heading'],
-                    content=note_template['content'],
-                    reminder_date=reminder_date,
-                    due_date=due_date,
-                    is_completed=random.choice([True, False]) if i > 2 else False  # Some completed notes
-                )
-            
-            self.stdout.write(f'  Created notes for user: {user.username}')
-
-    def create_sample_business_data(self):
-        """Create sample business tracking data"""
-        rms = User.objects.filter(role='rm')
-        
-        # Create monthly business data for last 6 months
-        for user in rms:
-            for i in range(6):
-                month_date = timezone.now().date() - timedelta(days=30*i)
-                month_date = month_date.replace(day=1)  # First day of month
-                
-                BusinessTracker.objects.create(
-                    month=month_date,
-                    user=user,
-                    total_sip=random.randint(50000, 200000),
-                    total_demat=random.randint(2, 8),
-                    total_aum=random.randint(1000000, 5000000)
-                )
-        
-        self.stdout.write('  Created sample business tracker data')
-        
-        # Create some investment plans
-        clients = Client.objects.all()
-        for client in clients:
-            InvestmentPlanReview.objects.create(
-                client=client,
-                created_by=client.user,
-                goal=random.choice(['Retirement', 'Child Education', 'House Purchase', 'Vacation', 'Emergency Fund']),
-                principal_amount=random.randint(100000, 500000),
-                monthly_investment=random.randint(5000, 25000),
-                tenure_years=random.randint(5, 20),
-                expected_return_rate=random.uniform(8.0, 15.0)
-            )
-        
-        self.stdout.write('  Created sample investment plans')
 
         self.stdout.write('Sample data creation completed!')

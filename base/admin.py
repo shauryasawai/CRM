@@ -9,8 +9,8 @@ from django.urls import reverse
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
 from .models import (
-    ClientInteraction, ClientPortfolio, ExecutionMetrics, ExecutionPlan, MutualFundScheme, PlanAction, PlanComment, PlanTemplate, PlanWorkflowHistory, ServiceRequestComment, ServiceRequestDocument, ServiceRequestType, ServiceRequestWorkflow, User, Team, TeamMembership, NoteList, Note,
-    ClientProfile, MFUCANAccount, MotilalDematAccount, PrabhudasDematAccount,
+    ClientInteraction, ClientPortfolio, ExecutionPlan, MutualFundScheme, PlanAction, PlanComment, PlanTemplate, PlanWorkflowHistory, ServiceRequestComment, ServiceRequestDocument, ServiceRequestType, ServiceRequestWorkflow, User, Team, TeamMembership, NoteList, Note,
+    ClientProfile, MFUCANAccount,
     ClientProfileModification, Lead, LeadInteraction, ProductDiscussion, 
     LeadStatusChange, Client, Task, Reminder, ServiceRequest, 
     BusinessTracker
@@ -248,16 +248,6 @@ class MFUCANAccountInline(admin.TabularInline):
     fields = ('account_number', 'folio_number', 'amc_name', 'kyc_status', 'is_primary')
 
 
-class MotilalDematAccountInline(admin.TabularInline):
-    model = MotilalDematAccount
-    extra = 0
-    fields = ('account_number', 'broker_name', 'dp_id', 'trading_enabled', 'kyc_status', 'is_primary')
-
-
-class PrabhudasDematAccountInline(admin.TabularInline):
-    model = PrabhudasDematAccount
-    extra = 0
-    fields = ('account_number', 'broker_name', 'dp_id', 'commodity_enabled', 'currency_enabled', 'kyc_status', 'is_primary')
 
 
 class ClientProfileModificationInline(admin.TabularInline):
@@ -285,8 +275,8 @@ class ClientProfileAdmin(admin.ModelAdmin):
     readonly_fields = ('client_id', 'created_at', 'updated_at')
     autocomplete_fields = ('mapped_rm', 'mapped_ops_exec', 'created_by', 'muted_by')
     inlines = [
-        MFUCANAccountInline, MotilalDematAccountInline, 
-        PrabhudasDematAccountInline, ClientProfileModificationInline
+        MFUCANAccountInline, 
+         ClientProfileModificationInline
     ]
     date_hierarchy = 'created_at'
     
@@ -398,29 +388,6 @@ class MFUCANAccountAdmin(admin.ModelAdmin):
         return format_html('<a href="{}">{}</a>', url, obj.client.client_full_name)
     client_link.short_description = 'Client'
 
-
-class MotilalDematAccountAdmin(admin.ModelAdmin):
-    list_display = ('account_number', 'client_link', 'broker_name', 'dp_id', 'trading_enabled', 'kyc_status', 'is_primary')
-    list_filter = ('kyc_status', 'is_primary', 'trading_enabled', 'margin_enabled', 'created_at')
-    search_fields = ('account_number', 'dp_id', 'client__client_full_name', 'broker_name')
-    autocomplete_fields = ('client',)
-    
-    def client_link(self, obj):
-        url = reverse('admin:base_clientprofile_change', args=[obj.client.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.client.client_full_name)
-    client_link.short_description = 'Client'
-
-
-class PrabhudasDematAccountAdmin(admin.ModelAdmin):
-    list_display = ('account_number', 'client_link', 'broker_name', 'dp_id', 'commodity_enabled', 'currency_enabled', 'kyc_status', 'is_primary')
-    list_filter = ('kyc_status', 'is_primary', 'commodity_enabled', 'currency_enabled', 'created_at')
-    search_fields = ('account_number', 'dp_id', 'client__client_full_name', 'broker_name')
-    autocomplete_fields = ('client',)
-    
-    def client_link(self, obj):
-        url = reverse('admin:base_clientprofile_change', args=[obj.client.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.client.client_full_name)
-    client_link.short_description = 'Client'
 
 
 class ClientProfileModificationAdmin(admin.ModelAdmin):
@@ -2555,8 +2522,6 @@ admin.site.register(Note, NoteAdmin)
 # Client Management
 admin.site.register(ClientProfile, ClientProfileAdmin)
 admin.site.register(MFUCANAccount, MFUCANAccountAdmin)
-admin.site.register(MotilalDematAccount, MotilalDematAccountAdmin)
-admin.site.register(PrabhudasDematAccount, PrabhudasDematAccountAdmin)
 admin.site.register(ClientProfileModification, ClientProfileModificationAdmin)
 
 # Lead Management

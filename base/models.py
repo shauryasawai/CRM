@@ -1,9 +1,17 @@
+# models.py - Fixed version with single ServiceRequest model
+
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator, FileExtensionValidator
+import pandas as pd
+from django.db import transaction
+import logging
+from decimal import Decimal
+
+logger = logging.getLogger(__name__)
 
 # Updated User roles with Ops roles
 ROLE_CHOICES = (
@@ -371,8 +379,6 @@ class Note(models.Model):
             return timezone.now() < self.reminder_date
         return False
 
-# Existing models continue below...
-
 # Add interaction type choices
 INTERACTION_TYPE_CHOICES = [
     ('call', 'Phone Call'),
@@ -495,7 +501,6 @@ class ClientProfile(models.Model):
         self.muted_date = None
         self.save()
 
-
 class ClientInteraction(models.Model):
     """Model to track all client interactions"""
     client_profile = models.ForeignKey(
@@ -583,7 +588,7 @@ class ClientInteraction(models.Model):
         """Get human-readable time since creation"""
         from django.utils.timesince import timesince
         return timesince(self.created_at)
-        
+
 class ClientAccount(models.Model):
     """Base abstract model for all client account types"""
     ACCOUNT_TYPE_CHOICES = (
@@ -632,44 +637,6 @@ class DematAccount(ClientAccount):
     
     class Meta:
         abstract = True
-
-class MotilalDematAccount(DematAccount):
-    """Motilal Oswal Demat account details"""
-    trading_enabled = models.BooleanField(default=False)
-    margin_enabled = models.BooleanField(default=False)
-    
-    # Fix the related_name to be unique
-    client = models.ForeignKey(
-        ClientProfile, 
-        on_delete=models.CASCADE, 
-        related_name='motilal_accounts'
-    )
-    
-    class Meta:
-        verbose_name = 'Motilal Demat Account'
-        verbose_name_plural = 'Motilal Demat Accounts'
-    
-    def __str__(self):
-        return f"Motilal Demat: {self.account_number}"
-
-class PrabhudasDematAccount(DematAccount):
-    """Prabhudas Lilladher Demat account details"""
-    commodity_enabled = models.BooleanField(default=False)
-    currency_enabled = models.BooleanField(default=False)
-    
-    # Fix the related_name to be unique
-    client = models.ForeignKey(
-        ClientProfile, 
-        on_delete=models.CASCADE, 
-        related_name='prabhudas_accounts'
-    )
-    
-    class Meta:
-        verbose_name = 'Prabhudas Demat Account'
-        verbose_name_plural = 'Prabhudas Demat Accounts'
-    
-    def __str__(self):
-        return f"Prabhudas Demat: {self.account_number}"
 
 class ClientProfileModification(models.Model):
     """Track modifications to client profiles"""
@@ -725,8 +692,7 @@ class ClientProfileModification(models.Model):
         self.approved_at = timezone.now()
         self.save()
         return True
-    
-    
+
 class Lead(models.Model):
     STATUS_CHOICES = (
         ('new', 'New Lead'),
@@ -1056,15 +1022,11 @@ class Reminder(models.Model):
     def __str__(self):
         return f"Reminder for {self.user.username}: {self.message}"
 
-from django.db import models
-from django.conf import settings
-from django.utils import timezone
-from django.core.exceptions import ValidationError
-
+# Service Request Models - Fixed to avoid duplicate definitions
 
 class ServiceRequestType(models.Model):
     """
-    Service Request Type categorization
+    Service Request Type categorization with essential fields only
     """
     CATEGORY_CHOICES = (
         ('personal_details', 'Personal Details Modification'),
@@ -1073,66 +1035,153 @@ class ServiceRequestType(models.Model):
         ('adhoc_mf', 'Adhoc Requests - Mutual Fund'),
         ('adhoc_demat', 'Adhoc Requests - Demat'),
         ('report_request', 'Report Request'),
+        ('general', 'General Request'),
     )
     
+    PRIORITY_CHOICES = (
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('urgent', 'Urgent'),
+    )
+    
+    # Basic Information
     name = models.CharField(max_length=100)
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
     code = models.CharField(max_length=20, unique=True)
     description = models.TextField(blank=True)
+    
+    # Essential Configuration
     is_active = models.BooleanField(default=True)
-    required_documents = models.JSONField(default=list, blank=True)
+    default_priority = models.CharField(
+        max_length=10, 
+        choices=PRIORITY_CHOICES, 
+        default='medium'
+    )
+    requires_approval = models.BooleanField(
+        default=False, 
+        help_text="Requires manager approval"
+    )
+    
+    # SLA
+    sla_hours = models.PositiveIntegerField(
+        default=48, 
+        help_text="Standard SLA in hours"
+    )
+    
+    # Document Requirements
+    required_documents = models.JSONField(
+        default=list, 
+        blank=True,
+        help_text="List of required document types"
+    )
+    
+    # Assignment
+    department = models.CharField(
+        max_length=50, 
+        choices=[
+            ('operations', 'Operations'),
+            ('compliance', 'Compliance'),
+            ('relationship', 'Relationship Management'),
+        ],
+        default='operations'
+    )
+    
+    # Instructions
+    internal_instructions = models.TextField(
+        blank=True,
+        help_text="Processing instructions for operations team"
+    )
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['category', 'name']
+        verbose_name = 'Service Request Type'
+        verbose_name_plural = 'Service Request Types'
+        indexes = [
+            models.Index(fields=['category', 'is_active']),
+            models.Index(fields=['code']),
+        ]
     
     def __str__(self):
         return f"{self.name} ({self.get_category_display()})"
+    
+    def clean(self):
+        """Basic validation"""
+        super().clean()
+        if self.sla_hours <= 0:
+            raise ValidationError("SLA hours must be greater than 0")
+    
+    def save(self, *args, **kwargs):
+        # Auto-generate code if not provided
+        if not self.code:
+            self.code = self.generate_code()
+        super().save(*args, **kwargs)
+    
+    def generate_code(self):
+        """Generate a unique code based on category and name"""
+        category_prefix = self.category.upper()[:3]
+        name_prefix = ''.join([word[0].upper() for word in self.name.split()[:2]])
+        base_code = f"{category_prefix}_{name_prefix}"
+        
+        # Ensure uniqueness
+        counter = 1
+        code = base_code
+        while ServiceRequestType.objects.filter(code=code).exists():
+            code = f"{base_code}_{counter}"
+            counter += 1
+        
+        return code
+    
+    def can_be_raised_by_role(self, role):
+        """Check if a role can raise this type of request"""
+        role_permissions = {
+            'rm': ['personal_details', 'account_creation', 'report_request', 'general'],
+            'rm_head': ['personal_details', 'account_creation', 'account_closure', 'report_request', 'general'],
+            'ops_exec': ['adhoc_mf', 'adhoc_demat'],
+            'ops_team_lead': ['adhoc_mf', 'adhoc_demat', 'compliance'],
+            'business_head': list(dict(self.CATEGORY_CHOICES).keys()),
+            'business_head_ops': ['adhoc_mf', 'adhoc_demat', 'compliance'],
+            'top_management': list(dict(self.CATEGORY_CHOICES).keys()),
+        }
+        
+        allowed_categories = role_permissions.get(role, [])
+        return self.category in allowed_categories
 
-
-class ServiceRequestDocument(models.Model):
-    """
-    Documents attached to service requests
-    """
-    service_request = models.ForeignKey(
-        'ServiceRequest',
-        on_delete=models.CASCADE,
-        related_name='documents'
-    )
-    document = models.FileField(upload_to='service_requests/documents/')
-    document_name = models.CharField(max_length=255)
-    uploaded_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True
-    )
-    uploaded_at = models.DateTimeField(auto_now_add=True)
+class ServiceRequestIDCounter(models.Model):
+    """Counter model to generate unique sequential service request IDs"""
+    date_key = models.DateField(unique=True, help_text="Date for which this counter applies")
+    current_value = models.PositiveIntegerField(default=0, help_text="Current counter value for this date")
+    
+    class Meta:
+        verbose_name = 'Service Request ID Counter'
+        verbose_name_plural = 'Service Request ID Counters'
+    
+    @classmethod
+    def get_next_sequence(cls, date_key):
+        """Get next sequence number for given date"""
+        from django.db import transaction
+        
+        with transaction.atomic():
+            counter, created = cls.objects.select_for_update().get_or_create(
+                date_key=date_key,
+                defaults={'current_value': 1}
+            )
+            if not created:
+                counter.current_value += 1
+                counter.save()
+            
+            return counter.current_value
     
     def __str__(self):
-        return f"Document: {self.document_name}"
-
-
-class ServiceRequestComment(models.Model):
-    """
-    Comments/remarks for service requests
-    """
-    service_request = models.ForeignKey(
-        'ServiceRequest',
-        on_delete=models.CASCADE,
-        related_name='comments'
-    )
-    comment = models.TextField()
-    commented_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    is_internal = models.BooleanField(default=False)  # Internal ops comments vs client-facing
-    
-    def __str__(self):
-        return f"Comment by {self.commented_by} on {self.created_at}"
-
+        return f"Counter for {self.date_key}: {self.current_value}"
 
 class ServiceRequest(models.Model):
     """
-    Enhanced Service Request Model with complete workflow support
+    Service Request Model with complete workflow support
     """
     STATUS_CHOICES = (
         ('draft', 'Draft'),
@@ -1157,7 +1206,7 @@ class ServiceRequest(models.Model):
     # Basic Information
     request_id = models.CharField(max_length=20, unique=True, editable=False)
     client = models.ForeignKey(
-        'base.Client',  # Assuming you have a Client model
+        Client,
         on_delete=models.CASCADE,
         related_name='service_requests'
     )
@@ -1169,7 +1218,7 @@ class ServiceRequest(models.Model):
         related_name='service_requests'
     )
     description = models.TextField()
-    additional_details = models.JSONField(default=dict, blank=True)  # For type-specific data
+    additional_details = models.JSONField(default=dict, blank=True)
     
     # Assignment and Hierarchy
     raised_by = models.ForeignKey(
@@ -1227,7 +1276,10 @@ class ServiceRequest(models.Model):
             models.Index(fields=['status', 'assigned_to']),
             models.Index(fields=['client', 'status']),
             models.Index(fields=['raised_by', 'created_at']),
+            models.Index(fields=['request_id']),
         ]
+        verbose_name = 'Service Request'
+        verbose_name_plural = 'Service Requests'
     
     def save(self, *args, **kwargs):
         if not self.request_id:
@@ -1235,10 +1287,18 @@ class ServiceRequest(models.Model):
         super().save(*args, **kwargs)
     
     def generate_request_id(self):
-        """Generate unique request ID"""
+        """Generate unique request ID using date-based counter"""
         from datetime import datetime
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        return f"SR{timestamp}"
+        
+        # Get current date
+        today = datetime.now().date()
+        date_str = today.strftime("%Y%m%d")
+        
+        # Get next sequence number for today
+        sequence = ServiceRequestIDCounter.get_next_sequence(today)
+        
+        # Format: SR + YYYYMMDD + 4-digit sequence
+        return f"SR{date_str}{sequence:04d}"
     
     def submit_request(self, user=None):
         """Submit the request and move to operations tray"""
@@ -1248,14 +1308,8 @@ class ServiceRequest(models.Model):
             if user:
                 self.current_owner = self.assigned_to  # Move to ops
             self.save()
-            
-            # Add comment
-            ServiceRequestComment.objects.create(
-                service_request=self,
-                comment="Service request submitted to operations team",
-                commented_by=user,
-                is_internal=True
-            )
+            return True
+        return False
     
     def request_documents(self, document_list, user=None):
         """Request documents from RM"""
@@ -1264,15 +1318,7 @@ class ServiceRequest(models.Model):
         self.required_documents_list = document_list
         self.current_owner = self.raised_by  # Back to RM
         self.save()
-        
-        # Add comment with document requirements
-        comment_text = f"Documents requested: {', '.join(document_list)}"
-        ServiceRequestComment.objects.create(
-            service_request=self,
-            comment=comment_text,
-            commented_by=user,
-            is_internal=False
-        )
+        return True
     
     def submit_documents(self, user=None):
         """Submit documents back to operations"""
@@ -1281,25 +1327,14 @@ class ServiceRequest(models.Model):
             self.documents_received_at = timezone.now()
             self.current_owner = self.assigned_to  # Back to ops
             self.save()
-            
-            ServiceRequestComment.objects.create(
-                service_request=self,
-                comment="Documents submitted to operations team",
-                commented_by=user,
-                is_internal=True
-            )
+            return True
+        return False
     
     def start_processing(self, user=None):
         """Start processing the request"""
         self.status = 'in_progress'
         self.save()
-        
-        ServiceRequestComment.objects.create(
-            service_request=self,
-            comment="Request processing started",
-            commented_by=user,
-            is_internal=True
-        )
+        return True
     
     def resolve_request(self, resolution_summary, user=None):
         """Resolve the request and send back to RM for verification"""
@@ -1308,13 +1343,7 @@ class ServiceRequest(models.Model):
         self.resolution_summary = resolution_summary
         self.current_owner = self.raised_by  # Back to RM for verification
         self.save()
-        
-        ServiceRequestComment.objects.create(
-            service_request=self,
-            comment=f"Request resolved: {resolution_summary}",
-            commented_by=user,
-            is_internal=False
-        )
+        return True
     
     def client_verification_complete(self, approved=True, user=None):
         """RM confirms client approval"""
@@ -1322,25 +1351,12 @@ class ServiceRequest(models.Model):
             self.status = 'client_verification'
             self.client_approved = True
             self.client_approval_date = timezone.now()
-            
-            ServiceRequestComment.objects.create(
-                service_request=self,
-                comment="Client verification completed - approved",
-                commented_by=user,
-                is_internal=True
-            )
         else:
             self.status = 'in_progress'  # Back to processing
             self.current_owner = self.assigned_to
-            
-            ServiceRequestComment.objects.create(
-                service_request=self,
-                comment="Client verification failed - requires rework",
-                commented_by=user,
-                is_internal=True
-            )
         
         self.save()
+        return True
     
     def close_request(self, user=None):
         """Close the request after client approval"""
@@ -1348,43 +1364,25 @@ class ServiceRequest(models.Model):
             self.status = 'closed'
             self.closed_at = timezone.now()
             self.save()
-            
-            ServiceRequestComment.objects.create(
-                service_request=self,
-                comment="Service request closed successfully",
-                commented_by=user,
-                is_internal=True
-            )
+            return True
         else:
             raise ValidationError("Cannot close request without client approval")
     
     def escalate_to_manager(self, user=None, reason=""):
         """Escalate request to line manager"""
-        # Logic to find and assign to manager
-        # This would depend on your user hierarchy model
-        ServiceRequestComment.objects.create(
-            service_request=self,
-            comment=f"Request escalated to manager. Reason: {reason}",
-            commented_by=user,
-            is_internal=True
-        )
+        # Logic to find and assign to manager would go here
         self.save()
+        return True
     
     def can_be_raised_by(self, user):
         """Check if user can raise request for this client"""
         # Implement your mapping logic here
-        # RM can only raise to mapped ops exec
         return True  # Placeholder
     
     def can_be_assigned_to(self, user):
         """Check if request can be assigned to this user"""
         # Implement hierarchy and mapping validation
         return True  # Placeholder
-    
-    def get_next_assignee_if_on_leave(self):
-        """Get next assignee if current assignee is on leave"""
-        # Implement leave handling logic based on hierarchy
-        pass
     
     def is_sla_breached(self):
         """Check if SLA is breached"""
@@ -1394,9 +1392,155 @@ class ServiceRequest(models.Model):
             return True
         return False
     
+    def get_age_in_hours(self):
+        """Get request age in hours"""
+        if self.created_at:
+            delta = timezone.now() - self.created_at
+            return delta.total_seconds() / 3600
+        return 0
+    
+    def get_sla_remaining_hours(self):
+        """Get remaining SLA hours"""
+        if self.request_type and self.created_at:
+            sla_deadline = self.created_at + timezone.timedelta(hours=self.request_type.sla_hours)
+            remaining = sla_deadline - timezone.now()
+            return max(0, remaining.total_seconds() / 3600)
+        return 0
+    
     def __str__(self):
         return f"{self.request_id} - {self.request_type.name} for {self.client.name}"
 
+class ServiceRequestDocument(models.Model):
+    """
+    Documents attached to service requests
+    """
+    service_request = models.ForeignKey(
+        ServiceRequest,
+        on_delete=models.CASCADE,
+        related_name='documents'
+    )
+    document = models.FileField(
+        upload_to='service_requests/documents/',
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'xlsx', 'xls'])]
+    )
+    document_name = models.CharField(max_length=255)
+    document_type = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Type of document (e.g., 'identity_proof', 'bank_statement')"
+    )
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='uploaded_service_documents'
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    file_size = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="File size in bytes"
+    )
+    is_verified = models.BooleanField(default=False)
+    verified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='verified_service_documents'
+    )
+    verified_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-uploaded_at']
+        verbose_name = 'Service Request Document'
+        verbose_name_plural = 'Service Request Documents'
+    
+    def save(self, *args, **kwargs):
+        if self.document:
+            self.file_size = self.document.size
+            if not self.document_name:
+                self.document_name = self.document.name
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"Document: {self.document_name} for {self.service_request.request_id}"
+    
+    def get_file_size_display(self):
+        """Return human readable file size"""
+        if self.file_size:
+            if self.file_size < 1024:
+                return f"{self.file_size} bytes"
+            elif self.file_size < 1024 * 1024:
+                return f"{self.file_size / 1024:.1f} KB"
+            else:
+                return f"{self.file_size / (1024 * 1024):.1f} MB"
+        return "Unknown"
+
+class ServiceRequestComment(models.Model):
+    """
+    Comments/remarks for service requests
+    """
+    service_request = models.ForeignKey(
+        ServiceRequest,
+        on_delete=models.CASCADE,
+        related_name='comments'
+    )
+    comment = models.TextField()
+    commented_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='service_request_comments'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_internal = models.BooleanField(
+        default=False, 
+        help_text="Internal ops comments vs client-facing"
+    )
+    comment_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('general', 'General Comment'),
+            ('status_update', 'Status Update'),
+            ('document_request', 'Document Request'),
+            ('escalation', 'Escalation'),
+            ('resolution', 'Resolution'),
+            ('client_communication', 'Client Communication'),
+        ],
+        default='general'
+    )
+    
+    # For replies/threading
+    parent_comment = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='replies'
+    )
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Service Request Comment'
+        verbose_name_plural = 'Service Request Comments'
+        indexes = [
+            models.Index(fields=['service_request', 'created_at']),
+            models.Index(fields=['commented_by', 'created_at']),
+        ]
+    
+    def __str__(self):
+        comment_preview = self.comment[:50] + "..." if len(self.comment) > 50 else self.comment
+        return f"Comment by {self.commented_by} on {self.service_request.request_id}: {comment_preview}"
+    
+    def is_reply(self):
+        """Check if this comment is a reply to another comment"""
+        return self.parent_comment is not None
+    
+    def get_replies(self):
+        """Get all replies to this comment"""
+        return self.replies.all()
 
 class ServiceRequestWorkflow(models.Model):
     """
@@ -1423,64 +1567,33 @@ class ServiceRequestWorkflow(models.Model):
     )
     transition_date = models.DateTimeField(auto_now_add=True)
     remarks = models.TextField(blank=True)
+    auto_transition = models.BooleanField(
+        default=False,
+        help_text="Was this an automatic transition?"
+    )
     
     class Meta:
         ordering = ['-transition_date']
+        verbose_name = 'Service Request Workflow'
+        verbose_name_plural = 'Service Request Workflows'
+        indexes = [
+            models.Index(fields=['service_request', 'transition_date']),
+        ]
     
     def __str__(self):
         return f"{self.service_request.request_id}: {self.from_status} → {self.to_status}"
-
-
-# Pre-populate ServiceRequestType with your specified types
-def populate_service_request_types():
-    """
-    Function to populate initial service request types
-    Call this in a data migration or management command
-    """
-    types_data = [
-        # Personal Details Modification
-        {'name': 'Email Modification', 'category': 'personal_details', 'code': 'PDM_EMAIL'},
-        {'name': 'Mobile Modification', 'category': 'personal_details', 'code': 'PDM_MOBILE'},
-        {'name': 'Address Modification', 'category': 'personal_details', 'code': 'PDM_ADDRESS'},
-        {'name': 'Bank Details Modification', 'category': 'personal_details', 'code': 'PDM_BANK'},
-        {'name': 'Nominee Modification', 'category': 'personal_details', 'code': 'PDM_NOMINEE'},
-        {'name': 'Name Change', 'category': 'personal_details', 'code': 'PDM_NAME'},
-        {'name': 'Re-KYC', 'category': 'personal_details', 'code': 'PDM_REKYC'},
-        
-        # Account Creation
-        {'name': 'Mutual Fund CAN', 'category': 'account_creation', 'code': 'AC_MF_CAN'},
-        {'name': 'MOSL Demat', 'category': 'account_creation', 'code': 'AC_MOSL_DEMAT'},
-        {'name': 'PL Demat', 'category': 'account_creation', 'code': 'AC_PL_DEMAT'},
-        
-        # Account Closure
-        {'name': 'MOSL Demat Closure', 'category': 'account_closure', 'code': 'ACL_MOSL_DEMAT'},
-        {'name': 'PL Demat Closure', 'category': 'account_closure', 'code': 'ACL_PL_DEMAT'},
-        
-        # Adhoc Requests - MF
-        {'name': 'ARN Change', 'category': 'adhoc_mf', 'code': 'AH_MF_ARN'},
-        {'name': 'RI to NRI Conversion', 'category': 'adhoc_mf', 'code': 'AH_MF_RI_NRI'},
-        {'name': 'NRI to RI Conversion', 'category': 'adhoc_mf', 'code': 'AH_MF_NRI_RI'},
-        {'name': 'Mandate Request Physical', 'category': 'adhoc_mf', 'code': 'AH_MF_MANDATE_PHY'},
-        {'name': 'Mandate Request Online', 'category': 'adhoc_mf', 'code': 'AH_MF_MANDATE_ONL'},
-        {'name': 'Change of Mapping', 'category': 'adhoc_mf', 'code': 'AH_MF_MAPPING'},
-        
-        # Adhoc Requests - Demat
-        {'name': 'Brokerage Change', 'category': 'adhoc_demat', 'code': 'AH_DM_BROKERAGE'},
-        {'name': 'DP Scheme Modification', 'category': 'adhoc_demat', 'code': 'AH_DM_DP_SCHEME'},
-        {'name': 'Stock Transfer', 'category': 'adhoc_demat', 'code': 'AH_DM_STOCK_TRANSFER'},
-        
-        # Report Requests
-        {'name': 'Capital Gain Set - MF', 'category': 'report_request', 'code': 'RPT_CG_MF'},
-        {'name': 'Capital Gain Set - MOSL', 'category': 'report_request', 'code': 'RPT_CG_MOSL'},
-        {'name': 'Capital Gain Set - PL', 'category': 'report_request', 'code': 'RPT_CG_PL'},
-        {'name': 'MF SOA', 'category': 'report_request', 'code': 'RPT_MF_SOA'},
-        {'name': 'CAS Upload', 'category': 'report_request', 'code': 'RPT_CAS_UPLOAD'},
-    ]
     
-    for type_data in types_data:
-        ServiceRequestType.objects.get_or_create(
-            code=type_data['code'],
-            defaults=type_data
+    @classmethod
+    def log_transition(cls, service_request, from_status, to_status, user=None, remarks="", auto=False):
+        """Create a workflow log entry"""
+        return cls.objects.create(
+            service_request=service_request,
+            from_status=from_status,
+            to_status=to_status,
+            from_user=user,
+            to_user=service_request.current_owner,
+            remarks=remarks,
+            auto_transition=auto
         )
 
 class BusinessTracker(models.Model):
@@ -1512,24 +1625,7 @@ class BusinessTracker(models.Model):
         user_str = f" - {self.user.username}" if self.user else ""
         return f"{self.month.strftime('%B %Y')}{user_str}"
 
-    
-# execution_plans/models.py
-from django.db import models
-from django.contrib.auth import get_user_model
-from django.utils import timezone
-from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator
-from decimal import Decimal
-
-
-# models.py - Complete Updated Portfolio Models
-import pandas as pd
-from django.db import transaction
-import logging
-
-logger = logging.getLogger(__name__)
-
-User = get_user_model()
+# Portfolio and Execution Plan Models
 
 class PortfolioUpload(models.Model):
     """Model to track portfolio file uploads"""
@@ -1639,7 +1735,7 @@ class PortfolioUpload(models.Model):
             
         except Exception as e:
             self.status = 'failed'
-            self.error_details = str(e)
+            self.error_details = {'error': str(e)}
             self.processed_at = timezone.now()
             self.save()
             
@@ -1655,9 +1751,7 @@ class PortfolioUpload(models.Model):
         """
         Process the uploaded CSV/Excel file with detailed logging
         """
-        import pandas as pd
         import os
-        from django.db import transaction
         
         try:
             # Determine file type and read accordingly
@@ -1871,7 +1965,7 @@ class ClientPortfolio(models.Model):
     """Enhanced client portfolio model with Excel upload support"""
     # Link to client profile
     client_profile = models.ForeignKey(
-        'ClientProfile',  # Reference to your existing ClientProfile model
+        ClientProfile,
         on_delete=models.CASCADE,
         related_name='portfolio_holdings',
         null=True,
@@ -1967,8 +2061,6 @@ class ClientPortfolio(models.Model):
             models.Index(fields=['is_mapped', 'client_pan']),
             models.Index(fields=['upload_batch', 'is_mapped']),
         ]
-        # Allow multiple entries for same client-scheme combination from different uploads
-        # unique_together = ['client_pan', 'scheme_name', 'upload_batch']
     
     def __str__(self):
         return f"{self.client_name} - {self.scheme_name} ({self.client_pan})"
@@ -1995,8 +2087,7 @@ class ClientPortfolio(models.Model):
         """Map this portfolio entry to a client profile based on PAN"""
         if self.client_pan:
             try:
-                # Import here to avoid circular imports
-                from base.models import ClientProfile  # Adjust import based on your app structure
+                # Try to find client profile by PAN
                 client_profile = ClientProfile.objects.get(pan_number=self.client_pan)
                 
                 self.client_profile = client_profile
@@ -2006,18 +2097,17 @@ class ClientPortfolio(models.Model):
                 
                 return True, f"Successfully mapped to {client_profile.client_full_name}"
                 
+            except ClientProfile.DoesNotExist:
+                self.mapping_notes = f"No client profile found with PAN {self.client_pan}"
+                self.save()
+                return False, f"No client profile found with PAN {self.client_pan}"
+            except ClientProfile.MultipleObjectsReturned:
+                self.mapping_notes = f"Multiple client profiles found with PAN {self.client_pan}"
+                self.save()
+                return False, f"Multiple client profiles found with PAN {self.client_pan}"
             except Exception as e:
-                if 'DoesNotExist' in str(type(e)):
-                    self.mapping_notes = f"No client profile found with PAN {self.client_pan}"
-                    self.save()
-                    return False, f"No client profile found with PAN {self.client_pan}"
-                elif 'MultipleObjectsReturned' in str(type(e)):
-                    self.mapping_notes = f"Multiple client profiles found with PAN {self.client_pan}"
-                    self.save()
-                    return False, f"Multiple client profiles found with PAN {self.client_pan}"
-                else:
-                    logger.error(f"Error mapping client profile: {e}")
-                    return False, f"Error mapping client profile: {str(e)}"
+                logger.error(f"Error mapping client profile: {e}")
+                return False, f"Error mapping client profile: {str(e)}"
         
         return False, "No PAN number provided"
     
@@ -2129,137 +2219,6 @@ class ClientPortfolio(models.Model):
             return str(value)
         
         return str(value).strip()
-    
-    @classmethod
-    def process_excel_file(cls, file_path, upload_instance):
-        """Process Excel file and create portfolio entries with enhanced error handling"""
-        results = {
-            'total_rows': 0,
-            'processed_rows': 0,
-            'successful_rows': 0,
-            'failed_rows': 0,
-            'errors': [],
-            'summary': {}
-        }
-        
-        try:
-            # Read Excel file with better handling
-            df = pd.read_excel(file_path, engine='openpyxl')
-            results['total_rows'] = len(df)
-            
-            # Clean column names (remove extra spaces)
-            df.columns = df.columns.str.strip()
-            
-            # Column mapping based on the Excel structure
-            column_mapping = {
-                'CLIENT': 'client_name',
-                'CLIENT PAN': 'client_pan',
-                'SCHEME': 'scheme_name',
-                'DEBT': 'debt_value',
-                ' DEBT': 'debt_value',
-                'EQUITY': 'equity_value',
-                ' EQUITY': 'equity_value',
-                'HYBRID': 'hybrid_value',
-                ' HYBRID': 'hybrid_value',
-                'LIQUID AND ULTRA SHORT': 'liquid_ultra_short_value',
-                ' LIQUID AND  ULTRA  SHORT': 'liquid_ultra_short_value',
-                'OTHER': 'other_value',
-                ' OTHER': 'other_value',
-                'ARBITRAGE': 'arbitrage_value',
-                ' ARBITRAGE': 'arbitrage_value',
-                'TOTAL': 'total_value',
-                'ALLOCATION': 'allocation_percentage',
-                'UNITS': 'units',
-                'FAMILY HEAD': 'family_head',
-                'APP CODE': 'app_code',
-                'EQUITY CODE': 'equity_code',
-                'OPERATIONS': 'operations_personnel',
-                ' OPERATIONS': 'operations_personnel',
-                'OPERATIONS CODE': 'operations_code',
-                ' OPERATIONS CODE': 'operations_code',
-                'RELATIONSHIP MANAGER': 'relationship_manager',
-                ' RELATIONSHIP  MANAGER': 'relationship_manager',
-                'RELATIONSHIP MANAGER CODE': 'rm_code',
-                ' RELATIONSHIP  MANAGER CODE': 'rm_code',
-                'SUB BROKER': 'sub_broker',
-                ' SUB  BROKER': 'sub_broker',
-                'SUB BROKER CODE': 'sub_broker_code',
-                ' SUB  BROKER CODE': 'sub_broker_code',
-                'ISIN NO': 'isin_number',
-                'CLIENT IWELL CODE': 'client_iwell_code',
-                'FAMILY HEAD IWELL CODE': 'family_head_iwell_code'
-            }
-            
-            # Process each row
-            with transaction.atomic():
-                for index, row in df.iterrows():
-                    try:
-                        results['processed_rows'] += 1
-                        
-                        # Prepare data for portfolio entry
-                        portfolio_data = {
-                            'upload_batch': upload_instance,
-                            'data_as_of_date': timezone.now().date(),
-                            'is_active': True,
-                            'is_mapped': False
-                        }
-                        
-                        # Map columns with safe conversion
-                        for excel_col, model_field in column_mapping.items():
-                            if excel_col in row.index and pd.notna(row[excel_col]):
-                                value = row[excel_col]
-                                
-                                # Handle different data types
-                                if model_field in [
-                                    'debt_value', 'equity_value', 'hybrid_value', 
-                                    'liquid_ultra_short_value', 'other_value', 'arbitrage_value',
-                                    'total_value', 'allocation_percentage', 'units'
-                                ]:
-                                    portfolio_data[model_field] = cls.safe_decimal_convert(value)
-                                else:
-                                    portfolio_data[model_field] = cls.safe_string_convert(value)
-                        
-                        # Validate required fields
-                        if not portfolio_data.get('client_name') or not portfolio_data.get('scheme_name'):
-                            results['failed_rows'] += 1
-                            results['errors'].append(f"Row {index + 2}: Missing client name or scheme name")
-                            continue
-                        
-                        # Create portfolio entry
-                        portfolio_entry = cls.objects.create(**portfolio_data)
-                        
-                        # Try to map to client profile
-                        try:
-                            mapped, message = portfolio_entry.map_to_client_profile()
-                            # Try to map personnel
-                            personnel_mapped = portfolio_entry.map_personnel()
-                        except Exception as mapping_error:
-                            logger.warning(f"Mapping failed for row {index + 2}: {mapping_error}")
-                        
-                        results['successful_rows'] += 1
-                        
-                    except Exception as e:
-                        results['failed_rows'] += 1
-                        error_msg = f"Row {index + 2}: {str(e)}"
-                        results['errors'].append(error_msg)
-                        logger.error(f"Error processing row {index + 2}: {e}")
-            
-            # Update summary
-            results['summary'] = {
-                'unique_clients': cls.objects.filter(upload_batch=upload_instance).values('client_pan').distinct().count(),
-                'unique_schemes': cls.objects.filter(upload_batch=upload_instance).values('scheme_name').distinct().count(),
-                'mapped_clients': cls.objects.filter(upload_batch=upload_instance, is_mapped=True).count(),
-                'total_aum': cls.objects.filter(upload_batch=upload_instance).aggregate(
-                    total=models.Sum('total_value')
-                )['total'] or 0
-            }
-            
-        except Exception as e:
-            results['errors'].append(f"File processing error: {str(e)}")
-            results['failed_rows'] = results.get('total_rows', 0)
-            logger.error(f"File processing failed: {e}")
-        
-        return results
 
 class PortfolioUploadLog(models.Model):
     """Enhanced log model with auto row number generation"""
@@ -2296,10 +2255,6 @@ class PortfolioUploadLog(models.Model):
         ordering = ['upload', 'row_number', 'created_at']
         verbose_name = 'Portfolio Upload Log'
         verbose_name_plural = 'Portfolio Upload Logs'
-        indexes = [
-            models.Index(fields=['upload', 'status']),
-            models.Index(fields=['upload', 'row_number']),
-        ]
     
     def __str__(self):
         if self.row_number == 0:
@@ -2308,7 +2263,7 @@ class PortfolioUploadLog(models.Model):
 
 class MutualFundScheme(models.Model):
     """Enhanced mutual fund scheme model"""
-    scheme_name = models.CharField(max_length=300)  # Increased length
+    scheme_name = models.CharField(max_length=300)
     amc_name = models.CharField(max_length=100)
     scheme_code = models.CharField(max_length=50, unique=True)
     isin_number = models.CharField(max_length=20, unique=True, null=True, blank=True)
@@ -2355,91 +2310,6 @@ class MutualFundScheme(models.Model):
     
     def __str__(self):
         return f"{self.amc_name} - {self.scheme_name}"
-    
-    @classmethod
-    def create_from_portfolio_data(cls, scheme_name, isin_number=None):
-        """Create scheme from portfolio data if it doesn't exist"""
-        try:
-            if isin_number:
-                scheme = cls.objects.get(isin_number=isin_number)
-            else:
-                scheme = cls.objects.get(scheme_name=scheme_name)
-            return scheme
-        except cls.DoesNotExist:
-            # Try to parse AMC name and scheme type from scheme name
-            amc_name = scheme_name.split()[0] if scheme_name else 'Unknown'
-            
-            # Determine scheme type based on name
-            scheme_type = 'other'
-            name_lower = scheme_name.lower()
-            if any(word in name_lower for word in ['equity', 'growth', 'large', 'mid', 'small', 'cap']):
-                scheme_type = 'equity'
-            elif any(word in name_lower for word in ['debt', 'bond', 'income']):
-                scheme_type = 'debt'
-            elif any(word in name_lower for word in ['hybrid', 'balanced']):
-                scheme_type = 'hybrid'
-            elif any(word in name_lower for word in ['liquid']):
-                scheme_type = 'liquid'
-            elif any(word in name_lower for word in ['elss', 'tax']):
-                scheme_type = 'elss'
-            
-            # Generate scheme code
-            scheme_code = isin_number or f"AUTO_{scheme_name[:20].replace(' ', '_').upper()}"
-            
-            return cls.objects.create(
-                scheme_name=scheme_name,
-                amc_name=amc_name,
-                scheme_code=scheme_code,
-                isin_number=isin_number,
-                scheme_type=scheme_type,
-                primary_asset_class=scheme_type.title()
-            )
-        except cls.MultipleObjectsReturned:
-            # Return the first one if multiple exist
-            if isin_number:
-                return cls.objects.filter(isin_number=isin_number).first()
-            else:
-                return cls.objects.filter(scheme_name=scheme_name).first()
-
-# Legacy ClientPortfolio compatibility for existing execution plans
-class LegacyClientPortfolio(models.Model):
-    """Legacy client portfolio model for backward compatibility"""
-    client = models.ForeignKey(
-        'Client',
-        on_delete=models.CASCADE,
-        related_name='legacy_portfolio'
-    )
-    scheme = models.ForeignKey(
-        MutualFundScheme,
-        on_delete=models.CASCADE,
-        related_name='legacy_holdings'
-    )
-    folio_number = models.CharField(max_length=50, blank=True)
-    units = models.DecimalField(max_digits=15, decimal_places=4, default=0)
-    current_value = models.DecimalField(max_digits=15, decimal_places=2, default=0)
-    cost_value = models.DecimalField(max_digits=15, decimal_places=2, default=0)
-    sip_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    sip_date = models.PositiveIntegerField(null=True, blank=True, help_text="SIP date (1-28)")
-    last_updated = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        unique_together = ['client', 'scheme', 'folio_number']
-        ordering = ['client', 'scheme']
-        verbose_name = 'Legacy Client Portfolio'
-        verbose_name_plural = 'Legacy Client Portfolios'
-    
-    def __str__(self):
-        return f"{self.client.name} - {self.scheme.scheme_name}"
-    
-    @property
-    def gain_loss(self):
-        return self.current_value - self.cost_value
-    
-    @property
-    def gain_loss_percentage(self):
-        if self.cost_value > 0:
-            return ((self.current_value - self.cost_value) / self.cost_value) * 100
-        return 0
 
 class ExecutionPlan(models.Model):
     """Main execution plan model"""
@@ -2457,7 +2327,7 @@ class ExecutionPlan(models.Model):
     # Basic Information
     plan_id = models.CharField(max_length=20, unique=True, editable=False)
     client = models.ForeignKey(
-        'base.Client',
+        Client,
         on_delete=models.CASCADE,
         related_name='execution_plans'
     )
@@ -2507,10 +2377,6 @@ class ExecutionPlan(models.Model):
         ordering = ['-created_at']
         verbose_name = 'Execution Plan'
         verbose_name_plural = 'Execution Plans'
-        permissions = [
-            ('can_approve_execution_plan', 'Can approve execution plans'),
-            ('can_execute_plan', 'Can execute approved plans'),
-        ]
     
     def save(self, *args, **kwargs):
         if not self.plan_id:
@@ -2535,87 +2401,6 @@ class ExecutionPlan(models.Model):
     
     def __str__(self):
         return f"{self.plan_id} - {self.plan_name} ({self.client.name})"
-    
-    def get_filename(self):
-        """Generate Excel filename"""
-        date_str = self.created_at.strftime('%d%m%Y')
-        return f"{self.client.name}_ExecutionPlan_{date_str}.xlsx"
-    
-    def can_be_approved_by(self, user):
-        """Check if user can approve this plan"""
-        if user.role not in ['rm_head', 'business_head', 'top_management']:
-            return False
-        
-        # RM Head can approve plans created by their team RMs
-        if user.role == 'rm_head':
-            return self.created_by.manager == user
-        
-        # Business Head and Top Management can approve any plan
-        return True
-    
-    def can_be_executed_by(self, user):
-        """Check if user can execute this plan"""
-        return user.role in ['ops_exec', 'ops_team_lead'] and self.status == 'client_approved'
-    
-    def submit_for_approval(self):
-        """Submit plan for approval"""
-        if self.status == 'draft':
-            self.status = 'pending_approval'
-            self.submitted_at = timezone.now()
-            self.save()
-            return True
-        return False
-    
-    def approve(self, approved_by):
-        """Approve the plan"""
-        if self.status == 'pending_approval' and self.can_be_approved_by(approved_by):
-            self.status = 'approved'
-            self.approved_by = approved_by
-            self.approved_at = timezone.now()
-            self.save()
-            return True
-        return False
-    
-    def reject(self, rejected_by, reason):
-        """Reject the plan"""
-        if self.status == 'pending_approval' and self.can_be_approved_by(rejected_by):
-            self.status = 'rejected'
-            self.rejection_reason = reason
-            self.approved_by = rejected_by
-            self.approved_at = timezone.now()
-            self.save()
-            return True
-        return False
-    
-    def mark_client_approved(self):
-        """Mark as client approved"""
-        if self.status == 'approved':
-            self.status = 'client_approved'
-            self.client_approved_at = timezone.now()
-            self.save()
-            return True
-        return False
-    
-    def start_execution(self, executor):
-        """Start plan execution"""
-        if self.status == 'client_approved' and self.can_be_executed_by(executor):
-            self.status = 'in_execution'
-            self.execution_started_at = timezone.now()
-            self.save()
-            return True
-        return False
-    
-    def complete_execution(self):
-        """Complete plan execution"""
-        if self.status == 'in_execution':
-            # Check if all actions are completed
-            pending_actions = self.actions.filter(status__in=['pending', 'in_progress'])
-            if not pending_actions.exists():
-                self.status = 'completed'
-                self.completed_at = timezone.now()
-                self.save()
-                return True
-        return False
 
 class PlanAction(models.Model):
     """Individual actions within an execution plan"""
@@ -2730,88 +2515,6 @@ class PlanAction(models.Model):
     
     def __str__(self):
         return f"{self.get_action_type_display()} - {self.scheme.scheme_name}"
-    
-    def clean(self):
-        """Validate action data"""
-        super().clean()
-        
-        # Validate amount or units is provided
-        if not self.amount and not self.units:
-            raise ValidationError("Either amount or units must be specified")
-        
-        # Validate SIP actions have SIP date
-        if self.action_type in ['sip_start', 'sip_modify'] and not self.sip_date:
-            raise ValidationError("SIP date is required for SIP actions")
-        
-        # Validate switch/STP actions have target scheme
-        if self.action_type in ['switch', 'stp_start'] and not self.target_scheme:
-            raise ValidationError("Target scheme is required for switch/STP actions")
-        
-        # Validate SIP date range
-        if self.sip_date and not (1 <= self.sip_date <= 28):
-            raise ValidationError("SIP date must be between 1 and 28")
-    
-    def execute(self, executor, transaction_details=None):
-        """Execute the action"""
-        if self.status != 'pending':
-            return False
-        
-        if not self.execution_plan.can_be_executed_by(executor):
-            return False
-        
-        self.status = 'in_progress'
-        self.executed_by = executor
-        self.save()
-        
-        # Here you would integrate with actual transaction systems
-        # For now, we'll simulate execution
-        try:
-            # Simulate transaction processing
-            self.status = 'completed'
-            self.executed_at = timezone.now()
-            
-            if transaction_details:
-                self.transaction_id = transaction_details.get('transaction_id', '')
-                self.executed_amount = transaction_details.get('amount', self.amount)
-                self.executed_units = transaction_details.get('units', self.units)
-                self.nav_price = transaction_details.get('nav_price')
-            
-            self.save()
-            
-            # Check if all actions in plan are completed
-            self.execution_plan.complete_execution()
-            
-            return True
-            
-        except Exception as e:
-            self.status = 'failed'
-            self.failure_reason = str(e)
-            self.save()
-            return False
-    
-    def mark_failed(self, reason, failed_by=None):
-        """Mark action as failed"""
-        self.status = 'failed'
-        self.failure_reason = reason
-        if failed_by:
-            self.executed_by = failed_by
-        self.executed_at = timezone.now()
-        self.save()
-    
-    def can_be_cancelled(self):
-        """Check if action can be cancelled"""
-        return self.status in ['pending', 'in_progress']
-    
-    def cancel(self, cancelled_by, reason=""):
-        """Cancel the action"""
-        if self.can_be_cancelled():
-            self.status = 'cancelled'
-            self.failure_reason = reason
-            self.executed_by = cancelled_by
-            self.executed_at = timezone.now()
-            self.save()
-            return True
-        return False
 
 class PlanWorkflowHistory(models.Model):
     """Track workflow history for audit trail"""
@@ -3016,8 +2719,8 @@ class ExecutionMetrics(models.Model):
         if self.total_actions > 0:
             return (self.successful_actions / self.total_actions) * 100
         return 0
-    
-    
+
+# Django signals for auto-processing
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.core.management import call_command

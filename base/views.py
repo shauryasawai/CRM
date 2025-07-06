@@ -2868,7 +2868,7 @@ from django.db.models import Q, Sum, Count, IntegerField
 from django.db.models.functions import Coalesce
 from django.forms import ModelForm
 from django import forms
-from .models import ClientProfile, User, MFUCANAccount, MotilalDematAccount, PrabhudasDematAccount
+from .models import ClientProfile, User, MFUCANAccount
 from .forms import ClientProfileForm  # Import the form
 
 # Add this to your views.py
