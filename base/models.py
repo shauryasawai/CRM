@@ -146,19 +146,16 @@ class User(AbstractUser):
     def get_team_members(self):
         """Get all team members for this user (if they're a team leader)"""
         if self.role == 'rm_head':
-            # Get users in the same groups as this RM Head
             return User.objects.filter(
                 role='rm',
-                groups__in=self.managed_groups.all()
-            ).distinct()
+                teams__leader=self
+                ).distinct()
         elif self.role == 'business_head_ops':
-            # Get all operations team members under this Business Head - Ops
             return User.objects.filter(
-                role__in=['ops_team_lead', 'ops_exec'],
-                manager__in=[self] + list(self.subordinates.all())
-            ).distinct()
+            role__in=['ops_team_lead', 'ops_exec'],
+            manager__in=[self] + list(self.subordinates.all())
+        ).distinct()
         elif self.role == 'ops_team_lead':
-            # Get operations executives under this team lead
             return User.objects.filter(role='ops_exec', manager=self)
         return User.objects.none()
 
@@ -242,8 +239,13 @@ class User(AbstractUser):
             return True
         elif self.role in ['business_head', 'business_head_ops']:
             return True
-        elif self.role in ['rm_head', 'ops_team_lead']:
+        elif self.role == 'rm_head':
             # Can access own data and team members' data
+            if target_user == self:
+                return True
+            # Check if target user is in any of the teams this RM Head leads
+            return target_user in self.get_team_members()
+        elif self.role == 'ops_team_lead':
             if target_user == self:
                 return True
             return target_user in self.get_team_members()
@@ -2750,3 +2752,423 @@ def auto_process_portfolio_upload(sender, instance, created, **kwargs):
         thread = Thread(target=process_in_background)
         thread.daemon = True
         thread.start()
+
+class PortfolioActionPlan(models.Model):
+    """Action plan for portfolio operations"""
+    
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('pending_approval', 'Pending Approval'),
+        ('approved', 'Approved'),
+        ('executed', 'Executed'),
+        ('rejected', 'Rejected'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    # Basic Information
+    plan_id = models.CharField(max_length=20, unique=True, editable=False)
+    client_portfolio = models.ForeignKey(
+        ClientPortfolio,
+        on_delete=models.CASCADE,
+        related_name='action_plans'
+    )
+    plan_name = models.CharField(max_length=200, help_text="Name for this action plan")
+    description = models.TextField(blank=True, help_text="Optional description")
+    
+    # Status and Workflow
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='created_action_plans'
+    )
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_action_plans'
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    executed_at = models.DateTimeField(null=True, blank=True)
+    
+    # Notes and comments
+    notes = models.TextField(blank=True)
+    approval_notes = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Portfolio Action Plan'
+        verbose_name_plural = 'Portfolio Action Plans'
+    
+    def save(self, *args, **kwargs):
+        if not self.plan_id:
+            self.plan_id = self.generate_plan_id()
+        super().save(*args, **kwargs)
+    
+    def generate_plan_id(self):
+        """Generate unique plan ID"""
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        return f"PAP{timestamp}"
+    
+    def __str__(self):
+        return f"{self.plan_id} - {self.plan_name} ({self.client_portfolio.client_name})"
+    
+    def can_be_edited(self):
+        """Check if plan can be edited"""
+        return self.status in ['draft', 'rejected']
+    
+    def can_be_approved(self):
+        """Check if plan can be approved"""
+        return self.status == 'pending_approval'
+    
+    def submit_for_approval(self):
+        """Submit plan for approval"""
+        if self.status == 'draft':
+            self.status = 'pending_approval'
+            self.save()
+            return True
+        return False
+    
+    def approve(self, approved_by, notes=""):
+        """Approve the action plan"""
+        if self.status == 'pending_approval':
+            self.status = 'approved'
+            self.approved_by = approved_by
+            self.approved_at = timezone.now()
+            self.approval_notes = notes
+            self.save()
+            return True
+        return False
+    
+    def reject(self, rejected_by, notes=""):
+        """Reject the action plan"""
+        if self.status == 'pending_approval':
+            self.status = 'rejected'
+            self.approved_by = rejected_by
+            self.approved_at = timezone.now()
+            self.approval_notes = notes
+            self.save()
+            return True
+        return False
+
+class PortfolioAction(models.Model):
+    """Individual actions within a portfolio action plan"""
+    
+    ACTION_TYPE_CHOICES = [
+        ('redeem', 'Redeem'),
+        ('switch', 'Switch'),
+        ('stp', 'STP (Systematic Transfer Plan)'),
+        ('sip', 'SIP (Systematic Investment Plan)'),
+        ('swp', 'SWP (Systematic Withdrawal Plan)'),
+    ]
+    
+    REDEEM_BY_CHOICES = [
+        ('all_units', 'All Units'),
+        ('specific_amount', 'Specific Amount'),
+        ('specific_units', 'Specific Units'),
+    ]
+    
+    FREQUENCY_CHOICES = [
+        ('daily', 'Daily'),
+        ('weekly', 'Weekly'),
+        ('fortnightly', 'Fortnightly'),
+        ('monthly', 'Monthly'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('executed', 'Executed'),
+        ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    # Basic Information
+    action_plan = models.ForeignKey(
+        PortfolioActionPlan,
+        on_delete=models.CASCADE,
+        related_name='actions'
+    )
+    action_type = models.CharField(max_length=20, choices=ACTION_TYPE_CHOICES)
+    priority = models.PositiveIntegerField(default=1, help_text="Execution priority (1 = highest)")
+    
+    # Scheme Information
+    source_scheme = models.CharField(
+        max_length=300,
+        help_text="Source scheme name (for current portfolio scheme or switch/STP source)"
+    )
+    target_scheme = models.CharField(
+        max_length=300,
+        blank=True,
+        help_text="Target scheme name (for switch/STP/SIP target)"
+    )
+    
+    # Redeem Action Fields
+    redeem_by = models.CharField(
+        max_length=20,
+        choices=REDEEM_BY_CHOICES,
+        blank=True,
+        help_text="Method of redemption"
+    )
+    redeem_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        help_text="Amount to redeem (if redeem_by is specific_amount)"
+    )
+    redeem_units = models.DecimalField(
+        max_digits=15,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.0001'))],
+        help_text="Units to redeem (if redeem_by is specific_units)"
+    )
+    
+    # Switch Action Fields
+    switch_by = models.CharField(
+        max_length=20,
+        choices=REDEEM_BY_CHOICES,
+        blank=True,
+        help_text="Method of switching"
+    )
+    switch_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        help_text="Amount to switch"
+    )
+    switch_units = models.DecimalField(
+        max_digits=15,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.0001'))],
+        help_text="Units to switch"
+    )
+    
+    # STP Action Fields
+    stp_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        help_text="Amount to transfer regularly in STP"
+    )
+    stp_frequency = models.CharField(
+        max_length=20,
+        choices=FREQUENCY_CHOICES,
+        blank=True,
+        help_text="Frequency of STP transfers"
+    )
+    
+    # SIP Action Fields
+    sip_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        help_text="SIP investment amount"
+    )
+    sip_frequency = models.CharField(
+        max_length=20,
+        choices=FREQUENCY_CHOICES,
+        blank=True,
+        help_text="SIP frequency"
+    )
+    sip_date = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(31)],
+        help_text="SIP execution date (1-31)"
+    )
+    
+    # SWP Action Fields
+    swp_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        help_text="SWP withdrawal amount"
+    )
+    swp_frequency = models.CharField(
+        max_length=20,
+        choices=FREQUENCY_CHOICES,
+        blank=True,
+        help_text="SWP frequency"
+    )
+    swp_date = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(31)],
+        help_text="SWP execution date (1-31)"
+    )
+    
+    # Execution Details
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    executed_at = models.DateTimeField(null=True, blank=True)
+    executed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='executed_portfolio_actions'
+    )
+    
+    # Transaction Details (post-execution)
+    transaction_id = models.CharField(max_length=100, blank=True)
+    execution_notes = models.TextField(blank=True)
+    failure_reason = models.TextField(blank=True)
+    
+    # Metadata
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['priority', 'created_at']
+        verbose_name = 'Portfolio Action'
+        verbose_name_plural = 'Portfolio Actions'
+    
+    def __str__(self):
+        return f"{self.get_action_type_display()} - {self.source_scheme}"
+    
+    def clean(self):
+        """Validate action data based on action type"""
+        super().clean()
+        
+        if self.action_type == 'redeem':
+            if not self.redeem_by:
+                raise ValidationError("Redeem method is required for redeem actions")
+            
+            if self.redeem_by == 'specific_amount' and not self.redeem_amount:
+                raise ValidationError("Redeem amount is required when redeeming by specific amount")
+            elif self.redeem_by == 'specific_units' and not self.redeem_units:
+                raise ValidationError("Redeem units is required when redeeming by specific units")
+        
+        elif self.action_type == 'switch':
+            if not self.target_scheme:
+                raise ValidationError("Target scheme is required for switch actions")
+            if not self.switch_by:
+                raise ValidationError("Switch method is required for switch actions")
+            
+            if self.switch_by == 'specific_amount' and not self.switch_amount:
+                raise ValidationError("Switch amount is required when switching by specific amount")
+            elif self.switch_by == 'specific_units' and not self.switch_units:
+                raise ValidationError("Switch units is required when switching by specific units")
+        
+        elif self.action_type == 'stp':
+            if not self.target_scheme:
+                raise ValidationError("Target scheme is required for STP actions")
+            if not self.stp_amount:
+                raise ValidationError("STP amount is required")
+            if not self.stp_frequency:
+                raise ValidationError("STP frequency is required")
+        
+        elif self.action_type == 'sip':
+            if not self.target_scheme:
+                raise ValidationError("Target scheme is required for SIP actions")
+            if not self.sip_amount:
+                raise ValidationError("SIP amount is required")
+            if not self.sip_frequency:
+                raise ValidationError("SIP frequency is required")
+            if not self.sip_date:
+                raise ValidationError("SIP date is required")
+        
+        elif self.action_type == 'swp':
+            if not self.swp_amount:
+                raise ValidationError("SWP amount is required")
+            if not self.swp_frequency:
+                raise ValidationError("SWP frequency is required")
+            if not self.swp_date:
+                raise ValidationError("SWP date is required")
+    
+    def get_action_summary(self):
+        """Get a human-readable summary of the action"""
+        if self.action_type == 'redeem':
+            if self.redeem_by == 'all_units':
+                return f"Redeem all units from {self.source_scheme}"
+            elif self.redeem_by == 'specific_amount':
+                return f"Redeem ₹{self.redeem_amount:,.2f} from {self.source_scheme}"
+            elif self.redeem_by == 'specific_units':
+                return f"Redeem {self.redeem_units:,.4f} units from {self.source_scheme}"
+        
+        elif self.action_type == 'switch':
+            if self.switch_by == 'all_units':
+                return f"Switch all units from {self.source_scheme} to {self.target_scheme}"
+            elif self.switch_by == 'specific_amount':
+                return f"Switch ₹{self.switch_amount:,.2f} from {self.source_scheme} to {self.target_scheme}"
+            elif self.switch_by == 'specific_units':
+                return f"Switch {self.switch_units:,.4f} units from {self.source_scheme} to {self.target_scheme}"
+        
+        elif self.action_type == 'stp':
+            return f"STP ₹{self.stp_amount:,.2f} {self.stp_frequency} from {self.source_scheme} to {self.target_scheme}"
+        
+        elif self.action_type == 'sip':
+            return f"SIP ₹{self.sip_amount:,.2f} {self.sip_frequency} on {self.sip_date} into {self.target_scheme}"
+        
+        elif self.action_type == 'swp':
+            return f"SWP ₹{self.swp_amount:,.2f} {self.swp_frequency} on {self.swp_date} from {self.source_scheme}"
+        
+        return f"{self.get_action_type_display()} action"
+
+class ActionPlanComment(models.Model):
+    """Comments on action plans"""
+    action_plan = models.ForeignKey(
+        PortfolioActionPlan,
+        on_delete=models.CASCADE,
+        related_name='comments'
+    )
+    comment = models.TextField()
+    commented_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='action_plan_comments'
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+    is_internal = models.BooleanField(default=True, help_text="Internal comment (not visible to client)")
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Action Plan Comment'
+        verbose_name_plural = 'Action Plan Comments'
+    
+    def __str__(self):
+        return f"Comment by {self.commented_by.username} on {self.action_plan.plan_id}"
+
+class ActionPlanWorkflow(models.Model):
+    """Track workflow history for action plans"""
+    action_plan = models.ForeignKey(
+        PortfolioActionPlan,
+        on_delete=models.CASCADE,
+        related_name='workflow_history'
+    )
+    from_status = models.CharField(max_length=20)
+    to_status = models.CharField(max_length=20)
+    changed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='action_plan_workflow_changes'
+    )
+    changed_at = models.DateTimeField(default=timezone.now)
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-changed_at']
+        verbose_name = 'Action Plan Workflow'
+        verbose_name_plural = 'Action Plan Workflows'
+    
+    def __str__(self):
+        return f"{self.action_plan.plan_id}: {self.from_status} → {self.to_status}"

@@ -33,12 +33,12 @@ from datetime import datetime, timedelta
 from django.core.mail import send_mail
 from project import settings
 from .models import (
-    ClientPortfolio, ExecutionMetrics, ExecutionPlan, MutualFundScheme, PlanAction, PlanComment, PlanTemplate, PlanWorkflowHistory, ServiceRequestComment, ServiceRequestDocument, ServiceRequestType, User, Lead, Client, Task, ServiceRequest, BusinessTracker, 
+    ActionPlanWorkflow, ClientPortfolio, ExecutionMetrics, ExecutionPlan, MutualFundScheme, PlanAction, PlanComment, PlanTemplate, PlanWorkflowHistory, PortfolioAction, PortfolioActionPlan, ServiceRequestComment, ServiceRequestDocument, ServiceRequestType, User, Lead, Client, Task, ServiceRequest, BusinessTracker, 
     Team, ProductDiscussion, ClientProfile,
     Note, NoteList
 )
 from .forms import (
-    ClientSearchForm, LeadForm, OperationsTaskAssignmentForm, TaskForm, ServiceRequestForm,
+    ActionPlanApprovalForm, ClientSearchForm, LeadForm, OperationsTaskAssignmentForm, PortfolioActionPlanForm, RedeemActionForm, SIPActionForm, STPActionForm, SWPActionForm, SwitchActionForm, TaskForm, ServiceRequestForm,
     ClientProfileForm, NoteForm, NoteListForm, QuickNoteForm
 )
 import openpyxl
@@ -5595,73 +5595,104 @@ def analytics_dashboard(request):
 
 @login_required
 def create_plan(request):
-    """Create new execution plan - Step 1: Choose client"""
+    """Create new execution plan - Step 1: Choose client (Legacy Clients Only)"""
     if request.user.role not in ['rm', 'rm_head']:
         messages.error(request, "Only RMs and RM Heads can create execution plans.")
         return redirect('dashboard')
     
-    # Get clients accessible to this RM - now using ClientProfile
+    # Get ONLY legacy clients (from Client model)
     if request.user.role == 'rm':
-        # RM can see their mapped clients from portfolio data
-        client_profiles = ClientProfile.objects.filter(
-            mapped_rm=request.user
-        ).distinct().order_by('client_full_name')
-        
-        # Also include clients from legacy Client model
+        # RM can see their mapped legacy clients
         legacy_clients = Client.objects.filter(user=request.user).order_by('name')
     else:
-        # RM Head can see all clients under their team
+        # RM Head can see all legacy clients under their team
         team_rms = User.objects.filter(manager=request.user, role='rm')
-        client_profiles = ClientProfile.objects.filter(
-            mapped_rm__in=team_rms
-        ).distinct().order_by('client_full_name')
-        
         legacy_clients = Client.objects.filter(user__in=team_rms).order_by('name')
     
-    # Combine portfolio-based clients and legacy clients
-    all_clients = []
+    # Prepare client data for dropdown (only legacy clients)
+    clients_data = []
     
-    # Add clients from portfolio data
-    for profile in client_profiles:
-        portfolio_summary = ClientPortfolio.objects.filter(
-            client_profile=profile,
-            is_active=True
-        ).aggregate(
-            total_aum=Sum('total_value'),
-            scheme_count=Count('scheme_name', distinct=True)
-        )
-        
-        all_clients.append({
-            'id': f"profile_{profile.id}",
-            'name': profile.client_full_name,
-            'pan': profile.pan_number,
-            'type': 'profile',
-            'profile_id': profile.id,
-            'total_aum': portfolio_summary['total_aum'] or 0,
-            'scheme_count': portfolio_summary['scheme_count'] or 0,
-            'mapped_rm': profile.mapped_rm.get_full_name() if profile.mapped_rm else 'Not Mapped',
-            'has_portfolio': True
-        })
-    
-    # Add legacy clients
     for client in legacy_clients:
-        all_clients.append({
-            'id': f"legacy_{client.id}",
+        # Check if this client has a linked profile for additional data
+        linked_profile = None
+        try:
+            if hasattr(client, 'client_profile') and client.client_profile:
+                linked_profile = client.client_profile
+        except:
+            linked_profile = None
+        
+        # Get portfolio data if profile exists
+        portfolio_summary = {'total_aum': 0, 'scheme_count': 0}
+        if linked_profile:
+            try:
+                portfolio_data = ClientPortfolio.objects.filter(
+                    client_profile=linked_profile,
+                    is_active=True
+                ).aggregate(
+                    total_aum=Sum('total_value'),
+                    scheme_count=Count('scheme_name', distinct=True)
+                )
+                portfolio_summary = {
+                    'total_aum': portfolio_data['total_aum'] or 0,
+                    'scheme_count': portfolio_data['scheme_count'] or 0
+                }
+            except Exception as e:
+                logger.warning(f"Error getting portfolio data for client {client.id}: {e}")
+        
+        client_info = {
+            # Use legacy client ID (not profile ID) - IMPORTANT: Must be integer
+            'id': client.id,  # This should be an integer
             'name': client.name,
-            'pan': getattr(client, 'pan_number', 'N/A'),
-            'type': 'legacy',
+            'type': 'legacy',  # Always legacy since we're only showing Client objects
             'client_id': client.id,
-            'total_aum': client.aum,
-            'scheme_count': 0,  # Legacy clients might not have detailed portfolio
+            
+            # Basic client data from Client model
+            'contact_info': client.contact_info or '',
+            'aum': float(client.aum) if client.aum else 0.0,
+            'sip_amount': float(client.sip_amount) if client.sip_amount else 0.0,
+            'demat_count': client.demat_count or 0,
+            'created_at': client.created_at,
+            
+            # Profile data if linked profile exists
+            'pan': linked_profile.pan_number if linked_profile else 'N/A',
+            'profile_id': linked_profile.client_id if linked_profile else None,
+            'email': linked_profile.email if linked_profile else '',
+            'mobile': linked_profile.mobile_number if linked_profile else '',
+            'full_address': linked_profile.address_kyc if linked_profile else '',
+            
+            # Portfolio data
+            'total_aum': float(portfolio_summary['total_aum']),
+            'scheme_count': portfolio_summary['scheme_count'],
+            'has_portfolio': portfolio_summary['scheme_count'] > 0,
+            'has_profile': linked_profile is not None,
+            
+            # Assignment
             'mapped_rm': client.user.get_full_name() if client.user else 'Not Mapped',
-            'has_portfolio': False
-        })
+            'created_by': client.created_by.get_full_name() if client.created_by else 'Unknown',
+        }
+        
+        clients_data.append(client_info)
     
-    # Sort by AUM descending
-    all_clients.sort(key=lambda x: x['total_aum'], reverse=True)
+    # Sort by total AUM (portfolio + client AUM) descending
+    clients_data.sort(key=lambda x: (x['total_aum'] + x['aum']), reverse=True)
+    
+    # Calculate statistics for display
+    total_clients = len(clients_data)
+    clients_with_profiles = len([c for c in clients_data if c['has_profile']])
+    clients_with_portfolio = len([c for c in clients_data if c['has_portfolio']])
+    total_aum = sum(c['aum'] for c in clients_data)
+    total_portfolio_aum = sum(c['total_aum'] for c in clients_data)
+    average_aum = (total_aum + total_portfolio_aum) / total_clients if total_clients > 0 else 0
     
     context = {
-        'clients': all_clients,
+        'clients': clients_data,
+        'total_clients': total_clients,
+        'clients_with_profiles': clients_with_profiles,
+        'clients_with_portfolio': clients_with_portfolio,
+        'total_aum': total_aum,
+        'total_portfolio_aum': total_portfolio_aum,
+        'average_aum': average_aum,
+        'user_role': request.user.role,
     }
     
     return render(request, 'execution_plans/create_plan.html', context)
@@ -5796,65 +5827,159 @@ def client_portfolio_ajax(request, client_id):
 
 @login_required
 def create_plan_step2(request, client_id):
-    """Create execution plan - Step 2: Design plan"""
+    """Create execution plan - Step 2: Design plan with Portfolio Actions (Legacy Clients Only)"""
+    
+    # Debug logging
+    logger.info(f"create_plan_step2 called with client_id: {client_id} (type: {type(client_id)})")
+    
     try:
-        # Parse client_id and get client data
-        if client_id.startswith('profile_'):
-            profile_id = int(client_id.replace('profile_', ''))
-            client_profile = get_object_or_404(ClientProfile, id=profile_id)
-            
-            # Check access permission
-            if request.user.role == 'rm' and client_profile.mapped_rm != request.user:
-                messages.error(request, "Access denied")
+        # Ensure client_id is an integer (removing any prefixes if they exist)
+        if isinstance(client_id, str):
+            # Remove any legacy prefixes that might still be in URLs
+            if client_id.startswith('legacy_'):
+                client_id = client_id.replace('legacy_', '')
+            elif client_id.startswith('profile_'):
+                messages.error(request, "Profile clients are not supported. Please select a legacy client.")
                 return redirect('create_plan')
-            elif request.user.role == 'rm_head':
-                if client_profile.mapped_rm and client_profile.mapped_rm.manager != request.user:
-                    messages.error(request, "Access denied")
-                    return redirect('create_plan')
             
-            # Get client portfolio from new model
+            try:
+                client_id = int(client_id)
+            except ValueError:
+                messages.error(request, f"Invalid client ID format: {client_id}")
+                return redirect('create_plan')
+        
+        # Get the legacy client
+        client = get_object_or_404(Client, id=client_id)
+        logger.info(f"Found legacy client: {client.name} (ID: {client.id})")
+        
+        # Check access permissions for legacy client
+        if request.user.role == 'rm' and client.user != request.user:
+            messages.error(request, "Access denied - You can only create plans for your own clients")
+            return redirect('create_plan')
+        elif request.user.role == 'rm_head':
+            # Check if client belongs to team member
+            team_rms = User.objects.filter(manager=request.user, role='rm')
+            if client.user not in team_rms and client.user != request.user:
+                messages.error(request, "Access denied - Client not in your team")
+                return redirect('create_plan')
+        elif request.user.role not in ['business_head', 'business_head_ops', 'top_management']:
+            messages.error(request, "Access denied")
+            return redirect('create_plan')
+        
+        # Get linked client profile if exists
+        client_profile = None
+        try:
+            if hasattr(client, 'client_profile') and client.client_profile:
+                client_profile = client.client_profile
+                logger.info(f"Found linked profile for client {client.id}")
+        except Exception as e:
+            logger.warning(f"No linked profile for client {client_id}: {e}")
+        
+        # Get portfolio data from linked profile (if exists)
+        portfolio = ClientPortfolio.objects.none()  # Empty queryset
+        portfolio_data = []
+        total_portfolio_value = 0.0
+        asset_allocation = None
+        
+        if client_profile:
             portfolio = ClientPortfolio.objects.filter(
                 client_profile=client_profile,
                 is_active=True
             ).order_by('scheme_name')
             
-            client_data = {
-                'id': client_id,
-                'name': client_profile.client_full_name,
-                'pan': client_profile.pan_number,
-                'type': 'profile',
-                'profile_id': client_profile.id
+            logger.info(f"Found {portfolio.count()} portfolio holdings for client {client.id}")
+            
+            if portfolio.exists():
+                # Use safe utility function for asset allocation
+                from django.db.models import Sum
+                
+                # Get aggregated values and convert to float safely
+                aggregation = portfolio.aggregate(
+                    total_equity=Sum('equity_value'),
+                    total_debt=Sum('debt_value'),
+                    total_hybrid=Sum('hybrid_value'),
+                    total_liquid=Sum('liquid_ultra_short_value'),
+                    total_other=Sum('other_value'),
+                    total_arbitrage=Sum('arbitrage_value'),
+                    total_aum=Sum('total_value')
+                )
+                
+                # Convert all Decimal results to float safely
+                asset_allocation = {}
+                for key, value in aggregation.items():
+                    if value is not None:
+                        asset_allocation[key] = float(value)
+                    else:
+                        asset_allocation[key] = 0.0
+                
+                total_portfolio_value = asset_allocation.get('total_aum', 0.0)
+                
+                # Prepare portfolio data for action planning
+                for holding in portfolio:
+                    # Convert Decimal fields to float consistently
+                    total_value = float(holding.total_value) if holding.total_value else 0.0
+                    units = float(holding.units) if holding.units else 0.0
+                    equity_value = float(holding.equity_value) if holding.equity_value else 0.0
+                    debt_value = float(holding.debt_value) if holding.debt_value else 0.0
+                    hybrid_value = float(holding.hybrid_value) if holding.hybrid_value else 0.0
+                    liquid_value = float(holding.liquid_ultra_short_value) if holding.liquid_ultra_short_value else 0.0
+                    other_value = float(holding.other_value) if holding.other_value else 0.0
+                    arbitrage_value = float(holding.arbitrage_value) if holding.arbitrage_value else 0.0
+                    allocation_percentage = float(holding.allocation_percentage) if holding.allocation_percentage else 0.0
+                    cost_value = float(holding.cost_value) if holding.cost_value else 0.0
+                    nav_price = float(holding.nav_price) if holding.nav_price else 0.0
+                    
+                    # Calculate gain/loss safely
+                    gain_loss = None
+                    gain_loss_percentage = None
+                    if holding.gain_loss is not None:
+                        gain_loss = float(holding.gain_loss)
+                    if holding.gain_loss_percentage is not None:
+                        gain_loss_percentage = float(holding.gain_loss_percentage)
+                    
+                    portfolio_data.append({
+                        'id': holding.id,
+                        'scheme_name': holding.scheme_name,
+                        'isin_number': holding.isin_number or '',
+                        'current_value': total_value,
+                        'units': units,
+                        'equity_value': equity_value,
+                        'debt_value': debt_value,
+                        'hybrid_value': hybrid_value,
+                        'liquid_value': liquid_value,
+                        'other_value': other_value,
+                        'arbitrage_value': arbitrage_value,
+                        'allocation_percentage': allocation_percentage,
+                        'primary_asset_class': holding.primary_asset_class,
+                        'cost_value': cost_value,
+                        'gain_loss': gain_loss,
+                        'gain_loss_percentage': gain_loss_percentage,
+                        # Action capabilities based on current value
+                        'can_redeem': total_value > 0,
+                        'can_switch': total_value > 0,
+                        'can_stp': total_value >= 1000,  # Minimum for STP
+                        'can_swp': total_value >= 5000,  # Minimum for SWP
+                        # Additional info
+                        'nav_price': nav_price,
+                        'folio_number': holding.folio_number or '',
+                    })
+        
+        # If no portfolio data from profile, try to get any legacy portfolio data
+        if not portfolio_data:
+            logger.info(f"No portfolio data from profile, checking for any legacy data for client {client.id}")
+            # You can add logic here if you have any legacy portfolio data directly linked to Client model
+            # For now, we'll just note that no portfolio exists
+            client_aum = float(client.aum) if client.aum else 0.0
+            asset_allocation = {
+                'total_aum': client_aum,
+                'total_equity': 0.0,
+                'total_debt': 0.0,
+                'total_hybrid': 0.0,
+                'total_liquid': 0.0,
+                'total_other': 0.0,
+                'total_arbitrage': 0.0,
             }
-            
-        elif client_id.startswith('legacy_'):
-            legacy_id = int(client_id.replace('legacy_', ''))
-            client = get_object_or_404(Client, id=legacy_id)
-            
-            # Check access permission
-            if request.user.role == 'rm' and client.user != request.user:
-                messages.error(request, "Access denied")
-                return redirect('create_plan')
-            elif request.user.role == 'rm_head':
-                if client.user.manager != request.user:
-                    messages.error(request, "Access denied")
-                    return redirect('create_plan')
-            
-            # Get legacy portfolio if available
-            try:
-                portfolio = ClientPortfolio.objects.filter(client=client).select_related('scheme')
-            except:
-                portfolio = []
-            
-            client_data = {
-                'id': client_id,
-                'name': client.name,
-                'pan': getattr(client, 'pan_number', 'N/A'),
-                'type': 'legacy',
-                'client_id': client.id
-            }
-        else:
-            messages.error(request, "Invalid client ID")
-            return redirect('create_plan')
+            total_portfolio_value = 0.0
         
         # Get all available schemes for adding new investments
         all_schemes = MutualFundScheme.objects.filter(is_active=True).order_by('amc_name', 'scheme_name')
@@ -5864,39 +5989,286 @@ def create_plan_step2(request, client_id):
             Q(is_public=True) | Q(created_by=request.user)
         ).filter(is_active=True)
         
-        # Get asset allocation if portfolio exists
-        asset_allocation = None
-        if portfolio:
-            if hasattr(portfolio.first(), 'equity_value'):  # New portfolio model
-                asset_allocation = portfolio.aggregate(
-                    total_equity=Sum('equity_value'),
-                    total_debt=Sum('debt_value'),
-                    total_hybrid=Sum('hybrid_value'),
-                    total_liquid=Sum('liquid_ultra_short_value'),
-                    total_other=Sum('other_value'),
-                    total_arbitrage=Sum('arbitrage_value'),
-                    total_aum=Sum('total_value')
-                )
-            else:  # Legacy portfolio model
-                asset_allocation = {
-                    'total_aum': portfolio.aggregate(total=Sum('current_value'))['total'] or 0
-                }
+        # Portfolio Action Types with descriptions
+        portfolio_action_types = [
+            {
+                'type': 'redeem',
+                'name': 'Redeem',
+                'icon': 'fas fa-minus-circle',
+                'color': 'danger',
+                'description': 'Withdraw units or amount from mutual fund schemes',
+                'options': [
+                    {'value': 'all_units', 'label': 'All Units'},
+                    {'value': 'specific_amount', 'label': 'Specific Amount'},
+                    {'value': 'specific_units', 'label': 'Specific Units'},
+                ]
+            },
+            {
+                'type': 'switch',
+                'name': 'Switch',
+                'icon': 'fas fa-exchange-alt',
+                'color': 'primary',
+                'description': 'Switch investment from one scheme to another',
+                'options': [
+                    {'value': 'all_units', 'label': 'All Units'},
+                    {'value': 'specific_amount', 'label': 'Specific Amount'},
+                    {'value': 'specific_units', 'label': 'Specific Units'},
+                ]
+            },
+            {
+                'type': 'stp',
+                'name': 'STP',
+                'icon': 'fas fa-arrow-right',
+                'color': 'info',
+                'description': 'Systematic Transfer Plan - Regular transfer between schemes',
+                'frequencies': [
+                    {'value': 'monthly', 'label': 'Monthly'},
+                    {'value': 'weekly', 'label': 'Weekly'},
+                ]
+            },
+            {
+                'type': 'sip',
+                'name': 'SIP',
+                'icon': 'fas fa-plus-circle',
+                'color': 'success',
+                'description': 'Systematic Investment Plan - Regular investments',
+                'frequencies': [
+                    {'value': 'daily', 'label': 'Daily'},
+                    {'value': 'weekly', 'label': 'Weekly'},
+                    {'value': 'fortnightly', 'label': 'Fortnightly'},
+                    {'value': 'monthly', 'label': 'Monthly'},
+                ]
+            },
+            {
+                'type': 'swp',
+                'name': 'SWP',
+                'icon': 'fas fa-arrow-down',
+                'color': 'warning',
+                'description': 'Systematic Withdrawal Plan - Regular withdrawals',
+                'frequencies': [
+                    {'value': 'monthly', 'label': 'Monthly'},
+                    {'value': 'weekly', 'label': 'Weekly'},
+                ]
+            }
+        ]
+        
+        # Get existing execution plans for this legacy client
+        existing_plans = ExecutionPlan.objects.filter(
+            client=client
+        ).order_by('-created_at')[:5]
+        
+        # Get existing portfolio action plans if client has portfolio
+        existing_action_plans = []
+        if client_profile and portfolio.exists():
+            existing_action_plans = PortfolioActionPlan.objects.filter(
+                client_portfolio__client_profile=client_profile
+            ).order_by('-created_at')[:5]
+        
+        # Summary statistics for UI
+        client_aum = float(client.aum) if client.aum else 0.0
+        client_sip = float(client.sip_amount) if client.sip_amount else 0.0
+        client_demat = int(client.demat_count) if client.demat_count else 0
+        
+        portfolio_summary = {
+            'total_schemes': len(portfolio_data),
+            'total_value': total_portfolio_value,
+            'average_scheme_value': total_portfolio_value / len(portfolio_data) if portfolio_data else 0.0,
+            'redeemable_schemes': sum(1 for p in portfolio_data if p.get('can_redeem', False)),
+            'switchable_schemes': sum(1 for p in portfolio_data if p.get('can_switch', False)),
+            'stp_eligible_schemes': sum(1 for p in portfolio_data if p.get('can_stp', False)),
+            'swp_eligible_schemes': sum(1 for p in portfolio_data if p.get('can_swp', False)),
+            # Client-specific data
+            'client_aum': client_aum,
+            'client_sip': client_sip,
+            'client_demat': client_demat,
+            'combined_aum': total_portfolio_value + client_aum,  # Both are now floats
+        }
+        
+        # Scheme categories for SIP (available schemes not in current portfolio)
+        current_scheme_names = [p['scheme_name'] for p in portfolio_data]
+        available_sip_schemes = all_schemes.exclude(scheme_name__in=current_scheme_names)
+        
+        # Prepare client data for template
+        client_data = {
+            'id': client.id,  # Use the integer client ID
+            'name': client.name,
+            'pan': client_profile.pan_number if client_profile else 'N/A',
+            'email': client_profile.email if client_profile else '',
+            'mobile': client_profile.mobile_number if client_profile else '',
+            'type': 'legacy',
+            'client_id': client.id,
+            'profile_id': client_profile.id if client_profile else None,
+            'contact_info': client.contact_info or '',
+            'has_profile': client_profile is not None,
+            'has_portfolio': len(portfolio_data) > 0,
+            'mapped_rm': client.user.get_full_name() if client.user else 'Not Mapped',
+            'created_by': client.created_by.get_full_name() if client.created_by else 'Unknown',
+        }
         
         context = {
             'client': client_data,
+            'client_object': client,  # Pass the actual client object for forms
+            'client_profile': client_profile,
             'portfolio': portfolio,
+            'portfolio_data': portfolio_data,
+            'portfolio_summary': portfolio_summary,
             'all_schemes': all_schemes,
+            'available_sip_schemes': available_sip_schemes,
             'templates': templates,
-            'action_types': PlanAction.ACTION_TYPES,
+            'action_types': PlanAction.ACTION_TYPES if 'PlanAction' in globals() else [],
+            'portfolio_action_types': portfolio_action_types,
             'asset_allocation': asset_allocation,
+            'existing_plans': existing_plans,
+            'existing_action_plans': existing_action_plans,
+            'total_portfolio_value': total_portfolio_value,
+            'has_portfolio_data': len(portfolio_data) > 0,
         }
+        
+        # Handle POST request for creating execution plan
+        if request.method == 'POST':
+            plan_name = request.POST.get('plan_name', '').strip()
+            description = request.POST.get('description', '').strip()
+            
+            if not plan_name:
+                messages.error(request, "Plan name is required.")
+                return render(request, 'execution_plans/create_plan_step2.html', context)
+            
+            try:
+                # Create execution plan linked to legacy client
+                execution_plan = ExecutionPlan.objects.create(
+                    client=client,  # Use the legacy Client object
+                    plan_name=plan_name,
+                    description=description,
+                    created_by=request.user,
+                    status='draft'
+                )
+                
+                logger.info(f"Created execution plan {execution_plan.plan_id} for client {client.id}")
+                messages.success(request, f"Execution plan '{plan_name}' created successfully!")
+                
+                # Redirect to plan detail or edit page
+                return redirect('execution_plan_detail', plan_id=execution_plan.plan_id)
+                
+            except Exception as e:
+                logger.error(f"Error creating execution plan for client {client_id}: {e}")
+                messages.error(request, f"Error creating execution plan: {str(e)}")
         
         return render(request, 'execution_plans/create_plan_step2.html', context)
         
+    except Client.DoesNotExist:
+        logger.error(f"Client with ID {client_id} does not exist")
+        messages.error(request, f"Client with ID {client_id} not found.")
+        return redirect('create_plan')
+        
     except Exception as e:
-        messages.error(request, f"Error: {str(e)}")
+        logger.error(f"Unexpected error in create_plan_step2 for client {client_id}: {e}")
+        messages.error(request, f"An unexpected error occurred: {str(e)}")
         return redirect('create_plan')
 
+# Add this new view to handle portfolio action creation from the execution plan interface
+@login_required 
+@require_http_methods(["POST"])
+def create_portfolio_action_from_plan(request, client_id):
+    """Create portfolio action from execution plan interface"""
+    try:
+        data = json.loads(request.body)
+        action_type = data.get('action_type')
+        portfolio_id = data.get('portfolio_id')
+        
+        # Get the portfolio
+        portfolio = get_object_or_404(ClientPortfolio, id=portfolio_id)
+        
+        # Check permissions
+        if not can_create_action_plan(request.user, portfolio):
+            return JsonResponse({'error': 'Access denied'}, status=403)
+        
+        # Create action plan
+        plan_name = f"{action_type.upper()} - {portfolio.scheme_name}"
+        action_plan = PortfolioActionPlan.objects.create(
+            client_portfolio=portfolio,
+            plan_name=plan_name,
+            description=f"{action_type.title()} action for {portfolio.client_name}",
+            created_by=request.user
+        )
+        
+        # Create the action based on type
+        action_data = {
+            'action_plan': action_plan,
+            'action_type': action_type,
+            'source_scheme': portfolio.scheme_name,
+            'priority': 1
+        }
+        
+        # Handle different action types
+        if action_type == 'redeem':
+            action_data.update({
+                'redeem_by': data.get('redeem_by', 'all_units'),
+                'redeem_amount': data.get('redeem_amount') if data.get('redeem_by') == 'specific_amount' else None,
+                'redeem_units': data.get('redeem_units') if data.get('redeem_by') == 'specific_units' else None,
+            })
+        elif action_type == 'switch':
+            action_data.update({
+                'target_scheme': data.get('target_scheme'),
+                'switch_by': data.get('switch_by', 'all_units'),
+                'switch_amount': data.get('switch_amount') if data.get('switch_by') == 'specific_amount' else None,
+                'switch_units': data.get('switch_units') if data.get('switch_by') == 'specific_units' else None,
+            })
+        elif action_type == 'stp':
+            action_data.update({
+                'target_scheme': data.get('target_scheme'),
+                'stp_amount': data.get('stp_amount'),
+                'stp_frequency': data.get('stp_frequency', 'monthly'),
+            })
+        elif action_type == 'sip':
+            action_data.update({
+                'target_scheme': data.get('target_scheme'),
+                'sip_amount': data.get('sip_amount'),
+                'sip_frequency': data.get('sip_frequency', 'monthly'),
+                'sip_date': data.get('sip_date'),
+            })
+        elif action_type == 'swp':
+            action_data.update({
+                'swp_amount': data.get('swp_amount'),
+                'swp_frequency': data.get('swp_frequency', 'monthly'),
+                'swp_date': data.get('swp_date'),
+            })
+        
+        # Create the action
+        action = PortfolioAction.objects.create(**action_data)
+        
+        # Create workflow entry
+        ActionPlanWorkflow.objects.create(
+            action_plan=action_plan,
+            from_status='',
+            to_status='draft',
+            changed_by=request.user,
+            notes=f'{action_type.title()} action plan created from execution plan interface'
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'{action_type.title()} action created successfully',
+            'action_plan_id': action_plan.id,
+            'action_summary': action.get_action_summary()
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+# Helper function (add to your existing helper functions)
+def can_create_action_plan(user, portfolio):
+    """Check if user can create action plans for this portfolio"""
+    if user.role in ['top_management', 'business_head']:
+        return True
+    elif user.role == 'rm_head':
+        # RM Head can create plans for portfolios of their team members
+        if portfolio.mapped_rm and portfolio.mapped_rm.manager == user:
+            return True
+    elif user.role == 'rm':
+        # RM can create plans for their own portfolios
+        if portfolio.mapped_rm == user:
+            return True
+    return False
 
 @login_required
 @require_http_methods(["POST"])
@@ -7586,3 +7958,384 @@ class PortfolioUploadForm(forms.ModelForm):
             raise forms.ValidationError("File size cannot exceed 10MB")
         
         return file
+    
+    
+@login_required
+def create_action_plan(request, portfolio_id):
+    """Create new action plan for a portfolio"""
+    portfolio = get_object_or_404(ClientPortfolio, id=portfolio_id)
+    
+    
+    if request.method == 'POST':
+        form = PortfolioActionPlanForm(request.POST)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    # Create action plan
+                    action_plan = form.save(commit=False)
+                    action_plan.client_portfolio = portfolio
+                    action_plan.created_by = request.user
+                    action_plan.save()
+                    
+                    # Create workflow entry
+                    ActionPlanWorkflow.objects.create(
+                        action_plan=action_plan,
+                        from_status='',
+                        to_status='draft',
+                        changed_by=request.user,
+                        notes='Action plan created'
+                    )
+                    
+                    messages.success(
+                        request, 
+                        f"Action plan '{action_plan.plan_name}' created successfully"
+                    )
+                    return redirect('action_plan_detail', plan_id=action_plan.id)
+                    
+            except Exception as e:
+                messages.error(request, f"Error creating action plan: {str(e)}")
+    else:
+        form = PortfolioActionPlanForm()
+    
+    context = {
+        'form': form,
+        'portfolio': portfolio,
+    }
+    
+    return render(request, 'portfolio/create_action_plan.html', context)
+
+@login_required
+def action_plan_detail(request, plan_id):
+    """View action plan details"""
+    action_plan = get_object_or_404(PortfolioActionPlan, id=plan_id)
+
+    
+    # Get actions for this plan
+    actions = action_plan.actions.all().order_by('priority', 'created_at')
+    
+    # Get comments
+    comments = action_plan.comments.all().order_by('-created_at')
+    
+    # Get workflow history
+    workflow_history = action_plan.workflow_history.all().order_by('-changed_at')
+    
+    # Check permissions
+    can_edit = action_plan.can_be_edited() and action_plan.created_by == request.user
+    can_approve = (action_plan.can_be_approved() and 
+                   request.user.role in ['rm_head', 'business_head', 'top_management'] and
+                   action_plan.created_by != request.user)
+    
+    context = {
+        'action_plan': action_plan,
+        'actions': actions,
+        'comments': comments,
+        'workflow_history': workflow_history,
+        'can_edit': can_edit,
+        'can_approve': can_approve,
+    }
+    
+    return render(request, 'portfolio/action_plan_detail.html', context)
+
+@login_required
+def add_action_to_plan(request, plan_id):
+    """Add action to existing action plan"""
+    action_plan = get_object_or_404(PortfolioActionPlan, id=plan_id)
+    
+    # Check if user can edit this plan
+    if not (action_plan.can_be_edited() and action_plan.created_by == request.user):
+        messages.error(request, "Cannot add actions to this plan")
+        return redirect('action_plan_detail', plan_id=plan_id)
+    
+    action_type = request.GET.get('type', 'redeem')
+    
+    if request.method == 'POST':
+        try:
+            action_data = {
+                'action_plan': action_plan,
+                'action_type': action_type,
+                'source_scheme': action_plan.client_portfolio.scheme_name,
+                'priority': action_plan.actions.count() + 1
+            }
+            
+            if action_type == 'redeem':
+                form = RedeemActionForm(request.POST)
+                if form.is_valid():
+                    action_data.update({
+                        'redeem_by': form.cleaned_data['redeem_by'],
+                        'redeem_amount': form.cleaned_data.get('redeem_amount'),
+                        'redeem_units': form.cleaned_data.get('redeem_units'),
+                    })
+                else:
+                    raise ValueError("Invalid redeem form data")
+            
+            elif action_type == 'switch':
+                form = SwitchActionForm(request.POST)
+                if form.is_valid():
+                    action_data.update({
+                        'target_scheme': form.cleaned_data['target_scheme'],
+                        'switch_by': form.cleaned_data['switch_by'],
+                        'switch_amount': form.cleaned_data.get('switch_amount'),
+                        'switch_units': form.cleaned_data.get('switch_units'),
+                    })
+                else:
+                    raise ValueError("Invalid switch form data")
+            
+            elif action_type == 'stp':
+                form = STPActionForm(request.POST)
+                if form.is_valid():
+                    action_data.update({
+                        'target_scheme': form.cleaned_data['target_scheme'],
+                        'stp_amount': form.cleaned_data['stp_amount'],
+                        'stp_frequency': form.cleaned_data['stp_frequency'],
+                    })
+                else:
+                    raise ValueError("Invalid STP form data")
+            
+            elif action_type == 'sip':
+                form = SIPActionForm(request.POST)
+                if form.is_valid():
+                    action_data.update({
+                        'target_scheme': form.cleaned_data['target_scheme'],
+                        'sip_amount': form.cleaned_data['sip_amount'],
+                        'sip_frequency': form.cleaned_data['sip_frequency'],
+                        'sip_date': form.cleaned_data['sip_date'],
+                    })
+                else:
+                    raise ValueError("Invalid SIP form data")
+            
+            elif action_type == 'swp':
+                form = SWPActionForm(request.POST)
+                if form.is_valid():
+                    action_data.update({
+                        'swp_amount': form.cleaned_data['swp_amount'],
+                        'swp_frequency': form.cleaned_data['swp_frequency'],
+                        'swp_date': form.cleaned_data['swp_date'],
+                    })
+                else:
+                    raise ValueError("Invalid SWP form data")
+            
+            # Create the action
+            action = PortfolioAction.objects.create(**action_data)
+            
+            messages.success(request, f"{action.get_action_type_display()} action added successfully")
+            return redirect('action_plan_detail', plan_id=plan_id)
+            
+        except Exception as e:
+            messages.error(request, f"Error adding action: {str(e)}")
+    
+    # Prepare form based on action type
+    if action_type == 'redeem':
+        form = RedeemActionForm()
+    elif action_type == 'switch':
+        form = SwitchActionForm()
+    elif action_type == 'stp':
+        form = STPActionForm()
+    elif action_type == 'sip':
+        form = SIPActionForm()
+    elif action_type == 'swp':
+        form = SWPActionForm()
+    else:
+        messages.error(request, "Invalid action type")
+        return redirect('action_plan_detail', plan_id=plan_id)
+    
+    context = {
+        'action_plan': action_plan,
+        'form': form,
+        'action_type': action_type,
+        'action_type_display': dict(PortfolioAction.ACTION_TYPE_CHOICES)[action_type],
+    }
+    
+    return render(request, 'portfolio/add_action.html', context)
+
+@login_required
+def quick_action(request, portfolio_id, action_type):
+    """Quick action creation from portfolio detail page"""
+    portfolio = get_object_or_404(ClientPortfolio, id=portfolio_id)
+    
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            # Create action plan
+            action_plan = PortfolioActionPlan.objects.create(
+                client_portfolio=portfolio,
+                plan_name=f"Quick {action_type.upper()} - {portfolio.scheme_name}",
+                description=f"Quick {action_type} action for {portfolio.client_name}",
+                created_by=request.user
+            )
+            
+            # Create action based on type
+            action_data = {
+                'action_plan': action_plan,
+                'action_type': action_type,
+                'source_scheme': portfolio.scheme_name,
+                'priority': 1
+            }
+            
+            if action_type == 'redeem':
+                action_data.update({
+                    'redeem_by': data.get('redeem_by'),
+                    'redeem_amount': data.get('redeem_amount'),
+                    'redeem_units': data.get('redeem_units'),
+                })
+            elif action_type == 'switch':
+                action_data.update({
+                    'target_scheme': data.get('target_scheme'),
+                    'switch_by': data.get('switch_by'),
+                    'switch_amount': data.get('switch_amount'),
+                    'switch_units': data.get('switch_units'),
+                })
+            # Add other action types as needed
+            
+            action = PortfolioAction.objects.create(**action_data)
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'{action_type.title()} action created successfully',
+                'action_plan_id': action_plan.id
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+@login_required
+@require_http_methods(["POST"])
+def submit_action_plan(request, plan_id):
+    """Submit action plan for approval"""
+    action_plan = get_object_or_404(PortfolioActionPlan, id=plan_id)
+    
+    if action_plan.created_by != request.user:
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    if not action_plan.actions.exists():
+        return JsonResponse({'error': 'Cannot submit plan without actions'}, status=400)
+    
+    try:
+        if action_plan.submit_for_approval():
+            # Create workflow entry
+            ActionPlanWorkflow.objects.create(
+                action_plan=action_plan,
+                from_status='draft',
+                to_status='pending_approval',
+                changed_by=request.user,
+                notes='Plan submitted for approval'
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Action plan submitted for approval successfully'
+            })
+        else:
+            return JsonResponse({'error': 'Cannot submit this plan'}, status=400)
+            
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+def approve_action_plan(request, plan_id):
+    """Approve or reject action plan"""
+    action_plan = get_object_or_404(PortfolioActionPlan, id=plan_id)
+    
+    # Check permission
+    if not (request.user.role in ['rm_head', 'business_head', 'top_management'] and
+            action_plan.created_by != request.user):
+        messages.error(request, "Access denied")
+        return redirect('action_plan_detail', plan_id=plan_id)
+    
+    if request.method == 'POST':
+        form = ActionPlanApprovalForm(request.POST)
+        if form.is_valid():
+            action = form.cleaned_data['action']
+            notes = form.cleaned_data['notes']
+            
+            try:
+                if action == 'approve':
+                    if action_plan.approve(request.user, notes):
+                        # Create workflow entry
+                        ActionPlanWorkflow.objects.create(
+                            action_plan=action_plan,
+                            from_status='pending_approval',
+                            to_status='approved',
+                            changed_by=request.user,
+                            notes=notes or 'Plan approved'
+                        )
+                        messages.success(request, "Action plan approved successfully")
+                    else:
+                        messages.error(request, "Cannot approve this plan")
+                        
+                elif action == 'reject':
+                    if action_plan.reject(request.user, notes):
+                        # Create workflow entry
+                        ActionPlanWorkflow.objects.create(
+                            action_plan=action_plan,
+                            from_status='pending_approval',
+                            to_status='rejected',
+                            changed_by=request.user,
+                            notes=notes or 'Plan rejected'
+                        )
+                        messages.success(request, "Action plan rejected")
+                    else:
+                        messages.error(request, "Cannot reject this plan")
+                        
+                return redirect('action_plan_detail', plan_id=plan_id)
+                
+            except Exception as e:
+                messages.error(request, f"Error processing approval: {str(e)}")
+    else:
+        form = ActionPlanApprovalForm()
+    
+    context = {
+        'action_plan': action_plan,
+        'form': form,
+    }
+    
+    return render(request, 'portfolio/approve_action_plan.html', context)
+
+@login_required
+def action_plan_list(request):
+    """List all action plans with filtering"""
+    # Get accessible action plans based on user role
+    if request.user.role in ['top_management', 'business_head']:
+        action_plans = PortfolioActionPlan.objects.all()
+    elif request.user.role == 'rm_head':
+        team_members = request.user.subordinates.all()
+        action_plans = PortfolioActionPlan.objects.filter(
+            created_by__in=list(team_members) + [request.user]
+        )
+    else:
+        action_plans = PortfolioActionPlan.objects.filter(created_by=request.user)
+    
+    # Filtering
+    status_filter = request.GET.get('status')
+    if status_filter:
+        action_plans = action_plans.filter(status=status_filter)
+    
+    search_query = request.GET.get('search')
+    if search_query:
+        action_plans = action_plans.filter(
+            Q(plan_name__icontains=search_query) |
+            Q(client_portfolio__client_name__icontains=search_query) |
+            Q(client_portfolio__scheme_name__icontains=search_query)
+        )
+    
+    # Sorting
+    sort_by = request.GET.get('sort', '-created_at')
+    if sort_by in ['-created_at', 'created_at', 'plan_name', '-plan_name', 'status']:
+        action_plans = action_plans.order_by(sort_by)
+    
+    # Pagination
+    paginator = Paginator(action_plans.select_related('client_portfolio', 'created_by'), 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'action_plans': page_obj,
+        'status_filter': status_filter,
+        'search_query': search_query,
+        'sort_by': sort_by,
+        'status_choices': PortfolioActionPlan.STATUS_CHOICES,
+    }
+    
+    return render(request, 'portfolio/action_plan_list.html', context)

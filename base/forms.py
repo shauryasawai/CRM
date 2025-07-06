@@ -4174,3 +4174,432 @@ class PortfolioUploadForm(forms.ModelForm):
         for field_name, field in self.fields.items():
             if field_name != 'file':
                 field.widget.attrs.update({'class': 'form-control'})
+                
+                
+# forms.py - Add these forms to your existing forms.py
+
+from django import forms
+from django.core.exceptions import ValidationError
+from .models import PortfolioActionPlan, PortfolioAction, ClientPortfolio
+from decimal import Decimal
+
+class PortfolioActionPlanForm(forms.ModelForm):
+    """Form for creating portfolio action plans"""
+    
+    class Meta:
+        model = PortfolioActionPlan
+        fields = ['plan_name', 'description', 'notes']
+        widgets = {
+            'plan_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter a name for this action plan'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Optional description of the action plan'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Any additional notes or instructions'
+            })
+        }
+
+class PortfolioActionForm(forms.ModelForm):
+    """Dynamic form for portfolio actions"""
+    
+    class Meta:
+        model = PortfolioAction
+        fields = [
+            'action_type', 'priority', 'source_scheme', 'target_scheme',
+            'redeem_by', 'redeem_amount', 'redeem_units',
+            'switch_by', 'switch_amount', 'switch_units',
+            'stp_amount', 'stp_frequency',
+            'sip_amount', 'sip_frequency', 'sip_date',
+            'swp_amount', 'swp_frequency', 'swp_date'
+        ]
+        widgets = {
+            'action_type': forms.Select(attrs={'class': 'form-control action-type-selector'}),
+            'priority': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'source_scheme': forms.TextInput(attrs={'class': 'form-control', 'readonly': True}),
+            'target_scheme': forms.TextInput(attrs={'class': 'form-control'}),
+            
+            # Redeem fields
+            'redeem_by': forms.Select(attrs={'class': 'form-control redeem-method'}),
+            'redeem_amount': forms.NumberInput(attrs={
+                'class': 'form-control', 
+                'step': '0.01', 
+                'placeholder': 'Enter amount'
+            }),
+            'redeem_units': forms.NumberInput(attrs={
+                'class': 'form-control', 
+                'step': '0.0001', 
+                'placeholder': 'Enter units'
+            }),
+            
+            # Switch fields
+            'switch_by': forms.Select(attrs={'class': 'form-control switch-method'}),
+            'switch_amount': forms.NumberInput(attrs={
+                'class': 'form-control', 
+                'step': '0.01', 
+                'placeholder': 'Enter amount'
+            }),
+            'switch_units': forms.NumberInput(attrs={
+                'class': 'form-control', 
+                'step': '0.0001', 
+                'placeholder': 'Enter units'
+            }),
+            
+            # STP fields
+            'stp_amount': forms.NumberInput(attrs={
+                'class': 'form-control', 
+                'step': '0.01', 
+                'placeholder': 'Enter transfer amount'
+            }),
+            'stp_frequency': forms.Select(attrs={'class': 'form-control'}),
+            
+            # SIP fields
+            'sip_amount': forms.NumberInput(attrs={
+                'class': 'form-control', 
+                'step': '0.01', 
+                'placeholder': 'Enter SIP amount'
+            }),
+            'sip_frequency': forms.Select(attrs={'class': 'form-control'}),
+            'sip_date': forms.NumberInput(attrs={
+                'class': 'form-control', 
+                'min': 1, 
+                'max': 31, 
+                'placeholder': 'Date (1-31)'
+            }),
+            
+            # SWP fields
+            'swp_amount': forms.NumberInput(attrs={
+                'class': 'form-control', 
+                'step': '0.01', 
+                'placeholder': 'Enter withdrawal amount'
+            }),
+            'swp_frequency': forms.Select(attrs={'class': 'form-control'}),
+            'swp_date': forms.NumberInput(attrs={
+                'class': 'form-control', 
+                'min': 1, 
+                'max': 31, 
+                'placeholder': 'Date (1-31)'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        portfolio = kwargs.pop('portfolio', None)
+        super().__init__(*args, **kwargs)
+        
+        # Set source scheme from portfolio
+        if portfolio:
+            self.fields['source_scheme'].initial = portfolio.scheme_name
+        
+        # Limit target scheme choices to active mutual fund schemes
+        try:
+            from .models import MutualFundScheme
+            active_schemes = MutualFundScheme.objects.filter(is_active=True)
+            scheme_choices = [(scheme.scheme_name, scheme.scheme_name) for scheme in active_schemes]
+            self.fields['target_scheme'].widget = forms.Select(
+                choices=[('', 'Select Target Scheme')] + scheme_choices,
+                attrs={'class': 'form-control'}
+            )
+        except:
+            pass  # If MutualFundScheme model doesn't exist, keep as text input
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        action_type = cleaned_data.get('action_type')
+        
+        if action_type == 'redeem':
+            redeem_by = cleaned_data.get('redeem_by')
+            if not redeem_by:
+                raise ValidationError("Please select a redemption method")
+            
+            if redeem_by == 'specific_amount':
+                if not cleaned_data.get('redeem_amount'):
+                    raise ValidationError("Please enter the amount to redeem")
+            elif redeem_by == 'specific_units':
+                if not cleaned_data.get('redeem_units'):
+                    raise ValidationError("Please enter the units to redeem")
+        
+        elif action_type == 'switch':
+            if not cleaned_data.get('target_scheme'):
+                raise ValidationError("Please select a target scheme for switching")
+            
+            switch_by = cleaned_data.get('switch_by')
+            if not switch_by:
+                raise ValidationError("Please select a switching method")
+            
+            if switch_by == 'specific_amount':
+                if not cleaned_data.get('switch_amount'):
+                    raise ValidationError("Please enter the amount to switch")
+            elif switch_by == 'specific_units':
+                if not cleaned_data.get('switch_units'):
+                    raise ValidationError("Please enter the units to switch")
+        
+        elif action_type == 'stp':
+            if not cleaned_data.get('target_scheme'):
+                raise ValidationError("Please select a target scheme for STP")
+            if not cleaned_data.get('stp_amount'):
+                raise ValidationError("Please enter the STP amount")
+            if not cleaned_data.get('stp_frequency'):
+                raise ValidationError("Please select STP frequency")
+        
+        elif action_type == 'sip':
+            if not cleaned_data.get('target_scheme'):
+                raise ValidationError("Please select a target scheme for SIP")
+            if not cleaned_data.get('sip_amount'):
+                raise ValidationError("Please enter the SIP amount")
+            if not cleaned_data.get('sip_frequency'):
+                raise ValidationError("Please select SIP frequency")
+            if not cleaned_data.get('sip_date'):
+                raise ValidationError("Please enter the SIP date")
+        
+        elif action_type == 'swp':
+            if not cleaned_data.get('swp_amount'):
+                raise ValidationError("Please enter the SWP amount")
+            if not cleaned_data.get('swp_frequency'):
+                raise ValidationError("Please select SWP frequency")
+            if not cleaned_data.get('swp_date'):
+                raise ValidationError("Please enter the SWP date")
+        
+        return cleaned_data
+
+class RedeemActionForm(forms.Form):
+    """Simplified form specifically for redeem actions"""
+    
+    REDEEM_BY_CHOICES = [
+        ('all_units', 'All Units'),
+        ('specific_amount', 'Specific Amount'),
+        ('specific_units', 'Specific Units'),
+    ]
+    
+    redeem_by = forms.ChoiceField(
+        choices=REDEEM_BY_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        label='Redeem By'
+    )
+    
+    redeem_amount = forms.DecimalField(
+        required=False,
+        min_value=Decimal('0.01'),
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'placeholder': 'Enter amount to redeem'
+        }),
+        label='Amount (₹)'
+    )
+    
+    redeem_units = forms.DecimalField(
+        required=False,
+        min_value=Decimal('0.0001'),
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.0001',
+            'placeholder': 'Enter units to redeem'
+        }),
+        label='Units'
+    )
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        redeem_by = cleaned_data.get('redeem_by')
+        
+        if redeem_by == 'specific_amount' and not cleaned_data.get('redeem_amount'):
+            raise ValidationError("Amount is required when redeeming by specific amount")
+        elif redeem_by == 'specific_units' and not cleaned_data.get('redeem_units'):
+            raise ValidationError("Units are required when redeeming by specific units")
+        
+        return cleaned_data
+
+class SwitchActionForm(forms.Form):
+    """Simplified form for switch actions"""
+    
+    SWITCH_BY_CHOICES = [
+        ('all_units', 'All Units'),
+        ('specific_amount', 'Specific Amount'),
+        ('specific_units', 'Specific Units'),
+    ]
+    
+    target_scheme = forms.CharField(
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter target scheme name'
+        }),
+        label='Target Scheme'
+    )
+    
+    switch_by = forms.ChoiceField(
+        choices=SWITCH_BY_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        label='Switch By'
+    )
+    
+    switch_amount = forms.DecimalField(
+        required=False,
+        min_value=Decimal('0.01'),
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'placeholder': 'Enter amount to switch'
+        }),
+        label='Amount (₹)'
+    )
+    
+    switch_units = forms.DecimalField(
+        required=False,
+        min_value=Decimal('0.0001'),
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.0001',
+            'placeholder': 'Enter units to switch'
+        }),
+        label='Units'
+    )
+
+class STPActionForm(forms.Form):
+    """Form for STP (Systematic Transfer Plan) actions"""
+    
+    FREQUENCY_CHOICES = [
+        ('monthly', 'Monthly'),
+        ('weekly', 'Weekly'),
+    ]
+    
+    target_scheme = forms.CharField(
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter target scheme name'
+        }),
+        label='Target Scheme'
+    )
+    
+    stp_amount = forms.DecimalField(
+        min_value=Decimal('0.01'),
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'placeholder': 'Enter transfer amount'
+        }),
+        label='Transfer Amount (₹)'
+    )
+    
+    stp_frequency = forms.ChoiceField(
+        choices=FREQUENCY_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Frequency'
+    )
+
+class SIPActionForm(forms.Form):
+    """Form for SIP (Systematic Investment Plan) actions"""
+    
+    FREQUENCY_CHOICES = [
+        ('daily', 'Daily'),
+        ('weekly', 'Weekly'),
+        ('fortnightly', 'Fortnightly'),
+        ('monthly', 'Monthly'),
+    ]
+    
+    target_scheme = forms.CharField(
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter scheme name for SIP'
+        }),
+        label='Scheme Name'
+    )
+    
+    sip_amount = forms.DecimalField(
+        min_value=Decimal('0.01'),
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'placeholder': 'Enter SIP amount'
+        }),
+        label='SIP Amount (₹)'
+    )
+    
+    sip_frequency = forms.ChoiceField(
+        choices=FREQUENCY_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='SIP Frequency'
+    )
+    
+    sip_date = forms.IntegerField(
+        min_value=1,
+        max_value=31,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Date (1-31)'
+        }),
+        label='SIP Date'
+    )
+
+class SWPActionForm(forms.Form):
+    """Form for SWP (Systematic Withdrawal Plan) actions"""
+    
+    FREQUENCY_CHOICES = [
+        ('monthly', 'Monthly'),
+        ('weekly', 'Weekly'),
+    ]
+    
+    swp_amount = forms.DecimalField(
+        min_value=Decimal('0.01'),
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'placeholder': 'Enter withdrawal amount'
+        }),
+        label='SWP Amount (₹)'
+    )
+    
+    swp_frequency = forms.ChoiceField(
+        choices=FREQUENCY_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='SWP Frequency'
+    )
+    
+    swp_date = forms.IntegerField(
+        min_value=1,
+        max_value=31,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Date (1-31)'
+        }),
+        label='SWP Date'
+    )
+
+class ActionPlanApprovalForm(forms.Form):
+    """Form for approving/rejecting action plans"""
+    
+    ACTION_CHOICES = [
+        ('approve', 'Approve'),
+        ('reject', 'Reject'),
+    ]
+    
+    action = forms.ChoiceField(
+        choices=ACTION_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'form-check-input'}),
+        label='Action'
+    )
+    
+    notes = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'Optional notes for approval/rejection'
+        }),
+        label='Notes'
+    )
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        action = cleaned_data.get('action')
+        notes = cleaned_data.get('notes')
+        
+        if action == 'reject' and not notes:
+            raise ValidationError("Please provide a reason for rejection")
+        
+        return cleaned_data
