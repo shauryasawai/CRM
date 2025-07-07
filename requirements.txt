@@ -3,7 +3,7 @@ Django>=4.2,<5.0
 
 # Geographic calculations for attendance location validation
 geopy>=2.3.0
-
+python-dotenv>=1.0.0
 # Excel and CSV file processing for execution plans and portfolio uploads
 openpyxl>=3.1.0
 pandas>=2.0.0
