@@ -44,7 +44,7 @@ from .forms import (
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from django.template.loader import render_to_string
 
 # Helper functions for role checks
@@ -6273,120 +6273,412 @@ def can_create_action_plan(user, portfolio):
 @login_required
 @require_http_methods(["POST"])
 def save_execution_plan(request):
-    """Save execution plan with actions - Updated for new client model"""
+    """Save execution plan with actions - FIXED VERSION"""
     try:
         data = json.loads(request.body)
         client_id = data.get('client_id')
         plan_name = data.get('plan_name')
         description = data.get('description', '')
         actions_data = data.get('actions', [])
+        submit_for_approval = data.get('submit_for_approval', False)
         
         if not client_id or not plan_name or not actions_data:
             return JsonResponse({'error': 'Missing required data'}, status=400)
         
-        # Get or create Client object based on client_id type
-        if client_id.startswith('profile_'):
-            profile_id = int(client_id.replace('profile_', ''))
-            client_profile = get_object_or_404(ClientProfile, id=profile_id)
-            
-            # Check access permission
-            if request.user.role == 'rm' and client_profile.mapped_rm != request.user:
-                return JsonResponse({'error': 'Access denied'}, status=403)
-            elif request.user.role == 'rm_head':
-                if client_profile.mapped_rm and client_profile.mapped_rm.manager != request.user:
-                    return JsonResponse({'error': 'Access denied'}, status=403)
-            
-            # Get or create Client object for ExecutionPlan
-            client, created = Client.objects.get_or_create(
-                client_profile=client_profile,
-                defaults={
-                    'name': client_profile.client_full_name,
-                    'user': client_profile.mapped_rm,
-                    'created_by': request.user,
-                    'contact_info': f"Email: {client_profile.email}, Mobile: {client_profile.mobile_number}",
-                    'aum': ClientPortfolio.objects.filter(
-                        client_profile=client_profile,
-                        is_active=True
-                    ).aggregate(total=Sum('total_value'))['total'] or 0
-                }
-            )
-            
-        elif client_id.startswith('legacy_'):
-            legacy_id = int(client_id.replace('legacy_', ''))
-            client = get_object_or_404(Client, id=legacy_id)
-            
-            # Check access permission
-            if request.user.role == 'rm' and client.user != request.user:
-                return JsonResponse({'error': 'Access denied'}, status=403)
-            elif request.user.role == 'rm_head':
-                if client.user.manager != request.user:
-                    return JsonResponse({'error': 'Access denied'}, status=403)
-        else:
+        # Get the client object (handle integer ID)
+        try:
+            client_id_int = int(client_id)
+            client = get_object_or_404(Client, id=client_id_int)
+        except (ValueError, TypeError):
             return JsonResponse({'error': 'Invalid client ID format'}, status=400)
         
-        # Create execution plan
-        execution_plan = ExecutionPlan.objects.create(
-            client=client,
-            plan_name=plan_name,
-            description=description,
-            created_by=request.user,
-            status='draft'
-        )
+        # Check access permission
+        if request.user.role == 'rm' and client.user != request.user:
+            return JsonResponse({'error': 'Access denied'}, status=403)
+        elif request.user.role == 'rm_head':
+            team_members = User.objects.filter(manager=request.user, role='rm')
+            if client.user not in team_members and client.user != request.user:
+                return JsonResponse({'error': 'Access denied'}, status=403)
+        elif request.user.role not in ['business_head', 'business_head_ops', 'top_management']:
+            return JsonResponse({'error': 'Access denied'}, status=403)
         
-        # Create plan actions
-        for action_data in actions_data:
-            # Get or create scheme based on provided data
-            if action_data.get('scheme_id'):
-                scheme = get_object_or_404(MutualFundScheme, id=action_data['scheme_id'])
-            elif action_data.get('scheme_name') and action_data.get('isin_number'):
-                # Create scheme from portfolio data if it doesn't exist
-                scheme = MutualFundScheme.create_from_portfolio_data(
-                    scheme_name=action_data['scheme_name'],
-                    isin_number=action_data['isin_number']
-                )
-            else:
-                continue  # Skip if no valid scheme data
-            
-            # Get target scheme if specified
-            target_scheme = None
-            if action_data.get('target_scheme_id'):
-                target_scheme = get_object_or_404(MutualFundScheme, id=action_data['target_scheme_id'])
-            
-            action = PlanAction.objects.create(
-                execution_plan=execution_plan,
-                action_type=action_data['action_type'],
-                scheme=scheme,
-                amount=Decimal(str(action_data.get('amount', 0))) if action_data.get('amount') else None,
-                units=Decimal(str(action_data.get('units', 0))) if action_data.get('units') else None,
-                sip_date=action_data.get('sip_date'),
-                target_scheme=target_scheme,
-                priority=action_data.get('priority', 1),
-                notes=action_data.get('notes', '')
+        with transaction.atomic():
+            # Create execution plan
+            execution_plan = ExecutionPlan.objects.create(
+                client=client,
+                plan_name=plan_name,
+                description=description,
+                created_by=request.user,
+                status='draft'
             )
+            
+            # Create plan actions
+            created_actions = []
+            for i, action_data in enumerate(actions_data):
+                try:
+                    action = process_action_data(action_data, execution_plan, client, i + 1)
+                    if action:
+                        created_actions.append(action)
+                    
+                except Exception as e:
+                    logger.error(f"Error creating action {i + 1}: {str(e)}")
+                    logger.error(f"Action data: {action_data}")
+                    continue
+            
+            if not created_actions:
+                return JsonResponse({'error': 'No valid actions could be created'}, status=400)
+            
+            # Generate Excel file
+            try:
+                excel_file_path = generate_execution_plan_excel(execution_plan)
+                if excel_file_path:
+                    execution_plan.excel_file = excel_file_path
+                    execution_plan.save()
+            except Exception as e:
+                logger.warning(f"Could not generate Excel file: {str(e)}")
+            
+            # Create workflow history
+            PlanWorkflowHistory.objects.create(
+                execution_plan=execution_plan,
+                from_status='',
+                to_status='draft',
+                changed_by=request.user,
+                comments='Execution plan created'
+            )
+            
+            # Submit for approval if requested
+            if submit_for_approval:
+                try:
+                    if execution_plan.submit_for_approval():
+                        PlanWorkflowHistory.objects.create(
+                            execution_plan=execution_plan,
+                            from_status='draft',
+                            to_status='pending_approval',
+                            changed_by=request.user,
+                            comments='Plan submitted for approval'
+                        )
+                        # Notify approval manager
+                        notify_approval_required(execution_plan)
+                except Exception as e:
+                    logger.warning(f"Could not submit for approval: {str(e)}")
+            
+            return JsonResponse({
+                'success': True,
+                'plan_id': execution_plan.id,
+                'plan_url': reverse('execution_plan_detail', args=[execution_plan.id]),
+                'message': 'Execution plan created successfully',
+                'actions_created': len(created_actions)
+            })
+            
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        logger.error(f"Error saving execution plan: {str(e)}")
+        return JsonResponse({'error': f'Server error: {str(e)}'}, status=500)
+
+
+def process_action_data(action_data, execution_plan, client, priority):
+    """Process individual action data and create appropriate action record"""
+    action_type = action_data.get('action_type')
+    
+    if not action_type:
+        logger.error(f"No action type specified for action: {action_data}")
+        return None
+    
+    # Find source scheme (for portfolio-based actions)
+    source_scheme = None
+    source_portfolio = None
+    
+    if action_type in ['redeem', 'switch', 'stp', 'swp']:
+        source_scheme_name = action_data.get('source_scheme')
+        portfolio_id = action_data.get('portfolio_id') or action_data.get('source_portfolio_id')
         
-        # Generate Excel file
-        excel_file_path = generate_execution_plan_excel(execution_plan)
-        if excel_file_path:
-            execution_plan.excel_file = excel_file_path
-            execution_plan.save()
+        if portfolio_id:
+            try:
+                source_portfolio = ClientPortfolio.objects.get(
+                    id=portfolio_id, 
+                    client=client
+                )
+                source_scheme = source_portfolio.scheme_name
+            except ClientPortfolio.DoesNotExist:
+                logger.error(f"Portfolio {portfolio_id} not found for client {client.id}")
+                if source_scheme_name:
+                    source_scheme = source_scheme_name
+                else:
+                    raise ValueError(f"Source portfolio {portfolio_id} not found")
+        elif source_scheme_name:
+            source_scheme = source_scheme_name
+        else:
+            raise ValueError("Source scheme is required for this action type")
+    
+    # Find target scheme (for investment actions)
+    target_scheme = None
+    target_scheme_obj = None
+    
+    if action_type in ['sip', 'switch', 'stp']:
+        target_scheme_name = action_data.get('target_scheme')
+        target_scheme_id = action_data.get('target_scheme_id')
+        target_scheme_code = action_data.get('target_scheme_code')
         
-        # Create workflow history
-        PlanWorkflowHistory.objects.create(
-            execution_plan=execution_plan,
-            from_status='',
-            to_status='draft',
-            changed_by=request.user,
-            comments='Execution plan created'
+        if not target_scheme_name:
+            raise ValueError("Target scheme is required for this action type")
+        
+        # Try to find the scheme by ID first
+        if target_scheme_id:
+            try:
+                target_scheme_obj = MutualFundScheme.objects.get(id=target_scheme_id)
+                target_scheme = target_scheme_obj.scheme_name
+            except MutualFundScheme.DoesNotExist:
+                logger.warning(f"Scheme with ID {target_scheme_id} not found")
+        
+        # If not found by ID, try by code
+        if not target_scheme_obj and target_scheme_code:
+            target_scheme_obj = MutualFundScheme.objects.filter(
+                Q(isin_growth=target_scheme_code) | 
+                Q(isin_div_reinvestment=target_scheme_code) |
+                Q(scheme_code=target_scheme_code)
+            ).first()
+            
+            if target_scheme_obj:
+                target_scheme = target_scheme_obj.scheme_name
+        
+        # If still not found, try by exact name match
+        if not target_scheme_obj:
+            target_scheme_obj = MutualFundScheme.objects.filter(
+                scheme_name__iexact=target_scheme_name
+            ).first()
+            
+            if target_scheme_obj:
+                target_scheme = target_scheme_obj.scheme_name
+        
+        # If still not found, create a basic scheme record
+        if not target_scheme_obj:
+            logger.warning(f"Creating new scheme record for: {target_scheme_name}")
+            target_scheme_obj = MutualFundScheme.objects.create(
+                scheme_name=target_scheme_name,
+                scheme_code=target_scheme_code or '',
+                amc_name=action_data.get('amc_name', 'Unknown'),
+                is_active=True,
+                minimum_investment=action_data.get('target_scheme_min_investment', 500),
+                minimum_sip=action_data.get('target_scheme_min_sip', 500)
+            )
+            target_scheme = target_scheme_obj.scheme_name
+    
+    # Create the base plan action
+    action = PlanAction.objects.create(
+        execution_plan=execution_plan,
+        action_type=action_type,
+        scheme=target_scheme_obj,  # For SIP, this will be the target scheme
+        notes=action_data.get('notes', ''),
+        priority=priority
+    )
+    
+    # Create action-type specific records
+    if action_type == 'sip':
+        create_sip_action(action, action_data, target_scheme_obj)
+    elif action_type == 'redeem':
+        create_redeem_action(action, action_data, source_portfolio, source_scheme)
+    elif action_type == 'switch':
+        create_switch_action(action, action_data, source_portfolio, source_scheme, target_scheme_obj)
+    elif action_type == 'stp':
+        create_stp_action(action, action_data, source_portfolio, source_scheme, target_scheme_obj)
+    elif action_type == 'swp':
+        create_swp_action(action, action_data, source_portfolio, source_scheme)
+    
+    return action
+
+
+def create_sip_action(action, action_data, target_scheme):
+    """Create SIP action record"""
+    sip_amount = safe_decimal(action_data.get('sip_amount'))
+    sip_date = safe_int(action_data.get('sip_date'))
+    sip_frequency = action_data.get('sip_frequency', 'monthly')
+    
+    if not sip_amount or sip_amount <= 0:
+        raise ValueError("Valid SIP amount is required")
+    
+    if not sip_date or sip_date < 1 or sip_date > 31:
+        raise ValueError("Valid SIP date (1-31) is required")
+    
+    # Update the main action fields
+    action.amount = sip_amount
+    action.sip_date = sip_date
+    action.frequency = sip_frequency
+    action.transaction_type = 'purchase'
+    action.save()
+    
+    # Create specific SIP record if you have a separate model
+    # SIPAction.objects.create(
+    #     plan_action=action,
+    #     scheme=target_scheme,
+    #     amount=sip_amount,
+    #     frequency=sip_frequency,
+    #     date=sip_date
+    # )
+
+
+def create_redeem_action(action, action_data, source_portfolio, source_scheme):
+    """Create redeem action record"""
+    redeem_by = action_data.get('redeem_by', 'all_units')
+    redeem_amount = safe_decimal(action_data.get('redeem_amount'))
+    redeem_units = safe_decimal(action_data.get('redeem_units'))
+    
+    if redeem_by == 'specific_amount' and (not redeem_amount or redeem_amount <= 0):
+        raise ValueError("Valid redeem amount is required")
+    
+    if redeem_by == 'specific_units' and (not redeem_units or redeem_units <= 0):
+        raise ValueError("Valid redeem units is required")
+    
+    # Update the main action fields
+    action.transaction_type = 'redemption'
+    action.amount = redeem_amount
+    action.units = redeem_units
+    action.save()
+    
+    # Store additional redeem-specific data in notes if needed
+    redeem_details = {
+        'redeem_by': redeem_by,
+        'source_scheme': source_scheme,
+        'portfolio_id': source_portfolio.id if source_portfolio else None
+    }
+    
+    if action.notes:
+        action.notes += f"\nRedeem details: {json.dumps(redeem_details)}"
+    else:
+        action.notes = f"Redeem details: {json.dumps(redeem_details)}"
+    action.save()
+
+
+def create_switch_action(action, action_data, source_portfolio, source_scheme, target_scheme):
+    """Create switch action record"""
+    switch_by = action_data.get('switch_by', 'all_units')
+    switch_amount = safe_decimal(action_data.get('switch_amount'))
+    switch_units = safe_decimal(action_data.get('switch_units'))
+    
+    if switch_by == 'specific_amount' and (not switch_amount or switch_amount <= 0):
+        raise ValueError("Valid switch amount is required")
+    
+    if switch_by == 'specific_units' and (not switch_units or switch_units <= 0):
+        raise ValueError("Valid switch units is required")
+    
+    # Update the main action fields
+    action.transaction_type = 'switch'
+    action.amount = switch_amount
+    action.units = switch_units
+    action.target_scheme = target_scheme
+    action.save()
+    
+    # Store switch-specific data
+    switch_details = {
+        'switch_by': switch_by,
+        'source_scheme': source_scheme,
+        'target_scheme': target_scheme.scheme_name,
+        'portfolio_id': source_portfolio.id if source_portfolio else None
+    }
+    
+    if action.notes:
+        action.notes += f"\nSwitch details: {json.dumps(switch_details)}"
+    else:
+        action.notes = f"Switch details: {json.dumps(switch_details)}"
+    action.save()
+
+
+def create_stp_action(action, action_data, source_portfolio, source_scheme, target_scheme):
+    """Create STP action record"""
+    stp_amount = safe_decimal(action_data.get('stp_amount'))
+    stp_frequency = action_data.get('stp_frequency', 'monthly')
+    
+    if not stp_amount or stp_amount <= 0:
+        raise ValueError("Valid STP amount is required")
+    
+    # Update the main action fields
+    action.transaction_type = 'stp'
+    action.amount = stp_amount
+    action.frequency = stp_frequency
+    action.target_scheme = target_scheme
+    action.save()
+    
+    # Store STP-specific data
+    stp_details = {
+        'source_scheme': source_scheme,
+        'target_scheme': target_scheme.scheme_name,
+        'portfolio_id': source_portfolio.id if source_portfolio else None
+    }
+    
+    if action.notes:
+        action.notes += f"\nSTP details: {json.dumps(stp_details)}"
+    else:
+        action.notes = f"STP details: {json.dumps(stp_details)}"
+    action.save()
+
+
+def create_swp_action(action, action_data, source_portfolio, source_scheme):
+    """Create SWP action record"""
+    swp_amount = safe_decimal(action_data.get('swp_amount'))
+    swp_frequency = action_data.get('swp_frequency', 'monthly')
+    swp_date = safe_int(action_data.get('swp_date'))
+    
+    if not swp_amount or swp_amount <= 0:
+        raise ValueError("Valid SWP amount is required")
+    
+    if not swp_date or swp_date < 1 or swp_date > 31:
+        raise ValueError("Valid SWP date (1-31) is required")
+    
+    # Update the main action fields
+    action.transaction_type = 'swp'
+    action.amount = swp_amount
+    action.frequency = swp_frequency
+    action.sip_date = swp_date  # Reuse sip_date field for SWP date
+    action.save()
+    
+    # Store SWP-specific data
+    swp_details = {
+        'source_scheme': source_scheme,
+        'portfolio_id': source_portfolio.id if source_portfolio else None
+    }
+    
+    if action.notes:
+        action.notes += f"\nSWP details: {json.dumps(swp_details)}"
+    else:
+        action.notes = f"SWP details: {json.dumps(swp_details)}"
+    action.save()
+
+
+def safe_decimal(value):
+    """Safely convert value to Decimal"""
+    if value is None or value == '':
+        return None
+    try:
+        return Decimal(str(value))
+    except (ValueError, TypeError, InvalidOperation):
+        return None
+
+
+def safe_int(value):
+    """Safely convert value to int"""
+    if value is None or value == '':
+        return None
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return None
+
+
+def notify_approval_required(execution_plan):
+    """Notify managers that approval is required"""
+    try:
+        # Get approval managers based on your hierarchy
+        approval_managers = User.objects.filter(
+            role__in=['rm_head', 'business_head', 'business_head_ops']
         )
         
-        return JsonResponse({
-            'success': True,
-            'plan_id': execution_plan.id,
-            'message': 'Execution plan created successfully'
-        })
-        
+        for manager in approval_managers:
+            # Send notification (implement your notification system)
+            # send_notification(manager, f"Execution plan '{execution_plan.plan_name}' requires approval")
+            pass
+            
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        logger.error(f"Error sending approval notifications: {str(e)}")
 
 
 def generate_execution_plan_excel(execution_plan):
@@ -6584,32 +6876,60 @@ def plan_detail(request, plan_id):
 @require_http_methods(["POST"])
 def submit_for_approval(request, plan_id):
     """Submit execution plan for approval"""
-    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
-    
-    # Check permission
-    if execution_plan.created_by != request.user:
-        return JsonResponse({'error': 'Access denied'}, status=403)
-    
-    if execution_plan.status != 'draft':
-        return JsonResponse({'error': 'Plan cannot be submitted for approval'}, status=400)
-    
-    # Submit for approval
-    if execution_plan.submit_for_approval():
-        # Create workflow history
-        PlanWorkflowHistory.objects.create(
-            execution_plan=execution_plan,
-            from_status='draft',
-            to_status='pending_approval',
-            changed_by=request.user,
-            comments='Plan submitted for approval'
-        )
+    try:
+        execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
         
-        # Notify line manager
-        notify_approval_required(execution_plan)
+        # Check permission
+        if execution_plan.created_by != request.user:
+            return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
         
-        return JsonResponse({'success': True, 'message': 'Plan submitted for approval successfully'})
-    else:
-        return JsonResponse({'error': 'Failed to submit plan for approval'}, status=400)
+        if execution_plan.status != 'draft':
+            return JsonResponse({
+                'success': False, 
+                'error': f'Plan cannot be submitted for approval. Current status: {execution_plan.get_status_display()}'
+            }, status=400)
+        
+        # Validate that plan has actions
+        if not execution_plan.actions.exists():
+            return JsonResponse({
+                'success': False, 
+                'error': 'Cannot submit plan without any actions'
+            }, status=400)
+        
+        # Use transaction to ensure data consistency
+        with transaction.atomic():
+            # Update plan status
+            execution_plan.status = 'pending_approval'
+            execution_plan.submitted_at = timezone.now()
+            execution_plan.save()
+            
+            # Create workflow history
+            PlanWorkflowHistory.objects.create(
+                execution_plan=execution_plan,
+                from_status='draft',
+                to_status='pending_approval',
+                changed_by=request.user,
+                comments='Plan submitted for approval'
+            )
+            
+            # Notify approval managers
+            try:
+                notify_approval_required(execution_plan)
+            except Exception as e:
+                logger.warning(f"Failed to send approval notifications: {str(e)}")
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Plan submitted for approval successfully',
+            'new_status': execution_plan.status
+        })
+        
+    except Exception as e:
+        logger.error(f"Error submitting plan for approval: {str(e)}")
+        return JsonResponse({
+            'success': False, 
+            'error': 'Failed to submit plan for approval'
+        }, status=500)
 
 
 @login_required
@@ -7039,30 +7359,71 @@ def add_comment(request, plan_id):
 
 
 @login_required
+@require_http_methods(["GET"])
 def search_schemes_ajax(request):
-    """AJAX endpoint to search mutual fund schemes"""
-    query = request.GET.get('q', '').strip()
-    
-    if len(query) < 2:
-        return JsonResponse({'schemes': []})
-    
-    schemes = MutualFundScheme.objects.filter(
-        Q(scheme_name__icontains=query) | Q(amc_name__icontains=query),
-        is_active=True
-    ).order_by('amc_name', 'scheme_name')[:20]
-    
-    schemes_data = []
-    for scheme in schemes:
-        schemes_data.append({
-            'id': scheme.id,
-            'scheme_name': scheme.scheme_name,
-            'amc_name': scheme.amc_name,
-            'scheme_type': scheme.get_scheme_type_display(),
-            'minimum_investment': float(scheme.minimum_investment),
-            'minimum_sip': float(scheme.minimum_sip),
+    """
+    AJAX endpoint to search mutual fund schemes from database
+    """
+    try:
+        query = request.GET.get('q', '').strip()
+        
+        if len(query) < 2:
+            return JsonResponse({
+                'success': False,
+                'message': 'Query must be at least 2 characters long'
+            })
+        
+        # Search in MutualFundScheme model - Fixed field names based on your model
+        schemes = MutualFundScheme.objects.filter(
+            Q(scheme_name__icontains=query) |
+            Q(amc_name__icontains=query) |
+            Q(isin_growth__icontains=query) |  # Fixed: was isin_number
+            Q(isin_div_reinvestment__icontains=query) |  # Added second ISIN field
+            Q(scheme_code__icontains=query) |
+            Q(category__icontains=query)  # Added category search
+        ).filter(
+            is_active=True  # Only show active schemes
+        ).order_by('scheme_name')[:50]  # Increased limit for better results
+        
+        scheme_list = []
+        for scheme in schemes:
+            scheme_data = {
+                'id': scheme.id,
+                'scheme_name': scheme.scheme_name,
+                'amc_name': scheme.amc_name,  # Direct field access since no FK relation
+                'scheme_type': scheme.scheme_type or 'other',
+                'category': scheme.category,
+                'risk_category': scheme.risk_category or 'moderate',
+                'isin_growth': scheme.isin_growth or '',  # Fixed field name
+                'isin_div_reinvestment': scheme.isin_div_reinvestment or '',  # Added this field
+                'scheme_code': scheme.scheme_code or '',
+                'last_nav_price': float(scheme.last_nav_price) if scheme.last_nav_price else None,  # Fixed field name
+                'last_nav_date': scheme.last_nav_date.strftime('%Y-%m-%d') if scheme.last_nav_date else None,  # Fixed field name
+                'minimum_investment': float(scheme.minimum_investment) if scheme.minimum_investment else 500,
+                'minimum_sip': float(scheme.minimum_sip) if scheme.minimum_sip else 500,
+                'is_active': scheme.is_active,
+                # Set default values for availability fields since they don't exist in your model
+                'sip_available': True,  # Default to True
+                'stp_available': True,  # Default to True
+                'swp_available': True,  # Default to True
+            }
+            scheme_list.append(scheme_data)
+        
+        return JsonResponse({
+            'success': True,
+            'schemes': scheme_list,
+            'count': len(scheme_list),
+            'query': query
         })
-    
-    return JsonResponse({'schemes': schemes_data})
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error in search_schemes_ajax: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': f'An error occurred while searching schemes: {str(e)}'
+        })
 
 
 @login_required
@@ -7164,7 +7525,7 @@ def plan_templates(request):
 @login_required
 @require_http_methods(["POST"])
 def save_template(request):
-    """Save plan as template"""
+    """Save plan as template - FIXED VERSION"""
     try:
         data = json.loads(request.body)
         
@@ -7180,6 +7541,15 @@ def save_template(request):
         if is_public and request.user.role not in ['rm_head', 'business_head', 'top_management']:
             is_public = False
         
+        # Check for duplicate template names
+        existing_template = PlanTemplate.objects.filter(
+            name=template_name,
+            created_by=request.user
+        ).first()
+        
+        if existing_template:
+            return JsonResponse({'error': 'Template with this name already exists'}, status=400)
+        
         template = PlanTemplate.objects.create(
             name=template_name,
             description=description,
@@ -7194,26 +7564,96 @@ def save_template(request):
             'message': 'Template saved successfully'
         })
         
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON data'}, status=400)
     except Exception as e:
+        logger.error(f"Error saving template: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
 
 
 @login_required
 def load_template_ajax(request, template_id):
-    """AJAX endpoint to load template data"""
-    template = get_object_or_404(PlanTemplate, id=template_id)
+    """AJAX endpoint to load template data - FIXED VERSION"""
+    try:
+        template = get_object_or_404(PlanTemplate, id=template_id)
+        
+        # Check access permission
+        if not (template.is_public or template.created_by == request.user):
+            return JsonResponse({'error': 'Access denied'}, status=403)
+        
+        return JsonResponse({
+            'success': True,
+            'template_data': template.template_data,
+            'template_name': template.name,
+            'description': template.description,
+        })
+        
+    except PlanTemplate.DoesNotExist:
+        return JsonResponse({'error': 'Template not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error loading template {template_id}: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def execution_plan_detail(request, plan_id):
+    """View execution plan details - FIXED VERSION"""
+    try:
+        execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+    except ValueError:
+        # Handle case where plan_id is not a valid integer
+        raise Http404("Invalid plan ID")
     
     # Check access permission
-    if not template.can_be_used_by(request.user):
-        return JsonResponse({'error': 'Access denied'}, status=403)
+    if not can_access_plan(request.user, execution_plan):
+        messages.error(request, "Access denied")
+        return redirect('dashboard')
     
-    return JsonResponse({
-        'success': True,
-        'template_data': template.template_data,
-        'template_name': template.name,
-        'description': template.description,
-    })
-
+    # Get plan actions
+    actions = execution_plan.actions.all().select_related('scheme', 'target_scheme', 'executed_by')
+    
+    # Get current portfolio if client has one
+    current_portfolio = None
+    if hasattr(execution_plan.client, 'client_profile') and execution_plan.client.client_profile:
+        current_portfolio = ClientPortfolio.objects.filter(
+            client_profile=execution_plan.client.client_profile,
+            is_active=True
+        ).order_by('scheme_name')
+    
+    # Get workflow history
+    workflow_history = execution_plan.workflow_history.all().select_related('changed_by')
+    
+    # Get comments
+    comments = execution_plan.comments.all().select_related('commented_by')
+    
+    # Calculate metrics if plan is completed
+    metrics = None
+    if execution_plan.status == 'completed':
+        try:
+            metrics, created = ExecutionMetrics.objects.get_or_create(execution_plan=execution_plan)
+            if created or not metrics.updated_at:
+                metrics.calculate_metrics()
+        except:
+            metrics = None
+    
+    # Check permissions
+    can_approve = can_approve_plan(request.user, execution_plan)
+    can_execute = can_execute_plan(request.user, execution_plan)
+    can_edit = can_edit_plan(request.user, execution_plan)
+    
+    context = {
+        'execution_plan': execution_plan,
+        'actions': actions,
+        'current_portfolio': current_portfolio,
+        'workflow_history': workflow_history,
+        'comments': comments,
+        'metrics': metrics,
+        'can_approve': can_approve,
+        'can_execute': can_execute,
+        'can_edit': can_edit,
+    }
+    
+    return render(request, 'execution_plans/plan_detail.html', context)
 
 # Utility functions
 
@@ -8339,3 +8779,133 @@ def action_plan_list(request):
     }
     
     return render(request, 'portfolio/action_plan_list.html', context)
+
+
+
+@login_required
+@require_http_methods(["GET"])
+def get_action_details(request, action_id):
+    """Get action details for execution modal"""
+    try:
+        action = get_object_or_404(PlanAction, id=action_id)
+        execution_plan = action.execution_plan
+        
+        # Check permissions
+        if not can_execute_plan(request.user, execution_plan):
+            return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+        
+        # Check if action can be executed
+        if action.status != 'pending':
+            return JsonResponse({
+                'success': False, 
+                'error': f'Action cannot be executed. Current status: {action.status}'
+            }, status=400)
+        
+        # Prepare action details
+        action_details = {
+            'id': action.id,
+            'action_type': action.action_type,
+            'scheme_name': action.scheme.scheme_name if action.scheme else '',
+            'scheme_id': action.scheme.id if action.scheme else None,
+            'target_scheme_name': action.target_scheme.scheme_name if action.target_scheme else '',
+            'target_scheme_id': action.target_scheme.id if action.target_scheme else None,
+            'amount': str(action.amount) if action.amount else '',
+            'units': str(action.units) if action.units else '',
+            'sip_date': action.sip_date,
+            'frequency': action.frequency,
+            'transaction_type': action.transaction_type,
+            'notes': action.notes or '',
+            'priority': action.priority,
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'action': action_details,
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting action details: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'Failed to load action details'}, status=500)
+    
+
+@login_required
+@require_http_methods(["POST"])
+def track_workflow(request, plan_id):
+    """Track workflow status changes for execution plan"""
+    try:
+        execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+        
+        # Check permissions
+        if not can_access_plan(request.user, execution_plan):
+            return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+        
+        # Get form data
+        from_status = request.POST.get('from_status', '')
+        to_status = request.POST.get('to_status', '')
+        comments = request.POST.get('comments', '')
+        
+        # Validate status transition
+        valid_transitions = {
+            '': ['draft'],
+            'draft': ['pending_approval', 'rejected'],
+            'pending_approval': ['approved', 'rejected'],
+            'approved': ['client_approved', 'rejected'],
+            'client_approved': ['in_execution'],
+            'in_execution': ['completed', 'paused'],
+            'paused': ['in_execution', 'cancelled'],
+            'rejected': ['draft'],
+            'completed': [],  # Completed is final
+            'cancelled': []   # Cancelled is final
+        }
+        
+        if to_status not in valid_transitions.get(from_status, []):
+            return JsonResponse({
+                'success': False, 
+                'error': f'Invalid status transition from {from_status} to {to_status}'
+            }, status=400)
+        
+        with transaction.atomic():
+            # Create workflow history record
+            workflow_history = PlanWorkflowHistory.objects.create(
+                execution_plan=execution_plan,
+                from_status=from_status,
+                to_status=to_status,
+                changed_by=request.user,
+                comments=comments,
+                changed_at=timezone.now()
+            )
+            
+            # Update execution plan status if it's different
+            if execution_plan.status != to_status:
+                old_status = execution_plan.status
+                execution_plan.status = to_status
+                
+                # Set timestamp fields based on status
+                if to_status == 'pending_approval':
+                    execution_plan.submitted_at = timezone.now()
+                elif to_status == 'approved':
+                    execution_plan.approved_at = timezone.now()
+                    execution_plan.approved_by = request.user
+                elif to_status == 'client_approved':
+                    execution_plan.client_approved_at = timezone.now()
+                elif to_status == 'in_execution':
+                    execution_plan.execution_started_at = timezone.now()
+                elif to_status == 'completed':
+                    execution_plan.completed_at = timezone.now()
+                elif to_status == 'rejected':
+                    execution_plan.rejected_at = timezone.now()
+                    execution_plan.rejected_by = request.user
+                
+                execution_plan.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Workflow updated from {from_status or "initial"} to {to_status}',
+            'workflow_id': workflow_history.id,
+            'current_status': execution_plan.status,
+            'timestamp': workflow_history.changed_at.strftime('%Y-%m-%d %H:%M:%S')
+        })
+        
+    except Exception as e:
+        logger.error(f"Error tracking workflow: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'Failed to track workflow change'}, status=500)

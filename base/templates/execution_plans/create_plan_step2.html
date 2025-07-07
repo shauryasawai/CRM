@@ -1,335 +1,234 @@
-{% extends 'execution_plans/base.html' %}
-
-{% block title %}Design Execution Plan{% endblock %}
-
-{% block breadcrumb %}
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
-        <li class="breadcrumb-item"><a href="{% url 'create_plan' %}">Create Plan</a></li>
-        <li class="breadcrumb-item active">Design Plan</li>
-    </ol>
-</nav>
-{% endblock %}
-
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3">
-        <i class="fas fa-drafting-compass text-primary me-2"></i>
-        Design Execution Plan for {{ client.name }}
-    </h1>
-</div>
-
-<form id="executionPlanForm">
-    {% csrf_token %}
-    <div class="row">
-        <!-- Plan Details -->
-        <div class="col-lg-4">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h6 class="card-title mb-0">
-                        <i class="fas fa-file-alt me-2"></i>Plan Details
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label for="planName" class="form-label">Plan Name *</label>
-                        <input type="text" class="form-control" id="planName" name="plan_name" required 
-                               placeholder="Enter plan name">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Execution Plan - Step 2</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <style>
+        .portfolio-card {
+            transition: all 0.3s ease;
+            border: 1px solid #dee2e6;
+        }
+        .portfolio-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        .action-card {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        .action-card:hover {
+            border-color: #007bff;
+            box-shadow: 0 2px 8px rgba(0,123,255,0.15);
+        }
+        .client-summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+        .scheme-search-result {
+            padding: 8px 12px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .scheme-search-result:hover {
+            background-color: #f8f9fa;
+        }
+        .scheme-search-result:last-child {
+            border-bottom: none;
+        }
+        .action-type-btn {
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        .action-type-btn.active {
+            border-color: #007bff;
+            background-color: #e7f3ff;
+        }
+        .conditional-field {
+            display: none;
+        }
+        .conditional-field.show {
+            display: block;
+        }
+        .portfolio-summary {
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            color: white;
+        }
+        .action-summary {
+            background-color: #f8f9fa;
+            border-left: 4px solid #28a745;
+        }
+        .loading-spinner {
+            display: none;
+        }
+        .scheme-tag {
+            background-color: #e3f2fd;
+            border: 1px solid #2196f3;
+            color: #1976d2;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin: 2px;
+            display: inline-block;
+        }
+        .asset-allocation-bar {
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            background-color: #f0f0f0;
+            margin: 10px 0;
+        }
+        .allocation-segment {
+            height: 100%;
+            display: inline-block;
+            vertical-align: top;
+        }
+        .equity-segment { background-color: #28a745; }
+        .debt-segment { background-color: #007bff; }
+        .hybrid-segment { background-color: #ffc107; }
+        .liquid-segment { background-color: #17a2b8; }
+        .other-segment { background-color: #6f42c1; }
+        .arbitrage-segment { background-color: #fd7e14; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="mb-0"><i class="fas fa-chart-line text-primary"></i> Create Execution Plan - Step 2</h2>
+                        <p class="text-muted mb-0">Design portfolio actions for {{ client.name }}</p>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="planDescription" class="form-label">Description</label>
-                        <textarea class="form-control" id="planDescription" name="description" rows="3" 
-                                  placeholder="Enter plan description (optional)"></textarea>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Client Information</label>
-                        <div class="bg-light p-3 rounded">
-                            <div><strong>Name:</strong> {{ client.name }}</div>
-                            {% if client.pan %}
-                                <div><strong>PAN:</strong> {{ client.pan }}</div>
-                            {% endif %}
-                            {% if total_portfolio_value %}
-                                <div><strong>Total AUM:</strong> ₹{{ total_portfolio_value|floatformat:2 }}</div>
-                            {% endif %}
-                            {% if asset_allocation %}
-                                <div class="mt-2">
-                                    <small><strong>Asset Allocation:</strong></small>
-                                    <div class="d-flex flex-wrap gap-1 mt-1">
-                                        {% if asset_allocation.total_equity %}
-                                            <span class="badge bg-success">Equity: ₹{{ asset_allocation.total_equity|floatformat:0 }}</span>
-                                        {% endif %}
-                                        {% if asset_allocation.total_debt %}
-                                            <span class="badge bg-info">Debt: ₹{{ asset_allocation.total_debt|floatformat:0 }}</span>
-                                        {% endif %}
-                                        {% if asset_allocation.total_hybrid %}
-                                            <span class="badge bg-warning">Hybrid: ₹{{ asset_allocation.total_hybrid|floatformat:0 }}</span>
-                                        {% endif %}
-                                        {% if asset_allocation.total_liquid %}
-                                            <span class="badge bg-secondary">Liquid: ₹{{ asset_allocation.total_liquid|floatformat:0 }}</span>
-                                        {% endif %}
-                                        {% if asset_allocation.total_other %}
-                                            <span class="badge bg-dark">Other: ₹{{ asset_allocation.total_other|floatformat:0 }}</span>
-                                        {% endif %}
-                                        {% if asset_allocation.total_arbitrage %}
-                                            <span class="badge bg-light text-dark">Arbitrage: ₹{{ asset_allocation.total_arbitrage|floatformat:0 }}</span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Templates -->
-            {% if templates %}
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-info text-white">
-                    <h6 class="card-title mb-0">
-                        <i class="fas fa-template me-2"></i>Templates
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <select class="form-control" id="templateSelect">
-                        <option value="">Select a template...</option>
-                        {% for template in templates %}
-                            <option value="{{ template.id }}">{{ template.name }}</option>
-                        {% endfor %}
-                    </select>
-                    <div class="form-text">Load actions from a saved template</div>
-                </div>
-            </div>
-            {% endif %}
-            
-            <!-- Portfolio Summary -->
-            {% if portfolio_summary %}
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-light">
-                    <h6 class="card-title mb-0">
-                        <i class="fas fa-chart-pie me-2"></i>Portfolio Summary
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-6">
-                            <div class="border-end">
-                                <h6 class="mb-1 text-primary">Total Schemes</h6>
-                                <strong>{{ portfolio_summary.total_schemes }}</strong>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <h6 class="mb-1 text-success">Avg Value</h6>
-                            <strong>₹{{ portfolio_summary.average_scheme_value|floatformat:0 }}</strong>
-                        </div>
-                    </div>
-                    <hr class="my-2">
-                    <div class="row text-center small">
-                        <div class="col-6">
-                            <div><strong class="text-success">{{ portfolio_summary.redeemable_schemes }}</strong> Redeemable</div>
-                        </div>
-                        <div class="col-6">
-                            <div><strong class="text-primary">{{ portfolio_summary.switchable_schemes }}</strong> Switchable</div>
-                        </div>
-                    </div>
-                    <div class="row text-center small mt-1">
-                        <div class="col-6">
-                            <div><strong class="text-info">{{ portfolio_summary.stp_eligible_schemes }}</strong> STP Eligible</div>
-                        </div>
-                        <div class="col-6">
-                            <div><strong class="text-warning">{{ portfolio_summary.swp_eligible_schemes }}</strong> SWP Eligible</div>
-                        </div>
-                    </div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-0">
+                            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                            <li class="breadcrumb-item"><a href="{% url 'create_plan' %}">Select Client</a></li>
+                            <li class="breadcrumb-item active">Design Plan</li>
+                        </ol>
+                    </nav>
                 </div>
             </div>
-            {% endif %}
         </div>
-        
-        <!-- Current Portfolio - Enhanced -->
-        <div class="col-lg-8">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                    <h6 class="card-title mb-0">
-                        <i class="fas fa-wallet me-2"></i>Current Portfolio
-                        {% if portfolio_data %}
-                            <span class="badge bg-light text-dark ms-2">{{ portfolio_data|length }} Holdings</span>
-                        {% endif %}
-                    </h6>
-                    <div class="btn-group btn-group-sm">
-                        <button type="button" class="btn btn-light btn-sm" id="portfolioViewToggle" data-view="summary">
-                            <i class="fas fa-table me-1"></i>Detailed View
-                        </button>
-                        <button type="button" class="btn btn-light btn-sm" onclick="exportPortfolio()">
-                            <i class="fas fa-download me-1"></i>Export
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body p-0">
-                    {% if portfolio_data %}
-                        <!-- Portfolio Summary -->
-                        <div id="portfolioSummary" class="p-3 bg-light border-bottom">
-                            <div class="row text-center">
-                                <div class="col-md-3">
-                                    <div class="border-end">
-                                        <h6 class="mb-1 text-success">Total Value</h6>
-                                        <strong>₹{{ total_portfolio_value|default:0|floatformat:0 }}</strong>
+
+        <!-- Client Summary -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card client-summary">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <h4 class="mb-2"><i class="fas fa-user-circle"></i> {{ client.name }}</h4>
+                                <p class="mb-1"><strong>PAN:</strong> {{ client.pan }}</p>
+                                <p class="mb-1"><strong>Email:</strong> {{ client.email|default:"Not available" }}</p>
+                                <p class="mb-0"><strong>Mobile:</strong> {{ client.mobile|default:"Not available" }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="row text-center">
+                                    <div class="col-4">
+                                        <h5 class="mb-1">₹{{ portfolio_summary.combined_aum|floatformat:0 }}</h5>
+                                        <small>Total AUM</small>
                                     </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="border-end">
-                                        <h6 class="mb-1 text-primary">Holdings</h6>
-                                        <strong>{{ portfolio_data|length }}</strong>
+                                    <div class="col-4">
+                                        <h5 class="mb-1">{{ portfolio_summary.total_schemes }}</h5>
+                                        <small>Schemes</small>
                                     </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="border-end">
-                                        <h6 class="mb-1 text-info">Equity Exposure</h6>
-                                        <strong id="equity-percentage">-</strong>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div>
-                                        <h6 class="mb-1 text-warning">Debt Exposure</h6>
-                                        <strong id="debt-percentage">-</strong>
+                                    <div class="col-4">
+                                        <h5 class="mb-1">{{ portfolio_summary.client_sip|floatformat:0 }}</h5>
+                                        <small>SIP Amount</small>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                        <!-- Detailed Portfolio Table -->
-                        <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                            <table class="table table-hover table-sm mb-0" id="portfolioTable">
-                                <thead class="table-dark sticky-top">
+        <!-- Portfolio Overview -->
+        {% if has_portfolio_data %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-pie-chart text-success"></i> Current Portfolio</h5>
+                        <span class="badge bg-success">{{ portfolio_summary.total_schemes }} Schemes</span>
+                    </div>
+                    <div class="card-body">
+                        <!-- Asset Allocation Bar -->
+                        {% if asset_allocation %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Asset Allocation (₹{{ asset_allocation.total_aum|floatformat:0 }})</label>
+                            <div class="asset-allocation-bar" id="asset-allocation-bar">
+                                <!-- Asset allocation will be calculated in JavaScript -->
+                            </div>
+                            <div class="row mt-2" id="asset-allocation-legend">
+                                <!-- Legend will be populated by JavaScript -->
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Portfolio Holdings -->
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-dark">
                                     <tr>
-                                        <th style="min-width: 250px;">Scheme Details</th>
+                                        <th>Scheme Name</th>
                                         <th class="text-end">Current Value</th>
                                         <th class="text-end">Units</th>
-                                        <th class="text-center">Asset Class</th>
-                                        <th class="text-end">Allocation %</th>
                                         <th class="text-center">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for holding in portfolio_data %}
-                                    <tr data-portfolio-id="{{ holding.id }}" 
-                                        data-scheme-name="{{ holding.scheme_name }}"
-                                        data-current-value="{{ holding.current_value }}"
-                                        data-equity-value="{{ holding.equity_value|default:0 }}"
-                                        data-debt-value="{{ holding.debt_value|default:0 }}"
-                                        data-hybrid-value="{{ holding.hybrid_value|default:0 }}"
-                                        data-liquid-value="{{ holding.liquid_value|default:0 }}"
-                                        data-other-value="{{ holding.other_value|default:0 }}"
-                                        data-arbitrage-value="{{ holding.arbitrage_value|default:0 }}">
+                                    <tr data-portfolio-id="{{ holding.id }}" data-scheme-name="{{ holding.scheme_name }}" data-current-value="{{ holding.current_value }}" data-units="{{ holding.units }}">
                                         <td>
                                             <div>
-                                                <strong class="text-primary">
-                                                    {{ holding.scheme_name|truncatechars:45 }}
-                                                </strong>
-                                                {% if holding.isin_number %}
-                                                    <br><small class="text-muted">ISIN: {{ holding.isin_number }}</small>
-                                                {% endif %}
-                                                {% if holding.folio_number %}
-                                                    <br><small class="badge bg-secondary">Folio: {{ holding.folio_number }}</small>
+                                                <strong>{{ holding.scheme_name|truncatechars:60 }}</strong>
+                                                {% if holding.primary_asset_class %}
+                                                <br><small class="text-muted">{{ holding.primary_asset_class }}</small>
                                                 {% endif %}
                                             </div>
                                         </td>
                                         <td class="text-end">
-                                            <strong class="text-success">
-                                                ₹{{ holding.current_value|floatformat:0 }}
-                                            </strong>
-                                            {% if holding.cost_value and holding.cost_value > 0 %}
-                                                <br><small class="text-muted">Cost: ₹{{ holding.cost_value|floatformat:0 }}</small>
-                                                {% if holding.gain_loss %}
-                                                    <br><small class="{% if holding.gain_loss >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                                        {% if holding.gain_loss >= 0 %}+{% endif %}{{ holding.gain_loss|floatformat:0 }} ({{ holding.gain_loss_percentage|floatformat:1 }}%)
-                                                    </small>
-                                                {% endif %}
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-end">
-                                            <span class="text-dark">{{ holding.units|floatformat:4 }}</span>
-                                        </td>
-                                        <td class="text-center">
-                                            {% if holding.primary_asset_class %}
-                                                <span class="badge 
-                                                    {% if holding.primary_asset_class == 'Equity' %}bg-success
-                                                    {% elif holding.primary_asset_class == 'Debt' %}bg-info
-                                                    {% elif holding.primary_asset_class == 'Hybrid' %}bg-warning
-                                                    {% elif holding.primary_asset_class == 'Liquid' %}bg-secondary
-                                                    {% else %}bg-light text-dark{% endif %}">
-                                                    {{ holding.primary_asset_class }}
-                                                </span>
-                                            {% else %}
-                                                <!-- Determine primary asset class from values -->
-                                                {% if holding.equity_value > holding.debt_value and holding.equity_value > holding.hybrid_value %}
-                                                    <span class="badge bg-success">Equity</span>
-                                                {% elif holding.debt_value > holding.equity_value and holding.debt_value > holding.hybrid_value %}
-                                                    <span class="badge bg-info">Debt</span>
-                                                {% elif holding.hybrid_value > 0 %}
-                                                    <span class="badge bg-warning">Hybrid</span>
-                                                {% elif holding.liquid_value > 0 %}
-                                                    <span class="badge bg-secondary">Liquid</span>
-                                                {% else %}
-                                                    <span class="badge bg-light text-dark">Mixed</span>
-                                                {% endif %}
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-end">
+                                            <strong>₹{{ holding.current_value|floatformat:0 }}</strong>
                                             {% if holding.allocation_percentage %}
-                                                {{ holding.allocation_percentage|floatformat:2 }}%
-                                            {% else %}
-                                                <small class="text-muted">-</small>
+                                            <br><small class="text-muted">{{ holding.allocation_percentage|floatformat:2 }}%</small>
                                             {% endif %}
                                         </td>
+                                        <td class="text-end">{{ holding.units|floatformat:4 }}</td>
                                         <td class="text-center">
-                                            <div class="btn-group">
-                                                <button type="button" class="btn btn-outline-danger btn-sm portfolio-action-btn" 
-                                                        data-portfolio-id="{{ holding.id }}" 
-                                                        data-scheme-name="{{ holding.scheme_name }}"
-                                                        data-action="redeem"
-                                                        title="Redeem"
-                                                        {% if not holding.can_redeem %}disabled{% endif %}>
-                                                    <i class="fas fa-minus-circle"></i>
+                                            <div class="btn-group" role="group">
+                                                {% if holding.can_redeem %}
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="openActionModal('redeem', '{{ holding.scheme_name|escapejs }}', {{ holding.current_value }}, {{ holding.units }}, {{ holding.id }})">
+                                                    <i class="fas fa-minus-circle"></i> Redeem
                                                 </button>
-                                                <button type="button" class="btn btn-outline-primary btn-sm portfolio-action-btn" 
-                                                        data-portfolio-id="{{ holding.id }}" 
-                                                        data-scheme-name="{{ holding.scheme_name }}"
-                                                        data-action="switch"
-                                                        title="Switch"
-                                                        {% if not holding.can_switch %}disabled{% endif %}>
-                                                    <i class="fas fa-exchange-alt"></i>
+                                                {% endif %}
+                                                {% if holding.can_switch %}
+                                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="openActionModal('switch', '{{ holding.scheme_name|escapejs }}', {{ holding.current_value }}, {{ holding.units }}, {{ holding.id }})">
+                                                    <i class="fas fa-exchange-alt"></i> Switch
                                                 </button>
-                                                <button type="button" class="btn btn-outline-info btn-sm portfolio-action-btn" 
-                                                        data-portfolio-id="{{ holding.id }}" 
-                                                        data-scheme-name="{{ holding.scheme_name }}"
-                                                        data-action="stp"
-                                                        title="STP"
-                                                        {% if not holding.can_stp %}disabled{% endif %}>
-                                                    <i class="fas fa-arrow-right"></i>
+                                                {% endif %}
+                                                {% if holding.can_stp %}
+                                                <button type="button" class="btn btn-sm btn-outline-info" onclick="openActionModal('stp', '{{ holding.scheme_name|escapejs }}', {{ holding.current_value }}, {{ holding.units }}, {{ holding.id }})">
+                                                    <i class="fas fa-arrow-right"></i> STP
                                                 </button>
-                                                <div class="btn-group">
-                                                    <button type="button" class="btn btn-outline-secondary btn-sm dropdown-toggle" 
-                                                            data-bs-toggle="dropdown" title="More Actions">
-                                                        <i class="fas fa-ellipsis-h"></i>
-                                                    </button>
-                                                    <ul class="dropdown-menu">
-                                                        <li><a class="dropdown-item portfolio-action-btn" href="#" 
-                                                               data-portfolio-id="{{ holding.id }}" 
-                                                               data-scheme-name="{{ holding.scheme_name }}"
-                                                               data-action="sip">
-                                                            <i class="fas fa-plus-circle me-2"></i>Start SIP
-                                                        </a></li>
-                                                        <li><a class="dropdown-item portfolio-action-btn" href="#" 
-                                                               data-portfolio-id="{{ holding.id }}" 
-                                                               data-scheme-name="{{ holding.scheme_name }}"
-                                                               data-action="swp"
-                                                               {% if not holding.can_swp %}style="color: #ccc; pointer-events: none;"{% endif %}>
-                                                            <i class="fas fa-arrow-down me-2"></i>Start SWP
-                                                        </a></li>
-                                                    </ul>
-                                                </div>
+                                                {% endif %}
+                                                {% if holding.can_swp %}
+                                                <button type="button" class="btn btn-sm btn-outline-warning" onclick="openActionModal('swp', '{{ holding.scheme_name|escapejs }}', {{ holding.current_value }}, {{ holding.units }}, {{ holding.id }})">
+                                                    <i class="fas fa-arrow-down"></i> SWP
+                                                </button>
+                                                {% endif %}
                                             </div>
                                         </td>
                                     </tr>
@@ -337,1439 +236,1575 @@
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
 
-                        <!-- Portfolio Asset Allocation -->
-                        {% if asset_allocation %}
-                        <div class="p-3 border-top bg-light">
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <h6 class="mb-2">Asset Allocation Breakdown</h6>
-                                    <div class="d-flex flex-wrap gap-2">
-                                        {% if asset_allocation.total_equity %}
-                                            <span class="badge bg-success">
-                                                Equity: ₹{{ asset_allocation.total_equity|floatformat:0 }} 
-                                                (<span class="equity-pct">-</span>%)
-                                            </span>
-                                        {% endif %}
-                                        {% if asset_allocation.total_debt %}
-                                            <span class="badge bg-info">
-                                                Debt: ₹{{ asset_allocation.total_debt|floatformat:0 }} 
-                                                (<span class="debt-pct">-</span>%)
-                                            </span>
-                                        {% endif %}
-                                        {% if asset_allocation.total_hybrid %}
-                                            <span class="badge bg-warning">
-                                                Hybrid: ₹{{ asset_allocation.total_hybrid|floatformat:0 }} 
-                                                (<span class="hybrid-pct">-</span>%)
-                                            </span>
-                                        {% endif %}
-                                        {% if asset_allocation.total_liquid %}
-                                            <span class="badge bg-secondary">
-                                                Liquid: ₹{{ asset_allocation.total_liquid|floatformat:0 }} 
-                                                (<span class="liquid-pct">-</span>%)
-                                            </span>
-                                        {% endif %}
-                                        {% if asset_allocation.total_other %}
-                                            <span class="badge bg-dark">
-                                                Other: ₹{{ asset_allocation.total_other|floatformat:0 }} 
-                                                (<span class="other-pct">-</span>%)
-                                            </span>
-                                        {% endif %}
-                                        {% if asset_allocation.total_arbitrage %}
-                                            <span class="badge bg-light text-dark">
-                                                Arbitrage: ₹{{ asset_allocation.total_arbitrage|floatformat:0 }} 
-                                                (<span class="arbitrage-pct">-</span>%)
-                                            </span>
-                                        {% endif %}
-                                    </div>
+        <!-- Action Planning Section -->
+        <div class="row">
+            <div class="col-md-8">
+                <!-- Quick Actions -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-plus-circle text-success"></i> Add New Action</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6 col-lg-4">
+                                <button type="button" class="btn btn-outline-success w-100 action-type-btn" onclick="openActionModal('sip', '', 0, 0, null)">
+                                    <i class="fas fa-plus-circle fa-2x d-block mb-2"></i>
+                                    <strong>New SIP</strong>
+                                    <br><small>Regular Investment</small>
+                                </button>
+                            </div>
+                            <div class="col-md-6 col-lg-4">
+                                <button type="button" class="btn btn-outline-primary w-100 action-type-btn" onclick="openSchemeSearchModal()">
+                                    <i class="fas fa-search fa-2x d-block mb-2"></i>
+                                    <strong>Search Schemes</strong>
+                                    <br><small>Find & Add Schemes</small>
+                                </button>
+                            </div>
+                            <div class="col-md-6 col-lg-4">
+                                <button type="button" class="btn btn-outline-info w-100 action-type-btn" onclick="loadTemplate()">
+                                    <i class="fas fa-file-alt fa-2x d-block mb-2"></i>
+                                    <strong>Use Template</strong>
+                                    <br><small>Pre-defined Plans</small>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Planned Actions -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-list-check text-primary"></i> Planned Actions</h5>
+                        <span class="badge bg-primary" id="action-count">0 Actions</span>
+                    </div>
+                    <div class="card-body">
+                        <div id="planned-actions">
+                            <div class="text-center text-muted py-4">
+                                <i class="fas fa-clipboard-list fa-3x mb-3"></i>
+                                <p>No actions planned yet. Start by adding actions from your portfolio or creating new investments.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <!-- Plan Summary -->
+                <div class="card mb-4">
+                    <div class="card-header portfolio-summary">
+                        <h6 class="mb-0"><i class="fas fa-chart-bar"></i> Plan Summary</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center mb-3">
+                            <div class="col-6">
+                                <h6 class="text-success mb-1" id="total-investment">₹0</h6>
+                                <small class="text-muted">Total Investment</small>
+                            </div>
+                            <div class="col-6">
+                                <h6 class="text-danger mb-1" id="total-redemption">₹0</h6>
+                                <small class="text-muted">Total Redemption</small>
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <h5 class="mb-1" id="net-investment">₹0</h5>
+                            <small class="text-muted">Net Investment</small>
+                        </div>
+                        <hr>
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-success" onclick="savePlan()" id="save-plan-btn" disabled>
+                                <i class="fas fa-save"></i> Save as Draft
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="savePlan(true)" id="submit-plan-btn" disabled>
+                                <i class="fas fa-paper-plane"></i> Save & Submit
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-info-circle"></i> Quick Stats</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>SIP Actions:</span>
+                            <span class="badge bg-success" id="sip-count">0</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Redemptions:</span>
+                            <span class="badge bg-danger" id="redeem-count">0</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Switches:</span>
+                            <span class="badge bg-primary" id="switch-count">0</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>STP/SWP:</span>
+                            <span class="badge bg-info" id="systematic-count">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Modal -->
+    <div class="modal fade" id="actionModal" tabindex="-1" aria-labelledby="actionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="actionModalLabel">Add Action</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="actionForm">
+                        <input type="hidden" id="action-type" name="action_type">
+                        <input type="hidden" id="portfolio-id" name="portfolio_id">
+                        <input type="hidden" id="current-value" name="current_value">
+                        <input type="hidden" id="current-units" name="current_units">
+
+                        <!-- Action Type Selection -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Action Type</label>
+                            <div class="row g-2">
+                                <div class="col-6 col-md-4">
+                                    <button type="button" class="btn btn-outline-danger w-100 action-type-selector" data-action="redeem">
+                                        <i class="fas fa-minus-circle"></i><br>Redeem
+                                    </button>
                                 </div>
-                                <div class="col-md-4 text-end">
-                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addBulkActions()">
-                                        <i class="fas fa-layer-group me-1"></i>Bulk Actions
+                                <div class="col-6 col-md-4">
+                                    <button type="button" class="btn btn-outline-primary w-100 action-type-selector" data-action="switch">
+                                        <i class="fas fa-exchange-alt"></i><br>Switch
+                                    </button>
+                                </div>
+                                <div class="col-6 col-md-4">
+                                    <button type="button" class="btn btn-outline-info w-100 action-type-selector" data-action="stp">
+                                        <i class="fas fa-arrow-right"></i><br>STP
+                                    </button>
+                                </div>
+                                <div class="col-6 col-md-4">
+                                    <button type="button" class="btn btn-outline-success w-100 action-type-selector" data-action="sip">
+                                        <i class="fas fa-plus-circle"></i><br>SIP
+                                    </button>
+                                </div>
+                                <div class="col-6 col-md-4">
+                                    <button type="button" class="btn btn-outline-warning w-100 action-type-selector" data-action="swp">
+                                        <i class="fas fa-arrow-down"></i><br>SWP
                                     </button>
                                 </div>
                             </div>
                         </div>
-                        {% endif %}
-                    {% else %}
-                        <div class="text-center text-muted p-5">
-                            <i class="fas fa-inbox fa-3x mb-3"></i>
-                            <h5>No Portfolio Data Found</h5>
-                            <p>No current portfolio found for this client. You can still create an execution plan by adding new investments.</p>
-                            <button type="button" class="btn btn-outline-primary" onclick="$('#schemeSearch').focus()">
-                                <i class="fas fa-plus me-1"></i>Add New Investment
+
+                        <!-- Source Scheme -->
+                        <div class="mb-3" id="source-scheme-group">
+                            <label for="source-scheme" class="form-label fw-bold">Source Scheme</label>
+                            <select class="form-select" id="source-scheme" name="source_scheme">
+                                <option value="">Select source scheme</option>
+                                {% for holding in portfolio_data %}
+                                <option value="{{ holding.scheme_name }}" data-portfolio-id="{{ holding.id }}" data-current-value="{{ holding.current_value }}" data-units="{{ holding.units }}">
+                                    {{ holding.scheme_name|truncatechars:60 }} (₹{{ holding.current_value|floatformat:0 }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Target Scheme (for Switch, STP, SIP) -->
+                        <div class="mb-3 conditional-field" id="target-scheme-group">
+                            <label for="target-scheme" class="form-label fw-bold">Target Scheme <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="target-scheme" name="target_scheme" placeholder="Search and select target scheme" readonly>
+                                <button type="button" class="btn btn-outline-secondary" onclick="openSchemeSearch('target-scheme')">
+                                    <i class="fas fa-search"></i> Browse Schemes
+                                </button>
+                            </div>
+                            <div class="form-text">
+                                <i class="fas fa-info-circle"></i> Click "Browse Schemes" to search from {{ all_schemes.count|default:"available" }} mutual fund schemes
+                            </div>
+                        </div>
+
+                        <!-- Redeem By -->
+                        <div class="mb-3 conditional-field" id="redeem-by-group">
+                            <label for="redeem-by" class="form-label fw-bold">Redeem By</label>
+                            <select class="form-select" id="redeem-by" name="redeem_by" onchange="toggleAmountField('redeem')">
+                                <option value="">Select option</option>
+                                <option value="all_units">All Units</option>
+                                <option value="specific_amount">Specific Amount</option>
+                                <option value="specific_units">Specific Units</option>
+                            </select>
+                        </div>
+
+                        <!-- Switch By -->
+                        <div class="mb-3 conditional-field" id="switch-by-group">
+                            <label for="switch-by" class="form-label fw-bold">Switch By</label>
+                            <select class="form-select" id="switch-by" name="switch_by" onchange="toggleAmountField('switch')">
+                                <option value="">Select option</option>
+                                <option value="all_units">All Units</option>
+                                <option value="specific_amount">Specific Amount</option>
+                                <option value="specific_units">Specific Units</option>
+                            </select>
+                        </div>
+
+                        <!-- Amount Fields -->
+                        <div class="mb-3 conditional-field" id="redeem-amount-group">
+                            <label for="redeem-amount" class="form-label fw-bold">Redeem Amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₹</span>
+                                <input type="number" class="form-control" id="redeem-amount" name="redeem_amount" min="0" step="0.01">
+                            </div>
+                        </div>
+
+                        <div class="mb-3 conditional-field" id="redeem-units-group">
+                            <label for="redeem-units" class="form-label fw-bold">Redeem Units</label>
+                            <input type="number" class="form-control" id="redeem-units" name="redeem_units" min="0" step="0.0001">
+                        </div>
+
+                        <div class="mb-3 conditional-field" id="switch-amount-group">
+                            <label for="switch-amount" class="form-label fw-bold">Switch Amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₹</span>
+                                <input type="number" class="form-control" id="switch-amount" name="switch_amount" min="0" step="0.01">
+                            </div>
+                        </div>
+
+                        <div class="mb-3 conditional-field" id="switch-units-group">
+                            <label for="switch-units" class="form-label fw-bold">Switch Units</label>
+                            <input type="number" class="form-control" id="switch-units" name="switch_units" min="0" step="0.0001">
+                        </div>
+
+                        <!-- STP Fields -->
+                        <div class="mb-3 conditional-field" id="stp-amount-group">
+                            <label for="stp-amount" class="form-label fw-bold">STP Amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₹</span>
+                                <input type="number" class="form-control" id="stp-amount" name="stp_amount" min="0" step="0.01">
+                            </div>
+                        </div>
+
+                        <div class="mb-3 conditional-field" id="stp-frequency-group">
+                            <label for="stp-frequency" class="form-label fw-bold">STP Frequency</label>
+                            <select class="form-select" id="stp-frequency" name="stp_frequency">
+                                <option value="">Select frequency</option>
+                                <option value="monthly">Monthly</option>
+                                <option value="weekly">Weekly</option>
+                            </select>
+                        </div>
+
+                        <!-- SIP Fields -->
+                        <div class="mb-3 conditional-field" id="sip-amount-group">
+                            <label for="sip-amount" class="form-label fw-bold">SIP Amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₹</span>
+                                <input type="number" class="form-control" id="sip-amount" name="sip_amount" min="0" step="0.01">
+                            </div>
+                        </div>
+
+                        <div class="mb-3 conditional-field" id="sip-frequency-group">
+                            <label for="sip-frequency" class="form-label fw-bold">SIP Frequency</label>
+                            <select class="form-select" id="sip-frequency" name="sip_frequency">
+                                <option value="">Select frequency</option>
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="fortnightly">Fortnightly</option>
+                                <option value="monthly">Monthly</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3 conditional-field" id="sip-date-group">
+                            <label for="sip-date" class="form-label fw-bold">SIP Date</label>
+                            <select class="form-select" id="sip-date" name="sip_date">
+                                <option value="">Select date</option>
+                                {% for i in "12345678901234567890123456789012345678901234567890" %}
+                                {% if forloop.counter <= 31 %}
+                                <option value="{{ forloop.counter }}">{{ forloop.counter }}</option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- SWP Fields -->
+                        <div class="mb-3 conditional-field" id="swp-amount-group">
+                            <label for="swp-amount" class="form-label fw-bold">SWP Amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₹</span>
+                                <input type="number" class="form-control" id="swp-amount" name="swp_amount" min="0" step="0.01">
+                            </div>
+                        </div>
+
+                        <div class="mb-3 conditional-field" id="swp-frequency-group">
+                            <label for="swp-frequency" class="form-label fw-bold">SWP Frequency</label>
+                            <select class="form-select" id="swp-frequency" name="swp_frequency">
+                                <option value="">Select frequency</option>
+                                <option value="monthly">Monthly</option>
+                                <option value="weekly">Weekly</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3 conditional-field" id="swp-date-group">
+                            <label for="swp-date" class="form-label fw-bold">SWP Date</label>
+                            <select class="form-select" id="swp-date" name="swp_date">
+                                <option value="">Select date</option>
+                                {% for i in "12345678901234567890123456789012345678901234567890" %}
+                                {% if forloop.counter <= 31 %}
+                                <option value="{{ forloop.counter }}">{{ forloop.counter }}</option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="mb-3">
+                            <label for="action-notes" class="form-label fw-bold">Notes (Optional)</label>
+                            <textarea class="form-control" id="action-notes" name="notes" rows="2" placeholder="Add any additional notes or instructions"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="addAction()">Add Action</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scheme Search Modal -->
+    <div class="modal fade" id="schemeSearchModal" tabindex="-1" aria-labelledby="schemeSearchModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="schemeSearchModalLabel">Search Mutual Fund Schemes</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="scheme-search-input" placeholder="Search by scheme name, AMC, ISIN, or category..." autocomplete="off">
+                            <button type="button" class="btn btn-primary" onclick="searchSchemes()">
+                                <i class="fas fa-search"></i> Search
                             </button>
                         </div>
-                    {% endif %}
-                </div>
-            </div>
-            
-            <!-- Existing Plans -->
-            {% if existing_plans %}
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-secondary text-white">
-                    <h6 class="card-title mb-0">
-                        <i class="fas fa-history me-2"></i>Recent Plans for this Client
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="list-group list-group-flush">
-                        {% for plan in existing_plans %}
-                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="mb-1">{{ plan.plan_name }}</h6>
-                                <small class="text-muted">Created: {{ plan.created_at|date:"M d, Y" }}</small>
-                            </div>
-                            <span class="badge bg-{% if plan.status == 'approved' %}success{% elif plan.status == 'pending' %}warning{% else %}secondary{% endif %}">
-                                {{ plan.get_status_display }}
-                            </span>
+                        <div class="form-text">
+                            <i class="fas fa-database"></i> Searching from {{ all_schemes.count|default:"available" }} mutual fund schemes in database
                         </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-    
-    <div class="row">
-        <!-- Add New Investment -->
-        <div class="col-lg-4">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-warning text-dark">
-                    <h6 class="card-title mb-0">
-                        <i class="fas fa-search-plus me-2"></i>Add New Investment
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label for="schemeSearch" class="form-label">Search Schemes</label>
-                        <input type="text" class="form-control" id="schemeSearch" 
-                               placeholder="Type scheme name, AMC, or ISIN...">
-                        <div id="schemeResults" class="mt-2"></div>
-                    </div>
-                    <div class="form-text">
-                        <i class="fas fa-lightbulb text-warning me-1"></i>
-                        Search by scheme name, AMC name, or ISIN number to find mutual fund schemes
                     </div>
                     
-                    <!-- Available SIP Schemes Count -->
-                    {% if available_sip_schemes %}
-                    <div class="mt-3 p-2 bg-light rounded">
-                        <small class="text-muted">
-                            <i class="fas fa-info-circle me-1"></i>
-                            {{ available_sip_schemes.count }} schemes available for new SIP investments
-                        </small>
+                    <div id="scheme-search-results">
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-search fa-2x mb-3"></i>
+                            <p>Enter at least 2 characters to search for schemes</p>
+                        </div>
                     </div>
-                    {% endif %}
+                    
+                    <div class="loading-spinner text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Searching schemes...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
-        
-        <!-- Plan Actions -->
-        <div class="col-lg-8">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
-                    <h6 class="card-title mb-0">
-                        <i class="fas fa-list me-2"></i>Plan Actions
-                    </h6>
-                    <button type="button" class="btn btn-light btn-sm" id="clearAllActions">
-                        <i class="fas fa-trash me-1"></i>Clear All
+    </div>
+
+    <!-- Plan Name Modal -->
+    <div class="modal fade" id="planNameModal" tabindex="-1" aria-labelledby="planNameModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="planNameModalLabel">Save Execution Plan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="planNameForm">
+                        <div class="mb-3">
+                            <label for="plan-name" class="form-label fw-bold">Plan Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="plan-name" name="plan_name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="plan-description" class="form-label fw-bold">Description</label>
+                            <textarea class="form-control" id="plan-description" name="description" rows="3" placeholder="Optional description of the execution plan"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" onclick="submitPlan(false)" id="save-draft-btn">
+                        <i class="fas fa-save"></i> Save as Draft
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="submitPlan(true)" id="submit-approval-btn">
+                        <i class="fas fa-paper-plane"></i> Save & Submit for Approval
                     </button>
                 </div>
-                <div class="card-body">
-                    <div id="actionsContainer">
-                        <div class="text-center text-muted py-4" id="noActionsMessage">
-                            <i class="fas fa-clipboard-list fa-3x mb-3"></i>
-                            <h5>No Actions Added Yet</h5>
-                            <p>Add actions from the portfolio or search for new schemes to get started.</p>
-                        </div>
-                    </div>
-                    
-                    <div id="actionsSummary" class="mt-3" style="display: none;">
-                        <div class="row">
-                            <div class="col-md-3">
-                                <div class="text-center">
-                                    <h6>Total Investment</h6>
-                                    <span class="h5 text-success" id="totalInvestment">₹0</span>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="text-center">
-                                    <h6>Total Redemption</h6>
-                                    <span class="h5 text-danger" id="totalRedemption">₹0</span>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="text-center">
-                                    <h6>Net Investment</h6>
-                                    <span class="h5 text-primary" id="netInvestment">₹0</span>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="text-center">
-                                    <h6>Total Actions</h6>
-                                    <span class="h5 text-info" id="totalActions">0</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
-    
-    <!-- Form Actions -->
-    <div class="d-flex justify-content-between mb-4">
-        <div>
-            <a href="{% url 'create_plan' %}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left me-2"></i>Back
-            </a>
-            <button type="button" class="btn btn-outline-info" id="saveTemplateBtn">
-                <i class="fas fa-save me-2"></i>Save as Template
-            </button>
-        </div>
-        <div>
-            <button type="button" class="btn btn-success" id="saveDraftBtn">
-                <i class="fas fa-save me-2"></i>Save as Draft
-            </button>
-            <button type="button" class="btn btn-primary" id="saveAndSubmitBtn">
-                <i class="fas fa-paper-plane me-2"></i>Save & Submit for Approval
-            </button>
-        </div>
-    </div>
-</form>
 
-<!-- Enhanced Portfolio Action Modal -->
-<div class="modal fade" id="portfolioActionModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Add Portfolio Action</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="portfolioActionForm">
-                    <input type="hidden" id="portfolioHoldingId">
-                    <input type="hidden" id="actionPortfolioSchemeName">
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Scheme</label>
-                        <div class="form-control-plaintext bg-light p-2 rounded" id="displayPortfolioSchemeName"></div>
-                    </div>
-                    
-                    <!-- Action Type Selection with Icons -->
-                    <div class="mb-3">
-                        <label class="form-label">Action Type</label>
-                        <div class="row" id="portfolioActionTypes">
-                            {% for action_type in portfolio_action_types %}
-                            <div class="col-md-6 mb-2">
-                                <div class="card action-type-card" data-action-type="{{ action_type.type }}">
-                                    <div class="card-body p-3 text-center">
-                                        <i class="{{ action_type.icon }} fa-2x text-{{ action_type.color }} mb-2"></i>
-                                        <h6 class="card-title">{{ action_type.name }}</h6>
-                                        <small class="text-muted">{{ action_type.description }}</small>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        <input type="hidden" id="selectedActionType">
-                    </div>
-                    
-                    <!-- Dynamic Action Options -->
-                    <div id="actionOptionsContainer" style="display: none;">
-                        <!-- Amount/Units Options -->
-                        <div id="amountUnitsOptions">
-                            <div class="mb-3">
-                                <label class="form-label">Transaction Type</label>
-                                <select class="form-control" id="transactionType">
-                                    <option value="">Select transaction type...</option>
-                                </select>
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="portfolioActionAmount" class="form-label">Amount (₹)</label>
-                                        <input type="number" class="form-control" id="portfolioActionAmount" 
-                                               step="0.01" min="0" placeholder="Enter amount">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="portfolioActionUnits" class="form-label">Units</label>
-                                        <input type="number" class="form-control" id="portfolioActionUnits" 
-                                               step="0.0001" min="0" placeholder="Enter units">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- SIP Specific Options -->
-                        <div id="sipOptions" style="display: none;">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="sipAmount" class="form-label">SIP Amount (₹)</label>
-                                        <input type="number" class="form-control" id="sipAmount" 
-                                               step="100" min="500" placeholder="Enter SIP amount">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="sipDate" class="form-label">SIP Date</label>
-                                        <select class="form-control" id="sipDate">
-                                            <option value="">Select date...</option>
-                                            {% for i in "12345678901234567890123456789"|make_list %}
-                                                {% if forloop.counter <= 28 %}
-                                                    <option value="{{ forloop.counter }}">{{ forloop.counter }}</option>
-                                                {% endif %}
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="sipFrequency" class="form-label">Frequency</label>
-                                        <select class="form-control" id="sipFrequency">
-                                            <option value="monthly">Monthly</option>
-                                            <option value="weekly">Weekly</option>
-                                            <option value="fortnightly">Fortnightly</option>
-                                            <option value="daily">Daily</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="sipDuration" class="form-label">Duration (months)</label>
-                                        <input type="number" class="form-control" id="sipDuration" 
-                                               min="1" placeholder="Enter duration">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- STP/Switch Target Scheme -->
-                        <div id="targetSchemeOptions" style="display: none;">
-                            <div class="mb-3">
-                                <label for="targetSchemeSearch" class="form-label">Target Scheme</label>
-                                <input type="text" class="form-control" id="targetSchemeSearch" 
-                                       placeholder="Search target scheme...">
-                                <input type="hidden" id="targetSchemeId">
-                                <div id="targetSchemeResults" class="mt-2"></div>
-                            </div>
-                        </div>
-                        
-                        <!-- STP Specific Options -->
-                        <div id="stpOptions" style="display: none;">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="stpAmount" class="form-label">STP Amount (₹)</label>
-                                        <input type="number" class="form-control" id="stpAmount" 
-                                               step="100" min="1000" placeholder="Enter STP amount">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="stpFrequency" class="form-label">Frequency</label>
-                                        <select class="form-control" id="stpFrequency">
-                                            <option value="monthly">Monthly</option>
-                                            <option value="weekly">Weekly</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- SWP Specific Options -->
-                        <div id="swpOptions" style="display: none;">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="swpAmount" class="form-label">SWP Amount (₹)</label>
-                                        <input type="number" class="form-control" id="swpAmount" 
-                                               step="100" min="1000" placeholder="Enter SWP amount">
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="swpFrequency" class="form-label">Frequency</label>
-                                        <select class="form-control" id="swpFrequency">
-                                            <option value="monthly">Monthly</option>
-                                            <option value="weekly">Weekly</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Common Notes -->
-                        <div class="mb-3">
-                            <label for="portfolioActionNotes" class="form-label">Notes</label>
-                            <textarea class="form-control" id="portfolioActionNotes" rows="2" 
-                                      placeholder="Additional notes (optional)"></textarea>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="addPortfolioActionBtn">Add Action</button>
-            </div>
-        </div>
-    </div>
-</div>
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-<!-- Scheme Search Action Modal -->
-<div class="modal fade" id="schemeActionModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Add New Investment</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="schemeActionForm">
-                    <input type="hidden" id="newSchemeId">
-                    <input type="hidden" id="newSchemeName">
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Selected Scheme</label>
-                        <div class="form-control-plaintext bg-light p-2 rounded" id="displayNewSchemeName"></div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="newInvestmentType" class="form-label">Investment Type</label>
-                        <select class="form-control" id="newInvestmentType" required>
-                            <option value="">Select investment type...</option>
-                            <option value="lumpsum">Lump Sum Investment</option>
-                            <option value="sip">Start SIP</option>
-                        </select>
-                    </div>
-                    
-                    <!-- Lump Sum Options -->
-                    <div id="lumpsumOptions" style="display: none;">
-                        <div class="mb-3">
-                            <label for="lumpsumAmount" class="form-label">Investment Amount (₹)</label>
-                            <input type="number" class="form-control" id="lumpsumAmount" 
-                                   step="0.01" min="1000" placeholder="Enter investment amount">
-                        </div>
-                    </div>
-                    
-                    <!-- New SIP Options -->
-                    <div id="newSipOptions" style="display: none;">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="newSipAmount" class="form-label">SIP Amount (₹)</label>
-                                    <input type="number" class="form-control" id="newSipAmount" 
-                                           step="100" min="500" placeholder="Enter SIP amount">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="newSipDate" class="form-label">SIP Date</label>
-                                    <select class="form-control" id="newSipDate">
-                                        <option value="">Select date...</option>
-                                        {% for i in "12345678901234567890123456789"|make_list %}
-                                            {% if forloop.counter <= 28 %}
-                                                <option value="{{ forloop.counter }}">{{ forloop.counter }}</option>
-                                            {% endif %}
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="newSipFrequency" class="form-label">Frequency</label>
-                                    <select class="form-control" id="newSipFrequency">
-                                        <option value="monthly">Monthly</option>
-                                        <option value="weekly">Weekly</option>
-                                        <option value="fortnightly">Fortnightly</option>
-                                        <option value="daily">Daily</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="newSipDuration" class="form-label">Duration (months)</label>
-                                    <input type="number" class="form-control" id="newSipDuration" 
-                                           min="1" placeholder="Enter duration">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="newInvestmentNotes" class="form-label">Notes</label>
-                        <textarea class="form-control" id="newInvestmentNotes" rows="2" 
-                                  placeholder="Additional notes (optional)"></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="addNewInvestmentBtn">Add Investment</button>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-// Enhanced JavaScript for Portfolio Actions - Aligned with backend data structure
-
-let planActions = [];
-let actionCounter = 0;
-
-// Portfolio action types from backend
-const portfolioActionTypes = {{ portfolio_action_types|safe }};
-
-$(document).ready(function() {
-    initializeForm();
-    calculatePercentages();
-    
-    // Portfolio view toggle
-    $('#portfolioViewToggle').on('click', function() {
-        const currentView = $(this).data('view');
-        if (currentView === 'summary') {
-            $(this).data('view', 'detailed').html('<i class="fas fa-list me-1"></i>Summary View');
-        } else {
-            $(this).data('view', 'summary').html('<i class="fas fa-table me-1"></i>Detailed View');
-        }
-    });
-
-    // Portfolio action buttons
-    $(document).on('click', '.portfolio-action-btn', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
+    <script>
+        // Global variables
+        let plannedActions = [];
+        let currentTargetField = null;
         
-        const portfolioId = $(this).data('portfolio-id');
-        const schemeName = $(this).data('scheme-name');
-        const actionType = $(this).data('action');
-        
-        console.log('Portfolio action:', { portfolioId, schemeName, actionType });
-        
-        if (!portfolioId || !schemeName) {
-            alert('Missing portfolio information. Please try again.');
-            return;
-        }
-        
-        openPortfolioActionModal(portfolioId, schemeName, actionType);
-    });
-    
-    // Action type selection in modal
-    $(document).on('click', '.action-type-card', function() {
-        $('.action-type-card').removeClass('border-primary bg-light');
-        $(this).addClass('border-primary bg-light');
-        
-        const actionType = $(this).data('action-type');
-        $('#selectedActionType').val(actionType);
-        
-        showActionOptions(actionType);
-    });
-    
-    // Investment type change for new schemes
-    $('#newInvestmentType').on('change', function() {
-        const investmentType = $(this).val();
-        
-        $('#lumpsumOptions, #newSipOptions').hide();
-        
-        if (investmentType === 'lumpsum') {
-            $('#lumpsumOptions').show();
-        } else if (investmentType === 'sip') {
-            $('#newSipOptions').show();
-        }
-    });
-    
-    // Add portfolio action
-    $('#addPortfolioActionBtn').on('click', function() {
-        addPortfolioAction();
-    });
-    
-    // Add new investment
-    $('#addNewInvestmentBtn').on('click', function() {
-        addNewInvestment();
-    });
-    
-    // Scheme search
-    let searchTimeout;
-    $('#schemeSearch').on('input', function() {
-        const query = $(this).val().trim();
-        
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(function() {
-            if (query.length >= 2) {
-                searchSchemes(query);
-            } else {
-                $('#schemeResults').empty();
-            }
-        }, 300);
-    });
-    
-    // Target scheme search
-    $('#targetSchemeSearch').on('input', function() {
-        const query = $(this).val().trim();
-        
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(function() {
-            if (query.length >= 2) {
-                searchTargetSchemes(query);
-            } else {
-                $('#targetSchemeResults').empty();
-            }
-        }, 300);
-    });
-    
-    // Template selector
-    $('#templateSelect').on('change', function() {
-        const templateId = $(this).val();
-        if (templateId) {
-            loadTemplate(templateId);
-        }
-    });
-    
-    // Clear all actions
-    $('#clearAllActions').on('click', function() {
-        if (planActions.length > 0 && confirm('Are you sure you want to clear all actions?')) {
-            planActions = [];
-            renderActions();
-            updateSummary();
-        }
-    });
-    
-    // Save functions
-    $('#saveDraftBtn').on('click', function() {
-        savePlan('draft');
-    });
-    
-    $('#saveAndSubmitBtn').on('click', function() {
-        savePlan('submit');
-    });
-    
-    $('#saveTemplateBtn').on('click', function() {
-        saveAsTemplate();
-    });
-});
-
-function initializeForm() {
-    console.log('Form initialized with client:', '{{ client.id }}');
-    console.log('Portfolio data count:', {{ portfolio_data|length|default:0 }});
-}
-
-function calculatePercentages() {
-    const totalValue = {{ total_portfolio_value|default:0 }};
-    
-    if (totalValue > 0) {
-        // Calculate percentages from asset allocation data
-        {% if asset_allocation.total_equity %}
-            const equityPct = ({{ asset_allocation.total_equity|default:0 }} / totalValue * 100).toFixed(1);
-            $('#equity-percentage').text(equityPct + '%');
-            $('.equity-pct').text(equityPct);
-        {% else %}
-            $('#equity-percentage').text('0%');
-            $('.equity-pct').text('0');
-        {% endif %}
-        
-        {% if asset_allocation.total_debt %}
-            const debtPct = ({{ asset_allocation.total_debt|default:0 }} / totalValue * 100).toFixed(1);
-            $('#debt-percentage').text(debtPct + '%');
-            $('.debt-pct').text(debtPct);
-        {% else %}
-            $('#debt-percentage').text('0%');
-            $('.debt-pct').text('0');
-        {% endif %}
-        
-        {% if asset_allocation.total_hybrid %}
-            const hybridPct = ({{ asset_allocation.total_hybrid|default:0 }} / totalValue * 100).toFixed(1);
-            $('.hybrid-pct').text(hybridPct);
-        {% else %}
-            $('.hybrid-pct').text('0');
-        {% endif %}
-        
-        {% if asset_allocation.total_liquid %}
-            const liquidPct = ({{ asset_allocation.total_liquid|default:0 }} / totalValue * 100).toFixed(1);
-            $('.liquid-pct').text(liquidPct);
-        {% else %}
-            $('.liquid-pct').text('0');
-        {% endif %}
-        
-        {% if asset_allocation.total_other %}
-            const otherPct = ({{ asset_allocation.total_other|default:0 }} / totalValue * 100).toFixed(1);
-            $('.other-pct').text(otherPct);
-        {% else %}
-            $('.other-pct').text('0');
-        {% endif %}
-        
-        {% if asset_allocation.total_arbitrage %}
-            const arbitragePct = ({{ asset_allocation.total_arbitrage|default:0 }} / totalValue * 100).toFixed(1);
-            $('.arbitrage-pct').text(arbitragePct);
-        {% else %}
-            $('.arbitrage-pct').text('0');
-        {% endif %}
-    } else {
-        // Set all percentages to 0 if no total value
-        $('#equity-percentage, #debt-percentage').text('0%');
-        $('.equity-pct, .debt-pct, .hybrid-pct, .liquid-pct, .other-pct, .arbitrage-pct').text('0');
-    }
-}
-
-function openPortfolioActionModal(portfolioId, schemeName, actionType) {
-    // Reset form
-    $('#portfolioActionForm')[0].reset();
-    $('.action-type-card').removeClass('border-primary bg-light');
-    $('#actionOptionsContainer').hide();
-    
-    // Set portfolio data
-    $('#portfolioHoldingId').val(portfolioId);
-    $('#actionPortfolioSchemeName').val(schemeName);
-    $('#displayPortfolioSchemeName').text(schemeName);
-    
-    // Pre-select action type if provided
-    if (actionType) {
-        $(`.action-type-card[data-action-type="${actionType}"]`).addClass('border-primary bg-light');
-        $('#selectedActionType').val(actionType);
-        showActionOptions(actionType);
-    }
-    
-    $('#portfolioActionModal').modal('show');
-}
-
-function showActionOptions(actionType) {
-    // Hide all option containers
-    $('#amountUnitsOptions, #sipOptions, #targetSchemeOptions, #stpOptions, #swpOptions').hide();
-    $('#actionOptionsContainer').show();
-    
-    // Clear transaction type options
-    $('#transactionType').empty().append('<option value="">Select transaction type...</option>');
-    
-    // Show relevant options based on action type
-    switch(actionType) {
-        case 'redeem':
-            $('#amountUnitsOptions').show();
-            populateTransactionOptions([
-                {value: 'all_units', label: 'All Units'},
-                {value: 'specific_amount', label: 'Specific Amount'},
-                {value: 'specific_units', label: 'Specific Units'}
-            ]);
-            break;
+        // Initialize when page loads
+        $(document).ready(function() {
+            updateActionsSummary();
+            initializeAssetAllocation();
             
-        case 'switch':
-            $('#amountUnitsOptions, #targetSchemeOptions').show();
-            populateTransactionOptions([
-                {value: 'all_units', label: 'All Units'},
-                {value: 'specific_amount', label: 'Specific Amount'},
-                {value: 'specific_units', label: 'Specific Units'}
-            ]);
-            break;
-            
-        case 'stp':
-            $('#targetSchemeOptions, #stpOptions').show();
-            break;
-            
-        case 'sip':
-            $('#sipOptions').show();
-            break;
-            
-        case 'swp':
-            $('#swpOptions').show();
-            break;
-    }
-}
-
-function populateTransactionOptions(options) {
-    const select = $('#transactionType');
-    options.forEach(option => {
-        select.append(`<option value="${option.value}">${option.label}</option>`);
-    });
-}
-
-function searchSchemes(query) {
-    console.log('Searching schemes for:', query);
-    
-    $('#schemeResults').html('<div class="text-center p-3"><i class="fas fa-spinner fa-spin"></i> Searching...</div>');
-    
-    // Simulated search - replace with actual AJAX call
-    setTimeout(() => {
-        displaySchemeResults([
-            {
-                id: 1,
-                scheme_name: 'Sample Equity Fund',
-                amc_name: 'Sample AMC',
-                scheme_type: 'Equity',
-                isin_number: 'INF123456789'
-            }
-        ]);
-    }, 500);
-}
-
-function searchTargetSchemes(query) {
-    console.log('Searching target schemes for:', query);
-    
-    $('#targetSchemeResults').html('<div class="text-center p-3"><i class="fas fa-spinner fa-spin"></i> Searching...</div>');
-    
-    // Simulated search - replace with actual AJAX call
-    setTimeout(() => {
-        displayTargetSchemeResults([
-            {
-                id: 2,
-                scheme_name: 'Target Debt Fund',
-                amc_name: 'Sample AMC',
-                scheme_type: 'Debt'
-            }
-        ]);
-    }, 500);
-}
-
-function displaySchemeResults(schemes) {
-    const results = $('#schemeResults');
-    results.empty();
-    
-    if (schemes && schemes.length > 0) {
-        let resultsHtml = '<div class="list-group">';
-        
-        schemes.forEach(function(scheme) {
-            resultsHtml += `
-                <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center new-scheme-result" 
-                     data-scheme-id="${scheme.id}" 
-                     data-scheme-name="${scheme.scheme_name}">
-                    <div>
-                        <h6 class="mb-1">${scheme.scheme_name}</h6>
-                        <small class="text-muted">${scheme.amc_name || 'Unknown AMC'} • ${scheme.scheme_type || 'Other'}</small>
-                        ${scheme.isin_number ? `<br><small class="text-muted">ISIN: ${scheme.isin_number}</small>` : ''}
-                    </div>
-                    <button type="button" class="btn btn-primary btn-sm">
-                        <i class="fas fa-plus"></i>
-                    </button>
-                </div>
-            `;
-        });
-        
-        resultsHtml += '</div>';
-        results.html(resultsHtml);
-        
-        // Add click handler for scheme selection
-        $(document).on('click', '.new-scheme-result', function(e) {
-            e.preventDefault();
-            
-            const schemeId = $(this).data('scheme-id');
-            const schemeName = $(this).data('scheme-name');
-            
-            openNewInvestmentModal(schemeId, schemeName);
-        });
-        
-    } else {
-        results.html('<div class="text-muted text-center p-3">No schemes found. Try different search terms.</div>');
-    }
-}
-
-function displayTargetSchemeResults(schemes) {
-    const results = $('#targetSchemeResults');
-    results.empty();
-    
-    if (schemes && schemes.length > 0) {
-        let resultsHtml = '<div class="list-group">';
-        
-        schemes.forEach(function(scheme) {
-            resultsHtml += `
-                <div class="list-group-item list-group-item-action target-scheme-result" 
-                     data-scheme-id="${scheme.id}" 
-                     data-scheme-name="${scheme.scheme_name}">
-                    <h6 class="mb-1">${scheme.scheme_name}</h6>
-                    <small class="text-muted">${scheme.amc_name || 'Unknown AMC'} • ${scheme.scheme_type || 'Other'}</small>
-                </div>
-            `;
-        });
-        
-        resultsHtml += '</div>';
-        results.html(resultsHtml);
-        
-        // Add click handler for target scheme selection
-        $(document).on('click', '.target-scheme-result', function(e) {
-            e.preventDefault();
-            
-            const schemeId = $(this).data('scheme-id');
-            const schemeName = $(this).data('scheme-name');
-            
-            $('#targetSchemeId').val(schemeId);
-            $('#targetSchemeSearch').val(schemeName);
-            $('#targetSchemeResults').empty();
-        });
-        
-    } else {
-        results.html('<div class="text-muted text-center p-3">No schemes found.</div>');
-    }
-}
-
-function openNewInvestmentModal(schemeId, schemeName) {
-    // Reset form
-    $('#schemeActionForm')[0].reset();
-    $('#lumpsumOptions, #newSipOptions').hide();
-    
-    // Set scheme data
-    $('#newSchemeId').val(schemeId);
-    $('#newSchemeName').val(schemeName);
-    $('#displayNewSchemeName').text(schemeName);
-    
-    $('#schemeActionModal').modal('show');
-}
-
-function addPortfolioAction() {
-    const actionType = $('#selectedActionType').val();
-    
-    if (!actionType) {
-        alert('Please select an action type');
-        return;
-    }
-    
-    // Collect common data
-    const actionData = {
-        id: ++actionCounter,
-        portfolio_id: $('#portfolioHoldingId').val(),
-        scheme_name: $('#actionPortfolioSchemeName').val(),
-        action_type: actionType,
-        notes: $('#portfolioActionNotes').val()
-    };
-    
-    // Collect specific data based on action type
-    switch(actionType) {
-        case 'redeem':
-        case 'switch':
-            actionData.transaction_type = $('#transactionType').val();
-            actionData.amount = $('#portfolioActionAmount').val() ? parseFloat($('#portfolioActionAmount').val()) : null;
-            actionData.units = $('#portfolioActionUnits').val() ? parseFloat($('#portfolioActionUnits').val()) : null;
-            
-            if (actionType === 'switch') {
-                actionData.target_scheme_id = $('#targetSchemeId').val();
-                actionData.target_scheme_name = $('#targetSchemeSearch').val();
-            }
-            break;
-            
-        case 'stp':
-            actionData.target_scheme_id = $('#targetSchemeId').val();
-            actionData.target_scheme_name = $('#targetSchemeSearch').val();
-            actionData.amount = $('#stpAmount').val() ? parseFloat($('#stpAmount').val()) : null;
-            actionData.frequency = $('#stpFrequency').val();
-            break;
-            
-        case 'sip':
-            actionData.amount = $('#sipAmount').val() ? parseFloat($('#sipAmount').val()) : null;
-            actionData.sip_date = $('#sipDate').val();
-            actionData.frequency = $('#sipFrequency').val();
-            actionData.duration = $('#sipDuration').val() ? parseInt($('#sipDuration').val()) : null;
-            break;
-            
-        case 'swp':
-            actionData.amount = $('#swpAmount').val() ? parseFloat($('#swpAmount').val()) : null;
-            actionData.frequency = $('#swpFrequency').val();
-            break;
-    }
-    
-    // Validate required fields
-    if (!validateActionData(actionData)) {
-        return;
-    }
-    
-    // Add to plan actions
-    planActions.push(actionData);
-    
-    // Update UI
-    renderActions();
-    updateSummary();
-    
-    // Close modal
-    $('#portfolioActionModal').modal('hide');
-    
-    console.log('Added portfolio action:', actionData);
-}
-
-function addNewInvestment() {
-    const investmentType = $('#newInvestmentType').val();
-    
-    if (!investmentType) {
-        alert('Please select an investment type');
-        return;
-    }
-    
-    const actionData = {
-        id: ++actionCounter,
-        scheme_id: $('#newSchemeId').val(),
-        scheme_name: $('#newSchemeName').val(),
-        action_type: investmentType === 'lumpsum' ? 'purchase' : 'sip',
-        notes: $('#newInvestmentNotes').val()
-    };
-    
-    if (investmentType === 'lumpsum') {
-        actionData.amount = $('#lumpsumAmount').val() ? parseFloat($('#lumpsumAmount').val()) : null;
-    } else if (investmentType === 'sip') {
-        actionData.amount = $('#newSipAmount').val() ? parseFloat($('#newSipAmount').val()) : null;
-        actionData.sip_date = $('#newSipDate').val();
-        actionData.frequency = $('#newSipFrequency').val();
-        actionData.duration = $('#newSipDuration').val() ? parseInt($('#newSipDuration').val()) : null;
-    }
-    
-    // Validate required fields
-    if (!validateActionData(actionData)) {
-        return;
-    }
-    
-    // Add to plan actions
-    planActions.push(actionData);
-    
-    // Update UI
-    renderActions();
-    updateSummary();
-    
-    // Close modal and clear search
-    $('#schemeActionModal').modal('hide');
-    $('#schemeSearch').val('');
-    $('#schemeResults').empty();
-    
-    console.log('Added new investment:', actionData);
-}
-
-function validateActionData(actionData) {
-    if (!actionData.amount && !actionData.units) {
-        alert('Please enter either amount or units');
-        return false;
-    }
-    
-    if (['sip', 'stp', 'swp'].includes(actionData.action_type)) {
-        if (!actionData.frequency) {
-            alert('Please select frequency');
-            return false;
-        }
-    }
-    
-    if (actionData.action_type === 'sip' && !actionData.sip_date) {
-        alert('Please select SIP date');
-        return false;
-    }
-    
-    if (['switch', 'stp'].includes(actionData.action_type) && !actionData.target_scheme_name) {
-        alert('Please select target scheme');
-        return false;
-    }
-    
-    return true;
-}
-
-function renderActions() {
-    const container = $('#actionsContainer');
-    
-    if (planActions.length === 0) {
-        $('#noActionsMessage').show();
-        $('#actionsSummary').hide();
-        container.find('.table-responsive').remove();
-        return;
-    }
-    
-    $('#noActionsMessage').hide();
-    $('#actionsSummary').show();
-    
-    let html = '<div class="table-responsive"><table class="table table-striped table-hover">';
-    html += `
-        <thead class="table-dark">
-            <tr>
-                <th>#</th>
-                <th>Action</th>
-                <th>Scheme</th>
-                <th class="text-end">Amount</th>
-                <th>Details</th>
-                <th>Notes</th>
-                <th class="text-center">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-    `;
-    
-    planActions.forEach(function(action, index) {
-        const actionTypeDisplay = getActionTypeDisplay(action.action_type);
-        const actionClass = getActionTypeClass(action.action_type);
-        
-        html += `
-            <tr>
-                <td><span class="badge bg-secondary">${index + 1}</span></td>
-                <td>
-                    <span class="badge ${actionClass}">${actionTypeDisplay}</span>
-                    ${action.frequency ? `<br><small class="text-muted">${action.frequency}</small>` : ''}
-                </td>
-                <td>
-                    <div class="fw-bold text-primary">${action.scheme_name}</div>
-                    ${action.target_scheme_name ? '<small class="text-muted"><i class="fas fa-arrow-right me-1"></i>' + action.target_scheme_name + '</small>' : ''}
-                </td>
-                <td class="text-end">
-                    ${action.amount ? '<span class="fw-bold">₹' + parseFloat(action.amount).toLocaleString('en-IN') + '</span>' : '<span class="text-muted">-</span>'}
-                    ${action.units ? '<br><small>' + parseFloat(action.units).toFixed(4) + ' units</small>' : ''}
-                </td>
-                <td>
-                    ${getActionDetails(action)}
-                </td>
-                <td>
-                    ${action.notes ? '<small>' + action.notes + '</small>' : '<span class="text-muted">-</span>'}
-                </td>
-                <td class="text-center">
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-sm btn-outline-primary edit-action-btn" 
-                                data-index="${index}" title="Edit">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-danger remove-action-btn" 
-                                data-index="${index}" title="Remove">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `;
-    });
-    
-    html += '</tbody></table></div>';
-    
-    // Remove existing table and add new one
-    container.find('.table-responsive').remove();
-    container.append(html);
-    
-    // Add event handlers
-    $(document).off('click', '.remove-action-btn').on('click', '.remove-action-btn', function(e) {
-        e.preventDefault();
-        const index = $(this).data('index');
-        if (confirm('Are you sure you want to remove this action?')) {
-            planActions.splice(index, 1);
-            renderActions();
-            updateSummary();
-        }
-    });
-    
-    $(document).off('click', '.edit-action-btn').on('click', '.edit-action-btn', function(e) {
-        e.preventDefault();
-        const index = $(this).data('index');
-        editAction(index);
-    });
-}
-
-function getActionTypeDisplay(actionType) {
-    const displayMap = {
-        'purchase': 'Purchase',
-        'redeem': 'Redeem',
-        'switch': 'Switch',
-        'stp': 'STP',
-        'sip': 'SIP',
-        'swp': 'SWP'
-    };
-    return displayMap[actionType] || actionType;
-}
-
-function getActionTypeClass(actionType) {
-    const classMap = {
-        'purchase': 'bg-success',
-        'redeem': 'bg-danger',
-        'switch': 'bg-info',
-        'stp': 'bg-dark',
-        'sip': 'bg-primary',
-        'swp': 'bg-warning'
-    };
-    return classMap[actionType] || 'bg-secondary';
-}
-
-function getActionDetails(action) {
-    let details = '';
-    
-    if (action.sip_date) {
-        details += `<span class="badge bg-info">Date: ${action.sip_date}</span><br>`;
-    }
-    
-    if (action.duration) {
-        details += `<small class="text-muted">Duration: ${action.duration} months</small><br>`;
-    }
-    
-    if (action.transaction_type) {
-        details += `<small class="text-muted">Type: ${action.transaction_type.replace('_', ' ')}</small><br>`;
-    }
-    
-    return details;
-}
-
-function editAction(index) {
-    const action = planActions[index];
-    
-    console.log('Editing action:', action);
-    
-    // Determine if it's a portfolio action or new investment
-    if (action.portfolio_id) {
-        // Edit portfolio action
-        openPortfolioActionModal(action.portfolio_id, action.scheme_name, action.action_type);
-        
-        // Populate form with existing data
-        setTimeout(() => {
-            populatePortfolioActionForm(action);
-            $('#addPortfolioActionBtn').data('edit-index', index).text('Update Action');
-        }, 100);
-    } else {
-        // Edit new investment
-        openNewInvestmentModal(action.scheme_id, action.scheme_name);
-        
-        // Populate form with existing data
-        setTimeout(() => {
-            populateNewInvestmentForm(action);
-            $('#addNewInvestmentBtn').data('edit-index', index).text('Update Investment');
-        }, 100);
-    }
-}
-
-function populatePortfolioActionForm(action) {
-    if (action.amount) $('#portfolioActionAmount').val(action.amount);
-    if (action.units) $('#portfolioActionUnits').val(action.units);
-    if (action.transaction_type) $('#transactionType').val(action.transaction_type);
-    if (action.target_scheme_id) {
-        $('#targetSchemeId').val(action.target_scheme_id);
-        $('#targetSchemeSearch').val(action.target_scheme_name);
-    }
-    if (action.sip_date) $('#sipDate').val(action.sip_date);
-    if (action.frequency) {
-        $('#sipFrequency, #stpFrequency, #swpFrequency').val(action.frequency);
-    }
-    if (action.duration) $('#sipDuration').val(action.duration);
-    if (action.notes) $('#portfolioActionNotes').val(action.notes);
-}
-
-function populateNewInvestmentForm(action) {
-    const investmentType = action.action_type === 'purchase' ? 'lumpsum' : 'sip';
-    $('#newInvestmentType').val(investmentType).trigger('change');
-    
-    if (investmentType === 'lumpsum') {
-        $('#lumpsumAmount').val(action.amount);
-    } else {
-        $('#newSipAmount').val(action.amount);
-        $('#newSipDate').val(action.sip_date);
-        $('#newSipFrequency').val(action.frequency);
-        $('#newSipDuration').val(action.duration);
-    }
-    
-    if (action.notes) $('#newInvestmentNotes').val(action.notes);
-}
-
-function updateSummary() {
-    let totalInvestment = 0;
-    let totalRedemption = 0;
-    let sipCount = 0;
-    
-    planActions.forEach(function(action) {
-        if (action.amount) {
-            const amount = parseFloat(action.amount);
-            
-            if (['purchase', 'sip'].includes(action.action_type)) {
-                totalInvestment += amount;
-                if (action.action_type === 'sip') {
-                    sipCount++;
+            // Setup scheme search on enter key
+            $('#scheme-search-input').on('keypress', function(e) {
+                if (e.which === 13) {
+                    searchSchemes();
                 }
-            } else if (['redeem', 'swp'].includes(action.action_type)) {
-                totalRedemption += amount;
+            });
+            
+            // Setup action type selection
+            $('.action-type-selector').on('click', function() {
+                const actionType = $(this).data('action');
+                selectActionType(actionType);
+            });
+        });
+
+        // Initialize asset allocation visualization
+        function initializeAssetAllocation() {
+            {% if asset_allocation %}
+            const allocation = {
+                total_aum: {{ asset_allocation.total_aum|default:0 }},
+                total_equity: {{ asset_allocation.total_equity|default:0 }},
+                total_debt: {{ asset_allocation.total_debt|default:0 }},
+                total_hybrid: {{ asset_allocation.total_hybrid|default:0 }},
+                total_liquid: {{ asset_allocation.total_liquid|default:0 }},
+                total_other: {{ asset_allocation.total_other|default:0 }},
+                total_arbitrage: {{ asset_allocation.total_arbitrage|default:0 }}
+            };
+            
+            if (allocation.total_aum > 0) {
+                displayAssetAllocation(allocation);
+            }
+            {% endif %}
+        }
+
+        function displayAssetAllocation(allocation) {
+            const barContainer = $('#asset-allocation-bar');
+            const legendContainer = $('#asset-allocation-legend');
+            
+            let barHtml = '';
+            let legendHtml = '';
+            
+            const segments = [
+                { name: 'Equity', value: allocation.total_equity, class: 'equity-segment' },
+                { name: 'Debt', value: allocation.total_debt, class: 'debt-segment' },
+                { name: 'Hybrid', value: allocation.total_hybrid, class: 'hybrid-segment' },
+                { name: 'Liquid', value: allocation.total_liquid, class: 'liquid-segment' },
+                { name: 'Other', value: allocation.total_other, class: 'other-segment' },
+                { name: 'Arbitrage', value: allocation.total_arbitrage, class: 'arbitrage-segment' }
+            ];
+            
+            segments.forEach(segment => {
+                if (segment.value > 0) {
+                    const percentage = (segment.value / allocation.total_aum) * 100;
+                    
+                    // Add to bar
+                    barHtml += `<div class="allocation-segment ${segment.class}" style="width: ${percentage}%"></div>`;
+                    
+                    // Add to legend
+                    legendHtml += `
+                        <div class="col-2">
+                            <span class="${segment.class} d-inline-block" style="width: 12px; height: 12px; border-radius: 2px;"></span> 
+                            ${segment.name}: ₹${segment.value.toLocaleString()}
+                        </div>
+                    `;
+                }
+            });
+            
+            barContainer.html(barHtml);
+            legendContainer.html(legendHtml);
+        }
+
+        // Action Modal Functions
+        function openActionModal(actionType, schemeName = '', currentValue = 0, currentUnits = 0, portfolioId = null) {
+            resetActionForm();
+            
+            // Set initial values
+            $('#action-type').val(actionType);
+            $('#current-value').val(currentValue);
+            $('#current-units').val(currentUnits);
+            $('#portfolio-id').val(portfolioId);
+            
+            // Set source scheme if provided
+            if (schemeName) {
+                $('#source-scheme').val(schemeName);
+                // Update the portfolio data when source scheme is selected
+                updatePortfolioData(schemeName);
+            }
+            
+            // Select action type
+            selectActionType(actionType);
+            
+            // Set modal title
+            const actionTitles = {
+                'redeem': 'Redeem Investment',
+                'switch': 'Switch Investment', 
+                'stp': 'Systematic Transfer Plan',
+                'sip': 'Systematic Investment Plan',
+                'swp': 'Systematic Withdrawal Plan'
+            };
+            $('#actionModalLabel').text(actionTitles[actionType] || 'Add Action');
+            
+            // Show modal
+            $('#actionModal').modal('show');
+        }
+
+        function updatePortfolioData(schemeName) {
+            // Find the selected option and update hidden fields
+            const selectedOption = $(`#source-scheme option[value="${schemeName}"]`);
+            if (selectedOption.length > 0) {
+                $('#portfolio-id').val(selectedOption.data('portfolio-id'));
+                $('#current-value').val(selectedOption.data('current-value'));
+                $('#current-units').val(selectedOption.data('units'));
             }
         }
-    });
-    
-    const netInvestment = totalInvestment - totalRedemption;
-    
-    $('#totalInvestment').text('₹' + totalInvestment.toLocaleString('en-IN'));
-    $('#totalRedemption').text('₹' + totalRedemption.toLocaleString('en-IN'));
-    $('#netInvestment').text('₹' + netInvestment.toLocaleString('en-IN'));
-    $('#totalActions').text(planActions.length);
-    
-    // Update net investment color
-    const netElement = $('#netInvestment');
-    netElement.removeClass('text-success text-danger text-primary');
-    if (netInvestment > 0) {
-        netElement.addClass('text-success');
-    } else if (netInvestment < 0) {
-        netElement.addClass('text-danger');
-    } else {
-        netElement.addClass('text-primary');
-    }
-}
 
-function savePlan(action) {
-    const planName = $('#planName').val().trim();
-    const description = $('#planDescription').val().trim();
-    
-    if (!planName) {
-        alert('Please enter a plan name');
-        $('#planName').focus();
-        return;
-    }
-    
-    if (planActions.length === 0) {
-        alert('Please add at least one action to the plan');
-        return;
-    }
-    
-    // Show loading state
-    const submitBtn = action === 'submit' ? $('#saveAndSubmitBtn') : $('#saveDraftBtn');
-    const originalText = submitBtn.html();
-    submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Saving...');
-    
-    const data = {
-        client_id: '{{ client.id }}',
-        plan_name: planName,
-        description: description,
-        actions: planActions,
-        submit_for_approval: action === 'submit'
-    };
-    
-    console.log('Saving plan:', data);
-    
-    // Simulate save operation - replace with actual AJAX call
-    setTimeout(() => {
-        const message = action === 'submit' ? 
-            'Plan saved and submitted for approval successfully!' : 
-            'Plan saved as draft successfully!';
-        
-        alert(message);
-        
-        // Restore button state
-        submitBtn.prop('disabled', false).html(originalText);
-        
-        // Redirect or update UI as needed
-        // window.location.href = '/execution_plans/ongoing/';
-    }, 1500);
-}
-
-function loadTemplate(templateId) {
-    console.log('Loading template:', templateId);
-    
-    // Simulate template loading - replace with actual AJAX call
-    setTimeout(() => {
-        const sampleTemplate = [
-            {
-                id: 1,
-                scheme_name: 'Template Equity Fund',
-                action_type: 'sip',
-                amount: 5000,
-                sip_date: 5,
-                frequency: 'monthly',
-                notes: 'From template'
-            }
-        ];
-        
-        planActions = sampleTemplate;
-        renderActions();
-        updateSummary();
-        alert('Template loaded successfully!');
-    }, 500);
-}
-
-function saveAsTemplate() {
-    const templateName = prompt('Enter template name:');
-    if (!templateName) return;
-    
-    if (planActions.length === 0) {
-        alert('Please add at least one action before saving as template');
-        return;
-    }
-    
-    console.log('Saving template:', templateName, planActions);
-    
-    // Simulate template saving - replace with actual AJAX call
-    setTimeout(() => {
-        alert('Template saved successfully!');
-    }, 500);
-}
-
-function exportPortfolio() {
-    const portfolioData = [];
-    $('#portfolioTable tbody tr').each(function() {
-        const row = $(this);
-        portfolioData.push({
-            scheme: row.find('td:eq(1)').text().trim(),
-            value: row.find('td:eq(2)').text().trim(),
-            units: row.find('td:eq(3)').text().trim(),
-            assetClass: row.find('td:eq(4)').text().trim(),
-            allocation: row.find('td:eq(5)').text().trim()
+        // Add event listener for source scheme selection
+        $(document).ready(function() {
+            $('#source-scheme').on('change', function() {
+                const selectedScheme = $(this).val();
+                if (selectedScheme) {
+                    updatePortfolioData(selectedScheme);
+                }
+            });
         });
-    });
-    
-    // Simple CSV export
-    let csv = 'Scheme,Current Value,Units,Asset Class,Allocation %\n';
-    portfolioData.forEach(function(row) {
-        csv += `"${row.scheme}","${row.value}","${row.units}","${row.assetClass}","${row.allocation}"\n`;
-    });
-    
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = '{{ client.name }}_portfolio.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
-}
 
-function addBulkActions() {
-    alert('Bulk actions feature coming soon!');
-}
+        function selectActionType(actionType) {
+            // Reset all buttons
+            $('.action-type-selector').removeClass('active btn-danger btn-primary btn-info btn-success btn-warning')
+                .addClass('btn-outline-danger btn-outline-primary btn-outline-info btn-outline-success btn-outline-warning');
+            
+            // Activate selected button
+            $(`.action-type-selector[data-action="${actionType}"]`)
+                .removeClass('btn-outline-danger btn-outline-primary btn-outline-info btn-outline-success btn-outline-warning')
+                .addClass('active');
+            
+            // Apply appropriate color
+            const colorMap = {
+                'redeem': 'btn-danger',
+                'switch': 'btn-primary',
+                'stp': 'btn-info',
+                'sip': 'btn-success',
+                'swp': 'btn-warning'
+            };
+            $(`.action-type-selector[data-action="${actionType}"]`).addClass(colorMap[actionType]);
+            
+            // Set hidden field
+            $('#action-type').val(actionType);
+            
+            // Show/hide relevant fields
+            showRelevantFields(actionType);
+        }
 
-</script>
+        function showRelevantFields(actionType) {
+            // Hide all conditional fields
+            $('.conditional-field').removeClass('show');
+            
+            // Show common fields based on action type
+            switch(actionType) {
+                case 'redeem':
+                    $('#redeem-by-group').addClass('show');
+                    $('#source-scheme-group').show();
+                    break;
+                case 'switch':
+                    $('#target-scheme-group, #switch-by-group').addClass('show');
+                    $('#source-scheme-group').show();
+                    break;
+                case 'stp':
+                    $('#target-scheme-group, #stp-amount-group, #stp-frequency-group').addClass('show');
+                    $('#source-scheme-group').show();
+                    break;
+                case 'sip':
+                    $('#target-scheme-group, #sip-amount-group, #sip-frequency-group, #sip-date-group').addClass('show');
+                    $('#source-scheme-group').hide(); // SIP doesn't need source scheme
+                    $('#source-scheme').val(''); // Clear source scheme for SIP
+                    break;
+                case 'swp':
+                    $('#swp-amount-group, #swp-frequency-group, #swp-date-group').addClass('show');
+                    $('#source-scheme-group').show();
+                    break;
+            }
+        }
 
-<style>
-.action-type-card {
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border: 2px solid transparent;
-}
+        function toggleAmountField(type) {
+            const selectedValue = $(`#${type}-by`).val();
+            
+            // Hide all amount/unit fields for this type
+            $(`#${type}-amount-group, #${type}-units-group`).removeClass('show');
+            
+            // Show relevant field based on selection
+            if (selectedValue === 'specific_amount') {
+                $(`#${type}-amount-group`).addClass('show');
+            } else if (selectedValue === 'specific_units') {
+                $(`#${type}-units-group`).addClass('show');
+            }
+        }
 
-.action-type-card:hover {
-    border-color: #dee2e6;
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-}
+        function resetActionForm() {
+            $('#actionForm')[0].reset();
+            $('.conditional-field').removeClass('show');
+            $('.action-type-selector').removeClass('active btn-danger btn-primary btn-info btn-success btn-warning')
+                .addClass('btn-outline-danger btn-outline-primary btn-outline-info btn-outline-success btn-outline-warning');
+        }
 
-.action-type-card.border-primary {
-    border-color: #0d6efd !important;
-    background-color: #f8f9fa !important;
-}
+        // Scheme Search Functions
+        function openSchemeSearchModal() {
+            $('#schemeSearchModal').modal('show');
+        }
 
-.list-group-item:hover {
-    background-color: #f8f9fa;
-}
+        function openSchemeSearch(targetFieldId) {
+            currentTargetField = targetFieldId;
+            $('#schemeSearchModal').modal('show');
+        }
 
-.new-scheme-result:hover,
-.target-scheme-result:hover {
-    background-color: #e9ecef;
-}
+        function searchSchemes() {
+            const query = $('#scheme-search-input').val().trim();
+            
+            if (query.length < 2) {
+                alert('Please enter at least 2 characters to search');
+                return;
+            }
+            
+            // Show loading spinner
+            $('.loading-spinner').show();
+            $('#scheme-search-results').hide();
+            
+            // Make AJAX request to search schemes
+            $.ajax({
+                url: '{% url "search_schemes_ajax" %}',
+                method: 'GET',
+                data: { q: query },
+                success: function(response) {
+                    $('.loading-spinner').hide();
+                    $('#scheme-search-results').show();
+                    
+                    if (response.success && response.schemes.length > 0) {
+                        displaySchemeResults(response.schemes);
+                    } else {
+                        $('#scheme-search-results').html(`
+                            <div class="text-center text-muted py-4">
+                                <i class="fas fa-search fa-2x mb-3"></i>
+                                <p>No schemes found for "${query}"</p>
+                            </div>
+                        `);
+                    }
+                },
+                error: function() {
+                    $('.loading-spinner').hide();
+                    $('#scheme-search-results').show().html(`
+                        <div class="text-center text-danger py-4">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                            <p>Error searching schemes. Please try again.</p>
+                        </div>
+                    `);
+                }
+            });
+        }
 
-.table th {
-    border-top: none;
-}
+        function displaySchemeResults(schemes) {
+            let html = '<div class="list-group">';
+            
+            schemes.forEach(function(scheme) {
+                // Handle the exact structure from your MutualFundScheme model
+                const schemeName = scheme.scheme_name || '';
+                const amcName = scheme.amc_name || 'Unknown AMC';
+                const category = scheme.category || 'Unknown Category';
+                const schemeType = scheme.scheme_type || 'other';
+                const riskCategory = scheme.risk_category || 'moderate';
+                const minInvestment = scheme.minimum_investment || 500;
+                const minSip = scheme.minimum_sip || 500;
+                
+                // ISIN Information
+                const isinGrowth = scheme.isin_growth || '';
+                const isinDiv = scheme.isin_div_reinvestment || '';
+                
+                // NAV Information
+                const lastNavPrice = scheme.last_nav_price ? parseFloat(scheme.last_nav_price).toFixed(4) : null;
+                const lastNavDate = scheme.last_nav_date || '';
+                
+                // Status and availability
+                const isActive = scheme.is_active !== false;
+                const sipAvailable = scheme.sip_available !== false;
+                const stpAvailable = scheme.stp_available !== false;
+                const swpAvailable = scheme.swp_available !== false;
+                
+                // Color coding based on scheme type
+                const typeColors = {
+                    'equity': 'success',
+                    'debt': 'primary', 
+                    'hybrid': 'warning',
+                    'liquid': 'info',
+                    'ultra_short': 'info',
+                    'elss': 'success',
+                    'index': 'secondary',
+                    'etf': 'dark',
+                    'arbitrage': 'danger',
+                    'other': 'secondary'
+                };
+                
+                const riskColors = {
+                    'low': 'success',
+                    'moderate': 'warning',
+                    'high': 'danger',
+                    'very_high': 'danger'
+                };
+                
+                const typeColor = typeColors[schemeType] || 'secondary';
+                const riskColor = riskColors[riskCategory] || 'warning';
+                
+                html += `
+                    <div class="scheme-search-result list-group-item list-group-item-action" onclick="selectScheme('${schemeName.replace(/'/g, "\\'")}', '${amcName.replace(/'/g, "\\'")}', '${scheme.id}', '${scheme.scheme_code || ''}')">
+                        <div class="d-flex w-100 justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-2">
+                                    <h6 class="mb-0 text-primary flex-grow-1">${schemeName}</h6>
+                                    <div class="ms-2">
+                                        ${isActive ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-danger">Inactive</span>'}
+                                    </div>
+                                </div>
+                                
+                                <div class="row mb-2">
+                                    <div class="col-md-8">
+                                        <p class="mb-1">
+                                            <strong>AMC:</strong> ${amcName}
+                                        </p>
+                                        <p class="mb-1">
+                                            <strong>Category:</strong> ${category}
+                                            <span class="badge bg-${typeColor} ms-2">${schemeType.toUpperCase()}</span>
+                                            <span class="badge bg-${riskColor} ms-1">${riskCategory.replace('_', ' ').toUpperCase()}</span>
+                                        </p>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        ${lastNavPrice ? `<div class="text-success"><strong>NAV:</strong> ₹${lastNavPrice}</div>` : ''}
+                                        ${lastNavDate ? `<small class="text-muted">${lastNavDate}</small>` : ''}
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        ${isinGrowth ? `<small class="text-muted d-block"><strong>ISIN Growth:</strong> ${isinGrowth}</small>` : ''}
+                                        ${isinDiv ? `<small class="text-muted d-block"><strong>ISIN Div Reinv:</strong> ${isinDiv}</small>` : ''}
+                                        ${scheme.scheme_code ? `<small class="text-muted d-block"><strong>Code:</strong> ${scheme.scheme_code}</small>` : ''}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <small class="text-muted d-block"><strong>Min Investment:</strong> ₹${minInvestment.toLocaleString()}</small>
+                                        <small class="text-muted d-block"><strong>Min SIP:</strong> ₹${minSip.toLocaleString()}</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-2">
+                                    ${sipAvailable ? '<span class="badge bg-success me-1"><i class="fas fa-check"></i> SIP Available</span>' : ''}
+                                    ${stpAvailable ? '<span class="badge bg-info me-1"><i class="fas fa-check"></i> STP Available</span>' : ''}
+                                    ${swpAvailable ? '<span class="badge bg-warning me-1"><i class="fas fa-check"></i> SWP Available</span>' : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            $('#scheme-search-results').html(html);
+        }
 
-.sticky-top {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-}
+        function selectScheme(schemeName, amcName, schemeId, schemeCode) {
+            const fullSchemeName = schemeName;
+            
+            if (currentTargetField) {
+                // If target field is specified, populate that field
+                $(`#${currentTargetField}`).val(fullSchemeName);
+                $(`#${currentTargetField}`).attr('data-scheme-id', schemeId);
+                $(`#${currentTargetField}`).attr('data-scheme-code', schemeCode);
+                $(`#${currentTargetField}`).attr('data-amc-name', amcName);
+                
+                // Store additional scheme data for validation
+                const selectedScheme = window.lastSearchResults?.find(s => s.id == schemeId);
+                if (selectedScheme) {
+                    $(`#${currentTargetField}`).attr('data-min-investment', selectedScheme.minimum_investment || 500);
+                    $(`#${currentTargetField}`).attr('data-min-sip', selectedScheme.minimum_sip || 500);
+                    $(`#${currentTargetField}`).attr('data-scheme-type', selectedScheme.scheme_type || 'other');
+                    $(`#${currentTargetField}`).attr('data-risk-category', selectedScheme.risk_category || 'moderate');
+                }
+                
+                currentTargetField = null;
+            } else {
+                // If no target field, assume it's for SIP action
+                openActionModal('sip', '', 0, 0, null);
+                $('#target-scheme').val(fullSchemeName);
+                $('#target-scheme').attr('data-scheme-id', schemeId);
+                $('#target-scheme').attr('data-scheme-code', schemeCode);
+                $('#target-scheme').attr('data-amc-name', amcName);
+            }
+            
+            $('#schemeSearchModal').modal('hide');
+        }
 
-.portfolio-summary-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-}
+        // Store search results globally for scheme selection
+        function searchSchemes() {
+            const query = $('#scheme-search-input').val().trim();
+            
+            if (query.length < 2) {
+                alert('Please enter at least 2 characters to search');
+                return;
+            }
+            
+            // Show loading spinner
+            $('.loading-spinner').show();
+            $('#scheme-search-results').hide();
+            
+            // Make AJAX request to search schemes
+            $.ajax({
+                url: '{% url "search_schemes_ajax" %}',
+                method: 'GET',
+                data: { q: query },
+                success: function(response) {
+                    $('.loading-spinner').hide();
+                    $('#scheme-search-results').show();
+                    
+                    if (response.success && response.schemes.length > 0) {
+                        // Store results globally for scheme selection
+                        window.lastSearchResults = response.schemes;
+                        displaySchemeResults(response.schemes);
+                    } else {
+                        $('#scheme-search-results').html(`
+                            <div class="text-center text-muted py-4">
+                                <i class="fas fa-search fa-2x mb-3"></i>
+                                <p>No schemes found for "${query}"</p>
+                                <small>Try searching with different keywords like AMC name, scheme type, or category</small>
+                            </div>
+                        `);
+                    }
+                },
+                error: function() {
+                    $('.loading-spinner').hide();
+                    $('#scheme-search-results').show().html(`
+                        <div class="text-center text-danger py-4">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                            <p>Error searching schemes. Please try again.</p>
+                        </div>
+                    `);
+                }
+            });
+        }
 
-.asset-allocation-breakdown {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    color: white;
-}
+        // Action Management Functions
+        function addAction() {
+            const formData = new FormData($('#actionForm')[0]);
+            const actionType = formData.get('action_type');
+            
+            // Validate required fields
+            if (!validateActionForm(actionType, formData)) {
+                return;
+            }
+            
+            // Create action object
+            const action = createActionObject(formData);
+            
+            // Add to planned actions
+            plannedActions.push(action);
+            
+            // Update UI
+            displayPlannedActions();
+            updateActionsSummary();
+            
+            // Close modal
+            $('#actionModal').modal('hide');
+        }
 
-@media (max-width: 768px) {
-    .btn-group {
-        flex-direction: column;
-    }
-    
-    .table-responsive {
-        max-height: 400px;
-    }
-}
-</style>
-{% endblock %}
+        function validateActionForm(actionType, formData) {
+            let isValid = true;
+            let errorMessage = '';
+            
+            switch(actionType) {
+                case 'redeem':
+                    if (!formData.get('source_scheme')) {
+                        errorMessage = 'Please select a source scheme';
+                        isValid = false;
+                    } else if (!formData.get('redeem_by')) {
+                        errorMessage = 'Please select redeem method';
+                        isValid = false;
+                    } else if (formData.get('redeem_by') === 'specific_amount' && !formData.get('redeem_amount')) {
+                        errorMessage = 'Redeem amount is required';
+                        isValid = false;
+                    } else if (formData.get('redeem_by') === 'specific_units' && !formData.get('redeem_units')) {
+                        errorMessage = 'Redeem units is required';
+                        isValid = false;
+                    }
+                    break;
+                    
+                case 'switch':
+                    if (!formData.get('source_scheme')) {
+                        errorMessage = 'Please select a source scheme';
+                        isValid = false;
+                    } else if (!formData.get('target_scheme')) {
+                        errorMessage = 'Target scheme is required. Please search and select a scheme.';
+                        isValid = false;
+                    } else if (!formData.get('switch_by')) {
+                        errorMessage = 'Please select switch method';
+                        isValid = false;
+                    } else if (formData.get('switch_by') === 'specific_amount' && !formData.get('switch_amount')) {
+                        errorMessage = 'Switch amount is required';
+                        isValid = false;
+                    } else if (formData.get('switch_by') === 'specific_units' && !formData.get('switch_units')) {
+                        errorMessage = 'Switch units is required';
+                        isValid = false;
+                    } else {
+                        // Validate minimum investment for switch
+                        const minInvestment = parseFloat($('#target-scheme').attr('data-min-investment')) || 500;
+                        const switchAmount = parseFloat(formData.get('switch_amount'));
+                        if (formData.get('switch_by') === 'specific_amount' && switchAmount < minInvestment) {
+                            errorMessage = `Switch amount must be at least ₹${minInvestment.toLocaleString()} for the selected scheme`;
+                            isValid = false;
+                        }
+                    }
+                    break;
+                    
+                case 'stp':
+                    if (!formData.get('source_scheme')) {
+                        errorMessage = 'Please select a source scheme';
+                        isValid = false;
+                    } else if (!formData.get('target_scheme')) {
+                        errorMessage = 'Target scheme is required. Please search and select a scheme.';
+                        isValid = false;
+                    } else if (!formData.get('stp_amount')) {
+                        errorMessage = 'STP amount is required';
+                        isValid = false;
+                    } else if (!formData.get('stp_frequency')) {
+                        errorMessage = 'STP frequency is required';
+                        isValid = false;
+                    } else {
+                        // Validate minimum STP amount (usually minimum investment amount)
+                        const minInvestment = parseFloat($('#target-scheme').attr('data-min-investment')) || 500;
+                        const stpAmount = parseFloat(formData.get('stp_amount'));
+                        if (stpAmount < minInvestment) {
+                            errorMessage = `STP amount must be at least ₹${minInvestment.toLocaleString()} for the selected scheme`;
+                            isValid = false;
+                        }
+                    }
+                    break;
+                    
+                case 'sip':
+                    if (!formData.get('target_scheme')) {
+                        errorMessage = 'Target scheme is required. Please search and select a scheme.';
+                        isValid = false;
+                    } else if (!formData.get('sip_amount')) {
+                        errorMessage = 'SIP amount is required';
+                        isValid = false;
+                    } else if (!formData.get('sip_frequency')) {
+                        errorMessage = 'SIP frequency is required';
+                        isValid = false;
+                    } else if (!formData.get('sip_date')) {
+                        errorMessage = 'SIP date is required';
+                        isValid = false;
+                    } else {
+                        // Validate minimum SIP amount
+                        const minSip = parseFloat($('#target-scheme').attr('data-min-sip')) || 500;
+                        const sipAmount = parseFloat(formData.get('sip_amount'));
+                        if (sipAmount < minSip) {
+                            errorMessage = `SIP amount must be at least ₹${minSip.toLocaleString()} for the selected scheme`;
+                            isValid = false;
+                        }
+                    }
+                    break;
+                    
+                case 'swp':
+                    if (!formData.get('source_scheme')) {
+                        errorMessage = 'Please select a source scheme';
+                        isValid = false;
+                    } else if (!formData.get('swp_amount')) {
+                        errorMessage = 'SWP amount is required';
+                        isValid = false;
+                    } else if (!formData.get('swp_frequency')) {
+                        errorMessage = 'SWP frequency is required';
+                        isValid = false;
+                    } else if (!formData.get('swp_date')) {
+                        errorMessage = 'SWP date is required';
+                        isValid = false;
+                    }
+                    break;
+            }
+            
+            if (!isValid) {
+                alert(errorMessage);
+            }
+            
+            return isValid;
+        }
+
+        function createActionObject(formData) {
+            const actionType = formData.get('action_type');
+            const action = {
+                id: Date.now() + Math.random(), // Unique ID
+                action_type: actionType,
+                source_scheme: formData.get('source_scheme') || '',
+                target_scheme: formData.get('target_scheme') || '',
+                notes: formData.get('notes') || '',
+                portfolio_id: formData.get('portfolio_id') || null,
+                // Add scheme IDs and codes for backend processing
+                source_scheme_id: $('#source-scheme option:selected').data('portfolio-id') || null,
+                target_scheme_id: $('#target-scheme').attr('data-scheme-id') || null,
+                target_scheme_code: $('#target-scheme').attr('data-scheme-code') || null,
+                // Add minimum investment validation data
+                target_scheme_min_investment: $('#target-scheme').attr('data-min-investment') || null,
+                target_scheme_min_sip: $('#target-scheme').attr('data-min-sip') || null
+            };
+            
+            // Add type-specific fields with validation
+            switch(actionType) {
+                case 'redeem':
+                    action.redeem_by = formData.get('redeem_by');
+                    action.redeem_amount = formData.get('redeem_amount');
+                    action.redeem_units = formData.get('redeem_units');
+                    break;
+                case 'switch':
+                    action.switch_by = formData.get('switch_by');
+                    action.switch_amount = formData.get('switch_amount');
+                    action.switch_units = formData.get('switch_units');
+                    break;
+                case 'stp':
+                    action.stp_amount = formData.get('stp_amount');
+                    action.stp_frequency = formData.get('stp_frequency');
+                    break;
+                case 'sip':
+                    action.sip_amount = formData.get('sip_amount');
+                    action.sip_frequency = formData.get('sip_frequency');
+                    action.sip_date = formData.get('sip_date');
+                    break;
+                case 'swp':
+                    action.swp_amount = formData.get('swp_amount');
+                    action.swp_frequency = formData.get('swp_frequency');
+                    action.swp_date = formData.get('swp_date');
+                    break;
+            }
+            
+            return action;
+        }
+
+        function displayPlannedActions() {
+            const container = $('#planned-actions');
+            
+            if (plannedActions.length === 0) {
+                container.html(`
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-clipboard-list fa-3x mb-3"></i>
+                        <p>No actions planned yet. Start by adding actions from your portfolio or creating new investments.</p>
+                    </div>
+                `);
+                return;
+            }
+            
+            let html = '';
+            plannedActions.forEach(function(action, index) {
+                html += createActionCard(action, index);
+            });
+            
+            container.html(html);
+        }
+
+        function createActionCard(action, index) {
+            const actionTypeColors = {
+                'redeem': 'danger',
+                'switch': 'primary',
+                'stp': 'info',
+                'sip': 'success',
+                'swp': 'warning'
+            };
+            
+            const actionTypeIcons = {
+                'redeem': 'fas fa-minus-circle',
+                'switch': 'fas fa-exchange-alt',
+                'stp': 'fas fa-arrow-right',
+                'sip': 'fas fa-plus-circle',
+                'swp': 'fas fa-arrow-down'
+            };
+            
+            const color = actionTypeColors[action.action_type] || 'secondary';
+            const icon = actionTypeIcons[action.action_type] || 'fas fa-cog';
+            
+            return `
+                <div class="card action-card mb-3" data-action-index="${index}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="card-title">
+                                    <i class="${icon} text-${color}"></i>
+                                    ${action.action_type.toUpperCase()}
+                                    <span class="badge bg-${color} ms-2">${index + 1}</span>
+                                </h6>
+                                <div class="action-details">
+                                    ${formatActionDetails(action)}
+                                </div>
+                                ${action.notes ? `<small class="text-muted"><i class="fas fa-sticky-note"></i> ${action.notes}</small>` : ''}
+                            </div>
+                            <div class="action-controls">
+                                <button type="button" class="btn btn-sm btn-outline-secondary me-1" onclick="editAction(${index})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeAction(${index})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function formatActionDetails(action) {
+            let details = '';
+            
+            switch(action.action_type) {
+                case 'redeem':
+                    details = `<strong>From:</strong> ${action.source_scheme}<br>`;
+                    if (action.redeem_by === 'all_units') {
+                        details += '<strong>Amount:</strong> All Units';
+                    } else if (action.redeem_by === 'specific_amount') {
+                        details += `<strong>Amount:</strong> ₹${parseFloat(action.redeem_amount).toLocaleString()}`;
+                    } else if (action.redeem_by === 'specific_units') {
+                        details += `<strong>Units:</strong> ${parseFloat(action.redeem_units).toLocaleString()}`;
+                    }
+                    break;
+                    
+                case 'switch':
+                    details = `<strong>From:</strong> ${action.source_scheme}<br>`;
+                    details += `<strong>To:</strong> ${action.target_scheme}<br>`;
+                    if (action.switch_by === 'all_units') {
+                        details += '<strong>Amount:</strong> All Units';
+                    } else if (action.switch_by === 'specific_amount') {
+                        details += `<strong>Amount:</strong> ₹${parseFloat(action.switch_amount).toLocaleString()}`;
+                    } else if (action.switch_by === 'specific_units') {
+                        details += `<strong>Units:</strong> ${parseFloat(action.switch_units).toLocaleString()}`;
+                    }
+                    break;
+                    
+                case 'stp':
+                    details = `<strong>From:</strong> ${action.source_scheme}<br>`;
+                    details += `<strong>To:</strong> ${action.target_scheme}<br>`;
+                    details += `<strong>Amount:</strong> ₹${parseFloat(action.stp_amount).toLocaleString()} ${action.stp_frequency}`;
+                    break;
+                    
+                case 'sip':
+                    details = `<strong>Scheme:</strong> ${action.target_scheme}<br>`;
+                    details += `<strong>Amount:</strong> ₹${parseFloat(action.sip_amount).toLocaleString()} ${action.sip_frequency}<br>`;
+                    details += `<strong>Date:</strong> ${action.sip_date}`;
+                    break;
+                    
+                case 'swp':
+                    details = `<strong>From:</strong> ${action.source_scheme}<br>`;
+                    details += `<strong>Amount:</strong> ₹${parseFloat(action.swp_amount).toLocaleString()} ${action.swp_frequency}<br>`;
+                    details += `<strong>Date:</strong> ${action.swp_date}`;
+                    break;
+            }
+            
+            return details;
+        }
+
+        function editAction(index) {
+            const action = plannedActions[index];
+            
+            // Populate form with action data
+            populateActionForm(action);
+            
+            // Remove action from list (will be re-added when form is submitted)
+            plannedActions.splice(index, 1);
+            displayPlannedActions();
+            updateActionsSummary();
+            
+            // Show modal
+            $('#actionModal').modal('show');
+        }
+
+        function populateActionForm(action) {
+            // Reset form first
+            resetActionForm();
+            
+            // Set action type
+            selectActionType(action.action_type);
+            
+            // Set common fields
+            $('#source-scheme').val(action.source_scheme);
+            $('#target-scheme').val(action.target_scheme);
+            $('#action-notes').val(action.notes);
+            
+            // Set type-specific fields
+            switch(action.action_type) {
+                case 'redeem':
+                    $('#redeem-by').val(action.redeem_by);
+                    $('#redeem-amount').val(action.redeem_amount);
+                    $('#redeem-units').val(action.redeem_units);
+                    toggleAmountField('redeem');
+                    break;
+                case 'switch':
+                    $('#switch-by').val(action.switch_by);
+                    $('#switch-amount').val(action.switch_amount);
+                    $('#switch-units').val(action.switch_units);
+                    toggleAmountField('switch');
+                    break;
+                case 'stp':
+                    $('#stp-amount').val(action.stp_amount);
+                    $('#stp-frequency').val(action.stp_frequency);
+                    break;
+                case 'sip':
+                    $('#sip-amount').val(action.sip_amount);
+                    $('#sip-frequency').val(action.sip_frequency);
+                    $('#sip-date').val(action.sip_date);
+                    break;
+                case 'swp':
+                    $('#swp-amount').val(action.swp_amount);
+                    $('#swp-frequency').val(action.swp_frequency);
+                    $('#swp-date').val(action.swp_date);
+                    break;
+            }
+        }
+
+        function removeAction(index) {
+            if (confirm('Are you sure you want to remove this action?')) {
+                plannedActions.splice(index, 1);
+                displayPlannedActions();
+                updateActionsSummary();
+            }
+        }
+
+        function updateActionsSummary() {
+            let totalInvestment = 0;
+            let totalRedemption = 0;
+            let sipCount = 0;
+            let redeemCount = 0;
+            let switchCount = 0;
+            let systematicCount = 0;
+            
+            plannedActions.forEach(function(action) {
+                switch(action.action_type) {
+                    case 'sip':
+                        if (action.sip_amount) {
+                            totalInvestment += parseFloat(action.sip_amount);
+                            sipCount++;
+                        }
+                        break;
+                    case 'redeem':
+                        if (action.redeem_amount) {
+                            totalRedemption += parseFloat(action.redeem_amount);
+                        }
+                        redeemCount++;
+                        break;
+                    case 'switch':
+                        switchCount++;
+                        break;
+                    case 'stp':
+                    case 'swp':
+                        systematicCount++;
+                        break;
+                }
+            });
+            
+            const netInvestment = totalInvestment - totalRedemption;
+            
+            // Update summary display
+            $('#total-investment').text(`₹${totalInvestment.toLocaleString()}`);
+            $('#total-redemption').text(`₹${totalRedemption.toLocaleString()}`);
+            $('#net-investment').text(`₹${netInvestment.toLocaleString()}`);
+            $('#action-count').text(`${plannedActions.length} Actions`);
+            
+            // Update action type counts
+            $('#sip-count').text(sipCount);
+            $('#redeem-count').text(redeemCount);
+            $('#switch-count').text(switchCount);
+            $('#systematic-count').text(systematicCount);
+            
+            // Enable/disable save buttons
+            const hasActions = plannedActions.length > 0;
+            $('#save-plan-btn, #submit-plan-btn').prop('disabled', !hasActions);
+        }
+
+        // Plan Saving Functions
+        function savePlan(submitForApproval = false) {
+            if (plannedActions.length === 0) {
+                alert('Please add at least one action before saving the plan.');
+                return;
+            }
+            
+            // Show plan name modal
+            $('#planNameModal').modal('show');
+            
+            // Store submit flag for later use
+            window.submitForApproval = submitForApproval;
+        }
+
+        function submitPlan(submitForApproval) {
+            const planName = $('#plan-name').val().trim();
+            
+            if (!planName) {
+                alert('Plan name is required.');
+                return;
+            }
+            
+            const planData = {
+                client_id: {{ client.id }},
+                plan_name: planName,
+                description: $('#plan-description').val(),
+                actions: plannedActions,
+                submit_for_approval: submitForApproval
+            };
+            
+            // Show loading state
+            const saveBtn = submitForApproval ? $('#submit-approval-btn') : $('#save-draft-btn');
+            const originalText = saveBtn.html();
+            saveBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+            
+            // Submit to server
+            $.ajaxSetup({
+                beforeSend: function(xhr, settings) {
+                    if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", $('[name=csrfmiddlewaretoken]').val());
+                    }
+                }
+            });
+            
+            $.ajax({
+                url: '{% url "save_execution_plan" %}',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(planData),
+                success: function(response) {
+                    if (response.success) {
+                        alert(response.message);
+                        // Redirect to plan detail page
+                        window.location.href = response.plan_url;
+                    } else {
+                        alert('Error: ' + response.error);
+                        saveBtn.prop('disabled', false).html(originalText);
+                    }
+                },
+                error: function(xhr) {
+                    let errorMessage = 'An error occurred while saving the plan.';
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMessage = response.error || errorMessage;
+                    } catch(e) {}
+                    
+                    alert(errorMessage);
+                    saveBtn.prop('disabled', false).html(originalText);
+                }
+            });
+        }
+
+        // Template Functions
+        function loadTemplate() {
+            // Placeholder for template loading functionality
+            alert('Template functionality will be implemented in the next phase.');
+        }
+
+        // Utility Functions
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-IN', {
+                style: 'currency',
+                currency: 'INR',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount);
+        }
+
+        function truncateText(text, maxLength = 50) {
+            if (text.length <= maxLength) return text;
+            return text.substr(0, maxLength) + '...';
+        }
+
+        // Add CSRF token to all AJAX requests
+        $(document).ready(function() {
+            // Get CSRF token from cookie or meta tag
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+            
+            const csrftoken = getCookie('csrftoken');
+            
+            $.ajaxSetup({
+                beforeSend: function(xhr, settings) {
+                    if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    }
+                }
+            });
+        });
+
+        // Keyboard shortcuts
+        $(document).on('keydown', function(e) {
+            // Ctrl+S to save as draft
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                if (plannedActions.length > 0) {
+                    savePlan(false);
+                }
+            }
+            
+            // Ctrl+Shift+S to save and submit
+            if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+                e.preventDefault();
+                if (plannedActions.length > 0) {
+                    savePlan(true);
+                }
+            }
+            
+            // Escape to close modals
+            if (e.key === 'Escape') {
+                $('.modal').modal('hide');
+            }
+        });
+
+        // Auto-save functionality (optional)
+        let autoSaveTimer;
+        function scheduleAutoSave() {
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(function() {
+                if (plannedActions.length > 0) {
+                    // Auto-save to localStorage
+                    localStorage.setItem('executionPlanDraft', JSON.stringify({
+                        client_id: {{ client.id }},
+                        actions: plannedActions,
+                        timestamp: new Date().toISOString()
+                    }));
+                }
+            }, 30000); // Auto-save every 30 seconds
+        }
+
+        // Load draft from localStorage on page load
+        $(document).ready(function() {
+            const draft = localStorage.getItem('executionPlanDraft');
+            if (draft) {
+                try {
+                    const data = JSON.parse(draft);
+                    if (data.client_id === {{ client.id }} && data.actions && data.actions.length > 0) {
+                        if (confirm('A draft plan was found for this client. Would you like to restore it?')) {
+                            plannedActions = data.actions;
+                            displayPlannedActions();
+                            updateActionsSummary();
+                        }
+                    }
+                } catch(e) {
+                    console.error('Error loading draft:', e);
+                }
+            }
+        });
+
+        // Clear draft when plan is successfully saved
+        function clearDraft() {
+            localStorage.removeItem('executionPlanDraft');
+        }
+
+        // Schedule auto-save whenever actions are modified
+        function onActionsModified() {
+            updateActionsSummary();
+            scheduleAutoSave();
+        }
+
+        // Warning before leaving page with unsaved changes
+        window.addEventListener('beforeunload', function(e) {
+            if (plannedActions.length > 0) {
+                e.preventDefault();
+                e.returnValue = '';
+                return 'You have unsaved changes. Are you sure you want to leave?';
+            }
+        });
+    </script>
+
+    <!-- Add CSRF token for AJAX requests -->
+    {% csrf_token %}
+    <script>
+        // Make CSRF token available to JavaScript
+        window.csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    </script>
+
+    <!-- Additional CSS for responsiveness -->
+    <style>
+        @media (max-width: 768px) {
+            .action-controls {
+                margin-top: 10px;
+            }
+            
+            .action-card .card-body {
+                padding: 0.75rem;
+            }
+            
+            .btn-group .btn {
+                font-size: 0.8rem;
+                padding: 0.25rem 0.5rem;
+            }
+            
+            .client-summary .row > div {
+                margin-bottom: 1rem;
+            }
+            
+            .asset-allocation-bar {
+                height: 15px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .action-type-btn {
+                margin-bottom: 0.5rem;
+            }
+            
+            .table-responsive {
+                font-size: 0.9rem;
+            }
+            
+            .modal-lg {
+                max-width: 90%;
+            }
+        }
+        
+        /* Print styles */
+        @media print {
+            .btn, .modal, .action-controls {
+                display: none !important;
+            }
+            
+            .action-card {
+                border: 1px solid #000 !important;
+                page-break-inside: avoid;
+            }
+        }
+        
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            .scheme-search-result:hover {
+                background-color: #2d3748;
+            }
+            
+            .action-card:hover {
+                border-color: #4299e1;
+                box-shadow: 0 2px 8px rgba(66,153,225,0.15);
+            }
+        }
+    </style>
+</body>
+</html>

@@ -201,7 +201,9 @@ urlpatterns = [
         path('create/<str:client_id>/', views.create_plan_step2, name='create_plan_step2'),  # Changed to str
         path('save/', views.save_execution_plan, name='save_execution_plan'),
         path('<int:plan_id>/', views.plan_detail, name='plan_detail'),
+        path('actions/<int:action_id>/details/', views.get_action_details, name='get_action_details'),
         path('<int:plan_id>/submit/', views.submit_for_approval, name='submit_for_approval'),
+        path('<int:plan_id>/track-workflow/', views.track_workflow, name='track_workflow'),
         path('<int:plan_id>/approve/', views.approve_plan, name='approve_plan'),
         path('<int:plan_id>/reject/', views.reject_plan, name='reject_plan'),
         path('<int:plan_id>/send-to-client/', views.send_to_client, name='send_to_client'),
@@ -218,10 +220,14 @@ urlpatterns = [
         path('templates/save/', views.save_template, name='save_template'),
         path('templates/<int:template_id>/load/', views.load_template_ajax, name='load_template_ajax'),
         path('bulk-action/', views.bulk_action_plans, name='bulk_action_plans'),
+        path('<int:plan_id>/', views.execution_plan_detail, name='execution_plan_detail'),
         
         # API endpoints for execution plans - UPDATED to handle string client IDs
         path('api/client/<str:client_id>/portfolio/', views.client_portfolio_ajax, name='client_portfolio_ajax'),  # Changed to str
         path('api/schemes/search/', views.search_schemes_ajax, name='search_schemes_ajax'),
+        path('api/execution-plans/save/', views.save_execution_plan, name='save_execution_plan'),
+        path('api/templates/<int:template_id>/', views.load_template_ajax, name='load_template_ajax'),
+        path('api/templates/save/', views.save_template, name='save_template'),
     ])),
 
     # Analytics

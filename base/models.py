@@ -10,6 +10,10 @@ import pandas as pd
 from django.db import transaction
 import logging
 from decimal import Decimal
+from django.dispatch import receiver 
+import pandas as pd
+from threading import Thread
+from django.db.models.signals import post_save
 
 logger = logging.getLogger(__name__)
 
@@ -264,6 +268,512 @@ class User(AbstractUser):
         else:  # RM, Ops Exec
             return User.objects.filter(id=self.id)
 
+
+####SCHEME PROCESSING
+
+import pandas as pd
+
+class SchemeUploadLog(models.Model):
+    """Log entries for scheme upload processing"""
+    upload = models.ForeignKey(
+        'SchemeUpload',  # Use string reference since SchemeUpload is defined later
+        on_delete=models.CASCADE,
+        related_name='processing_logs'
+    )
+    row_number = models.PositiveIntegerField(
+        help_text="Row number in the uploaded file (0 for system messages)"
+    )
+    amc_name = models.CharField(max_length=255, blank=True)
+    scheme_name = models.CharField(max_length=500, blank=True)
+    
+    STATUS_CHOICES = [
+        ('success', 'Success'),
+        ('error', 'Error'),
+        ('warning', 'Warning'),
+    ]
+    
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
+    message = models.TextField()
+    scheme = models.ForeignKey(
+        'MutualFundScheme',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='upload_logs'
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+    
+    class Meta:
+        ordering = ['upload', 'row_number', 'created_at']
+        verbose_name = 'Scheme Upload Log'
+        verbose_name_plural = 'Scheme Upload Logs'
+    
+    def __str__(self):
+        if self.row_number == 0:
+            return f"{self.upload.upload_id} - System Log ({self.get_status_display()})"
+        return f"{self.upload.upload_id} - Row {self.row_number} ({self.get_status_display()})"
+    
+class SchemeUpload(models.Model):
+    """Model to track scheme master file uploads"""
+    UPLOAD_STATUS_CHOICES = [
+        ('pending', 'Pending Processing'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('partial', 'Partially Processed'),
+        ('archived', 'Archived'),
+    ]
+    
+    upload_id = models.CharField(max_length=20, unique=True, editable=False)
+    file = models.FileField(
+        upload_to='scheme_uploads/',
+        validators=[FileExtensionValidator(allowed_extensions=['xlsx', 'xls'])]
+    )
+    uploaded_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='scheme_uploads'
+    )
+    uploaded_at = models.DateTimeField(default=timezone.now)
+    processed_at = models.DateTimeField(null=True, blank=True)
+    
+    # Processing Status
+    status = models.CharField(max_length=15, choices=UPLOAD_STATUS_CHOICES, default='pending')
+    total_rows = models.PositiveIntegerField(default=0)
+    processed_rows = models.PositiveIntegerField(default=0)
+    successful_rows = models.PositiveIntegerField(default=0)
+    failed_rows = models.PositiveIntegerField(default=0)
+    updated_rows = models.PositiveIntegerField(default=0)
+    
+    # Processing Details
+    processing_log = models.TextField(blank=True)
+    error_details = models.JSONField(default=dict, blank=True)
+    processing_summary = models.JSONField(default=dict, blank=True)
+    
+    # Options
+    update_existing = models.BooleanField(
+        default=True, 
+        help_text="Update existing schemes if found"
+    )
+    mark_missing_inactive = models.BooleanField(
+        default=False,
+        help_text="Mark schemes not in upload as inactive"
+    )
+    
+    # Archive fields
+    is_archived = models.BooleanField(default=False, help_text="Mark as archived instead of deleting")
+    archived_at = models.DateTimeField(null=True, blank=True)
+    archived_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='archived_uploads'
+    )
+    
+    class Meta:
+        ordering = ['-uploaded_at']
+        verbose_name = 'Scheme Upload'
+        verbose_name_plural = 'Scheme Uploads'
+    
+    def save(self, *args, **kwargs):
+        if not self.upload_id:
+            self.upload_id = self.generate_upload_id()
+        super().save(*args, **kwargs)
+    
+    def generate_upload_id(self):
+        """Generate unique upload ID"""
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        return f"SU{timestamp}"
+    
+    def __str__(self):
+        return f"{self.upload_id} - {self.file.name} ({self.get_status_display()})"
+    
+    def create_log(self, row_number, status, message, amc_name='', scheme_name='', scheme=None):
+        """Create a log entry for this upload"""
+        return SchemeUploadLog.objects.create(
+            upload=self,
+            row_number=row_number,
+            amc_name=amc_name,
+            scheme_name=scheme_name,
+            status=status,
+            message=message,
+            scheme=scheme
+        )
+    
+    def process_upload_with_logging(self):
+        """Main method to process the uploaded scheme file"""
+        import os
+        
+        try:
+            self.status = 'processing'
+            self.save()
+            
+            # Log start
+            self.create_log(0, 'success', f"Started processing upload {self.upload_id}")
+            
+            # Check if file exists
+            if not self.file or not os.path.exists(self.file.path):
+                raise Exception(f"File not found: {self.file.path if self.file else 'No file attached'}")
+            
+            # Read Excel file
+            try:
+                # Try reading with header=1 (row 2 as header)
+                df = pd.read_excel(self.file.path, engine='openpyxl', header=1)
+                self.create_log(0, 'success', f"Successfully read Excel file with {len(df)} rows")
+            except Exception as e:
+                self.create_log(0, 'error', f"Failed to read Excel file: {str(e)}")
+                raise
+            
+            # Remove any completely empty rows
+            df = df.dropna(how='all')
+            
+            # Check if we have data
+            if df.empty:
+                raise Exception("Excel file contains no data rows")
+            
+            self.total_rows = len(df)
+            self.save()
+            
+            self.create_log(0, 'success', f"Found {self.total_rows} rows to process")
+            
+            # Log column information
+            columns_found = list(df.columns)
+            self.create_log(0, 'success', f"Columns found: {', '.join(columns_found)}")
+            
+            # Expected columns based on your Excel file
+            expected_columns = [
+                'AMC Name',
+                'Scheme NAV Name', 
+                'Category',
+                'ISIN Div Payout / ISIN Growth',
+                'ISIN Div Reinvestment'
+            ]
+            
+            # Check if required columns exist
+            missing_columns = []
+            for col in expected_columns:
+                if col not in df.columns:
+                    missing_columns.append(col)
+            
+            if missing_columns:
+                error_msg = f"Missing required columns: {', '.join(missing_columns)}"
+                self.create_log(0, 'error', error_msg)
+                raise Exception(error_msg)
+            
+            self.create_log(0, 'success', f"Column validation successful")
+            
+            # Process each row
+            for index, row in df.iterrows():
+                try:
+                    self._process_single_scheme_row(row, index + 1)
+                    self.processed_rows += 1
+                    
+                    # Save progress every 100 rows
+                    if self.processed_rows % 100 == 0:
+                        self.save()
+                        self.create_log(0, 'success', f"Progress: {self.processed_rows}/{self.total_rows} rows processed")
+                        
+                except Exception as row_error:
+                    # Log the error but continue processing
+                    self.create_log(index + 1, 'error', f"Row processing failed: {str(row_error)}")
+                    self.failed_rows += 1
+                    continue
+            
+            # Mark missing schemes as inactive if requested
+            if self.mark_missing_inactive:
+                self._mark_missing_schemes_inactive()
+            
+            # Complete processing
+            if self.failed_rows == 0:
+                self.status = 'completed'
+            else:
+                self.status = 'partial'
+            
+            self.processed_at = timezone.now()
+            self.save()
+            
+            success_msg = f"Processing completed. Success: {self.successful_rows}, Failed: {self.failed_rows}, Updated: {self.updated_rows}"
+            self.create_log(0, 'success', success_msg)
+            
+            return True
+            
+        except Exception as e:
+            error_msg = f"Processing failed: {str(e)}"
+            
+            self.status = 'failed'
+            self.processed_at = timezone.now()
+            self.error_details = {'error': str(e)}
+            self.save()
+            
+            self.create_log(0, 'error', error_msg)
+            return False
+    
+    def _process_single_scheme_row(self, row, row_number):
+        """Process a single scheme row"""
+        try:
+            # Extract data with better error handling
+            amc_name = self._safe_string_convert(row.get('AMC Name', ''))
+            scheme_name = self._safe_string_convert(row.get('Scheme NAV Name', ''))
+            category = self._safe_string_convert(row.get('Category', ''))
+            isin_growth = self._safe_string_convert(row.get('ISIN Div Payout / ISIN Growth', ''))
+            isin_div = self._safe_string_convert(row.get('ISIN Div Reinvestment', ''))
+            
+            # Validate required fields
+            if not amc_name or not scheme_name:
+                self.failed_rows += 1
+                self.create_log(row_number, 'error', 
+                    f"Missing required fields - AMC: '{amc_name}', Scheme: '{scheme_name}'", 
+                    amc_name, scheme_name)
+                return
+            
+            # Generate scheme code
+            scheme_code = self._generate_scheme_code(amc_name, scheme_name, isin_growth)
+            
+            # Determine scheme type
+            scheme_type = self._categorize_scheme_type(category)
+            
+            # Check if scheme exists (by ISIN first, then by name)
+            existing_scheme = None
+            search_method = ""
+            
+            if isin_growth:
+                try:
+                    existing_scheme = MutualFundScheme.objects.get(isin_growth=isin_growth)
+                    search_method = f"ISIN Growth: {isin_growth}"
+                except MutualFundScheme.DoesNotExist:
+                    pass
+                except MutualFundScheme.MultipleObjectsReturned:
+                    # Handle duplicate ISINs
+                    existing_scheme = MutualFundScheme.objects.filter(isin_growth=isin_growth).first()
+                    search_method = f"ISIN Growth (multiple found): {isin_growth}"
+            
+            if not existing_scheme:
+                try:
+                    existing_scheme = MutualFundScheme.objects.get(
+                        amc_name__iexact=amc_name,
+                        scheme_name__iexact=scheme_name
+                    )
+                    search_method = f"AMC + Name: {amc_name} - {scheme_name}"
+                except MutualFundScheme.DoesNotExist:
+                    pass
+                except MutualFundScheme.MultipleObjectsReturned:
+                    existing_scheme = MutualFundScheme.objects.filter(
+                        amc_name__iexact=amc_name,
+                        scheme_name__iexact=scheme_name
+                    ).first()
+                    search_method = f"AMC + Name (multiple found): {amc_name} - {scheme_name}"
+            
+            # Prepare scheme data
+            scheme_data = {
+                'amc_name': amc_name,
+                'scheme_name': scheme_name,
+                'category': category,
+                'scheme_type': scheme_type,
+                'isin_growth': isin_growth if isin_growth else None,
+                'isin_div_reinvestment': isin_div if isin_div else None,
+                'scheme_code': scheme_code,
+                'is_active': True,
+                'last_updated': timezone.now(),
+                'upload_batch': self
+            }
+            
+            if existing_scheme and self.update_existing:
+                # Update existing scheme
+                for field, value in scheme_data.items():
+                    if field != 'upload_batch':  # Don't change upload_batch for existing
+                        setattr(existing_scheme, field, value)
+                existing_scheme.save()
+                
+                self.updated_rows += 1
+                self.create_log(row_number, 'success', 
+                    f"Updated existing scheme ({search_method})", 
+                    amc_name, scheme_name, existing_scheme)
+                
+            elif existing_scheme and not self.update_existing:
+                # Skip existing scheme
+                self.create_log(row_number, 'warning', 
+                    f"Skipped existing scheme ({search_method}) - update disabled", 
+                    amc_name, scheme_name)
+                
+            else:
+                # Create new scheme
+                new_scheme = MutualFundScheme.objects.create(**scheme_data)
+                
+                self.successful_rows += 1
+                self.create_log(row_number, 'success', 
+                    f"Created new scheme - Code: {scheme_code}", 
+                    amc_name, scheme_name, new_scheme)
+            
+        except Exception as e:
+            self.failed_rows += 1
+            error_message = f"Row processing error: {str(e)}"
+            
+            self.create_log(row_number, 'error', error_message,
+                amc_name if 'amc_name' in locals() else '',
+                scheme_name if 'scheme_name' in locals() else '')
+            
+            logger.error(f"Error processing row {row_number}: {e}")
+    
+    def _safe_string_convert(self, value):
+        """Safely convert values to string, handling NaN and None"""
+        if value is None:
+            return ''
+        
+        if pd.isna(value):
+            return ''
+        
+        # Convert to string and strip whitespace
+        result = str(value).strip()
+        
+        # Handle 'nan' string
+        if result.lower() == 'nan':
+            return ''
+            
+        return result
+    
+    def _categorize_scheme_type(self, category):
+        """Categorize scheme type based on category"""
+        if not category:
+            return 'other'
+        
+        category_lower = category.lower()
+        if 'equity' in category_lower:
+            return 'equity'
+        elif 'debt' in category_lower:
+            return 'debt'
+        elif 'hybrid' in category_lower:
+            return 'hybrid'
+        elif 'liquid' in category_lower:
+            return 'liquid'
+        elif 'ultra short' in category_lower:
+            return 'ultra_short'
+        elif 'elss' in category_lower:
+            return 'elss'
+        elif 'index' in category_lower:
+            return 'index'
+        elif 'etf' in category_lower:
+            return 'etf'
+        elif 'arbitrage' in category_lower:
+            return 'arbitrage'
+        else:
+            return 'other'
+    
+    def _generate_scheme_code(self, amc_name, scheme_name, isin=None):
+        """Generate unique scheme code"""
+        if isin:
+            return isin
+        
+        # Create from AMC and scheme name
+        amc_prefix = ''.join([c for c in amc_name.upper() if c.isalnum()])[:4]
+        scheme_suffix = ''.join([c for c in scheme_name.upper() if c.isalnum()])[:8]
+        base_code = f"{amc_prefix}_{scheme_suffix}"
+        
+        # Ensure uniqueness
+        counter = 1
+        code = base_code
+        while MutualFundScheme.objects.filter(scheme_code=code).exists():
+            code = f"{base_code}_{counter}"
+            counter += 1
+        
+        return code
+    
+    def _mark_missing_schemes_inactive(self):
+        """Mark schemes not in current upload as inactive"""
+        if self.successful_rows > 0:
+            # Get all scheme codes from this upload
+            upload_logs = self.processing_logs.filter(
+                status='success',
+                scheme__isnull=False
+            ).values_list('scheme__scheme_code', flat=True)
+            
+            # Mark others as inactive
+            inactive_count = MutualFundScheme.objects.exclude(
+                scheme_code__in=upload_logs
+            ).update(is_active=False)
+            
+            self.create_log(0, 'success', 
+                f"Marked {inactive_count} schemes as inactive (not in current upload)")
+    
+    # Archive and delete methods
+    def archive(self, user):
+        """Archive instead of delete"""
+        self.is_archived = True
+        self.archived_at = timezone.now()
+        self.archived_by = user
+        self.status = 'archived'
+        self.save()
+        
+        # Clear upload_batch reference from schemes
+        MutualFundScheme.objects.filter(upload_batch=self).update(upload_batch=None)
+        return True
+    
+    def can_be_deleted(self):
+        """Check if upload can be safely deleted"""
+        scheme_count = MutualFundScheme.objects.filter(upload_batch=self).count()
+        return scheme_count == 0
+    
+    def safe_delete(self, user):
+        """Safely delete or archive the upload"""
+        if self.can_be_deleted():
+            self.delete()
+            return True, "Upload deleted successfully"
+        else:
+            self.archive(user)
+            return False, "Upload archived (schemes still reference this upload)"
+    
+    def delete(self, using=None, keep_parents=False):
+        """Override delete to handle large datasets safely"""
+        from django.db import transaction
+        
+        # Clear foreign key references first in batches
+        with transaction.atomic():
+            batch_size = 1000
+            while True:
+                scheme_batch = list(
+                    self.uploaded_schemes.all()[:batch_size]
+                )
+                if not scheme_batch:
+                    break
+                
+                scheme_ids = [scheme.id for scheme in scheme_batch]
+                MutualFundScheme.objects.filter(
+                    id__in=scheme_ids
+                ).update(upload_batch=None)
+        
+        return super().delete(using=using, keep_parents=keep_parents)
+
+
+@receiver(post_save, sender=SchemeUpload)
+def auto_process_scheme_upload(sender, instance, created, **kwargs):
+    """Safely process uploads without transaction conflicts"""
+    if created and instance.status == 'pending':
+        try:
+            # Use transaction.on_commit to defer processing until after the current transaction
+            transaction.on_commit(lambda: process_upload_deferred(instance.id))
+        except Exception as e:
+            logger.error(f"Error scheduling upload processing for {instance.upload_id}: {e}")
+
+def process_upload_deferred(upload_id):
+    """Process upload after transaction commit"""
+    try:
+        upload = SchemeUpload.objects.get(id=upload_id)
+        if upload.status == 'pending':
+            upload.create_log(0, 'success', f"Upload {upload.upload_id} starting deferred processing")
+            upload.process_upload_with_logging()
+    except SchemeUpload.DoesNotExist:
+        logger.error(f"Upload with id {upload_id} not found for deferred processing")
+    except Exception as e:
+        logger.error(f"Deferred processing failed for upload id {upload_id}: {e}")
+        try:
+            upload = SchemeUpload.objects.get(id=upload_id)
+            upload.status = 'failed'
+            upload.error_details = {'error': str(e)}
+            upload.save()
+        except:
+            pass
+            
 # Add leader relationship to Team after User is defined
 Team.add_to_class('leader', models.ForeignKey(
     User,
@@ -2264,11 +2774,33 @@ class PortfolioUploadLog(models.Model):
         return f"{self.upload.upload_id} - Row {self.row_number} ({self.get_status_display()})"
 
 class MutualFundScheme(models.Model):
-    """Enhanced mutual fund scheme model"""
-    scheme_name = models.CharField(max_length=300)
-    amc_name = models.CharField(max_length=100)
+    """Enhanced mutual fund scheme model with upload support"""
+    scheme_name = models.CharField(max_length=500)  # Increased length for long scheme names
+    amc_name = models.CharField(max_length=200)     # Increased length for AMC names
     scheme_code = models.CharField(max_length=50, unique=True)
-    isin_number = models.CharField(max_length=20, unique=True, null=True, blank=True)
+    
+    # ISIN fields based on Excel structure
+    isin_growth = models.CharField(
+        max_length=20, 
+        unique=True, 
+        null=True, 
+        blank=True,
+        help_text="ISIN for Growth/Div Payout option"
+    )
+    isin_div_reinvestment = models.CharField(
+        max_length=20, 
+        unique=True, 
+        null=True, 
+        blank=True,
+        help_text="ISIN for Dividend Reinvestment option"
+    )
+    
+    # Category from Excel
+    category = models.CharField(
+        max_length=100, 
+        blank=True,
+        help_text="Category as per AMFI classification"
+    )
     
     scheme_type = models.CharField(max_length=50, choices=[
         ('equity', 'Equity'),
@@ -2283,8 +2815,7 @@ class MutualFundScheme(models.Model):
         ('other', 'Other'),
     ])
     
-    # Asset allocation from portfolio data
-    primary_asset_class = models.CharField(max_length=50, blank=True)
+    # Risk and investment details
     risk_category = models.CharField(max_length=20, choices=[
         ('low', 'Low'),
         ('moderate', 'Moderate'),
@@ -2301,6 +2832,16 @@ class MutualFundScheme(models.Model):
     last_nav_date = models.DateField(null=True, blank=True)
     last_nav_price = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True)
     
+    # Upload tracking
+    upload_batch = models.ForeignKey(
+        SchemeUpload,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='uploaded_schemes'
+    )
+    last_updated = models.DateTimeField(default=timezone.now)
+    
     # Metadata
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
@@ -2309,9 +2850,74 @@ class MutualFundScheme(models.Model):
         ordering = ['amc_name', 'scheme_name']
         verbose_name = 'Mutual Fund Scheme'
         verbose_name_plural = 'Mutual Fund Schemes'
+        indexes = [
+            models.Index(fields=['amc_name', 'scheme_name']),
+            models.Index(fields=['scheme_code']),
+            models.Index(fields=['isin_growth']),
+            models.Index(fields=['category', 'scheme_type']),
+            models.Index(fields=['is_active']),
+        ]
     
     def __str__(self):
         return f"{self.amc_name} - {self.scheme_name}"
+    
+    def clean(self):
+        """Validate scheme data"""
+        super().clean()
+        
+        # Validate ISIN format (basic)
+        for isin_field in [self.isin_growth, self.isin_div_reinvestment]:
+            if isin_field and len(isin_field) != 12:
+                raise ValidationError(f"ISIN {isin_field} must be 12 characters long")
+    
+    def get_primary_isin(self):
+        """Get the primary ISIN (prefer growth over div reinvestment)"""
+        return self.isin_growth or self.isin_div_reinvestment
+    
+    def has_multiple_options(self):
+        """Check if scheme has multiple ISIN options"""
+        return bool(self.isin_growth and self.isin_div_reinvestment)
+    
+    def get_scheme_display_name(self):
+        """Get a clean display name for the scheme"""
+        # Remove common suffixes for display
+        name = self.scheme_name
+        suffixes_to_remove = [
+            '- DIRECT - IDCW',
+            '- REGULAR - IDCW', 
+            '- Direct Plan-Growth',
+            '- Regular Plan-Growth',
+            '- DIRECT - MONTHLY IDCW',
+            '- REGULAR - MONTHLY IDCW'
+        ]
+        
+        for suffix in suffixes_to_remove:
+            if name.endswith(suffix):
+                name = name[:-len(suffix)].strip()
+                break
+        
+        return name
+    
+    @classmethod
+    def get_schemes_by_amc(cls, amc_name):
+        """Get all active schemes for a given AMC"""
+        return cls.objects.filter(amc_name__iexact=amc_name, is_active=True)
+    
+    @classmethod
+    def get_schemes_by_category(cls, category):
+        """Get all active schemes for a given category"""
+        return cls.objects.filter(category__icontains=category, is_active=True)
+    
+    @classmethod
+    def search_schemes(cls, query):
+        """Search schemes by name, AMC, or ISIN"""
+        return cls.objects.filter(
+            models.Q(scheme_name__icontains=query) |
+            models.Q(amc_name__icontains=query) |
+            models.Q(isin_growth__icontains=query) |
+            models.Q(isin_div_reinvestment__icontains=query),
+            is_active=True
+        )
 
 class ExecutionPlan(models.Model):
     """Main execution plan model"""
@@ -2351,6 +2957,13 @@ class ExecutionPlan(models.Model):
         related_name='approved_execution_plans',
         limit_choices_to={'role__in': ['rm_head', 'business_head']}
     )
+    rejected_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='rejected_execution_plans'
+    )
     
     # Status and Timeline
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
@@ -2361,6 +2974,7 @@ class ExecutionPlan(models.Model):
     client_approved_at = models.DateTimeField(null=True, blank=True)
     execution_started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+    rejected_at = models.DateTimeField(null=True, blank=True)
     
     # File Management
     excel_file = models.FileField(
@@ -2384,6 +2998,58 @@ class ExecutionPlan(models.Model):
         if not self.plan_id:
             self.plan_id = self.generate_plan_id()
         super().save(*args, **kwargs)
+    
+    # Essential Permission Methods (to fix the error)
+    def can_be_approved_by(self, user):
+        """Check if user can approve this execution plan"""
+        if self.status != 'pending_approval':
+            return False
+        
+        # User cannot approve their own plan
+        if self.created_by == user:
+            return False
+        
+        # Check user role
+        if hasattr(user, 'role'):
+            if user.role in ['top_management', 'business_head', 'business_head_ops']:
+                return True
+            elif user.role == 'rm_head':
+                # RM Head can approve plans from their subordinates
+                return getattr(self.created_by, 'manager', None) == user
+        
+        return False
+    
+    def can_be_executed_by(self, user):
+        """Check if user can execute this plan"""
+        if self.status not in ['client_approved', 'in_execution']:
+            return False
+        
+        if hasattr(user, 'role'):
+            return user.role in ['ops_exec', 'ops_team_lead', 'business_head_ops', 'top_management']
+        
+        return False
+    
+    def can_be_edited_by(self, user):
+        """Check if user can edit this plan"""
+        if self.status not in ['draft', 'rejected']:
+            return False
+        
+        return self.created_by == user
+    
+    def can_be_accessed_by(self, user):
+        """Check if user can access this plan"""
+        if hasattr(user, 'role'):
+            if user.role in ['top_management', 'business_head', 'business_head_ops']:
+                return True
+            elif user.role == 'rm_head':
+                return (self.created_by == user or 
+                        getattr(self.created_by, 'manager', None) == user)
+            elif user.role == 'rm':
+                return self.created_by == user
+            elif user.role in ['ops_exec', 'ops_team_lead']:
+                return self.status in ['client_approved', 'in_execution', 'completed']
+        
+        return False
     
     def generate_plan_id(self):
         """Generate unique plan ID in format EPYYYYMMDDXXXX"""
@@ -3172,3 +3838,6 @@ class ActionPlanWorkflow(models.Model):
     
     def __str__(self):
         return f"{self.action_plan.plan_id}: {self.from_status} → {self.to_status}"
+    
+    
+    

@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
 from .models import (
-    ClientInteraction, ClientPortfolio, ExecutionPlan, MutualFundScheme, PlanAction, PlanComment, PlanTemplate, PlanWorkflowHistory, ServiceRequestComment, ServiceRequestDocument, ServiceRequestType, ServiceRequestWorkflow, User, Team, TeamMembership, NoteList, Note,
+    ClientInteraction, ClientPortfolio, ExecutionPlan, MutualFundScheme, PlanAction, PlanComment, PlanTemplate, PlanWorkflowHistory, SchemeUpload, SchemeUploadLog, ServiceRequestComment, ServiceRequestDocument, ServiceRequestType, ServiceRequestWorkflow, User, Team, TeamMembership, NoteList, Note,
     ClientProfile, MFUCANAccount,
     ClientProfileModification, Lead, LeadInteraction, ProductDiscussion, 
     LeadStatusChange, Client, Task, Reminder, ServiceRequest, 
@@ -2483,22 +2483,27 @@ class ClientPortfolioAdmin(admin.ModelAdmin):
         )
     mark_inactive.short_description = "Mark selected portfolios as inactive"
 
+# Replace your existing MutualFundSchemeAdmin with this corrected version:
+
 @admin.register(MutualFundScheme)
 class MutualFundSchemeAdmin(admin.ModelAdmin):
     list_display = [
-        'scheme_name', 'amc_name', 'scheme_type', 'primary_asset_class',
+        'scheme_name', 'amc_name', 'scheme_type', 'category_short',
         'risk_category', 'is_active', 'portfolio_count'
     ]
-    list_filter = ['scheme_type', 'primary_asset_class', 'risk_category', 'is_active', 'amc_name']
-    search_fields = ['scheme_name', 'amc_name', 'scheme_code', 'isin_number']
-    readonly_fields = ['created_at', 'updated_at', 'portfolio_count']
+    list_filter = ['scheme_type', 'risk_category', 'is_active', 'amc_name', 'upload_batch']
+    search_fields = ['scheme_name', 'amc_name', 'scheme_code', 'isin_growth', 'isin_div_reinvestment', 'category']
+    readonly_fields = ['scheme_code', 'created_at', 'updated_at', 'portfolio_count', 'upload_batch', 'last_updated']
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('scheme_name', 'amc_name', 'scheme_code', 'isin_number')
+            'fields': ('scheme_name', 'amc_name', 'scheme_code', 'category')
+        }),
+        ('ISIN Information', {
+            'fields': ('isin_growth', 'isin_div_reinvestment')
         }),
         ('Classification', {
-            'fields': ('scheme_type', 'primary_asset_class', 'risk_category')
+            'fields': ('scheme_type', 'risk_category')
         }),
         ('Investment Limits', {
             'fields': ('minimum_investment', 'minimum_sip')
@@ -2506,15 +2511,92 @@ class MutualFundSchemeAdmin(admin.ModelAdmin):
         ('Status & NAV', {
             'fields': ('is_active', 'last_nav_date', 'last_nav_price')
         }),
+        ('Upload Tracking', {
+            'fields': ('upload_batch', 'last_updated'),
+            'classes': ('collapse',)
+        }),
         ('Metadata', {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
         })
     )
     
+    def category_short(self, obj):
+        """Display shortened category name"""
+        if obj.category and len(obj.category) > 30:
+            return obj.category[:30] + "..."
+        return obj.category or "-"
+    category_short.short_description = "Category"
+    
     def portfolio_count(self, obj):
-        return ClientPortfolio.objects.filter(scheme_name=obj.scheme_name).count()
+        """Count portfolio entries for this scheme"""
+        return ClientPortfolio.objects.filter(scheme_name__iexact=obj.scheme_name).count()
     portfolio_count.short_description = "Portfolio Entries"
+    
+    def get_queryset(self, request):
+        """Optimize queryset with select_related"""
+        return super().get_queryset(request).select_related('upload_batch')
+
+# Optional: Add these admin actions for bulk operations
+@admin.action(description='Mark selected schemes as active')
+def make_schemes_active(modeladmin, request, queryset):
+    updated = queryset.update(is_active=True)
+    modeladmin.message_user(request, f"{updated} schemes marked as active.")
+
+@admin.action(description='Mark selected schemes as inactive')
+def make_schemes_inactive(modeladmin, request, queryset):
+    updated = queryset.update(is_active=False)
+    modeladmin.message_user(request, f"{updated} schemes marked as inactive.")
+
+# Add the actions to the admin class
+MutualFundSchemeAdmin.actions = [make_schemes_active, make_schemes_inactive]
+
+# Also add the SchemeUpload and SchemeUploadLog admin classes if you haven't already:
+
+@admin.register(SchemeUpload)
+class SchemeUploadAdmin(admin.ModelAdmin):
+    list_display = [
+        'upload_id', 'uploaded_by', 'status', 'total_rows', 
+        'successful_rows', 'failed_rows', 'updated_rows', 'uploaded_at'
+    ]
+    list_filter = ['status', 'uploaded_at', 'update_existing', 'mark_missing_inactive']
+    readonly_fields = [
+        'upload_id', 'processed_at', 'total_rows', 'processed_rows', 
+        'successful_rows', 'failed_rows', 'updated_rows', 'processing_summary', 'error_details'
+    ]
+    search_fields = ['upload_id', 'uploaded_by__username']
+    
+    fieldsets = (
+        ('Upload Information', {
+            'fields': ('upload_id', 'file', 'uploaded_by', 'uploaded_at')
+        }),
+        ('Processing Options', {
+            'fields': ('update_existing', 'mark_missing_inactive')
+        }),
+        ('Processing Status', {
+            'fields': ('status', 'processed_at', 'total_rows', 'processed_rows', 
+                      'successful_rows', 'failed_rows', 'updated_rows')
+        }),
+        ('Processing Details', {
+            'fields': ('processing_log', 'processing_summary', 'error_details'),
+            'classes': ('collapse',)
+        })
+    )
+
+@admin.register(SchemeUploadLog)
+class SchemeUploadLogAdmin(admin.ModelAdmin):
+    list_display = ['upload', 'row_number', 'status', 'amc_name', 'scheme_name_short', 'created_at']
+    list_filter = ['status', 'upload', 'created_at']
+    search_fields = ['amc_name', 'scheme_name', 'message', 'upload__upload_id']
+    raw_id_fields = ['upload', 'scheme']
+    readonly_fields = ['created_at']
+    
+    def scheme_name_short(self, obj):
+        """Display shortened scheme name"""
+        if obj.scheme_name and len(obj.scheme_name) > 50:
+            return obj.scheme_name[:50] + "..."
+        return obj.scheme_name
+    scheme_name_short.short_description = 'Scheme Name'
     
 admin.site.register(NoteList, NoteListAdmin)
 admin.site.register(Note, NoteAdmin)
@@ -2554,40 +2636,3 @@ user_change_url = f'admin:{User._meta.app_label}_{User._meta.model_name}_change'
 admin.site.site_header = "CRM Administration"
 admin.site.site_title = "CRM Admin"
 admin.site.index_title = "Welcome to CRM Administration"
-
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-from threading import Thread
-import logging
-
-logger = logging.getLogger(__name__)
-
-@receiver(post_save, sender=PortfolioUpload)
-def auto_process_portfolio_upload(sender, instance, created, **kwargs):
-    """
-    Automatically start processing when a new portfolio upload is created
-    """
-    if created and instance.status == 'pending':
-        # Log the trigger
-        instance.create_log(
-            row_number=0,
-            status='success',
-            message=f"Upload {instance.upload_id} created and queued for automatic processing"
-        )
-        
-        # Process in background thread to avoid blocking the request
-        def process_in_background():
-            try:
-                instance.process_upload_with_logging()
-            except Exception as e:
-                logger.error(f"Auto-processing failed for {instance.upload_id}: {e}")
-                instance.create_log(
-                    row_number=0,
-                    status='error',
-                    message=f"Auto-processing failed: {str(e)}"
-                )
-        
-        # Start background processing
-        thread = Thread(target=process_in_background)
-        thread.daemon = True
-        thread.start()
