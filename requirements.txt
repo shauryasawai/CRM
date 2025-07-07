@@ -33,8 +33,7 @@ gunicorn>=20.1.0
 
 # Environment variables management
 python-decouple>=3.8
-
-# Additional libraries used in your models and processing
+dj-database-url>=2.1.0
 
 # Threading support (built-in to Python, no package needed)
 # Logging support (built-in to Python, no package needed)
@@ -46,8 +45,8 @@ python-decouple>=3.8
 # django-storages>=1.14  # Uncomment if using cloud storage (AWS S3, etc.)
 
 # For background task processing (recommended for file processing)
-# celery>=5.3.0              # Uncomment if using Celery for async tasks
-# redis>=4.5.0               # Uncomment if using Redis for Celery broker
+celery>=5.3.0              # Uncomment if using Celery for async tasks
+redis>=4.5.0               # Uncomment if using Redis for Celery broker
 
 # Development and debugging tools (optional)
 # django-debug-toolbar>=4.0  # Uncomment for development
@@ -69,5 +68,5 @@ python-decouple>=3.8
 # django-anymail>=10.0       # Uncomment if using external email services
 
 # API development (if building REST APIs)
-# djangorestframework>=3.14.0  # Uncomment if building REST APIs
-# django-filter>=23.0          # Uncomment for API filtering
+djangorestframework>=3.14.0  # Uncomment if building REST APIs
+django-filter>=23.0          # Uncomment for API filtering
