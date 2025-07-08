@@ -2,6 +2,10 @@
   "version": 2,
   "builds": [
     {
+    "src": "/static/(.*)",
+    "dest": "/staticfiles_build/static/$1"
+  },
+    {
       "src": "project/wsgi.py",
       "use": "@vercel/python"
     }
