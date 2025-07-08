@@ -2998,6 +2998,93 @@ class ExecutionPlan(models.Model):
         if not self.plan_id:
             self.plan_id = self.generate_plan_id()
         super().save(*args, **kwargs)
+        
+    def approve(self, approved_by):
+        """Approve the execution plan"""
+        from django.utils import timezone
+        
+        if self.status != 'pending_approval':
+            return False
+        
+        if not self.can_be_approved_by(approved_by):
+            return False
+        
+        self.status = 'approved'
+        self.approved_by = approved_by
+        self.approved_at = timezone.now()
+        self.save()
+        return True
+    
+    def reject(self, rejected_by, reason):
+        """Reject the execution plan"""
+        from django.utils import timezone
+        
+        if self.status != 'pending_approval':
+            return False
+        
+        if not self.can_be_approved_by(rejected_by):
+            return False
+        
+        self.status = 'rejected'
+        self.rejected_by = rejected_by
+        self.rejected_at = timezone.now()
+        self.rejection_reason = reason
+        self.save()
+        return True
+    
+    def submit_for_approval(self, submitted_by=None):
+        """Submit plan for approval"""
+        from django.utils import timezone
+        
+        if self.status != 'draft':
+            return False
+        
+        if submitted_by and self.created_by != submitted_by:
+            return False
+        
+        self.status = 'pending_approval'
+        self.submitted_at = timezone.now()
+        self.save()
+        return True
+    
+    def mark_client_approved(self, user=None):
+        """Mark as client approved"""
+        from django.utils import timezone
+        
+        if self.status != 'approved':
+            return False
+        
+        if user and self.created_by != user:
+            return False
+        
+        self.status = 'client_approved'
+        self.client_approved_at = timezone.now()
+        self.save()
+        return True
+    
+    def start_execution(self, user=None):
+        """Start execution"""
+        from django.utils import timezone
+        
+        if self.status != 'client_approved':
+            return False
+        
+        self.status = 'in_execution'
+        self.execution_started_at = timezone.now()
+        self.save()
+        return True
+    
+    def complete_execution(self, user=None):
+        """Mark execution as completed"""
+        from django.utils import timezone
+        
+        if self.status != 'in_execution':
+            return False
+        
+        self.status = 'completed'
+        self.completed_at = timezone.now()
+        self.save()
+        return True
     
     # Essential Permission Methods (to fix the error)
     def can_be_approved_by(self, user):

@@ -4,16 +4,12 @@
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Ongoing Execution Plans</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
-        {% if user.role in 'rm,rm_head' %}
+        {% if can_create %}
         <a href="{% url 'create_plan' %}" class="btn btn-primary me-2">
             <i class="fas fa-plus me-1"></i> Create New Plan
         </a>
         {% endif %}
-        {% if user.role in 'business_head,top_management' %}
-        <a href="{% url 'create_plan' %}" class="btn btn-success me-2">
-            <i class="fas fa-plus-circle me-1"></i> New Execution Plan
-        </a>
-        {% endif %}
+        
         <div class="btn-group me-2">
             <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
                 <i class="fas fa-filter me-1"></i> Filter
@@ -21,12 +17,14 @@
             <ul class="dropdown-menu">
                 <li><a class="dropdown-item {% if not status_filter %}active{% endif %}" href="?">All Statuses</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item {% if status_filter == 'pending_approval' %}active{% endif %}" href="?status=pending_approval">Pending Approval</a></li>
-                <li><a class="dropdown-item {% if status_filter == 'approved' %}active{% endif %}" href="?status=approved">Approved</a></li>
-                <li><a class="dropdown-item {% if status_filter == 'client_approved' %}active{% endif %}" href="?status=client_approved">Client Approved</a></li>
-                <li><a class="dropdown-item {% if status_filter == 'in_execution' %}active{% endif %}" href="?status=in_execution">In Execution</a></li>
+                {% for status_code, status_name in status_choices %}
+                    {% if status_code in 'pending_approval,approved,client_approved,in_execution' %}
+                    <li><a class="dropdown-item {% if status_filter == status_code %}active{% endif %}" href="?status={{ status_code }}{% if search %}&search={{ search }}{% endif %}">{{ status_name }}</a></li>
+                    {% endif %}
+                {% endfor %}
             </ul>
         </div>
+        
         <div class="btn-group me-2">
             <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
                 <i class="fas fa-cog me-1"></i> Actions
@@ -50,8 +48,8 @@
     </div>
 </div>
 
-<!-- Quick Stats Cards (optional enhancement) -->
-{% if user.role in 'rm_head,business_head,top_management' %}
+<!-- Statistics Cards with Real Data -->
+{% if user.role in 'rm_head,business_head,business_head_ops,top_management' %}
 <div class="row mb-4">
     <div class="col-md-3">
         <div class="card text-white bg-warning">
@@ -59,13 +57,21 @@
                 <div class="d-flex justify-content-between">
                     <div>
                         <h5 class="card-title">Pending Approval</h5>
-                        <h3 class="mb-0">{{ stats.pending_approval|default:0 }}</h3>
+                        <h3 class="mb-0">{{ stats.pending_approval }}</h3>
+                        <small class="opacity-75">Awaiting review</small>
                     </div>
                     <div class="align-self-center">
                         <i class="fas fa-clock fa-2x"></i>
                     </div>
                 </div>
             </div>
+            {% if stats.pending_approval > 0 %}
+            <div class="card-footer bg-warning bg-opacity-75">
+                <a href="?status=pending_approval" class="text-white text-decoration-none">
+                    <small><i class="fas fa-arrow-circle-right me-1"></i>View pending plans</small>
+                </a>
+            </div>
+            {% endif %}
         </div>
     </div>
     <div class="col-md-3">
@@ -74,13 +80,21 @@
                 <div class="d-flex justify-content-between">
                     <div>
                         <h5 class="card-title">Approved</h5>
-                        <h3 class="mb-0">{{ stats.approved|default:0 }}</h3>
+                        <h3 class="mb-0">{{ stats.approved }}</h3>
+                        <small class="opacity-75">Ready for client</small>
                     </div>
                     <div class="align-self-center">
                         <i class="fas fa-check fa-2x"></i>
                     </div>
                 </div>
             </div>
+            {% if stats.approved > 0 %}
+            <div class="card-footer bg-info bg-opacity-75">
+                <a href="?status=approved" class="text-white text-decoration-none">
+                    <small><i class="fas fa-arrow-circle-right me-1"></i>View approved plans</small>
+                </a>
+            </div>
+            {% endif %}
         </div>
     </div>
     <div class="col-md-3">
@@ -89,13 +103,21 @@
                 <div class="d-flex justify-content-between">
                     <div>
                         <h5 class="card-title">Client Approved</h5>
-                        <h3 class="mb-0">{{ stats.client_approved|default:0 }}</h3>
+                        <h3 class="mb-0">{{ stats.client_approved }}</h3>
+                        <small class="opacity-75">Ready for execution</small>
                     </div>
                     <div class="align-self-center">
                         <i class="fas fa-user-check fa-2x"></i>
                     </div>
                 </div>
             </div>
+            {% if stats.client_approved > 0 %}
+            <div class="card-footer bg-primary bg-opacity-75">
+                <a href="?status=client_approved" class="text-white text-decoration-none">
+                    <small><i class="fas fa-arrow-circle-right me-1"></i>View client approved</small>
+                </a>
+            </div>
+            {% endif %}
         </div>
     </div>
     <div class="col-md-3">
@@ -104,18 +126,27 @@
                 <div class="d-flex justify-content-between">
                     <div>
                         <h5 class="card-title">In Execution</h5>
-                        <h3 class="mb-0">{{ stats.in_execution|default:0 }}</h3>
+                        <h3 class="mb-0">{{ stats.in_execution }}</h3>
+                        <small class="opacity-75">Being processed</small>
                     </div>
                     <div class="align-self-center">
                         <i class="fas fa-play fa-2x"></i>
                     </div>
                 </div>
             </div>
+            {% if stats.in_execution > 0 %}
+            <div class="card-footer bg-success bg-opacity-75">
+                <a href="?status=in_execution" class="text-white text-decoration-none">
+                    <small><i class="fas fa-arrow-circle-right me-1"></i>View in execution</small>
+                </a>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
 {% endif %}
 
+<!-- Search and Filter Section -->
 <div class="row mb-3">
     <div class="col-md-6">
         <form method="get" class="input-group">
@@ -128,18 +159,20 @@
                 <i class="fas fa-times"></i>
             </a>
             {% endif %}
+            {% if status_filter %}
+            <input type="hidden" name="status" value="{{ status_filter }}">
+            {% endif %}
         </form>
     </div>
     <div class="col-md-6 text-end">
-        <!-- Additional Create Button for Mobile/Small Screens -->
-        {% if user.role in 'rm,rm_head,business_head,top_management' %}
-        <a href="{% url 'create_plan' %}" class="btn btn-primary d-md-none">
-            <i class="fas fa-plus me-1"></i> New Plan
-        </a>
-        {% endif %}
+        <!-- Quick Stats Summary -->
+        <small class="text-muted">
+            Total ongoing: {{ stats.pending_approval|add:stats.approved|add:stats.client_approved|add:stats.in_execution }} plans
+        </small>
     </div>
 </div>
 
+<!-- Plans Table -->
 <div class="table-responsive">
     <table class="table table-hover align-middle">
         <thead class="table-light">
@@ -160,7 +193,7 @@
                     <code class="text-primary">{{ plan.plan_id }}</code>
                 </td>
                 <td>
-                    <a href="{% url 'plan_detail' plan.id %}" class="text-decoration-none fw-medium">
+                    <a href="{% url 'execution_plan_detail' plan.id %}" class="text-decoration-none fw-medium">
                         {{ plan.plan_name }}
                     </a>
                     {% if plan.description %}
@@ -178,7 +211,7 @@
                     </div>
                 </td>
                 <td>
-                    <div class="fw-medium">{{ plan.created_by.get_full_name }}</div>
+                    <div class="fw-medium">{{ plan.created_by.get_full_name|default:plan.created_by.username }}</div>
                     <small class="text-muted">{{ plan.created_by.get_role_display }}</small>
                 </td>
                 <td>
@@ -191,31 +224,65 @@
                         {% endif %}">
                         {{ plan.get_status_display }}
                     </span>
+                    
+                    <!-- Progress indicator for different statuses -->
+                    {% if plan.status == 'pending_approval' %}
+                        <br><small class="text-muted"><i class="fas fa-hourglass-half me-1"></i>Awaiting approval</small>
+                    {% elif plan.status == 'approved' %}
+                        <br><small class="text-muted"><i class="fas fa-envelope me-1"></i>Send to client</small>
+                    {% elif plan.status == 'client_approved' %}
+                        <br><small class="text-muted"><i class="fas fa-rocket me-1"></i>Ready to execute</small>
+                    {% elif plan.status == 'in_execution' %}
+                        <br><small class="text-muted"><i class="fas fa-cogs me-1"></i>Processing...</small>
+                    {% endif %}
                 </td>
                 <td>
                     <div>{{ plan.created_at|date:"M d, Y" }}</div>
                     <small class="text-muted">{{ plan.created_at|time:"H:i" }}</small>
+                    
+                    <!-- Show relevant dates based on status -->
+                    {% if plan.status == 'approved' and plan.approved_at %}
+                        <br><small class="text-success"><i class="fas fa-check me-1"></i>{{ plan.approved_at|date:"M d" }}</small>
+                    {% elif plan.status == 'client_approved' and plan.client_approved_at %}
+                        <br><small class="text-primary"><i class="fas fa-user-check me-1"></i>{{ plan.client_approved_at|date:"M d" }}</small>
+                    {% elif plan.status == 'in_execution' and plan.execution_started_at %}
+                        <br><small class="text-success"><i class="fas fa-play me-1"></i>{{ plan.execution_started_at|date:"M d" }}</small>
+                    {% endif %}
                 </td>
                 <td class="text-center">
                     <div class="btn-group btn-group-sm" role="group">
-                        <a href="{% url 'plan_detail' plan.id %}" class="btn btn-outline-primary" title="View Details">
+                        <a href="{% url 'execution_plan_detail' plan.id %}" class="btn btn-outline-primary" title="View Details">
                             <i class="fas fa-eye"></i>
                         </a>
+                        
+                        <!-- Role-based action buttons -->
                         {% if user.role == 'rm' and plan.created_by == user and plan.status in 'draft,rejected' %}
-                        <a href="{% url 'plan_detail' plan.id %}" class="btn btn-outline-secondary" title="Edit">
+                        <a href="{% url 'execution_plan_detail' plan.id %}" class="btn btn-outline-secondary" title="Edit">
                             <i class="fas fa-edit"></i>
                         </a>
                         {% endif %}
-                        {% if user.role in 'rm_head,business_head' and plan.status == 'pending_approval' %}
+                        
+                        {% if can_approve and plan.status == 'pending_approval' %}
                         <button type="button" class="btn btn-outline-success" onclick="approvePlan({{ plan.id }})" title="Approve">
                             <i class="fas fa-check"></i>
                         </button>
+                        <button type="button" class="btn btn-outline-danger" onclick="rejectPlan({{ plan.id }})" title="Reject">
+                            <i class="fas fa-times"></i>
+                        </button>
                         {% endif %}
-                        {% if user.role in 'ops_exec,ops_team_lead' and plan.status == 'client_approved' %}
+                        
+                        {% if user.role == 'rm' and plan.created_by == user and plan.status == 'approved' %}
+                        <button type="button" class="btn btn-outline-success" onclick="markClientApproved({{ plan.id }})" title="Mark Client Approved">
+                            <i class="fas fa-user-check"></i>
+                        </button>
+                        {% endif %}
+                        
+                        {% if can_execute and plan.status == 'client_approved' %}
                         <button type="button" class="btn btn-outline-success" onclick="startExecution({{ plan.id }})" title="Start Execution">
                             <i class="fas fa-play"></i>
                         </button>
                         {% endif %}
+                        
                         {% if plan.excel_file %}
                         <a href="{% url 'download_excel' plan.id %}" class="btn btn-outline-info" title="Download Excel">
                             <i class="fas fa-download"></i>
@@ -231,11 +298,20 @@
                         <i class="fas fa-clipboard-list fa-3x text-muted"></i>
                     </div>
                     <h5 class="text-muted">No ongoing plans found</h5>
-                    {% if user.role in 'rm,rm_head' %}
-                    <p class="text-muted mb-3">Create your first execution plan to get started.</p>
-                    <a href="{% url 'create_plan' %}" class="btn btn-primary">
-                        <i class="fas fa-plus me-1"></i> Create New Plan
-                    </a>
+                    {% if search or status_filter %}
+                        <p class="text-muted mb-3">No plans match your current filters.</p>
+                        <a href="{% url 'ongoing_plans' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-1"></i> Clear Filters
+                        </a>
+                    {% else %}
+                        {% if can_create %}
+                        <p class="text-muted mb-3">Create your first execution plan to get started.</p>
+                        <a href="{% url 'create_plan' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i> Create New Plan
+                        </a>
+                        {% else %}
+                        <p class="text-muted">No execution plans are currently ongoing.</p>
+                        {% endif %}
                     {% endif %}
                 </td>
             </tr>
@@ -244,6 +320,7 @@
     </table>
 </div>
 
+<!-- Pagination -->
 {% if page_obj.paginator.num_pages > 1 %}
 <nav aria-label="Page navigation">
     <ul class="pagination justify-content-center">
@@ -284,7 +361,9 @@
 </nav>
 {% endif %}
 
+<!-- JavaScript for Actions -->
 <script>
+// Approve Plan
 function approvePlan(planId) {
     if (confirm('Are you sure you want to approve this execution plan?')) {
         fetch(`/execution-plans/${planId}/approve/`, {
@@ -299,12 +378,69 @@ function approvePlan(planId) {
             if (data.success) {
                 location.reload();
             } else {
-                alert('Error: ' + data.error);
+                alert('Error: ' + (data.error || 'Failed to approve plan'));
             }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while approving the plan');
         });
     }
 }
 
+// Reject Plan
+function rejectPlan(planId) {
+    const reason = prompt('Please provide a reason for rejection:');
+    if (reason && reason.trim()) {
+        fetch(`/execution-plans/${planId}/reject/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'reason=' + encodeURIComponent(reason.trim())
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to reject plan'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while rejecting the plan');
+        });
+    }
+}
+
+// Mark Client Approved
+function markClientApproved(planId) {
+    if (confirm('Confirm that the client has approved this execution plan?')) {
+        fetch(`/execution-plans/${planId}/mark-client-approved/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to mark as client approved'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while updating the plan');
+        });
+    }
+}
+
+// Start Execution
 function startExecution(planId) {
     if (confirm('Are you sure you want to start execution of this plan?')) {
         fetch(`/execution-plans/${planId}/start-execution/`, {
@@ -319,11 +455,25 @@ function startExecution(planId) {
             if (data.success) {
                 location.reload();
             } else {
-                alert('Error: ' + data.error);
+                alert('Error: ' + (data.error || 'Failed to start execution'));
             }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while starting execution');
         });
     }
 }
+
+// Auto-refresh every 30 seconds if there are plans in execution
+{% if stats.in_execution > 0 %}
+setTimeout(function() {
+    location.reload();
+}, 30000);
+{% endif %}
 </script>
+
+<!-- Add CSRF token for AJAX requests -->
+{% csrf_token %}
 
 {% endblock %}

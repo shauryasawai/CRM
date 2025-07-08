@@ -114,6 +114,50 @@ def get_user_accessible_data(user, model_class, user_field='assigned_to'):
         filter_kwargs = {user_field: user}
         return model_class.objects.filter(**filter_kwargs)
 
+
+# Quick fix - Add this at the top of your views.py file
+
+def patch_execution_plan():
+    def approve(self, approved_by):
+        if self.status != 'pending_approval':
+            return False
+        if self.created_by == approved_by:
+            return False
+        if not hasattr(approved_by, 'role'):
+            return False
+        if approved_by.role not in ['business_head', 'top_management', 'business_head_ops']:
+            return False
+        
+        self.status = 'approved'
+        self.approved_by = approved_by
+        self.approved_at = timezone.now()
+        self.save()
+        return True
+    
+    def reject(self, rejected_by, reason):
+        if self.status != 'pending_approval':
+            return False
+        if self.created_by == rejected_by:
+            return False
+        if not hasattr(rejected_by, 'role'):
+            return False
+        if rejected_by.role not in ['business_head', 'top_management', 'business_head_ops']:
+            return False
+        
+        self.status = 'rejected'
+        self.rejected_by = rejected_by
+        self.rejected_at = timezone.now()
+        if hasattr(self, 'rejection_reason'):
+            self.rejection_reason = reason
+        self.save()
+        return True
+    
+    ExecutionPlan.approve = approve
+    ExecutionPlan.reject = reject
+
+# Call this function
+patch_execution_plan()
+
 @login_required
 def dashboard(request):
     user = request.user
@@ -6935,70 +6979,194 @@ def submit_for_approval(request, plan_id):
 @login_required
 @require_http_methods(["POST"])
 def approve_plan(request, plan_id):
-    """Approve execution plan"""
-    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
-    
-    # Check permission
-    if not can_approve_plan(request.user, execution_plan):
-        return JsonResponse({'error': 'Access denied'}, status=403)
-    
-    comments = request.POST.get('comments', '')
-    
-    if execution_plan.approve(request.user):
-        # Create workflow history
-        PlanWorkflowHistory.objects.create(
-            execution_plan=execution_plan,
-            from_status='pending_approval',
-            to_status='approved',
-            changed_by=request.user,
-            comments=comments or 'Plan approved'
-        )
+    """Approve execution plan - Role based approval"""
+    try:
+        execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
         
-        # Add comment if provided
-        if comments:
-            PlanComment.objects.create(
-                execution_plan=execution_plan,
-                comment=comments,
-                commented_by=request.user,
-                is_internal=True
-            )
+        # Check permission - only BH and TM can approve
+        if not can_approve_plan(request.user, execution_plan):
+            return JsonResponse({
+                'success': False, 
+                'error': 'Access denied. Only Business Head or Top Management can approve execution plans.'
+            }, status=403)
         
-        messages.success(request, 'Plan approved successfully')
-        return JsonResponse({'success': True, 'message': 'Plan approved successfully'})
-    else:
-        return JsonResponse({'error': 'Failed to approve plan'}, status=400)
+        if execution_plan.status != 'pending_approval':
+            return JsonResponse({
+                'success': False,
+                'error': f'Plan cannot be approved. Current status: {execution_plan.get_status_display()}'
+            }, status=400)
+        
+        comments = request.POST.get('comments', '')
+        
+        # Use transaction for data consistency
+        with transaction.atomic():
+            # Approve the plan
+            if execution_plan.approve(request.user):
+                # Create workflow history
+                PlanWorkflowHistory.objects.create(
+                    execution_plan=execution_plan,
+                    from_status='pending_approval',
+                    to_status='approved',
+                    changed_by=request.user,
+                    comments=comments or 'Plan approved'
+                )
+                
+                # Add comment if provided
+                if comments:
+                    PlanComment.objects.create(
+                        execution_plan=execution_plan,
+                        comment=comments,
+                        commented_by=request.user,
+                        is_internal=True
+                    )
+                
+                # Notify plan creator
+                try:
+                    send_approval_notification(execution_plan, request.user)
+                except Exception as e:
+                    logger.warning(f"Failed to send approval notification: {str(e)}")
+                
+                return JsonResponse({
+                    'success': True, 
+                    'message': 'Plan approved successfully',
+                    'new_status': execution_plan.status
+                })
+            else:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'Failed to approve plan'
+                }, status=400)
+    
+    except Exception as e:
+        logger.error(f"Error approving plan: {str(e)}")
+        return JsonResponse({
+            'success': False, 
+            'error': 'An error occurred while approving the plan'
+        }, status=500)
 
 
 @login_required
 @require_http_methods(["POST"])
 def reject_plan(request, plan_id):
-    """Reject execution plan"""
-    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
-    
-    # Check permission
-    if not can_approve_plan(request.user, execution_plan):
-        return JsonResponse({'error': 'Access denied'}, status=403)
-    
-    reason = request.POST.get('reason', '')
-    if not reason:
-        return JsonResponse({'error': 'Rejection reason is required'}, status=400)
-    
-    if execution_plan.reject(request.user, reason):
-        # Create workflow history
-        PlanWorkflowHistory.objects.create(
-            execution_plan=execution_plan,
-            from_status='pending_approval',
-            to_status='rejected',
-            changed_by=request.user,
-            comments=f'Plan rejected: {reason}'
-        )
+    """Reject execution plan - Role based rejection"""
+    try:
+        execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
         
-        messages.success(request, 'Plan rejected')
-        return JsonResponse({'success': True, 'message': 'Plan rejected'})
-    else:
-        return JsonResponse({'error': 'Failed to reject plan'}, status=400)
+        # Check permission - only BH and TM can reject
+        if not can_approve_plan(request.user, execution_plan):
+            return JsonResponse({
+                'success': False, 
+                'error': 'Access denied. Only Business Head or Top Management can reject execution plans.'
+            }, status=403)
+        
+        if execution_plan.status != 'pending_approval':
+            return JsonResponse({
+                'success': False,
+                'error': f'Plan cannot be rejected. Current status: {execution_plan.get_status_display()}'
+            }, status=400)
+        
+        reason = request.POST.get('reason', '').strip()
+        if not reason:
+            return JsonResponse({
+                'success': False, 
+                'error': 'Rejection reason is required'
+            }, status=400)
+        
+        # Use transaction for data consistency
+        with transaction.atomic():
+            # Reject the plan
+            if execution_plan.reject(request.user, reason):
+                # Create workflow history
+                PlanWorkflowHistory.objects.create(
+                    execution_plan=execution_plan,
+                    from_status='pending_approval',
+                    to_status='rejected',
+                    changed_by=request.user,
+                    comments=f'Plan rejected: {reason}'
+                )
+                
+                # Add rejection comment
+                PlanComment.objects.create(
+                    execution_plan=execution_plan,
+                    comment=f"Plan rejected by {request.user.get_full_name() or request.user.username}. Reason: {reason}",
+                    commented_by=request.user,
+                    is_internal=True
+                )
+                
+                # Notify plan creator
+                try:
+                    send_rejection_notification(execution_plan, request.user, reason)
+                except Exception as e:
+                    logger.warning(f"Failed to send rejection notification: {str(e)}")
+                
+                return JsonResponse({
+                    'success': True, 
+                    'message': 'Plan rejected successfully',
+                    'new_status': execution_plan.status
+                })
+            else:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'Failed to reject plan'
+                }, status=400)
+    
+    except Exception as e:
+        logger.error(f"Error rejecting plan: {str(e)}")
+        return JsonResponse({
+            'success': False, 
+            'error': 'An error occurred while rejecting the plan'
+        }, status=500)
+
+def send_approval_notification(execution_plan, approved_by):
+    """Send notification when plan is approved"""
+    try:
+        # Notify plan creator
+        creator = execution_plan.created_by
+        if creator and creator.email:
+            subject = f"Execution Plan Approved - {execution_plan.plan_name}"
+            message = f"""
+            Your execution plan "{execution_plan.plan_name}" for client {execution_plan.client.name} 
+            has been approved by {approved_by.get_full_name() or approved_by.username}.
+            
+            Plan ID: {execution_plan.plan_id}
+            Approved on: {execution_plan.approved_at.strftime('%Y-%m-%d %H:%M')}
+            
+            You can now proceed to get client approval.
+            """
+            
+            # Send email notification here
+            logger.info(f"Approval notification sent to {creator.email}")
+    
+    except Exception as e:
+        logger.error(f"Error sending approval notification: {str(e)}")
 
 
+def send_rejection_notification(execution_plan, rejected_by, reason):
+    """Send notification when plan is rejected"""
+    try:
+        # Notify plan creator
+        creator = execution_plan.created_by
+        if creator and creator.email:
+            subject = f"Execution Plan Rejected - {execution_plan.plan_name}"
+            message = f"""
+            Your execution plan "{execution_plan.plan_name}" for client {execution_plan.client.name} 
+            has been rejected by {rejected_by.get_full_name() or rejected_by.username}.
+            
+            Plan ID: {execution_plan.plan_id}
+            Rejected on: {execution_plan.rejected_at.strftime('%Y-%m-%d %H:%M')}
+            
+            Rejection Reason: {reason}
+            
+            Please review and resubmit the plan after making necessary changes.
+            """
+            
+            # Send email notification here
+            logger.info(f"Rejection notification sent to {creator.email}")
+    
+    except Exception as e:
+        logger.error(f"Error sending rejection notification: {str(e)}")
+        
+        
 @login_required
 @require_http_methods(["POST"])
 def send_to_client(request, plan_id):
@@ -7090,54 +7258,94 @@ def mark_client_approved(request, plan_id):
         return JsonResponse({'error': 'Failed to mark as client approved'}, status=400)
 
 
+# Add this modified view to your views.py file
+# Make sure you have these imports at the top of your views.py:
+# from django.db.models import Case, When, IntegerField, Q, Count, Sum
+# from django.core.paginator import Paginator
+
 @login_required
 def ongoing_plans(request):
-    """View ongoing execution plans"""
-    # Get plans based on user role
-    if request.user.role == 'rm':
+    """View ongoing execution plans with actual database statistics"""
+    user = request.user
+    
+    # Get base queryset based on user role
+    if user.role == 'rm':
         plans = ExecutionPlan.objects.filter(
-            created_by=request.user,
+            created_by=user,
             status__in=['pending_approval', 'approved', 'client_approved', 'in_execution']
         )
-    elif request.user.role == 'rm_head':
-        subordinate_rms = User.objects.filter(manager=request.user, role='rm')
+    elif user.role == 'rm_head':
+        subordinate_rms = User.objects.filter(manager=user, role='rm')
         plans = ExecutionPlan.objects.filter(
-            Q(created_by__in=subordinate_rms) | Q(created_by=request.user),
+            Q(created_by__in=subordinate_rms) | Q(created_by=user),
             status__in=['pending_approval', 'approved', 'client_approved', 'in_execution']
         )
-    elif request.user.role in ['ops_exec', 'ops_team_lead']:
+    elif user.role in ['ops_exec', 'ops_team_lead']:
         plans = ExecutionPlan.objects.filter(
             status__in=['client_approved', 'in_execution']
         )
-    else:
+    elif user.role in ['business_head', 'business_head_ops']:
         plans = ExecutionPlan.objects.filter(
             status__in=['pending_approval', 'approved', 'client_approved', 'in_execution']
         )
+    elif user.role == 'top_management':
+        plans = ExecutionPlan.objects.filter(
+            status__in=['pending_approval', 'approved', 'client_approved', 'in_execution']
+        )
+    else:
+        plans = ExecutionPlan.objects.none()
     
-    # Filter by status if requested
+    # Calculate actual statistics from database
+    stats = {
+        'pending_approval': plans.filter(status='pending_approval').count(),
+        'approved': plans.filter(status='approved').count(),
+        'client_approved': plans.filter(status='client_approved').count(),
+        'in_execution': plans.filter(status='in_execution').count(),
+    }
+    
+    # Apply filters
     status_filter = request.GET.get('status')
     if status_filter:
         plans = plans.filter(status=status_filter)
     
-    # Search
+    # Search functionality
     search = request.GET.get('search')
     if search:
         plans = plans.filter(
             Q(plan_name__icontains=search) |
             Q(client__name__icontains=search) |
-            Q(plan_id__icontains=search)
+            Q(plan_id__icontains=search) |
+            Q(description__icontains=search)
         )
     
+    # Order by priority (pending approval first, then by creation date)
+    plans = plans.annotate(
+        status_priority=Case(
+            When(status='pending_approval', then=1),
+            When(status='approved', then=2),
+            When(status='client_approved', then=3),
+            When(status='in_execution', then=4),
+            default=5,
+            output_field=IntegerField()
+        )
+    ).order_by('status_priority', '-created_at')
+    
     # Pagination
-    paginator = Paginator(plans.order_by('-created_at'), 20)
+    paginator = Paginator(plans.select_related('client', 'created_by', 'approved_by'), 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
+    # Additional context for role-specific permissions
     context = {
         'page_obj': page_obj,
+        'stats': stats,
         'status_filter': status_filter,
         'search': search,
-        'user_role': request.user.role,
+        'user_role': user.role,
+        'can_create': user.role in ['rm', 'rm_head'],
+        'can_approve': user.role in ['rm_head', 'business_head', 'business_head_ops', 'top_management'],
+        'can_execute': user.role in ['ops_exec', 'ops_team_lead', 'business_head_ops'],
+        'status_choices': ExecutionPlan.STATUS_CHOICES,
     }
     
     return render(request, 'execution_plans/ongoing_plans.html', context)
