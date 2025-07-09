@@ -2101,6 +2101,11 @@ class PortfolioUploadAdmin(admin.ModelAdmin):
         
         return actions
 
+
+
+####start from here part 3
+
+
 @admin.register(PortfolioUploadLog)
 class PortfolioUploadLogAdmin(admin.ModelAdmin):
     list_display = [
@@ -2625,7 +2630,7 @@ admin.site.register(BusinessTracker, BusinessTrackerAdmin)
 
 # Unregister default Group admin and register custom one
 admin.site.unregister(Group)
-admin.site.register(Group, CustomGroupAdmin)
+
 from django.contrib.auth import get_user_model
 # For the User model:
 User = get_user_model()

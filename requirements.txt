@@ -47,7 +47,7 @@ dj-database-url>=2.1.0
 # For background task processing (recommended for file processing)
 celery>=5.3.0              # Uncomment if using Celery for async tasks
 redis>=4.5.0               # Uncomment if using Redis for Celery broker
-
+whitenoise==6.9.0
 # Development and debugging tools (optional)
 # django-debug-toolbar>=4.0  # Uncomment for development
 # django-silk>=5.0           # Uncomment for advanced profiling
