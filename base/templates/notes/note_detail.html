@@ -7,76 +7,509 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        .note-container {
-            background: #f8f9fa;
-            min-height: 100vh;
-            padding: 20px 0;
+        :root {
+            --primary-color: #1C64FF;
+            --secondary-text: #696969;
+            --background: #FFFFFF;
+            --border-muted: #D9D9D9;
+            --highlight-accent: #C3E4FF;
+            --primary-hover: #1557E6;
+            --text-dark: #2C3E50;
+            --success-color: #28A745;
+            --warning-color: #FFC107;
+            --danger-color: #DC3545;
+            --light-bg: #F8F9FA;
+            --info-color: #17A2B8;
         }
-        .note-content {
-            background: #fff;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--light-bg);
+            color: var(--text-dark);
             line-height: 1.6;
-            white-space: pre-wrap;
+            min-height: 100vh;
         }
+
+        /* Modern Navbar */
+        .modern-navbar {
+            background-color: var(--background) !important;
+            border-bottom: 2px solid var(--border-muted);
+            box-shadow: 0 2px 10px rgba(28, 100, 255, 0.1);
+            padding: 1rem 0;
+        }
+
+        .modern-navbar .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--primary-color) !important;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .modern-navbar .nav-link {
+            color: var(--secondary-text) !important;
+            font-weight: 500;
+            padding: 0.5rem 1rem !important;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            margin: 0 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .modern-navbar .nav-link:hover {
+            background-color: var(--highlight-accent);
+            color: var(--primary-color) !important;
+        }
+
+        /* Note Container */
+        .note-container {
+            padding: 2rem 0;
+        }
+
+        /* Modern Card */
+        .modern-card {
+            background: var(--background);
+            border: 2px solid var(--border-muted);
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(28, 100, 255, 0.1);
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .modern-card:hover {
+            box-shadow: 0 12px 40px rgba(28, 100, 255, 0.15);
+            border-color: var(--primary-color);
+        }
+
+        /* Note Header */
         .note-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 1.5rem;
-            border-radius: 10px 10px 0 0;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+            color: var(--background);
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
         }
+
+        .note-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            transform: translate(30px, -30px);
+        }
+
+        .note-header h4 {
+            font-weight: 700;
+            font-size: 1.75rem;
+            margin-bottom: 0.75rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .note-header .note-list-info {
+            opacity: 0.9;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Status Badge */
+        .status-badge {
+            font-size: 1rem;
+            padding: 0.75rem 1.25rem;
+            border-radius: 25px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .badge.bg-success {
+            background-color: var(--success-color) !important;
+            color: var(--background);
+        }
+
+        .badge.bg-warning {
+            background-color: var(--warning-color) !important;
+            color: var(--text-dark);
+        }
+
+        .badge.bg-danger {
+            background-color: var(--danger-color) !important;
+            color: var(--background);
+        }
+
+        /* Note Content */
+        .note-content {
+            background: var(--background);
+            padding: 2.5rem;
+            font-size: 1.1rem;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            border-bottom: 2px solid var(--border-muted);
+        }
+
+        /* Note Meta */
         .note-meta {
-            background: #e9ecef;
-            padding: 1rem;
-            border-radius: 5px;
-            margin: 1rem 0;
+            background-color: var(--light-bg);
+            padding: 2rem;
+            border-bottom: 2px solid var(--border-muted);
         }
-        .attachment-box {
-            background: #f8f9fa;
-            border: 2px dashed #dee2e6;
+
+        .meta-item {
+            background: var(--background);
+            border: 2px solid var(--border-muted);
+            border-radius: 12px;
             padding: 1.5rem;
-            border-radius: 10px;
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+
+        .meta-item:hover {
+            border-color: var(--primary-color);
+            background-color: var(--highlight-accent);
+            transform: translateY(-2px);
+        }
+
+        .meta-item h6 {
+            color: var(--secondary-text);
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .meta-item p {
+            color: var(--text-dark);
+            font-weight: 500;
+            font-size: 1rem;
+            margin: 0;
+        }
+
+        .meta-item .badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+        }
+
+        /* Attachment Box */
+        .attachment-section {
+            padding: 2rem;
+            border-bottom: 2px solid var(--border-muted);
+        }
+
+        .attachment-box {
+            background: var(--light-bg);
+            border: 2px dashed var(--border-muted);
+            border-radius: 12px;
+            padding: 2rem;
             text-align: center;
             transition: all 0.3s ease;
         }
+
         .attachment-box:hover {
-            border-color: #667eea;
-            background: #f0f7ff;
+            border-color: var(--primary-color);
+            background-color: var(--highlight-accent);
+            transform: translateY(-2px);
         }
-        .status-badge {
-            font-size: 1.1rem;
-            padding: 0.5rem 1rem;
+
+        .attachment-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
         }
-        .btn-action {
-            min-width: 120px;
+
+        .attachment-info h6 {
+            color: var(--text-dark);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
         }
+
+        .attachment-info p {
+            color: var(--secondary-text);
+            margin: 0;
+        }
+
+        /* Note Stats */
         .note-stats {
-            background: #fff;
-            border-left: 4px solid #667eea;
-            padding: 1rem;
+            background: var(--background);
+            border: 2px solid var(--border-muted);
+            border-left: 4px solid var(--primary-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 2rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-item h6 {
+            color: var(--secondary-text);
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-item small {
+            color: var(--text-dark);
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        /* Modern Buttons */
+        .modern-btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            min-width: 120px;
+            justify-content: center;
+        }
+
+        .modern-btn:hover {
+            text-decoration: none;
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: var(--background);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+            border-color: var(--primary-hover);
+            color: var(--background);
+            box-shadow: 0 4px 15px rgba(28, 100, 255, 0.3);
+        }
+
+        .btn-success {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+            color: var(--background);
+        }
+
+        .btn-success:hover {
+            background-color: #218838;
+            border-color: #218838;
+            color: var(--background);
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-warning {
+            background-color: var(--warning-color);
+            border-color: var(--warning-color);
+            color: var(--text-dark);
+        }
+
+        .btn-warning:hover {
+            background-color: #E0A800;
+            border-color: #E0A800;
+            color: var(--text-dark);
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+            border-color: var(--danger-color);
+            color: var(--background);
+        }
+
+        .btn-danger:hover {
+            background-color: #C82333;
+            border-color: #C82333;
+            color: var(--background);
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-outline-secondary {
+            background-color: transparent;
+            border-color: var(--border-muted);
+            color: var(--secondary-text);
+        }
+
+        .btn-outline-secondary:hover {
+            background-color: var(--light-bg);
+            border-color: var(--secondary-text);
+            color: var(--text-dark);
+        }
+
+        .btn-outline-primary {
+            background-color: transparent;
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .btn-outline-primary:hover {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: var(--background);
+        }
+
+        /* Card Footer */
+        .modern-card-footer {
+            background-color: var(--light-bg);
+            border-top: 2px solid var(--border-muted);
+            padding: 2rem;
+        }
+
+        /* Related Notes */
+        .related-note-card {
+            background: var(--background);
+            border: 2px solid var(--border-muted);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+
+        .related-note-card:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 15px rgba(28, 100, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .related-note-card .card-title a {
+            color: var(--text-dark);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .related-note-card .card-title a:hover {
+            color: var(--primary-color);
+        }
+
+        .related-note-card .card-text {
+            color: var(--secondary-text);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .note-container {
+                padding: 1rem 0;
+            }
+
+            .note-header {
+                padding: 1.5rem;
+            }
+
+            .note-header h4 {
+                font-size: 1.5rem;
+            }
+
+            .note-content {
+                padding: 1.5rem;
+                font-size: 1rem;
+            }
+
+            .note-meta {
+                padding: 1.5rem;
+            }
+
+            .attachment-section {
+                padding: 1.5rem;
+            }
+
+            .modern-card-footer {
+                padding: 1.5rem;
+            }
+
+            .modern-btn {
+                padding: 0.625rem 1.25rem;
+                font-size: 0.85rem;
+                min-width: 100px;
+            }
+
+            .d-flex.justify-content-between {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .d-flex.justify-content-between > div:last-child {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                gap: 1rem;
+            }
+        }
+
+        /* Utility Classes */
+        .text-muted {
+            color: var(--secondary-text) !important;
+        }
+
+        .border-primary {
+            border-color: var(--primary-color) !important;
+        }
+
+        .bg-light {
+            background-color: var(--light-bg) !important;
+        }
+
+        /* Loading Animation */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .fa-spin {
+            animation: spin 1s linear infinite;
         }
     </style>
 </head>
-<body class="note-container">
+<body>
     <div class="container-fluid">
-        <!-- Header -->
+        <!-- Modern Header -->
         <div class="row">
             <div class="col-12">
-                <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+                <nav class="navbar navbar-expand-lg modern-navbar">
                     <div class="container-fluid">
                         <a class="navbar-brand" href="{% url 'notes_dashboard' %}">
-                            <i class="fas fa-sticky-note"></i> Note Details
+                            <i class="fas fa-sticky-note"></i>
+                            Note Details
                         </a>
                         <div class="navbar-nav ms-auto">
                             <a class="nav-link" href="{% url 'note_list' %}">
-                                <i class="fas fa-list"></i> All Notes
+                                <i class="fas fa-list"></i>
+                                All Notes
                             </a>
                             <a class="nav-link" href="{% url 'notes_dashboard' %}">
-                                <i class="fas fa-home"></i> Notes Dashboard
+                                <i class="fas fa-home"></i>
+                                Dashboard
                             </a>
                             <a class="nav-link" href="{% url 'dashboard' %}">
-                                <i class="fas fa-tachometer-alt"></i> Main Dashboard
+                                <i class="fas fa-tachometer-alt"></i>
+                                Main Dashboard
                             </a>
                         </div>
                     </div>
@@ -84,38 +517,42 @@
             </div>
         </div>
 
-        <!-- Note Content -->
-        <div class="row justify-content-center">
-            <div class="col-md-10 col-lg-8">
-                <div class="card border-0 shadow">
-                    <!-- Note Header -->
-                    <div class="note-header">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <h4 class="mb-2">{{ note.heading }}</h4>
-                                <p class="mb-0 opacity-75">
-                                    <i class="fas fa-folder"></i> {{ note.note_list.name }}
-                                </p>
-                            </div>
-                            <div class="text-end">
-                                {% if note.is_completed %}
-                                    <span class="badge bg-success status-badge">
-                                        <i class="fas fa-check-circle"></i> Completed
-                                    </span>
-                                {% elif note.is_overdue %}
-                                    <span class="badge bg-danger status-badge">
-                                        <i class="fas fa-exclamation-triangle"></i> Overdue
-                                    </span>
-                                {% else %}
-                                    <span class="badge bg-warning status-badge">
-                                        <i class="fas fa-clock"></i> Pending
-                                    </span>
-                                {% endif %}
+        <div class="container note-container">
+            <!-- Note Content -->
+            <div class="row justify-content-center">
+                <div class="col-xl-10">
+                    <div class="modern-card">
+                        <!-- Note Header -->
+                        <div class="note-header">
+                            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                                <div class="flex-grow-1">
+                                    <h4>{{ note.heading }}</h4>
+                                    <p class="note-list-info mb-0">
+                                        <i class="fas fa-folder"></i>
+                                        {{ note.note_list.name }}
+                                    </p>
+                                </div>
+                                <div>
+                                    {% if note.is_completed %}
+                                        <span class="badge bg-success status-badge">
+                                            <i class="fas fa-check-circle"></i>
+                                            Completed
+                                        </span>
+                                    {% elif note.is_overdue %}
+                                        <span class="badge bg-danger status-badge">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            Overdue
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-warning status-badge">
+                                            <i class="fas fa-clock"></i>
+                                            Pending
+                                        </span>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="card-body p-0">
                         <!-- Note Content -->
                         <div class="note-content">
                             {{ note.content|linebreaks }}
@@ -123,39 +560,48 @@
 
                         <!-- Note Details -->
                         <div class="note-meta">
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <h6 class="text-muted mb-2">
-                                        <i class="fas fa-calendar-plus text-primary"></i> Creation Date
-                                    </h6>
-                                    <p class="mb-0">{{ note.creation_date|date:"F d, Y" }}</p>
+                            <div class="row g-4">
+                                <div class="col-lg-4">
+                                    <div class="meta-item">
+                                        <h6>
+                                            <i class="fas fa-calendar-plus text-primary"></i>
+                                            Creation Date
+                                        </h6>
+                                        <p>{{ note.creation_date|date:"F d, Y" }}</p>
+                                    </div>
                                 </div>
                                 {% if note.reminder_date %}
-                                <div class="col-md-4">
-                                    <h6 class="text-muted mb-2">
-                                        <i class="fas fa-bell text-warning"></i> Reminder
-                                    </h6>
-                                    <p class="mb-0">
-                                        {{ note.reminder_date|date:"F d, Y H:i" }}
-                                        {% if note.has_reminder_pending %}
-                                            <span class="badge bg-info ms-2">Pending</span>
-                                        {% endif %}
-                                    </p>
+                                <div class="col-lg-4">
+                                    <div class="meta-item">
+                                        <h6>
+                                            <i class="fas fa-bell text-warning"></i>
+                                            Reminder
+                                        </h6>
+                                        <p>
+                                            {{ note.reminder_date|date:"F d, Y H:i" }}
+                                            {% if note.has_reminder_pending %}
+                                                <span class="badge bg-info ms-2">Pending</span>
+                                            {% endif %}
+                                        </p>
+                                    </div>
                                 </div>
                                 {% endif %}
                                 {% if note.due_date %}
-                                <div class="col-md-4">
-                                    <h6 class="text-muted mb-2">
-                                        <i class="fas fa-calendar-check text-danger"></i> Due Date
-                                    </h6>
-                                    <p class="mb-0">
-                                        {{ note.due_date|date:"F d, Y" }}
-                                        {% if note.is_overdue %}
-                                            <span class="badge bg-danger ms-2">Overdue</span>
-                                        {% elif note.due_date == today %}
-                                            <span class="badge bg-warning ms-2">Due Today</span>
-                                        {% endif %}
-                                    </p>
+                                <div class="col-lg-4">
+                                    <div class="meta-item">
+                                        <h6>
+                                            <i class="fas fa-calendar-check text-danger"></i>
+                                            Due Date
+                                        </h6>
+                                        <p>
+                                            {{ note.due_date|date:"F d, Y" }}
+                                            {% if note.is_overdue %}
+                                                <span class="badge bg-danger ms-2">Overdue</span>
+                                            {% elif note.due_date == today %}
+                                                <span class="badge bg-warning ms-2">Due Today</span>
+                                            {% endif %}
+                                        </p>
+                                    </div>
                                 </div>
                                 {% endif %}
                             </div>
@@ -163,40 +609,42 @@
 
                         <!-- File Attachment -->
                         {% if note.attachment %}
-                        <div class="p-3">
+                        <div class="attachment-section">
                             <h6 class="text-muted mb-3">
-                                <i class="fas fa-paperclip text-primary"></i> Attachment
+                                <i class="fas fa-paperclip text-primary"></i>
+                                Attachment
                             </h6>
                             <div class="attachment-box">
-                                <div class="d-flex align-items-center justify-content-center">
-                                    <div class="me-3">
+                                <div class="d-flex align-items-center justify-content-center flex-wrap gap-3">
+                                    <div class="attachment-icon">
                                         {% with file_ext=note.attachment.name|slice:"-4:" %}
                                             {% if file_ext == ".pdf" %}
-                                                <i class="fas fa-file-pdf fa-3x text-danger"></i>
+                                                <i class="fas fa-file-pdf text-danger"></i>
                                             {% elif file_ext == ".doc" or file_ext == "docx" %}
-                                                <i class="fas fa-file-word fa-3x text-primary"></i>
+                                                <i class="fas fa-file-word text-primary"></i>
                                             {% elif file_ext == ".xls" or file_ext == "xlsx" %}
-                                                <i class="fas fa-file-excel fa-3x text-success"></i>
+                                                <i class="fas fa-file-excel text-success"></i>
                                             {% elif file_ext == ".jpg" or file_ext == "jpeg" or file_ext == ".png" %}
-                                                <i class="fas fa-file-image fa-3x text-info"></i>
+                                                <i class="fas fa-file-image text-info"></i>
                                             {% else %}
-                                                <i class="fas fa-file fa-3x text-secondary"></i>
+                                                <i class="fas fa-file text-secondary"></i>
                                             {% endif %}
                                         {% endwith %}
                                     </div>
-                                    <div class="text-start">
-                                        <h6 class="mb-1">
+                                    <div class="attachment-info text-start flex-grow-1">
+                                        <h6>
                                             <a href="{{ note.attachment.url }}" target="_blank" class="text-decoration-none">
                                                 {{ note.attachment.name|cut:"notes/"|cut:note.user.id|cut:"/" }}
                                             </a>
                                         </h6>
-                                        <p class="text-muted mb-0">
-                                            <small>{{ note.attachment.size|filesizeformat }}</small>
+                                        <p class="text-muted">
+                                            {{ note.attachment.size|filesizeformat }}
                                         </p>
                                     </div>
-                                    <div class="ms-auto">
-                                        <a href="{{ note.attachment.url }}" target="_blank" class="btn btn-outline-primary">
-                                            <i class="fas fa-download"></i> Download
+                                    <div>
+                                        <a href="{{ note.attachment.url }}" target="_blank" class="modern-btn btn-outline-primary">
+                                            <i class="fas fa-download"></i>
+                                            Download
                                         </a>
                                     </div>
                                 </div>
@@ -206,9 +654,10 @@
 
                         <!-- Completion Status -->
                         {% if note.is_completed and note.completed_at %}
-                        <div class="note-stats mx-3 mb-3">
+                        <div class="note-stats">
                             <h6 class="text-success mb-2">
-                                <i class="fas fa-check-circle"></i> Completion Details
+                                <i class="fas fa-check-circle"></i>
+                                Completion Details
                             </h6>
                             <p class="mb-0">
                                 Completed on {{ note.completed_at|date:"F d, Y H:i" }}
@@ -217,98 +666,105 @@
                         {% endif %}
 
                         <!-- Note Statistics -->
-                        <div class="note-stats mx-3 mb-3">
-                            <div class="row text-center">
-                                <div class="col-4">
-                                    <h6 class="text-muted mb-1">Created</h6>
+                        <div class="note-stats">
+                            <div class="stats-grid">
+                                <div class="stat-item">
+                                    <h6>Created</h6>
                                     <small>{{ note.created_at|timesince }} ago</small>
                                 </div>
-                                <div class="col-4">
-                                    <h6 class="text-muted mb-1">Updated</h6>
+                                <div class="stat-item">
+                                    <h6>Updated</h6>
                                     <small>{{ note.updated_at|timesince }} ago</small>
                                 </div>
-                                <div class="col-4">
-                                    <h6 class="text-muted mb-1">Characters</h6>
+                                <div class="stat-item">
+                                    <h6>Characters</h6>
                                     <small>{{ note.content|length }} chars</small>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- Action Buttons -->
-                    <div class="card-footer bg-light">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <a href="{% url 'notes_dashboard' %}" class="btn btn-outline-secondary btn-action">
-                                    <i class="fas fa-arrow-left"></i> Back
-                                </a>
-                            </div>
-                            <div>
-                                {% if can_edit %}
-                                <a href="{% url 'note_update' note.pk %}" class="btn btn-primary btn-action">
-                                    <i class="fas fa-edit"></i> Edit
-                                </a>
-                                {% endif %}
-                                
-                                <!-- Toggle Complete Button -->
-                                <button type="button" 
-                                        class="btn btn-{% if note.is_completed %}warning{% else %}success{% endif %} btn-action" 
-                                        onclick="toggleComplete({{ note.pk }})"
-                                        id="toggleBtn">
-                                    {% if note.is_completed %}
-                                        <i class="fas fa-undo"></i> Mark Pending
-                                    {% else %}
-                                        <i class="fas fa-check"></i> Mark Complete
+                        
+                        <!-- Action Buttons -->
+                        <div class="modern-card-footer">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <a href="{% url 'notes_dashboard' %}" class="modern-btn btn-outline-secondary">
+                                        <i class="fas fa-arrow-left"></i>
+                                        Back
+                                    </a>
+                                </div>
+                                <div class="d-flex gap-2 flex-wrap">
+                                    {% if can_edit %}
+                                    <a href="{% url 'note_update' note.pk %}" class="modern-btn btn-primary">
+                                        <i class="fas fa-edit"></i>
+                                        Edit
+                                    </a>
                                     {% endif %}
-                                </button>
-                                
-                                {% if can_delete %}
-                                <a href="{% url 'note_delete' note.pk %}" class="btn btn-danger btn-action">
-                                    <i class="fas fa-trash"></i> Delete
-                                </a>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Related Notes (same list) -->
-                {% if related_notes %}
-                <div class="card mt-4">
-                    <div class="card-header">
-                        <h6 class="mb-0">
-                            <i class="fas fa-layer-group"></i> 
-                            Other notes in "{{ note.note_list.name }}"
-                        </h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            {% for related_note in related_notes %}
-                            <div class="col-md-6 mb-3">
-                                <div class="card h-100">
-                                    <div class="card-body">
-                                        <h6 class="card-title">
-                                            <a href="{% url 'note_detail' related_note.pk %}" class="text-decoration-none">
-                                                {{ related_note.heading|truncatechars:40 }}
-                                            </a>
-                                        </h6>
-                                        <p class="card-text small text-muted">
-                                            {{ related_note.content|truncatechars:80 }}
-                                        </p>
-                                        <small class="text-muted">
-                                            {{ related_note.updated_at|timesince }} ago
-                                        </small>
-                                    </div>
+                                    
+                                    <!-- Toggle Complete Button -->
+                                    <button type="button" 
+                                            class="modern-btn btn-{% if note.is_completed %}warning{% else %}success{% endif %}" 
+                                            onclick="toggleComplete({{ note.pk }})"
+                                            id="toggleBtn">
+                                        {% if note.is_completed %}
+                                            <i class="fas fa-undo"></i>
+                                            Mark Pending
+                                        {% else %}
+                                            <i class="fas fa-check"></i>
+                                            Mark Complete
+                                        {% endif %}
+                                    </button>
+                                    
+                                    {% if can_delete %}
+                                    <a href="{% url 'note_delete' note.pk %}" class="modern-btn btn-danger">
+                                        <i class="fas fa-trash"></i>
+                                        Delete
+                                    </a>
+                                    {% endif %}
                                 </div>
                             </div>
-                            {% endfor %}
                         </div>
                     </div>
+
+                    <!-- Related Notes -->
+                    {% if related_notes %}
+                    <div class="modern-card mt-4">
+                        <div class="modern-card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-layer-group"></i>
+                                Other notes in "{{ note.note_list.name }}"
+                            </h6>
+                        </div>
+                        <div class="p-4">
+                            <div class="row g-4">
+                                {% for related_note in related_notes %}
+                                <div class="col-lg-6">
+                                    <div class="related-note-card card">
+                                        <div class="card-body">
+                                            <h6 class="card-title">
+                                                <a href="{% url 'note_detail' related_note.pk %}">
+                                                    {{ related_note.heading|truncatechars:40 }}
+                                                </a>
+                                            </h6>
+                                            <p class="card-text">
+                                                {{ related_note.content|truncatechars:80 }}
+                                            </p>
+                                            <small class="text-muted">
+                                                <i class="fas fa-clock"></i>
+                                                {{ related_note.updated_at|timesince }} ago
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
-                {% endif %}
             </div>
         </div>
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         function toggleComplete(noteId) {
@@ -318,6 +774,7 @@
             // Show loading state
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
             btn.disabled = true;
+            btn.style.opacity = '0.7';
             
             fetch(`/notes/${noteId}/toggle-complete/`, {
                 method: 'POST',
@@ -329,19 +786,85 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    // Show success feedback before reload
+                    btn.innerHTML = '<i class="fas fa-check"></i> Updated!';
+                    btn.style.opacity = '1';
+                    
                     // Reload page to show updated status
-                    location.reload();
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
                 } else {
-                    alert('Error updating note status');
+                    showCustomAlert('Error updating note status', 'error');
                     btn.innerHTML = originalText;
                     btn.disabled = false;
+                    btn.style.opacity = '1';
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Error updating note status');
+                showCustomAlert('Error updating note status', 'error');
                 btn.innerHTML = originalText;
                 btn.disabled = false;
+                btn.style.opacity = '1';
+            });
+        }
+
+        // Custom alert function
+        function showCustomAlert(message, type = 'info') {
+            const alertContainer = document.createElement('div');
+            alertContainer.style.cssText = `
+                position: fixed;
+                top: 2rem;
+                right: 2rem;
+                z-index: 9999;
+                padding: 1rem 2rem;
+                border-radius: 12px;
+                color: white;
+                font-weight: 500;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+                max-width: 400px;
+            `;
+
+            // Set background based on type
+            if (type === 'success') {
+                alertContainer.style.backgroundColor = 'var(--success-color)';
+                alertContainer.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+            } else if (type === 'error') {
+                alertContainer.style.backgroundColor = 'var(--danger-color)';
+                alertContainer.innerHTML = `<i class="fas fa-times-circle"></i> ${message}`;
+            } else {
+                alertContainer.style.backgroundColor = 'var(--primary-color)';
+                alertContainer.innerHTML = `<i class="fas fa-info-circle"></i> ${message}`;
+            }
+
+            document.body.appendChild(alertContainer);
+
+            // Animate in
+            setTimeout(() => {
+                alertContainer.style.transform = 'translateX(0)';
+            }, 100);
+
+            // Auto remove after 4 seconds
+            setTimeout(() => {
+                alertContainer.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (alertContainer.parentNode) {
+                        alertContainer.parentNode.removeChild(alertContainer);
+                    }
+                }, 300);
+            }, 4000);
+
+            // Click to dismiss
+            alertContainer.addEventListener('click', () => {
+                alertContainer.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (alertContainer.parentNode) {
+                        alertContainer.parentNode.removeChild(alertContainer);
+                    }
+                }, 300);
             });
         }
 
@@ -361,6 +884,58 @@
                         break;
                 }
             }
+        });
+
+        // Add smooth animations on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const modernCard = document.querySelector('.modern-card');
+            const relatedNotesCard = document.querySelector('.modern-card.mt-4');
+            
+            // Animate main card
+            modernCard.style.opacity = '0';
+            modernCard.style.transform = 'translateY(30px)';
+            
+            setTimeout(() => {
+                modernCard.style.transition = 'all 0.6s ease';
+                modernCard.style.opacity = '1';
+                modernCard.style.transform = 'translateY(0)';
+            }, 100);
+            
+            // Animate related notes card
+            if (relatedNotesCard) {
+                relatedNotesCard.style.opacity = '0';
+                relatedNotesCard.style.transform = 'translateY(30px)';
+                
+                setTimeout(() => {
+                    relatedNotesCard.style.transition = 'all 0.6s ease';
+                    relatedNotesCard.style.opacity = '1';
+                    relatedNotesCard.style.transform = 'translateY(0)';
+                }, 300);
+            }
+
+            // Add hover effects to meta items
+            const metaItems = document.querySelectorAll('.meta-item');
+            metaItems.forEach(item => {
+                item.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-2px)';
+                });
+                
+                item.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+            });
+
+            // Add hover effects to related note cards
+            const relatedCards = document.querySelectorAll('.related-note-card');
+            relatedCards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-2px)';
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+            });
         });
     </script>
 </body>

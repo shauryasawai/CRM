@@ -171,6 +171,144 @@
   color: #2e7d32;
 }
 
+/* Select2 Bootstrap 5 Integration */
+.select2-container--default .select2-selection--single,
+.select2-container--default .select2-selection--multiple {
+    border: 1px solid #D9D9D9 !important;
+    border-radius: 0.375rem !important;
+    min-height: calc(1.5em + 0.75rem + 2px) !important;
+    padding: 0.375rem 0.75rem !important;
+    font-size: 1rem !important;
+    line-height: 1.5 !important;
+    background-color: #FFFFFF !important;
+}
+
+.select2-container--default.select2-container--focus .select2-selection--single,
+.select2-container--default.select2-container--focus .select2-selection--multiple {
+    border-color: #1C64FF !important;
+    box-shadow: 0 0 0 0.25rem rgba(28, 100, 255, 0.25) !important;
+    outline: 0 !important;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background-color: #1C64FF !important;
+    border: 1px solid #1C64FF !important;
+    color: white !important;
+    border-radius: 0.25rem !important;
+    padding: 0.25rem 0.5rem !important;
+    margin: 0.125rem !important;
+    font-size: 0.875rem !important;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+    color: rgba(255, 255, 255, 0.8) !important;
+    margin-right: 0.25rem !important;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+    color: white !important;
+}
+
+.select2-dropdown {
+    border: 1px solid #D9D9D9 !important;
+    border-radius: 0.375rem !important;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #1C64FF !important;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field {
+    border: 1px solid #D9D9D9 !important;
+    border-radius: 0.375rem !important;
+    padding: 0.375rem 0.75rem !important;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field:focus {
+    border-color: #1C64FF !important;
+    box-shadow: 0 0 0 0.25rem rgba(28, 100, 255, 0.25) !important;
+    outline: 0 !important;
+}
+
+/* Enhanced form styling */
+.form-control:focus,
+.form-select:focus {
+    border-color: #1C64FF !important;
+    box-shadow: 0 0 0 0.25rem rgba(28, 100, 255, 0.25) !important;
+}
+
+.btn-primary {
+    background-color: #1C64FF !important;
+    border-color: #1C64FF !important;
+}
+
+.btn-primary:hover {
+    background-color: #1557e6 !important;
+    border-color: #1557e6 !important;
+}
+
+.btn-outline-secondary {
+    border-color: #D9D9D9 !important;
+    color: #696969 !important;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #D9D9D9 !important;
+    border-color: #D9D9D9 !important;
+    color: #495057 !important;
+}
+
+/* Smooth transitions */
+.btn,
+.form-control,
+.form-select,
+.card {
+    transition: all 0.2s ease !important;
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.spinner-border-sm {
+    animation: spin 1s linear infinite;
+}
+
+/* Role badge styling */
+.role-badge {
+    transition: all 0.3s ease;
+}
+
+.role-badge:hover {
+    transform: scale(1.05);
+}
+
+/* Enhanced accessibility */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .card {
+        border: 2px solid #000 !important;
+    }
+    
+    .btn {
+        border-width: 2px !important;
+    }
+}
+
+/* Responsive adjustments */
 @media (max-width: 768px) {
   .profile-form-container {
     padding: 0 1rem;
@@ -192,147 +330,619 @@
     width: 100%;
     justify-content: center;
   }
+  
+  .btn-lg {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+    }
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="profile-form-container">
-  <div class="profile-form-card">
-    <div class="profile-form-header">
-      <h1 class="profile-form-title">
-        <i class="fas fa-user-edit"></i>
-        Edit User: {{ profile_user.get_full_name|default:profile_user.username }}
-      </h1>
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
+            <!-- Header Card -->
+            <div class="card border-0 shadow-sm mb-4" style="background-color: #FFFFFF;">
+                <div class="card-header text-center py-4 border-0" style="background: linear-gradient(135deg, #1C64FF 0%, #C3E4FF 100%);">
+                    <div class="mb-3">
+                        <i class="fas fa-user-edit fa-3x text-white"></i>
+                    </div>
+                    <h1 class="h2 fw-bold text-white mb-2">
+                        Edit User Profile
+                    </h1>
+                    <p class="text-white-50 mb-0">
+                        Update information for <strong>{{ profile_user.get_full_name|default:profile_user.username }}</strong>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Form Card -->
+            <div class="card border-0 shadow-sm" style="background-color: #FFFFFF; border: 1px solid #D9D9D9;">
+                <div class="card-body p-4">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger border-0 mb-4" role="alert">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-exclamation-circle me-2"></i>
+                                    <div>
+                                        {% for error in form.non_field_errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Name Fields -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="{{ form.first_name.id_for_label }}" class="form-label fw-semibold" style="color: #1C64FF;">
+                                    <i class="fas fa-user me-2"></i>First Name
+                                </label>
+                                <input type="text" 
+                                       class="form-control form-control-lg {% if form.first_name.errors %}is-invalid{% endif %}" 
+                                       id="{{ form.first_name.id_for_label }}" 
+                                       name="{{ form.first_name.name }}" 
+                                       value="{{ form.first_name.value|default:'' }}"
+                                       placeholder="Enter first name"
+                                       style="border-color: #D9D9D9;">
+                                {% if form.first_name.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.first_name.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.last_name.id_for_label }}" class="form-label fw-semibold" style="color: #1C64FF;">
+                                    <i class="fas fa-user me-2"></i>Last Name
+                                </label>
+                                <input type="text" 
+                                       class="form-control form-control-lg {% if form.last_name.errors %}is-invalid{% endif %}" 
+                                       id="{{ form.last_name.id_for_label }}" 
+                                       name="{{ form.last_name.name }}" 
+                                       value="{{ form.last_name.value|default:'' }}"
+                                       placeholder="Enter last name"
+                                       style="border-color: #D9D9D9;">
+                                {% if form.last_name.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.last_name.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Email Field -->
+                        <div class="mb-4">
+                            <label for="{{ form.email.id_for_label }}" class="form-label fw-semibold" style="color: #1C64FF;">
+                                <i class="fas fa-envelope me-2"></i>Email Address
+                            </label>
+                            <input type="email" 
+                                   class="form-control form-control-lg {% if form.email.errors %}is-invalid{% endif %}" 
+                                   id="{{ form.email.id_for_label }}" 
+                                   name="{{ form.email.name }}" 
+                                   value="{{ form.email.value|default:'' }}"
+                                   placeholder="Enter email address"
+                                   style="border-color: #D9D9D9;">
+                            {% if form.email.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.email.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text" style="color: #696969;">
+                                <i class="fas fa-info-circle me-1"></i>
+                                This will be used for login and notifications
+                            </div>
+                        </div>
+                        
+                        <!-- Role Field -->
+                        <div class="mb-4">
+                            <label for="{{ form.role.id_for_label }}" class="form-label fw-semibold" style="color: #1C64FF;">
+                                <i class="fas fa-id-badge me-2"></i>User Role
+                            </label>
+                            <select class="form-select form-select-lg {% if form.role.errors %}is-invalid{% endif %}" 
+                                    id="{{ form.role.id_for_label }}" 
+                                    name="{{ form.role.name }}"
+                                    style="border-color: #D9D9D9;">
+                                <option value="">Select user role</option>
+                                {% for choice in form.role.field.choices %}
+                                    <option value="{{ choice.0 }}" {% if form.role.value == choice.0 %}selected{% endif %}>
+                                        {{ choice.1 }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            {% if form.role.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.role.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="mt-2">
+                                <small id="roleBadge" class="badge rounded-pill role-badge" style="display: none;"></small>
+                            </div>
+                            <div class="form-text" style="color: #696969;">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Role determines user permissions and access levels
+                            </div>
+                        </div>
+                        
+                        <!-- Teams Field -->
+                        <div class="mb-4">
+                            <label for="{{ form.teams.id_for_label }}" class="form-label fw-semibold" style="color: #1C64FF;">
+                                <i class="fas fa-users me-2"></i>Team Assignments
+                            </label>
+                            <select class="form-select {% if form.teams.errors %}is-invalid{% endif %}" 
+                                    id="{{ form.teams.id_for_label }}" 
+                                    name="{{ form.teams.name }}"
+                                    multiple
+                                    style="border-color: #D9D9D9;">
+                                {% for choice in form.teams.field.queryset %}
+                                    <option value="{{ choice.pk }}" 
+                                            {% if choice.pk in form.teams.value %}selected{% endif %}>
+                                        {{ choice.name }} (Leader: {{ choice.leader.get_full_name|default:choice.leader.username }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            {% if form.teams.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.teams.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text" style="color: #696969;">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Select multiple teams this user should be part of
+                            </div>
+                        </div>
+                        
+                        <!-- Current User Info -->
+                        <div class="alert alert-light border-0 mb-4" style="background-color: #C3E4FF; border-left: 4px solid #1C64FF !important;">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-info-circle me-3" style="color: #1C64FF;"></i>
+                                <div>
+                                    <h6 class="mb-1 fw-semibold" style="color: #1C64FF;">Current User Information</h6>
+                                    <p class="mb-0 small" style="color: #696969;">
+                                        <strong>Username:</strong> {{ profile_user.username }} | 
+                                        <strong>Date Joined:</strong> {{ profile_user.date_joined|date:"M d, Y" }} |
+                                        <strong>Last Login:</strong> {{ profile_user.last_login|date:"M d, Y H:i"|default:"Never" }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Form Actions -->
+                        <div class="d-flex flex-column flex-sm-row justify-content-end gap-3 pt-4 mt-4" style="border-top: 1px solid #D9D9D9;">
+                            <a href="{% url 'user_profile' profile_user.id %}" 
+                               class="btn btn-outline-secondary btn-lg px-4" 
+                               style="border-color: #D9D9D9; color: #696969;">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg px-4" id="submitBtn" style="background-color: #1C64FF; border-color: #1C64FF;">
+                                <i class="fas fa-save me-2"></i>Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container for Notifications -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+    <div id="successToast" class="toast border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header border-0" style="background-color: #C3E4FF;">
+            <i class="fas fa-check-circle text-success me-2"></i>
+            <strong class="me-auto" style="color: #1C64FF;">Success</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" style="background-color: #FFFFFF; color: #696969;">
+            <span id="successMessage"></span>
+        </div>
     </div>
     
-    <div class="profile-form-body">
-      <form method="post" novalidate>
-        {% csrf_token %}
-        
-        {% if form.non_field_errors %}
-          <div class="alert alert-danger mb-4">
-            {% for error in form.non_field_errors %}
-              {{ error }}
-            {% endfor %}
-          </div>
-        {% endif %}
-        
-        <!-- Name Fields -->
-        <div class="row">
-          <div class="col-md-6">
-            <div class="form-group">
-              <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name</label>
-              {{ form.first_name }}
-              {% if form.first_name.errors %}
-                <ul class="error-list">
-                  {% for error in form.first_name.errors %}
-                    <li>{{ error }}</li>
-                  {% endfor %}
-                </ul>
-              {% endif %}
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="form-group">
-              <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name</label>
-              {{ form.last_name }}
-              {% if form.last_name.errors %}
-                <ul class="error-list">
-                  {% for error in form.last_name.errors %}
-                    <li>{{ error }}</li>
-                  {% endfor %}
-                </ul>
-              {% endif %}
-            </div>
-          </div>
+    <div id="errorToast" class="toast border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header border-0" style="background-color: #f8d7da;">
+            <i class="fas fa-exclamation-circle text-danger me-2"></i>
+            <strong class="me-auto text-danger">Error</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
-        
-        <!-- Email Field -->
-        <div class="form-group">
-          <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
-          {{ form.email }}
-          {% if form.email.errors %}
-            <ul class="error-list">
-              {% for error in form.email.errors %}
-                <li>{{ error }}</li>
-              {% endfor %}
-            </ul>
-          {% endif %}
+        <div class="toast-body" style="background-color: #FFFFFF; color: #696969;">
+            <span id="errorMessage"></span>
         </div>
-        
-        <!-- Role Field -->
-        <div class="form-group">
-          <label for="{{ form.role.id_for_label }}" class="form-label">Role</label>
-          {{ form.role }}
-          {% if form.role.errors %}
-            <ul class="error-list">
-              {% for error in form.role.errors %}
-                <li>{{ error }}</li>
-              {% endfor %}
-            </ul>
-          {% endif %}
-        </div>
-        
-        <!-- Teams Field -->
-        <div class="form-group">
-          <label for="{{ form.teams.id_for_label }}" class="form-label">Teams</label>
-          {{ form.teams }}
-          {% if form.teams.errors %}
-            <ul class="error-list">
-              {% for error in form.teams.errors %}
-                <li>{{ error }}</li>
-              {% endfor %}
-            </ul>
-          {% endif %}
-        </div>
-        
-        <div class="form-actions">
-          <a href="{% url 'user_profile' profile_user.id %}" class="btn btn-secondary">
-            <i class="fas fa-times"></i> Cancel
-          </a>
-          <button type="submit" class="btn btn-primary">
-            <i class="fas fa-save"></i> Save Changes
-          </button>
-        </div>
-      </form>
     </div>
-  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-$(document).ready(function() {
-    // Initialize Select2 with customizations
-    $('select').select2({
-        placeholder: "Select options",
-        allowClear: true,
-        width: '100%',
-        theme: 'bootstrap4'
-    });
-
-    // Form submission loading state
-    $('form').on('submit', function() {
-        const submitBtn = $(this).find('button[type="submit"]');
-        submitBtn.prop('disabled', true);
-        submitBtn.html('<i class="fas fa-spinner fa-spin"></i> Saving...');
-    });
-
-    // Add role badge styling
-    const roleSelect = $('#id_role');
-    function updateRoleBadge() {
-        const selectedRole = roleSelect.find('option:selected').text().toLowerCase();
-        roleSelect.removeClass('role-admin role-manager role-user');
-        if (selectedRole) {
-            roleSelect.addClass(`role-${selectedRole}`);
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Select2 with enhanced customizations
+    const selectElements = document.querySelectorAll('select');
+    selectElements.forEach(select => {
+        if (select.multiple) {
+            // Multi-select for teams
+            $(select).select2({
+                placeholder: "Search and select teams",
+                allowClear: true,
+                width: '100%',
+                closeOnSelect: false,
+                templateResult: function(option) {
+                    if (!option.id) return option.text;
+                    
+                    const optionText = option.text;
+                    const parts = optionText.split(' (Leader: ');
+                    const teamName = parts[0];
+                    const leader = parts[1] ? parts[1].replace(')', '') : '';
+                    
+                    return $(`
+                        <div class="d-flex align-items-center">
+                            <div class="me-2">
+                                <i class="fas fa-users" style="color: #1C64FF;"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold">${teamName}</div>
+                                ${leader ? `<small class="text-muted">Leader: ${leader}</small>` : ''}
+                            </div>
+                        </div>
+                    `);
+                },
+                templateSelection: function(option) {
+                    if (!option.id) return option.text;
+                    
+                    const optionText = option.text;
+                    const parts = optionText.split(' (Leader: ');
+                    const teamName = parts[0];
+                    
+                    return teamName;
+                }
+            });
+        } else {
+            // Single select for role
+            $(select).select2({
+                placeholder: "Select user role",
+                allowClear: true,
+                width: '100%',
+                templateResult: function(option) {
+                    if (!option.id) return option.text;
+                    
+                    const roleIcons = {
+                        'rm': 'fas fa-user',
+                        'rm_head': 'fas fa-user-tie',
+                        'business_head': 'fas fa-briefcase',
+                        'top_management': 'fas fa-crown'
+                    };
+                    
+                    const icon = roleIcons[option.id] || 'fas fa-user-circle';
+                    
+                    return $(`
+                        <div class="d-flex align-items-center">
+                            <div class="me-2">
+                                <i class="${icon}" style="color: #1C64FF;"></i>
+                            </div>
+                            <div class="fw-semibold">${option.text}</div>
+                        </div>
+                    `);
+                }
+            });
         }
-    }
+    });
+
+    // Role badge functionality
+    const roleSelect = document.querySelector('select[name="role"]');
+    const roleBadge = document.getElementById('roleBadge');
     
-    // Initialize and update on change
-    updateRoleBadge();
-    roleSelect.on('change', updateRoleBadge);
+    if (roleSelect && roleBadge) {
+        function updateRoleBadge() {
+            const selectedValue = roleSelect.value;
+            const selectedText = roleSelect.options[roleSelect.selectedIndex].text;
+            
+            if (selectedValue) {
+                roleBadge.style.display = 'inline-block';
+                roleBadge.textContent = selectedText;
+                
+                // Reset classes
+                roleBadge.className = 'badge rounded-pill role-badge';
+                
+                // Add appropriate styling based on role
+                switch(selectedValue) {
+                    case 'rm':
+                        roleBadge.classList.add('text-primary');
+                        roleBadge.style.backgroundColor = '#e3f2fd';
+                        roleBadge.style.border = '1px solid #bbdefb';
+                        break;
+                    case 'rm_head':
+                        roleBadge.classList.add('text-success');
+                        roleBadge.style.backgroundColor = '#e8f5e9';
+                        roleBadge.style.border = '1px solid #c8e6c9';
+                        break;
+                    case 'business_head':
+                        roleBadge.classList.add('text-warning');
+                        roleBadge.style.backgroundColor = '#fff3e0';
+                        roleBadge.style.border = '1px solid #ffcc02';
+                        break;
+                    case 'top_management':
+                        roleBadge.classList.add('text-danger');
+                        roleBadge.style.backgroundColor = '#ffebee';
+                        roleBadge.style.border = '1px solid #ffcdd2';
+                        break;
+                    default:
+                        roleBadge.style.backgroundColor = '#f5f5f5';
+                        roleBadge.style.border = '1px solid #e0e0e0';
+                        roleBadge.style.color = '#424242';
+                }
+            } else {
+                roleBadge.style.display = 'none';
+            }
+        }
+        
+        roleSelect.addEventListener('change', updateRoleBadge);
+        
+        // Initialize on page load
+        updateRoleBadge();
+    }
+
+    // Form submission handling
+    const form = document.querySelector('form');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    if (form && submitBtn) {
+        form.addEventListener('submit', function(e) {
+            // Add loading state
+            submitBtn.disabled = true;
+            const originalContent = submitBtn.innerHTML;
+            submitBtn.innerHTML = `
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Saving...
+            `;
+            
+            // Basic validation
+            const firstName = document.getElementById('{{ form.first_name.id_for_label }}').value.trim();
+            const lastName = document.getElementById('{{ form.last_name.id_for_label }}').value.trim();
+            const email = document.getElementById('{{ form.email.id_for_label }}').value.trim();
+            const role = document.getElementById('{{ form.role.id_for_label }}').value;
+            
+            if (!firstName || !lastName) {
+                e.preventDefault();
+                showToast('Please enter both first and last name', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalContent;
+                return;
+            }
+            
+            if (!email) {
+                e.preventDefault();
+                showToast('Please enter an email address', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalContent;
+                return;
+            }
+            
+            if (!role) {
+                e.preventDefault();
+                showToast('Please select a user role', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalContent;
+                return;
+            }
+            
+            // Show success message
+            showToast('User profile is being updated...', 'success');
+        });
+    }
+
+    // Enhanced form field interactions
+    const formControls = document.querySelectorAll('.form-control, .form-select');
+    formControls.forEach(control => {
+        // Focus effects
+        control.addEventListener('focus', function() {
+            this.style.borderColor = '#1C64FF';
+            this.style.boxShadow = '0 0 0 0.25rem rgba(28, 100, 255, 0.15)';
+            this.style.transition = 'all 0.2s ease';
+        });
+        
+        control.addEventListener('blur', function() {
+            if (!this.classList.contains('is-invalid')) {
+                this.style.borderColor = '#D9D9D9';
+                this.style.boxShadow = 'none';
+            }
+        });
+        
+        // Input validation feedback
+        control.addEventListener('input', function() {
+            if (this.classList.contains('is-invalid') && this.value.trim()) {
+                this.classList.remove('is-invalid');
+                this.style.borderColor = '#1C64FF';
+                
+                // Hide error message
+                const feedback = this.nextElementSibling;
+                if (feedback && feedback.classList.contains('invalid-feedback')) {
+                    feedback.style.display = 'none';
+                }
+            }
+        });
+    });
+
+    // Button hover effects
+    const buttons = document.querySelectorAll('.btn');
+    buttons.forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            if (!this.disabled) {
+                this.style.transform = 'translateY(-2px)';
+                this.style.transition = 'transform 0.2s ease';
+                
+                if (this.classList.contains('btn-primary')) {
+                    this.style.boxShadow = '0 8px 25px rgba(28, 100, 255, 0.3)';
+                } else {
+                    this.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+                }
+            }
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '';
+        });
+        
+        // Click feedback
+        button.addEventListener('click', function(e) {
+            if (this.disabled) return;
+            
+            // Create ripple effect
+            const ripple = document.createElement('span');
+            const rect = this.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = e.clientX - rect.left - size / 2;
+            const y = e.clientY - rect.top - size / 2;
+            
+            ripple.style.cssText = `
+                position: absolute;
+                width: ${size}px;
+                height: ${size}px;
+                left: ${x}px;
+                top: ${y}px;
+                background: rgba(255, 255, 255, 0.3);
+                border-radius: 50%;
+                transform: scale(0);
+                animation: ripple 0.6s ease-out;
+                pointer-events: none;
+            `;
+            
+            this.style.position = 'relative';
+            this.appendChild(ripple);
+            
+            setTimeout(() => ripple.remove(), 600);
+        });
+    });
+
+    // Add CSS for ripple animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes ripple {
+            to {
+                transform: scale(2);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Add entrance animations
+    const card = document.querySelector('.card');
+    if (card) {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.transition = 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+        
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, 100);
+    }
+
+    // Error handling for Select2
+    $(document).on('select2:select select2:unselect', function() {
+        const formGroup = $(this).closest('.mb-4');
+        formGroup.find('.is-invalid').removeClass('is-invalid');
+        formGroup.find('.invalid-feedback').hide();
+    });
+
+    // Toast notification function
+    function showToast(message, type) {
+        const toastId = type === 'success' ? 'successToast' : 'errorToast';
+        const messageId = type === 'success' ? 'successMessage' : 'errorMessage';
+        
+        document.getElementById(messageId).textContent = message;
+        
+        const toastElement = document.getElementById(toastId);
+        const toast = new bootstrap.Toast(toastElement, {
+            autohide: true,
+            delay: 5000
+        });
+        toast.show();
+    }
+
+    // Email validation
+    const emailInput = document.getElementById('{{ form.email.id_for_label }}');
+    if (emailInput) {
+        emailInput.addEventListener('blur', function() {
+            const email = this.value.trim();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            
+            if (email && !emailRegex.test(email)) {
+                this.style.borderColor = '#dc3545';
+                
+                let warning = this.parentNode.querySelector('.email-warning');
+                if (!warning) {
+                    warning = document.createElement('small');
+                    warning.className = 'form-text text-danger email-warning';
+                    warning.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Please enter a valid email address';
+                    this.parentNode.appendChild(warning);
+                }
+            } else {
+                this.style.borderColor = '#D9D9D9';
+                
+                const warning = this.parentNode.querySelector('.email-warning');
+                if (warning) {
+                    warning.remove();
+                }
+            }
+        });
+    }
+
+    // Real-time name validation
+    const nameInputs = [
+        document.getElementById('{{ form.first_name.id_for_label }}'),
+        document.getElementById('{{ form.last_name.id_for_label }}')
+    ];
+    
+    nameInputs.forEach(input => {
+        if (input) {
+            input.addEventListener('input', function() {
+                const value = this.value.trim();
+                if (value.length > 0 && value.length < 2) {
+                    this.style.borderColor = '#dc3545';
+                } else {
+                    this.style.borderColor = '#D9D9D9';
+                }
+            });
+        }
+    });
+
+    // Auto-save draft functionality (optional)
+    let saveTimeout;
+    const formInputs = document.querySelectorAll('input, select, textarea');
+    formInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                // Save form data to localStorage as draft
+                const formData = new FormData(form);
+                const draftData = {};
+                for (let [key, value] of formData.entries()) {
+                    draftData[key] = value;
+                }
+                localStorage.setItem('userFormDraft', JSON.stringify(draftData));
+            }, 1000);
+        });
+    });
+
+    // Clear draft on successful submission
+    form.addEventListener('submit', function() {
+        localStorage.removeItem('userFormDraft');
+    });
 });
 </script>
 {% endblock %}

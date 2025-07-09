@@ -143,6 +143,142 @@
   margin-right: 4px;
 }
 
+/* Select2 Bootstrap 5 Integration */
+.select2-container--default .select2-selection--single,
+.select2-container--default .select2-selection--multiple {
+    border: 1px solid #D9D9D9 !important;
+    border-radius: 0.375rem !important;
+    min-height: calc(1.5em + 0.75rem + 2px) !important;
+    padding: 0.375rem 0.75rem !important;
+    font-size: 1rem !important;
+    line-height: 1.5 !important;
+    background-color: #FFFFFF !important;
+}
+
+.select2-container--default.select2-container--focus .select2-selection--single,
+.select2-container--default.select2-container--focus .select2-selection--multiple {
+    border-color: #1C64FF !important;
+    box-shadow: 0 0 0 0.25rem rgba(28, 100, 255, 0.25) !important;
+    outline: 0 !important;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background-color: #1C64FF !important;
+    border: 1px solid #1C64FF !important;
+    color: white !important;
+    border-radius: 0.25rem !important;
+    padding: 0.25rem 0.5rem !important;
+    margin: 0.125rem !important;
+    font-size: 0.875rem !important;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+    color: rgba(255, 255, 255, 0.8) !important;
+    margin-right: 0.25rem !important;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+    color: white !important;
+}
+
+.select2-dropdown {
+    border: 1px solid #D9D9D9 !important;
+    border-radius: 0.375rem !important;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #1C64FF !important;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field {
+    border: 1px solid #D9D9D9 !important;
+    border-radius: 0.375rem !important;
+    padding: 0.375rem 0.75rem !important;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field:focus {
+    border-color: #1C64FF !important;
+    box-shadow: 0 0 0 0.25rem rgba(28, 100, 255, 0.25) !important;
+    outline: 0 !important;
+}
+
+/* Enhanced form styling */
+.form-control:focus,
+.form-select:focus {
+    border-color: #1C64FF !important;
+    box-shadow: 0 0 0 0.25rem rgba(28, 100, 255, 0.25) !important;
+}
+
+.btn-primary {
+    background-color: #1C64FF !important;
+    border-color: #1C64FF !important;
+}
+
+.btn-primary:hover {
+    background-color: #1557e6 !important;
+    border-color: #1557e6 !important;
+}
+
+.btn-outline-secondary {
+    border-color: #D9D9D9 !important;
+    color: #696969 !important;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #D9D9D9 !important;
+    border-color: #D9D9D9 !important;
+    color: #495057 !important;
+}
+
+/* Smooth transitions */
+.btn,
+.form-control,
+.form-select,
+.card {
+    transition: all 0.2s ease !important;
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.spinner-border-sm {
+    animation: spin 1s linear infinite;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .btn-lg {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+    }
+}
+
+/* Enhanced accessibility */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .card {
+        border: 2px solid #000 !important;
+    }
+    
+    .btn {
+        border-width: 2px !important;
+    }
+}
+
 @media (max-width: 768px) {
   .team-form-container {
     padding: 0 1rem;
@@ -169,110 +305,491 @@
 {% endblock %}
 
 {% block content %}
-<div class="team-form-container">
-  <div class="team-form-card">
-    <div class="team-form-header">
-      <h1 class="team-form-title">
-        <i class="fas fa-users me-2"></i>
-        {{ action }} Team
-      </h1>
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
+            <!-- Header Card -->
+            <div class="card border-0 shadow-sm mb-4" style="background-color: #FFFFFF;">
+                <div class="card-header text-center py-4 border-0" style="background: linear-gradient(135deg, #1C64FF 0%, #C3E4FF 100%);">
+                    <div class="mb-3">
+                        <i class="fas fa-users fa-3x text-white"></i>
+                    </div>
+                    <h1 class="h2 fw-bold text-white mb-2">
+                        {{ action }} Team
+                    </h1>
+                    <p class="text-white-50 mb-0">
+                        {% if action == 'Create' %}
+                            Build and organize your team structure
+                        {% else %}
+                            Update team information and members
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <!-- Form Card -->
+            <div class="card border-0 shadow-sm" style="background-color: #FFFFFF; border: 1px solid #D9D9D9;">
+                <div class="card-body p-4">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger border-0 mb-4" role="alert">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-exclamation-circle me-2"></i>
+                                    <div>
+                                        {% for error in form.non_field_errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Team Name Field -->
+                        <div class="mb-4">
+                            <label for="{{ form.name.id_for_label }}" class="form-label fw-semibold" style="color: #1C64FF;">
+                                <i class="fas fa-tag me-2"></i>Team Name
+                            </label>
+                            <input type="text" 
+                                   class="form-control form-control-lg {% if form.name.errors %}is-invalid{% endif %}" 
+                                   id="{{ form.name.id_for_label }}" 
+                                   name="{{ form.name.name }}" 
+                                   value="{{ form.name.value|default:'' }}"
+                                   placeholder="Enter team name"
+                                   style="border-color: #D9D9D9;">
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.name.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text" style="color: #696969;">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Choose a descriptive name for your team
+                            </div>
+                        </div>
+                        
+                        <!-- Team Leader Field -->
+                        <div class="mb-4">
+                            <label for="{{ form.leader.id_for_label }}" class="form-label fw-semibold" style="color: #1C64FF;">
+                                <i class="fas fa-crown me-2"></i>Team Leader
+                            </label>
+                            <select class="form-select form-select-lg {% if form.leader.errors %}is-invalid{% endif %}" 
+                                    id="{{ form.leader.id_for_label }}" 
+                                    name="{{ form.leader.name }}"
+                                    style="border-color: #D9D9D9;">
+                                <option value="">Select team leader</option>
+                                {% for choice in form.leader.field.queryset %}
+                                    <option value="{{ choice.pk }}" {% if form.leader.value == choice.pk %}selected{% endif %}>
+                                        {{ choice.get_full_name|default:choice.username }} ({{ choice.get_role_display }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            {% if form.leader.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.leader.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text" style="color: #696969;">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Select the person who will lead this team
+                            </div>
+                        </div>
+                        
+                        <!-- Team Members Field -->
+                        <div class="mb-4">
+                            <label for="{{ form.members.id_for_label }}" class="form-label fw-semibold" style="color: #1C64FF;">
+                                <i class="fas fa-users me-2"></i>Team Members
+                            </label>
+                            <select class="form-select {% if form.members.errors %}is-invalid{% endif %}" 
+                                    id="{{ form.members.id_for_label }}" 
+                                    name="{{ form.members.name }}"
+                                    multiple
+                                    style="border-color: #D9D9D9;">
+                                {% for choice in form.members.field.queryset %}
+                                    <option value="{{ choice.pk }}" 
+                                            {% if choice.pk in form.members.value %}selected{% endif %}>
+                                        {{ choice.get_full_name|default:choice.username }} ({{ choice.get_role_display }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            {% if form.members.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.members.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text" style="color: #696969;">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Select multiple team members. You can search and select users.
+                            </div>
+                        </div>
+                        
+                        <!-- Form Actions -->
+                        <div class="d-flex flex-column flex-sm-row justify-content-end gap-3 pt-4 mt-4" style="border-top: 1px solid #D9D9D9;">
+                            <a href="{% if team %}{% url 'team_detail' team.id %}{% else %}{% url 'team_management' %}{% endif %}" 
+                               class="btn btn-outline-secondary btn-lg px-4" 
+                               style="border-color: #D9D9D9; color: #696969;">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg px-4" id="submitBtn" style="background-color: #1C64FF; border-color: #1C64FF;">
+                                <i class="fas fa-save me-2"></i>Save Team
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container for Notifications -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+    <div id="successToast" class="toast border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header border-0" style="background-color: #C3E4FF;">
+            <i class="fas fa-check-circle text-success me-2"></i>
+            <strong class="me-auto" style="color: #1C64FF;">Success</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" style="background-color: #FFFFFF; color: #696969;">
+            <span id="successMessage"></span>
+        </div>
     </div>
     
-    <div class="team-form-body">
-      <form method="post" novalidate>
-        {% csrf_token %}
-        
-        {% if form.non_field_errors %}
-          <div class="alert alert-danger mb-4">
-            {% for error in form.non_field_errors %}
-              {{ error }}
-            {% endfor %}
-          </div>
-        {% endif %}
-        
-        <!-- Team Name Field -->
-        <div class="form-group">
-          <label for="{{ form.name.id_for_label }}" class="form-label">Team Name</label>
-          {{ form.name }}
-          {% if form.name.errors %}
-            <ul class="error-list">
-              {% for error in form.name.errors %}
-                <li>{{ error }}</li>
-              {% endfor %}
-            </ul>
-          {% endif %}
+    <div id="errorToast" class="toast border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header border-0" style="background-color: #f8d7da;">
+            <i class="fas fa-exclamation-circle text-danger me-2"></i>
+            <strong class="me-auto text-danger">Error</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
-        
-        <!-- Team Leader Field -->
-        <div class="form-group">
-          <label for="{{ form.leader.id_for_label }}" class="form-label">Team Leader</label>
-          {{ form.leader }}
-          {% if form.leader.errors %}
-            <ul class="error-list">
-              {% for error in form.leader.errors %}
-                <li>{{ error }}</li>
-              {% endfor %}
-            </ul>
-          {% endif %}
+        <div class="toast-body" style="background-color: #FFFFFF; color: #696969;">
+            <span id="errorMessage"></span>
         </div>
-        
-        <!-- Team Members Field -->
-        <div class="form-group">
-          <label for="{{ form.members.id_for_label }}" class="form-label">Team Members</label>
-          {{ form.members }}
-          {% if form.members.errors %}
-            <ul class="error-list">
-              {% for error in form.members.errors %}
-                <li>{{ error }}</li>
-              {% endfor %}
-            </ul>
-          {% endif %}
-        </div>
-        
-        <div class="form-actions">
-          <a href="{% if team %}{% url 'team_detail' team.id %}{% else %}{% url 'team_management' %}{% endif %}" 
-             class="btn btn-secondary">
-            <i class="fas fa-times"></i> Cancel
-          </a>
-          <button type="submit" class="btn btn-primary">
-            <i class="fas fa-save"></i> Save Team
-          </button>
-        </div>
-      </form>
     </div>
-  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-$(document).ready(function() {
-    // Initialize Select2 with customizations
-    $('select').select2({
-        placeholder: "Select options",
-        allowClear: true,
-        width: '100%',
-        theme: 'bootstrap4'
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Select2 with enhanced customizations
+    const selectElements = document.querySelectorAll('select');
+    selectElements.forEach(select => {
+        if (select.multiple) {
+            // Multi-select for team members
+            $(select).select2({
+                placeholder: "Search and select team members",
+                allowClear: true,
+                width: '100%',
+                closeOnSelect: false,
+                templateResult: function(option) {
+                    if (!option.id) return option.text;
+                    
+                    const optionText = option.text;
+                    const parts = optionText.split(' (');
+                    const name = parts[0];
+                    const role = parts[1] ? parts[1].replace(')', '') : '';
+                    
+                    return $(`
+                        <div class="d-flex align-items-center">
+                            <div class="me-2">
+                                <i class="fas fa-user" style="color: #1C64FF;"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold">${name}</div>
+                                ${role ? `<small class="text-muted">${role}</small>` : ''}
+                            </div>
+                        </div>
+                    `);
+                },
+                templateSelection: function(option) {
+                    if (!option.id) return option.text;
+                    
+                    const optionText = option.text;
+                    const parts = optionText.split(' (');
+                    const name = parts[0];
+                    
+                    return name;
+                }
+            });
+        } else {
+            // Single select for team leader
+            $(select).select2({
+                placeholder: "Select team leader",
+                allowClear: true,
+                width: '100%',
+                templateResult: function(option) {
+                    if (!option.id) return option.text;
+                    
+                    const optionText = option.text;
+                    const parts = optionText.split(' (');
+                    const name = parts[0];
+                    const role = parts[1] ? parts[1].replace(')', '') : '';
+                    
+                    return $(`
+                        <div class="d-flex align-items-center">
+                            <div class="me-2">
+                                <i class="fas fa-crown" style="color: #ffc107;"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold">${name}</div>
+                                ${role ? `<small class="text-muted">${role}</small>` : ''}
+                            </div>
+                        </div>
+                    `);
+                },
+                templateSelection: function(option) {
+                    if (!option.id) return option.text;
+                    
+                    const optionText = option.text;
+                    const parts = optionText.split(' (');
+                    const name = parts[0];
+                    
+                    return name;
+                }
+            });
+        }
     });
 
-    // Form submission loading state
-    $('form').on('submit', function() {
-        const submitBtn = $(this).find('button[type="submit"]');
-        submitBtn.prop('disabled', true);
-        submitBtn.html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+    // Form submission handling
+    const form = document.querySelector('form');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    if (form && submitBtn) {
+        form.addEventListener('submit', function(e) {
+            // Add loading state
+            submitBtn.disabled = true;
+            const originalContent = submitBtn.innerHTML;
+            submitBtn.innerHTML = `
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Saving...
+            `;
+            
+            // Validate form
+            const teamName = document.getElementById('{{ form.name.id_for_label }}').value.trim();
+            const teamLeader = document.getElementById('{{ form.leader.id_for_label }}').value;
+            
+            if (!teamName) {
+                e.preventDefault();
+                showToast('Please enter a team name', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalContent;
+                return;
+            }
+            
+            if (!teamLeader) {
+                e.preventDefault();
+                showToast('Please select a team leader', 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalContent;
+                return;
+            }
+            
+            // Show success message
+            showToast('Team is being saved...', 'success');
+        });
+    }
+
+    // Enhanced form field interactions
+    const formControls = document.querySelectorAll('.form-control, .form-select');
+    formControls.forEach(control => {
+        // Focus effects
+        control.addEventListener('focus', function() {
+            this.style.borderColor = '#1C64FF';
+            this.style.boxShadow = '0 0 0 0.25rem rgba(28, 100, 255, 0.15)';
+            this.style.transition = 'all 0.2s ease';
+        });
+        
+        control.addEventListener('blur', function() {
+            if (!this.classList.contains('is-invalid')) {
+                this.style.borderColor = '#D9D9D9';
+                this.style.boxShadow = 'none';
+            }
+        });
+        
+        // Input validation feedback
+        control.addEventListener('input', function() {
+            if (this.classList.contains('is-invalid') && this.value.trim()) {
+                this.classList.remove('is-invalid');
+                this.style.borderColor = '#1C64FF';
+                
+                // Hide error message
+                const feedback = this.nextElementSibling;
+                if (feedback && feedback.classList.contains('invalid-feedback')) {
+                    feedback.style.display = 'none';
+                }
+            }
+        });
     });
 
-    // Add focus styling to Select2 elements
-    $(document).on('select2:open', () => {
-        document.querySelector('.select2-search__field').focus();
+    // Button hover effects
+    const buttons = document.querySelectorAll('.btn');
+    buttons.forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            if (!this.disabled) {
+                this.style.transform = 'translateY(-2px)';
+                this.style.transition = 'transform 0.2s ease';
+                
+                if (this.classList.contains('btn-primary')) {
+                    this.style.boxShadow = '0 8px 25px rgba(28, 100, 255, 0.3)';
+                } else {
+                    this.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+                }
+            }
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '';
+        });
+        
+        // Click feedback
+        button.addEventListener('click', function(e) {
+            if (this.disabled) return;
+            
+            // Create ripple effect
+            const ripple = document.createElement('span');
+            const rect = this.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = e.clientX - rect.left - size / 2;
+            const y = e.clientY - rect.top - size / 2;
+            
+            ripple.style.cssText = `
+                position: absolute;
+                width: ${size}px;
+                height: ${size}px;
+                left: ${x}px;
+                top: ${y}px;
+                background: rgba(255, 255, 255, 0.3);
+                border-radius: 50%;
+                transform: scale(0);
+                animation: ripple 0.6s ease-out;
+                pointer-events: none;
+            `;
+            
+            this.style.position = 'relative';
+            this.appendChild(ripple);
+            
+            setTimeout(() => ripple.remove(), 600);
+        });
     });
+
+    // Add CSS for ripple animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes ripple {
+            to {
+                transform: scale(2);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Add entrance animations
+    const card = document.querySelector('.card');
+    if (card) {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.transition = 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+        
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, 100);
+    }
 
     // Error handling for Select2
-    $('select').on('change', function() {
-        const formGroup = $(this).closest('.form-group');
-        formGroup.removeClass('has-error');
-        formGroup.find('.error-list').hide();
+    $(document).on('select2:select select2:unselect', function() {
+        const formGroup = $(this).closest('.mb-4');
+        formGroup.find('.is-invalid').removeClass('is-invalid');
+        formGroup.find('.invalid-feedback').hide();
+    });
+
+    // Toast notification function
+    function showToast(message, type) {
+        const toastId = type === 'success' ? 'successToast' : 'errorToast';
+        const messageId = type === 'success' ? 'successMessage' : 'errorMessage';
+        
+        document.getElementById(messageId).textContent = message;
+        
+        const toastElement = document.getElementById(toastId);
+        const toast = new bootstrap.Toast(toastElement, {
+            autohide: true,
+            delay: 5000
+        });
+        toast.show();
+    }
+
+    // Real-time validation
+    const teamNameInput = document.getElementById('{{ form.name.id_for_label }}');
+    if (teamNameInput) {
+        teamNameInput.addEventListener('input', function() {
+            const value = this.value.trim();
+            if (value.length > 0 && value.length < 3) {
+                this.style.borderColor = '#dc3545';
+                
+                let warning = this.parentNode.querySelector('.name-warning');
+                if (!warning) {
+                    warning = document.createElement('small');
+                    warning.className = 'form-text text-danger name-warning';
+                    warning.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Team name should be at least 3 characters';
+                    this.parentNode.appendChild(warning);
+                }
+            } else {
+                this.style.borderColor = '#D9D9D9';
+                
+                const warning = this.parentNode.querySelector('.name-warning');
+                if (warning) {
+                    warning.remove();
+                }
+            }
+        });
+    }
+
+    // Auto-save draft functionality (optional)
+    let saveTimeout;
+    const formInputs = document.querySelectorAll('input, select, textarea');
+    formInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                // Save form data to localStorage as draft
+                const formData = new FormData(form);
+                const draftData = {};
+                for (let [key, value] of formData.entries()) {
+                    draftData[key] = value;
+                }
+                localStorage.setItem('teamFormDraft', JSON.stringify(draftData));
+            }, 1000);
+        });
+    });
+
+    // Load draft on page load
+    const savedDraft = localStorage.getItem('teamFormDraft');
+    if (savedDraft && !form.querySelector('input[value]')) {
+        try {
+            const draftData = JSON.parse(savedDraft);
+            Object.keys(draftData).forEach(key => {
+                const field = form.querySelector(`[name="${key}"]`);
+                if (field && !field.value) {
+                    field.value = draftData[key];
+                }
+            });
+        } catch (e) {
+            console.log('Could not load draft data');
+        }
+    }
+
+    // Clear draft on successful submission
+    form.addEventListener('submit', function() {
+        localStorage.removeItem('teamFormDraft');
     });
 });
 </script>

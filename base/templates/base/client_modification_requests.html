@@ -5,250 +5,751 @@
 Client Profile Modification Requests
 {% endblock %}
 
+{% block extra_css %}
+<style>
+:root {
+    --bs-primary: #1C64FF;
+    --bs-secondary: #696969;
+    --bs-light: #FFFFFF;
+    --bs-border-color: #D9D9D9;
+    --bs-info: #C3E4FF;
+}
+
+.modification-container {
+    background: #f8f9fa;
+    min-height: 100vh;
+    padding: 2rem 0;
+}
+
+.page-header {
+    background: linear-gradient(135deg, #FFFFFF 0%, #f8f9fa 100%);
+    border: 1px solid #D9D9D9;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    margin-bottom: 2rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.page-header:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+.page-header .card-body {
+    padding: 2.5rem;
+}
+
+.page-title {
+    color: #1C64FF;
+    font-weight: 700;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.page-subtitle {
+    color: #696969;
+    font-size: 1.1rem;
+    margin-bottom: 0;
+    font-weight: 400;
+}
+
+.stats-card {
+    background: #FFFFFF;
+    border: 1px solid #D9D9D9;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    position: relative;
+}
+
+.stats-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.15);
+}
+
+.stats-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    transition: all 0.3s ease;
+}
+
+.stats-card.pending::before {
+    background: linear-gradient(90deg, #ffc107, #ffb300);
+}
+
+.stats-card.success::before {
+    background: linear-gradient(90deg, #198754, #157347);
+}
+
+.stats-card.info::before {
+    background: linear-gradient(90deg, #1C64FF, #1557e6);
+}
+
+.stats-card .card-body {
+    padding: 2rem;
+}
+
+.stats-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #1C64FF;
+    margin-bottom: 0.5rem;
+    line-height: 1;
+}
+
+.stats-label {
+    color: #696969;
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 0;
+}
+
+.stats-icon {
+    color: #C3E4FF;
+    font-size: 3rem;
+    opacity: 0.7;
+}
+
+.role-info {
+    background: rgba(28, 100, 255, 0.1);
+    border: 1px solid rgba(28, 100, 255, 0.2);
+    border-radius: 8px;
+    padding: 1rem;
+    color: #1C64FF;
+    font-weight: 500;
+}
+
+.section-card {
+    background: #FFFFFF;
+    border: 1px solid #D9D9D9;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-bottom: 2rem;
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.section-card:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+.section-header {
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+    color: #FFFFFF;
+    padding: 1.5rem 2rem;
+    border-bottom: none;
+    font-weight: 600;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.section-header.warning {
+    background: linear-gradient(135deg, #ffc107, #ffb300);
+    color: #000000;
+}
+
+.section-header.light {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    color: #1C64FF;
+    border-bottom: 1px solid #D9D9D9;
+}
+
+.badge-count {
+    background: rgba(255, 255, 255, 0.2);
+    color: inherit;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-left: auto;
+}
+
+.table-modern {
+    margin-bottom: 0;
+}
+
+.table-modern thead th {
+    background: #f8f9fa;
+    border-bottom: 2px solid #D9D9D9;
+    color: #1C64FF;
+    font-weight: 600;
+    padding: 1rem;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.table-modern tbody tr {
+    transition: all 0.3s ease;
+    border-bottom: 1px solid #D9D9D9;
+}
+
+.table-modern tbody tr:hover {
+    background: rgba(28, 100, 255, 0.05);
+    transform: scale(1.01);
+}
+
+.table-modern tbody td {
+    padding: 1.25rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #D9D9D9;
+}
+
+.client-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.client-name {
+    font-weight: 600;
+    color: #1C64FF;
+    font-size: 1rem;
+}
+
+.client-email {
+    color: #696969;
+    font-size: 0.875rem;
+}
+
+.requester-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.requester-name {
+    font-weight: 600;
+    color: #333333;
+    font-size: 0.95rem;
+}
+
+.requester-role {
+    color: #696969;
+    font-size: 0.875rem;
+}
+
+.date-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.date-primary {
+    font-weight: 600;
+    color: #333333;
+    font-size: 0.95rem;
+}
+
+.date-secondary {
+    color: #696969;
+    font-size: 0.875rem;
+}
+
+.field-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.field-badge {
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+    color: #FFFFFF;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(28, 100, 255, 0.3);
+}
+
+.reason-text {
+    color: #696969;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.priority-badge {
+    padding: 0.5rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.priority-high {
+    background: linear-gradient(135deg, #dc3545, #bb2d3b);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+.priority-standard {
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(28, 100, 255, 0.3);
+}
+
+.status-badge {
+    padding: 0.5rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status-approved {
+    background: linear-gradient(135deg, #198754, #157347);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(25, 135, 84, 0.3);
+}
+
+.status-rejected {
+    background: linear-gradient(135deg, #dc3545, #bb2d3b);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+.status-pending {
+    background: linear-gradient(135deg, #ffc107, #ffb300);
+    color: #000000;
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+}
+
+.btn-primary {
+    background-color: #1C64FF;
+    border-color: #1C64FF;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background-color: #1557e6;
+    border-color: #1557e6;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(28, 100, 255, 0.3);
+}
+
+.btn-outline-primary {
+    color: #1C64FF;
+    border-color: #1C64FF;
+    font-weight: 500;
+}
+
+.btn-outline-primary:hover {
+    background-color: #1C64FF;
+    border-color: #1C64FF;
+}
+
+.btn-outline-secondary {
+    color: #696969;
+    border-color: #696969;
+    font-weight: 500;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #696969;
+    border-color: #696969;
+}
+
+.btn-group .btn {
+    border-radius: 6px;
+    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+}
+
+.btn-group .btn:not(:last-child) {
+    margin-right: 0.25rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #696969;
+}
+
+.empty-state .empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+    opacity: 0.7;
+}
+
+.empty-state.success .empty-icon {
+    color: #198754;
+}
+
+.empty-state.muted .empty-icon {
+    color: #696969;
+}
+
+.empty-state h5 {
+    color: #1C64FF;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.empty-state p {
+    color: #696969;
+    margin-bottom: 0;
+    font-size: 1rem;
+}
+
+.fade-in {
+    animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-in {
+    animation: slideIn 0.6s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .modification-container {
+        padding: 1rem 0;
+    }
+    
+    .page-header .card-body {
+        padding: 1.5rem;
+    }
+    
+    .page-title {
+        font-size: 1.5rem;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .stats-card .card-body {
+        padding: 1.5rem;
+    }
+    
+    .stats-number {
+        font-size: 2rem;
+    }
+    
+    .section-header {
+        padding: 1rem 1.5rem;
+        font-size: 1rem;
+    }
+    
+    .table-modern thead th,
+    .table-modern tbody td {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .btn-group {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn-group .btn {
+        margin-right: 0;
+        margin-bottom: 0.25rem;
+    }
+    
+    .field-badges {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="mb-1">
-                <i class="fas fa-edit me-2"></i>
-                Modification Requests
-            </h2>
-            <p class="text-muted mb-0">Review and approve client profile modification requests</p>
+<div class="modification-container">
+    <div class="container-fluid">
+        <!-- Page Header -->
+        <div class="card page-header fade-in">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="page-title">
+                            <i class="fas fa-edit"></i>
+                            Modification Requests
+                        </h1>
+                        <p class="page-subtitle">Review and approve client profile modification requests</p>
+                    </div>
+                    <div>
+                        <a href="{% url 'client_profile_list' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-users me-2"></i>Back to Clients
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div>
-            <a href="{% url 'client_profile_list' %}" class="btn btn-outline-primary">
-                <i class="fas fa-users me-2"></i>Back to Clients
-            </a>
-        </div>
-    </div>
 
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card bg-warning text-white">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-grow-1">
-                            <h3 class="mb-0">{{ pending_modifications.count }}</h3>
-                            <p class="mb-0">Pending Requests</p>
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card stats-card pending slide-in">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <div class="stats-number">{{ pending_modifications.count }}</div>
+                                <div class="stats-label">Pending Requests</div>
+                            </div>
+                            <div class="stats-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
                         </div>
-                        <div class="ms-3">
-                            <i class="fas fa-clock fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card stats-card success slide-in" style="animation-delay: 0.1s">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <div class="stats-number">{{ recent_modifications|length }}</div>
+                                <div class="stats-label">Recent Actions</div>
+                            </div>
+                            <div class="stats-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 col-md-12 mb-3">
+                <div class="card stats-card info slide-in" style="animation-delay: 0.2s">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="role-info flex-grow-1">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <i class="fas fa-shield-alt"></i>
+                                    <strong>Your Role: {{ user.get_role_display }}</strong>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="fas fa-user-shield"></i>
+                                    <span>Authorized to review modification requests</span>
+                                </div>
+                            </div>
+                            <div class="stats-icon">
+                                <i class="fas fa-user-shield"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-grow-1">
-                            <h3 class="mb-0">{{ recent_modifications|length }}</h3>
-                            <p class="mb-0">Recent Actions</p>
-                        </div>
-                        <div class="ms-3">
-                            <i class="fas fa-check-circle fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card bg-info text-white">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-grow-1">
-                            <h5 class="mb-1">Your Role: {{ user.get_role_display }}</h5>
-                            <p class="mb-0">
-                                <i class="fas fa-shield-alt me-1"></i>
-                                Authorized to review modification requests
-                            </p>
-                        </div>
-                        <div class="ms-3">
-                            <i class="fas fa-user-shield fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Pending Modifications -->
-    <div class="card shadow mb-4">
-        <div class="card-header bg-warning text-dark">
-            <h5 class="mb-0">
-                <i class="fas fa-clock me-2"></i>
-                Pending Modification Requests
+        <!-- Pending Modifications -->
+        <div class="card section-card fade-in">
+            <div class="section-header warning">
+                <i class="fas fa-clock"></i>
+                <span>Pending Modification Requests</span>
                 {% if pending_modifications.count > 0 %}
-                    <span class="badge bg-dark ms-2">{{ pending_modifications.count }}</span>
+                    <span class="badge-count">{{ pending_modifications.count }}</span>
                 {% endif %}
-            </h5>
+            </div>
+            <div class="card-body p-0">
+                {% if pending_modifications %}
+                    <div class="table-responsive">
+                        <table class="table table-modern">
+                            <thead>
+                                <tr>
+                                    <th>Client</th>
+                                    <th>Requested By</th>
+                                    <th>Request Date</th>
+                                    <th>Fields to Modify</th>
+                                    <th>Priority</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for modification in pending_modifications %}
+                                <tr>
+                                    <td>
+                                        <div class="client-info">
+                                            <div class="client-name">{{ modification.client.client_full_name }}</div>
+                                            <div class="client-email">{{ modification.client.email|default:"No email" }}</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="requester-info">
+                                            <div class="requester-name">{{ modification.requested_by.get_full_name }}</div>
+                                            <div class="requester-role">{{ modification.requested_by.get_role_display }}</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="date-info">
+                                            <div class="date-primary">{{ modification.requested_at|date:"M d, Y" }}</div>
+                                            <div class="date-secondary">{{ modification.requested_at|time:"H:i" }}</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="field-badges">
+                                            {% for field, value in modification.modification_data.items %}
+                                                <span class="field-badge">{{ field|title }}</span>
+                                            {% endfor %}
+                                        </div>
+                                        {% if modification.reason %}
+                                            <div class="reason-text">
+                                                <i class="fas fa-comment"></i>
+                                                <span>{{ modification.reason|truncatechars:50 }}</span>
+                                            </div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if modification.requires_top_management %}
+                                            <span class="priority-badge priority-high">
+                                                <i class="fas fa-exclamation-triangle"></i>
+                                                High Priority
+                                            </span>
+                                        {% else %}
+                                            <span class="priority-badge priority-standard">
+                                                <i class="fas fa-info-circle"></i>
+                                                Standard
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'approve_modification' modification.pk %}" 
+                                               class="btn btn-outline-primary">
+                                                <i class="fas fa-eye me-1"></i>Review
+                                            </a>
+                                            <a href="{% url 'client_profile_detail' modification.client.pk %}" 
+                                               class="btn btn-outline-secondary">
+                                                <i class="fas fa-user me-1"></i>Client
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="empty-state success">
+                        <i class="fas fa-check-circle empty-icon"></i>
+                        <h5>No Pending Requests</h5>
+                        <p>All modification requests have been processed.</p>
+                    </div>
+                {% endif %}
+            </div>
         </div>
-        <div class="card-body">
-            {% if pending_modifications %}
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Client</th>
-                                <th>Requested By</th>
-                                <th>Request Date</th>
-                                <th>Fields to Modify</th>
-                                <th>Priority</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for modification in pending_modifications %}
-                            <tr>
-                                <td>
-                                    <div>
-                                        <strong>{{ modification.client.client_full_name }}</strong>
-                                        <br>
-                                        <small class="text-muted">
-                                            {{ modification.client.email|default:"No email" }}
-                                        </small>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div>
-                                        <strong>{{ modification.requested_by.get_full_name }}</strong>
-                                        <br>
-                                        <small class="text-muted">{{ modification.requested_by.get_role_display }}</small>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div>
-                                        <strong>{{ modification.requested_at|date:"M d, Y" }}</strong>
-                                        <br>
-                                        <small class="text-muted">{{ modification.requested_at|time:"H:i" }}</small>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div>
-                                        {% for field, value in modification.modification_data.items %}
-                                            <span class="badge bg-secondary me-1 mb-1">{{ field|title }}</span>
-                                        {% endfor %}
-                                    </div>
-                                    {% if modification.reason %}
-                                        <small class="text-muted d-block mt-1">
-                                            <i class="fas fa-comment me-1"></i>{{ modification.reason|truncatechars:50 }}
-                                        </small>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if modification.requires_top_management %}
-                                        <span class="badge bg-danger">High Priority</span>
-                                    {% else %}
-                                        <span class="badge bg-info">Standard</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <div class="btn-group" role="group">
-                                        <a href="{% url 'approve_modification' modification.pk %}" 
-                                           class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-eye me-1"></i>Review
-                                        </a>
-                                        <a href="{% url 'client_profile_detail' modification.client.pk %}" 
-                                           class="btn btn-sm btn-outline-secondary">
-                                            <i class="fas fa-user me-1"></i>Client
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% else %}
-                <div class="text-center py-5">
-                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-                    <h5 class="text-muted">No Pending Requests</h5>
-                    <p class="text-muted">All modification requests have been processed.</p>
-                </div>
-            {% endif %}
-        </div>
-    </div>
 
-    <!-- Recent Modifications -->
-    <div class="card shadow">
-        <div class="card-header bg-light">
-            <h5 class="mb-0">
-                <i class="fas fa-history me-2"></i>
-                Recent Modification History
-            </h5>
-        </div>
-        <div class="card-body">
-            {% if recent_modifications %}
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Client</th>
-                                <th>Requested By</th>
-                                <th>Approved/Rejected By</th>
-                                <th>Date</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for modification in recent_modifications %}
-                            <tr>
-                                <td>
-                                    <strong>{{ modification.client.client_full_name }}</strong>
-                                </td>
-                                <td>
-                                    {{ modification.requested_by.get_full_name }}
-                                    <br>
-                                    <small class="text-muted">{{ modification.requested_at|date:"M d" }}</small>
-                                </td>
-                                <td>
-                                    {% if modification.approved_by %}
-                                        {{ modification.approved_by.get_full_name }}
-                                        <br>
-                                        <small class="text-muted">{{ modification.approved_at|date:"M d" }}</small>
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {{ modification.approved_at|date:"M d, Y H:i"|default:"-" }}
-                                </td>
-                                <td>
-                                    {% if modification.status == 'approved' %}
-                                        <span class="badge bg-success">
-                                            <i class="fas fa-check me-1"></i>Approved
-                                        </span>
-                                    {% elif modification.status == 'rejected' %}
-                                        <span class="badge bg-danger">
-                                            <i class="fas fa-times me-1"></i>Rejected
-                                        </span>
-                                    {% else %}
-                                        <span class="badge bg-warning">
-                                            <i class="fas fa-clock me-1"></i>Pending
-                                        </span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <a href="{% url 'client_profile_detail' modification.client.pk %}" 
-                                       class="btn btn-sm btn-outline-secondary">
-                                        <i class="fas fa-eye me-1"></i>View
-                                    </a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% else %}
-                <div class="text-center py-4">
-                    <i class="fas fa-history fa-2x text-muted mb-3"></i>
-                    <p class="text-muted mb-0">No recent modification history available.</p>
-                </div>
-            {% endif %}
+        <!-- Recent Modifications -->
+        <div class="card section-card fade-in">
+            <div class="section-header light">
+                <i class="fas fa-history"></i>
+                <span>Recent Modification History</span>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_modifications %}
+                    <div class="table-responsive">
+                        <table class="table table-modern">
+                            <thead>
+                                <tr>
+                                    <th>Client</th>
+                                    <th>Requested By</th>
+                                    <th>Approved/Rejected By</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for modification in recent_modifications %}
+                                <tr>
+                                    <td>
+                                        <div class="client-name">{{ modification.client.client_full_name }}</div>
+                                    </td>
+                                    <td>
+                                        <div class="requester-info">
+                                            <div class="requester-name">{{ modification.requested_by.get_full_name }}</div>
+                                            <div class="date-secondary">{{ modification.requested_at|date:"M d" }}</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if modification.approved_by %}
+                                            <div class="requester-info">
+                                                <div class="requester-name">{{ modification.approved_by.get_full_name }}</div>
+                                                <div class="date-secondary">{{ modification.approved_at|date:"M d" }}</div>
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="date-primary">{{ modification.approved_at|date:"M d, Y H:i"|default:"-" }}</div>
+                                    </td>
+                                    <td>
+                                        {% if modification.status == 'approved' %}
+                                            <span class="status-badge status-approved">
+                                                <i class="fas fa-check"></i>Approved
+                                            </span>
+                                        {% elif modification.status == 'rejected' %}
+                                            <span class="status-badge status-rejected">
+                                                <i class="fas fa-times"></i>Rejected
+                                            </span>
+                                        {% else %}
+                                            <span class="status-badge status-pending">
+                                                <i class="fas fa-clock"></i>Pending
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'client_profile_detail' modification.client.pk %}" 
+                                           class="btn btn-outline-secondary">
+                                            <i class="fas fa-eye me-1"></i>View
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="empty-state muted">
+                        <i class="fas fa-history empty-icon"></i>
+                        <h5>No Recent History</h5>
+                        <p>No recent modification history available.</p>
+                    </div>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>
@@ -263,6 +764,14 @@ setTimeout(function() {
 var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
 var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
     return new bootstrap.Tooltip(tooltipTriggerEl);
+});
+
+// Add animation delays to cards
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.slide-in');
+    cards.forEach((card, index) => {
+        card.style.animationDelay = `${index * 0.1}s`;
+    });
 });
 </script>
 {% endblock %}

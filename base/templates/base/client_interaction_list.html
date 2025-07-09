@@ -6,245 +6,822 @@
 
 {% block extra_css %}
 <style>
-.interaction-card {
-    transition: all 0.3s ease;
-    border-left: 4px solid #e3f2fd;
-}
-.interaction-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-.interaction-card.priority-high {
-    border-left-color: #f44336;
-}
-.interaction-card.priority-urgent {
-    border-left-color: #ff5722;
-}
-.interaction-card.priority-medium {
-    border-left-color: #ff9800;
-}
-.interaction-card.priority-low {
-    border-left-color: #4caf50;
-}
-.interaction-type-badge {
-    font-size: 0.8rem;
-    padding: 0.25rem 0.5rem;
-}
-.follow-up-badge {
-    background-color: #ff5722;
-    color: white;
-}
-.edit-status-badge {
-    font-size: 0.75rem;
-    padding: 0.2rem 0.5rem;
-}
-.edit-available {
-    background-color: #28a745;
-    color: white;
-}
-.edit-expired {
-    background-color: #6c757d;
-    color: white;
-}
+    :root {
+        --bs-primary: #1C64FF;
+        --bs-secondary: #696969;
+        --bs-light: #FFFFFF;
+        --bs-border-color: #D9D9D9;
+        --bs-info: #C3E4FF;
+    }
+
+    .interactions-container {
+        background: #f8f9fa;
+        min-height: 100vh;
+        padding: 2rem 0;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, #FFFFFF 0%, #f8f9fa 100%);
+        border: 1px solid #D9D9D9;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .page-header:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    }
+
+    .page-header .card-body {
+        padding: 2.5rem;
+    }
+
+    .client-info-section {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .client-avatar {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #1C64FF, #1557e6);
+        color: #FFFFFF;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-right: 1.5rem;
+        box-shadow: 0 4px 12px rgba(28, 100, 255, 0.3);
+    }
+
+    .client-details h4 {
+        color: #1C64FF;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .client-meta {
+        color: #696969;
+        font-size: 0.95rem;
+        line-height: 1.4;
+    }
+
+    .filters-card {
+        background: #FFFFFF;
+        border: 1px solid #D9D9D9;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+        transition: all 0.3s ease;
+    }
+
+    .filters-card:hover {
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+
+    .interaction-card {
+        background: #FFFFFF;
+        border: 1px solid #D9D9D9;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 1.5rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .interaction-card::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: linear-gradient(180deg, #1C64FF, #1557e6);
+        transition: all 0.3s ease;
+    }
+
+    .interaction-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px rgba(0,0,0,0.15);
+        border-color: #1C64FF;
+    }
+
+    .interaction-card:hover::before {
+        width: 6px;
+    }
+
+    .interaction-card.priority-high::before {
+        background: linear-gradient(180deg, #dc3545, #bb2d3b);
+    }
+
+    .interaction-card.priority-urgent::before {
+        background: linear-gradient(180deg, #ff5722, #e64a19);
+    }
+
+    .interaction-card.priority-medium::before {
+        background: linear-gradient(180deg, #ffc107, #ffb300);
+    }
+
+    .interaction-card.priority-low::before {
+        background: linear-gradient(180deg, #198754, #157347);
+    }
+
+    .interaction-card .card-body {
+        padding: 2rem;
+    }
+
+    .interaction-header {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+        align-items: center;
+    }
+
+    .badge {
+        font-weight: 500;
+        padding: 0.5rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .badge-type {
+        background: linear-gradient(135deg, #1C64FF, #1557e6);
+        color: #FFFFFF;
+        box-shadow: 0 2px 8px rgba(28, 100, 255, 0.3);
+    }
+
+    .badge-priority-high {
+        background: linear-gradient(135deg, #dc3545, #bb2d3b);
+        color: #FFFFFF;
+        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+    }
+
+    .badge-priority-urgent {
+        background: linear-gradient(135deg, #ff5722, #e64a19);
+        color: #FFFFFF;
+        animation: pulse 2s infinite;
+        box-shadow: 0 2px 8px rgba(255, 87, 34, 0.3);
+    }
+
+    .badge-priority-medium {
+        background: linear-gradient(135deg, #ffc107, #ffb300);
+        color: #000000;
+        box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+    }
+
+    .badge-priority-low {
+        background: linear-gradient(135deg, #198754, #157347);
+        color: #FFFFFF;
+        box-shadow: 0 2px 8px rgba(25, 135, 84, 0.3);
+    }
+
+    .badge-follow-up {
+        background: linear-gradient(135deg, #ff5722, #e64a19);
+        color: #FFFFFF;
+        animation: pulse 2s infinite;
+        box-shadow: 0 2px 8px rgba(255, 87, 34, 0.3);
+    }
+
+    .badge-edit-available {
+        background: linear-gradient(135deg, #198754, #157347);
+        color: #FFFFFF;
+        box-shadow: 0 2px 8px rgba(25, 135, 84, 0.3);
+    }
+
+    .badge-edit-expired {
+        background: linear-gradient(135deg, #696969, #5a5a5a);
+        color: #FFFFFF;
+        box-shadow: 0 2px 8px rgba(105, 105, 105, 0.3);
+    }
+
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+
+    .interaction-content {
+        margin-bottom: 1.5rem;
+    }
+
+    .interaction-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        color: #696969;
+        font-size: 0.95rem;
+    }
+
+    .interaction-meta .meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .interaction-meta .meta-item i {
+        color: #1C64FF;
+        width: 16px;
+        text-align: center;
+    }
+
+    .interaction-notes {
+        color: #333333;
+        line-height: 1.6;
+        font-size: 0.95rem;
+        margin-bottom: 1rem;
+    }
+
+    .follow-up-info {
+        background: rgba(255, 87, 34, 0.1);
+        border: 1px solid rgba(255, 87, 34, 0.2);
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        color: #e64a19;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .interaction-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 1rem;
+        border-top: 1px solid #D9D9D9;
+    }
+
+    .creator-info {
+        color: #696969;
+        font-size: 0.875rem;
+    }
+
+    .creator-info .creator-name {
+        font-weight: 600;
+        color: #1C64FF;
+    }
+
+    .btn-primary {
+        background-color: #1C64FF;
+        border-color: #1C64FF;
+        font-weight: 600;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        background-color: #1557e6;
+        border-color: #1557e6;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(28, 100, 255, 0.3);
+    }
+
+    .btn-outline-primary {
+        color: #1C64FF;
+        border-color: #1C64FF;
+        font-weight: 500;
+    }
+
+    .btn-outline-primary:hover {
+        background-color: #1C64FF;
+        border-color: #1C64FF;
+    }
+
+    .btn-outline-secondary {
+        color: #696969;
+        border-color: #696969;
+        font-weight: 500;
+    }
+
+    .btn-outline-secondary:hover {
+        background-color: #696969;
+        border-color: #696969;
+    }
+
+    .btn-outline-warning {
+        color: #ffc107;
+        border-color: #ffc107;
+        font-weight: 500;
+    }
+
+    .btn-outline-warning:hover {
+        background-color: #ffc107;
+        border-color: #ffc107;
+        color: #000000;
+    }
+
+    .form-control {
+        border: 1px solid #D9D9D9;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        border-color: #1C64FF;
+        box-shadow: 0 0 0 0.2rem rgba(28, 100, 255, 0.25);
+    }
+
+    .form-select {
+        border: 1px solid #D9D9D9;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-select:focus {
+        border-color: #1C64FF;
+        box-shadow: 0 0 0 0.2rem rgba(28, 100, 255, 0.25);
+    }
+
+    .empty-state {
+        background: #FFFFFF;
+        border: 2px dashed #D9D9D9;
+        border-radius: 12px;
+        padding: 4rem 2rem;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .empty-state:hover {
+        border-color: #1C64FF;
+        background: rgba(195, 228, 255, 0.05);
+    }
+
+    .empty-state .empty-icon {
+        font-size: 4rem;
+        color: #D9D9D9;
+        margin-bottom: 1.5rem;
+        display: block;
+    }
+
+    .empty-state h5 {
+        color: #1C64FF;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+
+    .empty-state p {
+        color: #696969;
+        margin-bottom: 2rem;
+    }
+
+    .pagination {
+        justify-content: center;
+        margin-top: 2rem;
+    }
+
+    .page-link {
+        color: #1C64FF;
+        border-color: #D9D9D9;
+        padding: 0.75rem 1rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .page-link:hover {
+        background-color: #C3E4FF;
+        border-color: #1C64FF;
+        color: #1C64FF;
+    }
+
+    .page-item.active .page-link {
+        background-color: #1C64FF;
+        border-color: #1C64FF;
+    }
+
+    .fade-in {
+        animation: fadeIn 0.6s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .slide-in {
+        animation: slideIn 0.6s ease-out;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .interactions-container {
+            padding: 1rem 0;
+        }
+        
+        .page-header .card-body {
+            padding: 1.5rem;
+        }
+        
+        .client-info-section {
+            flex-direction: column;
+            text-align: center;
+            gap: 1rem;
+        }
+        
+        .client-avatar {
+            margin-right: 0;
+        }
+        
+        .interaction-card .card-body {
+            padding: 1.5rem;
+        }
+        
+        .interaction-footer {
+            flex-direction: column;
+            gap: 1rem;
+            align-items: stretch;
+        }
+        
+        .btn-group {
+            width: 100%;
+        }
+        
+        .btn-group .btn {
+            flex: 1;
+        }
+        
+        .d-flex.justify-content-between {
+            flex-direction: column;
+            gap: 1rem;
+        }
+    }
+
+    .interaction-card:nth-child(1) { animation-delay: 0.1s; }
+    .interaction-card:nth-child(2) { animation-delay: 0.2s; }
+    .interaction-card:nth-child(3) { animation-delay: 0.3s; }
+    .interaction-card:nth-child(4) { animation-delay: 0.4s; }
+    .interaction-card:nth-child(5) { animation-delay: 0.5s; }
+    .interaction-card:nth-child(6) { animation-delay: 0.6s; }
+    .interaction-card:nth-child(7) { animation-delay: 0.7s; }
+    .interaction-card:nth-child(8) { animation-delay: 0.8s; }
+    .interaction-card:nth-child(9) { animation-delay: 0.9s; }
+    .interaction-card:nth-child(10) { animation-delay: 1.0s; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="mb-1">Client Interactions</h4>
-                            <p class="text-muted mb-0">
-                                <strong>{{ client_profile.client_full_name }}</strong> ({{ client_profile.client_id }})
-                                <br>
-                                <small>PAN: {{ client_profile.pan_number }} | RM: {{ client_profile.mapped_rm|default:"Not assigned" }}</small>
-                            </p>
+<div class="interactions-container">
+    <div class="container-fluid">
+        <!-- Page Header -->
+        <div class="card page-header fade-in">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="client-info-section">
+                        <div class="client-avatar">
+                            {{ client_profile.client_full_name|first }}
                         </div>
-                        <div class="text-end">
-                            {% if can_add_interaction %}
-                                <a href="{% url 'client_interaction_create' client_profile.id %}" class="btn btn-primary">
-                                    <i class="fas fa-plus"></i> Add Interaction
-                                </a>
-                            {% endif %}
-                            <a href="{% url 'client_profile_detail' client_profile.id %}" class="btn btn-outline-secondary">
-                                <i class="fas fa-arrow-left"></i> Back to Profile
+                        <div class="client-details">
+                            <h4>Client Interactions</h4>
+                            <div class="client-meta">
+                                <div><strong>{{ client_profile.client_full_name }}</strong> ({{ client_profile.client_id }})</div>
+                                <div>
+                                    <i class="fas fa-id-card me-1"></i>PAN: {{ client_profile.pan_number|default:"Not provided" }} | 
+                                    <i class="fas fa-user-tie me-1"></i>RM: {{ client_profile.mapped_rm|default:"Not assigned" }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-column flex-md-row gap-2">
+                        {% if can_add_interaction %}
+                            <a href="{% url 'client_interaction_create' client_profile.id %}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Add Interaction
                             </a>
-                        </div>
+                        {% endif %}
+                        <a href="{% url 'client_profile_detail' client_profile.id %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Profile
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Filters -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body">
-                    <form method="get" class="row g-3">
-                        <div class="col-md-4">
-                            <label for="search" class="form-label">Search</label>
-                            <input type="text" class="form-control" id="search" name="search" 
-                                   value="{{ search_query }}" placeholder="Search in notes or type...">
-                        </div>
-                        <div class="col-md-3">
-                            <label for="type" class="form-label">Interaction Type</label>
-                            <select class="form-select" id="type" name="type">
-                                <option value="">All Types</option>
-                                <option value="call" {% if interaction_type == 'call' %}selected{% endif %}>Phone Call</option>
-                                <option value="email" {% if interaction_type == 'email' %}selected{% endif %}>Email</option>
-                                <option value="meeting" {% if interaction_type == 'meeting' %}selected{% endif %}>Meeting</option>
-                                <option value="video_call" {% if interaction_type == 'video_call' %}selected{% endif %}>Video Call</option>
-                                <option value="site_visit" {% if interaction_type == 'site_visit' %}selected{% endif %}>Site Visit</option>
-                                <option value="documentation" {% if interaction_type == 'documentation' %}selected{% endif %}>Documentation</option>
-                                <option value="complaint" {% if interaction_type == 'complaint' %}selected{% endif %}>Complaint</option>
-                                <option value="follow_up" {% if interaction_type == 'follow_up' %}selected{% endif %}>Follow Up</option>
-                                <option value="advisory" {% if interaction_type == 'advisory' %}selected{% endif %}>Advisory</option>
-                                <option value="other" {% if interaction_type == 'other' %}selected{% endif %}>Other</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary me-2">
-                                <i class="fas fa-search"></i> Filter
-                            </button>
-                            <a href="{% url 'client_interaction_list' client_profile.id %}" class="btn btn-outline-secondary">
-                                <i class="fas fa-times"></i> Clear
-                            </a>
-                        </div>
-                    </form>
-                </div>
+        <!-- Filters -->
+        <div class="card filters-card fade-in">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-4">
+                        <label for="search" class="form-label">
+                            <i class="fas fa-search me-2"></i>Search Interactions
+                        </label>
+                        <input type="text" class="form-control" id="search" name="search" 
+                               value="{{ search_query }}" placeholder="Search in notes or interaction details...">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="type" class="form-label">
+                            <i class="fas fa-filter me-2"></i>Interaction Type
+                        </label>
+                        <select class="form-select" id="type" name="type">
+                            <option value="">All Types</option>
+                            <option value="call" {% if interaction_type == 'call' %}selected{% endif %}>Phone Call</option>
+                            <option value="email" {% if interaction_type == 'email' %}selected{% endif %}>Email</option>
+                            <option value="meeting" {% if interaction_type == 'meeting' %}selected{% endif %}>Meeting</option>
+                            <option value="video_call" {% if interaction_type == 'video_call' %}selected{% endif %}>Video Call</option>
+                            <option value="site_visit" {% if interaction_type == 'site_visit' %}selected{% endif %}>Site Visit</option>
+                            <option value="documentation" {% if interaction_type == 'documentation' %}selected{% endif %}>Documentation</option>
+                            <option value="complaint" {% if interaction_type == 'complaint' %}selected{% endif %}>Complaint</option>
+                            <option value="follow_up" {% if interaction_type == 'follow_up' %}selected{% endif %}>Follow Up</option>
+                            <option value="advisory" {% if interaction_type == 'advisory' %}selected{% endif %}>Advisory</option>
+                            <option value="other" {% if interaction_type == 'other' %}selected{% endif %}>Other</option>
+                        </select>
+                    </div>
+                    <div class="col-md-5 d-flex align-items-end gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-2"></i>Apply Filters
+                        </button>
+                        <a href="{% url 'client_interaction_list' client_profile.id %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>Clear All
+                        </a>
+                    </div>
+                </form>
             </div>
         </div>
-    </div>
 
-    <!-- Interactions List -->
-    <div class="row">
-        <div class="col-12">
-            {% if interactions %}
-                {% for interaction in interactions %}
-                    <div class="card mb-3 interaction-card priority-{{ interaction.priority }}">
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <div class="d-flex align-items-center mb-2">
-                                        <span class="badge bg-primary interaction-type-badge me-2">
-                                            {{ interaction.get_interaction_type_display }}
+        <!-- Interactions List -->
+        <div class="row">
+            <div class="col-12">
+                {% if interactions %}
+                    {% for interaction in interactions %}
+                        <div class="card interaction-card priority-{{ interaction.priority }} slide-in">
+                            <div class="card-body">
+                                <!-- Interaction Header -->
+                                <div class="interaction-header">
+                                    <span class="badge badge-type">
+                                        <i class="fas fa-comments"></i>
+                                        {{ interaction.get_interaction_type_display }}
+                                    </span>
+                                    <span class="badge badge-priority-{{ interaction.priority }}">
+                                        <i class="fas fa-flag"></i>
+                                        {{ interaction.get_priority_display }}
+                                    </span>
+                                    {% if interaction.follow_up_required %}
+                                        <span class="badge badge-follow-up">
+                                            <i class="fas fa-bell"></i>
+                                            Follow-up Required
                                         </span>
-                                        <span class="badge bg-{{ interaction.priority }} interaction-type-badge me-2">
-                                            {{ interaction.get_priority_display }}
+                                    {% endif %}
+                                    {% if interaction.can_edit %}
+                                        <span class="badge badge-edit-available">
+                                            <i class="fas fa-edit"></i>
+                                            Editable
                                         </span>
-                                        {% if interaction.follow_up_required %}
-                                            <span class="badge follow-up-badge interaction-type-badge">
-                                                Follow-up Required
-                                            </span>
-                                        {% endif %}
-                                        <!-- Edit Status Badge -->
-                                        {% if interaction.can_edit %}
-                                            <span class="badge edit-available edit-status-badge ms-2">
-                                                <i class="fas fa-edit"></i> Editable
-                                            </span>
-                                        {% else %}
-                                            <span class="badge edit-expired edit-status-badge ms-2">
-                                                <i class="fas fa-lock"></i> Read-only
-                                            </span>
-                                        {% endif %}
-                                    </div>
-                                    <p class="mb-2">
-                                        <strong>Date:</strong> {{ interaction.interaction_date|date:"M d, Y H:i" }}
-                                        {% if interaction.duration_minutes %}
-                                            | <strong>Duration:</strong> {{ interaction.duration_minutes }} minutes
-                                        {% endif %}
-                                    </p>
-                                    <p class="mb-2">{{ interaction.notes|truncatewords:30 }}</p>
-                                    {% if interaction.follow_up_date %}
-                                        <p class="mb-0 text-warning">
-                                            <i class="fas fa-calendar-alt"></i> Follow-up: {{ interaction.follow_up_date|date:"M d, Y" }}
-                                        </p>
+                                    {% else %}
+                                        <span class="badge badge-edit-expired">
+                                            <i class="fas fa-lock"></i>
+                                            Read-only
+                                        </span>
                                     {% endif %}
                                 </div>
-                                <div class="col-md-4 text-end">
-                                    <p class="mb-1">
-                                        <small class="text-muted">
-                                            by {{ interaction.created_by.get_full_name|default:interaction.created_by.username }}
-                                        </small>
-                                    </p>
-                                    <p class="mb-2">
-                                        <small class="text-muted">{{ interaction.get_time_since_creation }} ago</small>
-                                    </p>
+
+                                <!-- Interaction Content -->
+                                <div class="interaction-content">
+                                    <div class="interaction-meta">
+                                        <div class="meta-item">
+                                            <i class="fas fa-calendar-alt"></i>
+                                            <strong>{{ interaction.interaction_date|date:"M d, Y H:i" }}</strong>
+                                        </div>
+                                        {% if interaction.duration_minutes %}
+                                            <div class="meta-item">
+                                                <i class="fas fa-clock"></i>
+                                                <span>{{ interaction.duration_minutes }} minutes</span>
+                                            </div>
+                                        {% endif %}
+                                        <div class="meta-item">
+                                            <i class="fas fa-user"></i>
+                                            <span>{{ interaction.created_by.get_full_name|default:interaction.created_by.username }}</span>
+                                        </div>
+                                        <div class="meta-item">
+                                            <i class="fas fa-history"></i>
+                                            <span>{{ interaction.get_time_since_creation }} ago</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="interaction-notes">
+                                        {{ interaction.notes|truncatewords:30 }}
+                                        {% if interaction.notes|wordcount > 30 %}
+                                            <span class="text-muted">... (truncated)</span>
+                                        {% endif %}
+                                    </div>
+
+                                    {% if interaction.follow_up_date %}
+                                        <div class="follow-up-info">
+                                            <i class="fas fa-calendar-check"></i>
+                                            <strong>Follow-up scheduled for: {{ interaction.follow_up_date|date:"M d, Y" }}</strong>
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Interaction Footer -->
+                                <div class="interaction-footer">
+                                    <div class="creator-info">
+                                        <div>Created by <span class="creator-name">{{ interaction.created_by.get_full_name|default:interaction.created_by.username }}</span></div>
+                                        <div class="text-muted small">{{ interaction.created_at|date:"M d, Y H:i" }}</div>
+                                    </div>
                                     <div class="btn-group btn-group-sm">
                                         <a href="{% url 'client_interaction_detail' client_profile.id interaction.id %}" 
                                            class="btn btn-outline-primary">
-                                            <i class="fas fa-eye"></i> View
+                                            <i class="fas fa-eye me-1"></i>View Details
                                         </a>
                                         {% if interaction.can_edit %}
                                             <a href="{% url 'client_interaction_update' client_profile.id interaction.id %}" 
                                                class="btn btn-outline-warning">
-                                                <i class="fas fa-edit"></i> Edit
+                                                <i class="fas fa-edit me-1"></i>Edit
                                             </a>
                                         {% endif %}
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                {% endfor %}
+                    {% endfor %}
 
-                <!-- Pagination -->
-                {% if interactions.has_other_pages %}
-                    <nav aria-label="Interactions pagination">
-                        <ul class="pagination justify-content-center">
-                            {% if interactions.has_previous %}
-                                <li class="page-item">
-                                    <a class="page-link" href="?page={{ interactions.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if interaction_type %}&type={{ interaction_type }}{% endif %}">
-                                        Previous
-                                    </a>
-                                </li>
-                            {% endif %}
-
-                            {% for num in interactions.paginator.page_range %}
-                                {% if interactions.number == num %}
-                                    <li class="page-item active">
-                                        <span class="page-link">{{ num }}</span>
-                                    </li>
-                                {% elif num > interactions.number|add:'-3' and num < interactions.number|add:'3' %}
+                    <!-- Pagination -->
+                    {% if interactions.has_other_pages %}
+                        <nav aria-label="Interactions pagination" class="fade-in">
+                            <ul class="pagination">
+                                {% if interactions.has_previous %}
                                     <li class="page-item">
-                                        <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if interaction_type %}&type={{ interaction_type }}{% endif %}">
-                                            {{ num }}
+                                        <a class="page-link" href="?page={{ interactions.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if interaction_type %}&type={{ interaction_type }}{% endif %}">
+                                            <i class="fas fa-chevron-left me-1"></i>Previous
                                         </a>
                                     </li>
                                 {% endif %}
-                            {% endfor %}
 
-                            {% if interactions.has_next %}
-                                <li class="page-item">
-                                    <a class="page-link" href="?page={{ interactions.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if interaction_type %}&type={{ interaction_type }}{% endif %}">
-                                        Next
-                                    </a>
-                                </li>
+                                {% for num in interactions.paginator.page_range %}
+                                    {% if interactions.number == num %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ num }}</span>
+                                        </li>
+                                    {% elif num > interactions.number|add:'-3' and num < interactions.number|add:'3' %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if interaction_type %}&type={{ interaction_type }}{% endif %}">
+                                                {{ num }}
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+
+                                {% if interactions.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ interactions.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if interaction_type %}&type={{ interaction_type }}{% endif %}">
+                                            Next<i class="fas fa-chevron-right ms-1"></i>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    {% endif %}
+                {% else %}
+                    <div class="card empty-state fade-in">
+                        <div class="card-body">
+                            <i class="fas fa-comments empty-icon"></i>
+                            <h5>No Interactions Found</h5>
+                            <p class="text-muted">
+                                {% if search_query or interaction_type %}
+                                    No interactions match your current search criteria. Try adjusting your filters or search terms.
+                                {% else %}
+                                    This client doesn't have any recorded interactions yet.
+                                {% endif %}
+                            </p>
+                            {% if can_add_interaction %}
+                                <a href="{% url 'client_interaction_create' client_profile.id %}" class="btn btn-primary">
+                                    <i class="fas fa-plus me-2"></i>Add First Interaction
+                                </a>
                             {% endif %}
-                        </ul>
-                    </nav>
-                {% endif %}
-            {% else %}
-                <div class="card">
-                    <div class="card-body text-center py-5">
-                        <i class="fas fa-comments fa-3x text-muted mb-3"></i>
-                        <h5>No Interactions Found</h5>
-                        <p class="text-muted">No interactions match your search criteria.</p>
-                        {% if can_add_interaction %}
-                            <a href="{% url 'client_interaction_create' client_profile.id %}" class="btn btn-primary">
-                                <i class="fas fa-plus"></i> Add First Interaction
-                            </a>
-                        {% endif %}
+                            {% if search_query or interaction_type %}
+                                <a href="{% url 'client_interaction_list' client_profile.id %}" class="btn btn-outline-secondary ms-2">
+                                    <i class="fas fa-times me-2"></i>Clear Filters
+                                </a>
+                            {% endif %}
+                        </div>
                     </div>
-                </div>
-            {% endif %}
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add animation delays to interaction cards
+    const interactionCards = document.querySelectorAll('.interaction-card');
+    interactionCards.forEach((card, index) => {
+        card.style.animationDelay = `${index * 0.1}s`;
+    });
+    
+    // Enhanced hover effects for interaction cards
+    interactionCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-6px)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(-4px)';
+        });
+    });
+    
+    // Auto-submit search form on Enter
+    const searchInput = document.getElementById('search');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                this.closest('form').submit();
+            }
+        });
+    }
+    
+    // Auto-submit form when type filter changes
+    const typeSelect = document.getElementById('type');
+    if (typeSelect) {
+        typeSelect.addEventListener('change', function() {
+            this.closest('form').submit();
+        });
+    }
+    
+    // Add loading states to buttons
+    const actionButtons = document.querySelectorAll('.btn-group .btn');
+    actionButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            if (this.href) {
+                const originalText = this.innerHTML;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Loading...';
+                this.disabled = true;
+                
+                // Re-enable after 3 seconds as fallback
+                setTimeout(() => {
+                    this.innerHTML = originalText;
+                    this.disabled = false;
+                }, 3000);
+            }
+        });
+    });
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + K to focus search
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            searchInput?.focus();
+        }
+        
+        // Escape to clear search
+        if (e.key === 'Escape' && searchInput === document.activeElement) {
+            searchInput.value = '';
+            searchInput.closest('form').submit();
+        }
+    });
+    
+    // Add tooltips to badges
+    const badges = document.querySelectorAll('.badge');
+    badges.forEach(badge => {
+        if (badge.classList.contains('badge-follow-up')) {
+            badge.title = 'This interaction requires follow-up action';
+        } else if (badge.classList.contains('badge-edit-available')) {
+            badge.title = 'This interaction can be edited (within 24 hours of creation)';
+        } else if (badge.classList.contains('badge-edit-expired')) {
+            badge.title = 'This interaction is read-only (edit window expired)';
+        }
+    });
+    
+    // Smooth scroll to top when pagination is clicked
+    const paginationLinks = document.querySelectorAll('.pagination .page-link');
+    paginationLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    });
+});
+</script>
 {% endblock %}

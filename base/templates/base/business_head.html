@@ -1,4 +1,3 @@
-<!-- templates/dashboard/business_head.html -->
 {% extends "base/base.html" %}
 {% load humanize %}
 
@@ -11,20 +10,17 @@
 {% block content %}
 <style>
 :root {
-    --primary-green: #D3FF61;
-    --primary-black: #1a1a1a;
-    --soft-black: #2d2d2d;
-    --light-gray: #f8f9fa;
-    --border-gray: #e9ecef;
-    --shadow-light: 0 2px 4px rgba(0,0,0,0.1);
-    --shadow-medium: 0 4px 12px rgba(0,0,0,0.15);
-    --shadow-heavy: 0 8px 32px rgba(0,0,0,0.2);
+    --bs-primary: #1C64FF;
+    --bs-secondary: #696969;
+    --bs-light: #FFFFFF;
+    --bs-border-color: #D9D9D9;
+    --bs-info: #C3E4FF;
 }
 
 body {
-    background: linear-gradient(135deg, var(--primary-green) 0%, #ffffff 100%);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    min-height: 100vh;
+    background-color: #f8f9fa;
+    color: #333333;
 }
 
 .dashboard-container {
@@ -33,10 +29,10 @@ body {
 
 /* Enhanced Card Styles */
 .metric-card {
-    background: white;
-    border-radius: 16px;
-    border: none;
-    box-shadow: var(--shadow-light);
+    background: #FFFFFF;
+    border-radius: 12px;
+    border: 1px solid #D9D9D9;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
     position: relative;
@@ -49,12 +45,13 @@ body {
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, var(--primary-green), #a8e63d);
+    background: linear-gradient(90deg, #1C64FF, #1557e6);
 }
 
 .metric-card:hover {
     transform: translateY(-4px);
-    box-shadow: var(--shadow-heavy);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    border-color: #1C64FF;
 }
 
 .metric-card .card-body {
@@ -64,7 +61,7 @@ body {
 .metric-card .metric-icon {
     width: 60px;
     height: 60px;
-    background: var(--primary-green);
+    background: #C3E4FF;
     border-radius: 12px;
     display: flex;
     align-items: center;
@@ -74,13 +71,13 @@ body {
 
 .metric-card .metric-icon i {
     font-size: 1.5rem;
-    color: var(--primary-black);
+    color: #1C64FF;
 }
 
 .metric-title {
     font-size: 0.875rem;
     font-weight: 600;
-    color: #6c757d;
+    color: #696969;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 0.5rem;
@@ -89,22 +86,27 @@ body {
 .metric-value {
     font-size: 2.25rem;
     font-weight: 800;
-    color: var(--primary-black);
+    color: #1C64FF;
     line-height: 1.2;
 }
 
 /* Enhanced Table Card */
 .table-card {
-    background: white;
-    border-radius: 16px;
-    border: none;
-    box-shadow: var(--shadow-medium);
+    background: #FFFFFF;
+    border-radius: 12px;
+    border: 1px solid #D9D9D9;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.table-card:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
 }
 
 .table-card .card-header {
-    background: linear-gradient(135deg, var(--primary-black), var(--soft-black));
-    color: white;
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+    color: #FFFFFF;
     border: none;
     padding: 1.5rem 2rem;
 }
@@ -117,7 +119,7 @@ body {
 .date-selector {
     background: rgba(255,255,255,0.1);
     border: 1px solid rgba(255,255,255,0.2);
-    color: white;
+    color: #FFFFFF;
     border-radius: 8px;
     padding: 0.5rem 1rem;
     font-size: 0.875rem;
@@ -126,7 +128,15 @@ body {
 
 .date-selector:hover {
     background: rgba(255,255,255,0.2);
-    border-color: var(--primary-green);
+    border-color: #C3E4FF;
+    color: #FFFFFF;
+}
+
+.date-selector:focus {
+    background: rgba(255,255,255,0.2);
+    border-color: #C3E4FF;
+    color: #FFFFFF;
+    box-shadow: 0 0 0 0.2rem rgba(195, 228, 255, 0.25);
 }
 
 .performance-table {
@@ -134,8 +144,8 @@ body {
 }
 
 .performance-table thead th {
-    background: var(--light-gray);
-    color: var(--primary-black);
+    background: #f8f9fa;
+    color: #1C64FF;
     font-weight: 600;
     font-size: 0.875rem;
     text-transform: uppercase;
@@ -150,20 +160,28 @@ body {
 }
 
 .performance-table tbody tr:hover {
-    background: rgba(211, 255, 97, 0.1);
+    background: #C3E4FF;
     transform: scale(1.01);
 }
 
 .performance-table tbody td {
     padding: 1rem;
-    border-top: 1px solid var(--border-gray);
+    border-top: 1px solid #D9D9D9;
     vertical-align: middle;
 }
 
+.avatar-sm {
+    width: 40px;
+    height: 40px;
+    font-weight: 600;
+    color: #1C64FF;
+    background: #C3E4FF !important;
+}
+
 .action-btn {
-    background: var(--primary-green);
+    background: #1C64FF;
     border: none;
-    color: var(--primary-black);
+    color: #FFFFFF;
     width: 36px;
     height: 36px;
     border-radius: 8px;
@@ -174,26 +192,32 @@ body {
 }
 
 .action-btn:hover {
-    background: #a8e63d;
+    background: #1557e6;
     transform: scale(1.1);
-    color: var(--primary-black);
+    color: #FFFFFF;
+    box-shadow: 0 4px 12px rgba(28, 100, 255, 0.3);
 }
 
 /* Chart Cards */
 .chart-card {
-    background: white;
-    border-radius: 16px;
-    border: none;
-    box-shadow: var(--shadow-medium);
+    background: #FFFFFF;
+    border-radius: 12px;
+    border: 1px solid #D9D9D9;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     margin-bottom: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.chart-card:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
 }
 
 .chart-card .card-header {
-    background: linear-gradient(135deg, var(--primary-green), #a8e63d);
-    color: var(--primary-black);
+    background: linear-gradient(135deg, #C3E4FF, #a8d4ff);
+    color: #1C64FF;
     border: none;
     padding: 1.25rem 1.5rem;
-    border-radius: 16px 16px 0 0;
+    border-radius: 12px 12px 0 0;
 }
 
 .chart-card .card-header h5 {
@@ -203,31 +227,36 @@ body {
 
 /* Activities Card */
 .activities-card {
-    background: white;
-    border-radius: 16px;
-    border: none;
-    box-shadow: var(--shadow-medium);
+    background: #FFFFFF;
+    border-radius: 12px;
+    border: 1px solid #D9D9D9;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+}
+
+.activities-card:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
 }
 
 .activities-card .card-header {
-    background: var(--primary-black);
-    color: white;
+    background: #1C64FF;
+    color: #FFFFFF;
     border: none;
     padding: 1.25rem 1.5rem;
-    border-radius: 16px 16px 0 0;
+    border-radius: 12px 12px 0 0;
 }
 
 .activity-item {
     border: none;
     border-radius: 0;
     padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--border-gray);
+    border-bottom: 1px solid #D9D9D9;
     transition: all 0.2s ease;
 }
 
 .activity-item:hover {
-    background: rgba(211, 255, 97, 0.05);
-    border-left: 4px solid var(--primary-green);
+    background: rgba(195, 228, 255, 0.1);
+    border-left: 4px solid #1C64FF;
 }
 
 .activity-item:last-child {
@@ -236,14 +265,67 @@ body {
 
 .activity-time {
     font-size: 0.75rem;
-    color: #6c757d;
+    color: #696969;
     font-weight: 500;
 }
 
 .activity-message {
-    color: var(--primary-black);
+    color: #333333;
     font-size: 0.875rem;
     margin: 0.25rem 0 0 0;
+}
+
+.badge {
+    font-weight: 500;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+}
+
+.bg-primary {
+    background-color: #1C64FF !important;
+}
+
+.text-success {
+    color: #198754 !important;
+}
+
+.text-primary {
+    color: #1C64FF !important;
+}
+
+.text-secondary {
+    color: #696969 !important;
+}
+
+.text-muted {
+    color: #696969 !important;
+}
+
+.btn-primary {
+    background-color: #1C64FF;
+    border-color: #1C64FF;
+    font-weight: 600;
+}
+
+.btn-primary:hover {
+    background-color: #1557e6;
+    border-color: #1557e6;
+}
+
+.dropdown-menu {
+    border: 1px solid #D9D9D9;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.dropdown-item {
+    color: #333333;
+    font-weight: 500;
+}
+
+.dropdown-item:hover {
+    background-color: #C3E4FF;
+    color: #1C64FF;
 }
 
 /* Responsive Enhancements */
@@ -265,6 +347,10 @@ body {
     }
     
     .performance-table {
+        font-size: 0.875rem;
+    }
+    
+    .table-responsive {
         font-size: 0.875rem;
     }
 }
@@ -293,45 +379,45 @@ body {
 
 <div class="dashboard-container">
     <!-- Metrics Row -->
-    <div class="row mb-4">
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card metric-card">
+    <div class="row mb-4 g-4">
+        <div class="col-lg-3 col-md-6">
+            <div class="card metric-card h-100">
                 <div class="card-body text-center">
                     <div class="metric-icon mx-auto">
-                        <i class="bi bi-people"></i>
+                        <i class="fas fa-users"></i>
                     </div>
                     <div class="metric-title">RM Heads</div>
                     <div class="metric-value">{{ rm_heads.count }}</div>
                 </div>
             </div>
         </div>
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card metric-card">
+        <div class="col-lg-3 col-md-6">
+            <div class="card metric-card h-100">
                 <div class="card-body text-center">
                     <div class="metric-icon mx-auto">
-                        <i class="bi bi-person-check"></i>
+                        <i class="fas fa-user-check"></i>
                     </div>
                     <div class="metric-title">Active RMs</div>
                     <div class="metric-value">{{ rms.count }}</div>
                 </div>
             </div>
         </div>
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card metric-card">
+        <div class="col-lg-3 col-md-6">
+            <div class="card metric-card h-100">
                 <div class="card-body text-center">
                     <div class="metric-icon mx-auto">
-                        <i class="bi bi-person-plus"></i>
+                        <i class="fas fa-user-plus"></i>
                     </div>
                     <div class="metric-title">Total Leads</div>
                     <div class="metric-value">{{ total_leads|default:0|intcomma }}</div>
                 </div>
             </div>
         </div>
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card metric-card">
+        <div class="col-lg-3 col-md-6">
+            <div class="card metric-card h-100">
                 <div class="card-body text-center">
                     <div class="metric-icon mx-auto">
-                        <i class="bi bi-graph-up"></i>
+                        <i class="fas fa-chart-line"></i>
                     </div>
                     <div class="metric-title">Conversions</div>
                     <div class="metric-value">{{ conversions|default:0|intcomma }}</div>
@@ -341,16 +427,16 @@ body {
     </div>
 
     <!-- Main Content Row -->
-    <div class="row">
-        <div class="col-xl-8 col-lg-7 mb-4">
+    <div class="row g-4">
+        <div class="col-xl-8 col-lg-7">
             <div class="card table-card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">RM Head Performance</h5>
+                <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+                    <h5 class="mb-2 mb-md-0">RM Head Performance</h5>
                     <div class="dropdown">
-                        <button class="btn date-selector dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown">
-                            <i class="bi bi-calendar me-2"></i>{{ timezone.now|date:"F Y" }}
+                        <button class="btn date-selector dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-calendar me-2"></i>{{ timezone.now|date:"F Y" }}
                         </button>
-                        <ul class="dropdown-menu">
+                        <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                             <li><a class="dropdown-item" href="#">Last Month</a></li>
                             <li><a class="dropdown-item" href="#">Quarter to Date</a></li>
                             <li><a class="dropdown-item" href="#">Year to Date</a></li>
@@ -391,14 +477,14 @@ body {
                                     <td>{{ rh.team_demat }}</td>
                                     <td>
                                         <button class="btn action-btn" title="View Team">
-                                            <i class="bi bi-people"></i>
+                                            <i class="fas fa-users"></i>
                                         </button>
                                     </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
                                     <td colspan="8" class="text-center text-muted py-4">
-                                        <i class="bi bi-people fs-1 d-block mb-2 opacity-25"></i>
+                                        <i class="fas fa-users fa-2x d-block mb-2 opacity-25"></i>
                                         No RM Heads reporting to you
                                     </td>
                                 </tr>
@@ -437,7 +523,7 @@ body {
                         </div>
                         {% empty %}
                         <div class="activity-item text-center py-4">
-                            <i class="bi bi-clock-history fs-1 text-muted opacity-25 d-block mb-2"></i>
+                            <i class="fas fa-clock fa-2x text-muted opacity-25 d-block mb-2"></i>
                             <span class="text-muted">No recent activities</span>
                         </div>
                         {% endfor %}
@@ -447,6 +533,8 @@ body {
         </div>
     </div>
 </div>
+
+{% endblock %}
 
 {% block scripts %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
@@ -460,11 +548,11 @@ body {
             datasets: [{
                 data: [25, 15, 10, 5, 3],
                 backgroundColor: [
-                    '#D3FF61',
-                    '#a8e63d',
-                    '#1a1a1a',
-                    '#2d2d2d',
-                    '#6c757d'
+                    '#1C64FF',
+                    '#C3E4FF',
+                    '#696969',
+                    '#198754',
+                    '#dc3545'
                 ],
                 borderColor: '#ffffff',
                 borderWidth: 3,
@@ -491,10 +579,10 @@ body {
                     }
                 },
                 tooltip: {
-                    backgroundColor: '#1a1a1a',
+                    backgroundColor: '#1C64FF',
                     titleColor: '#ffffff',
                     bodyColor: '#ffffff',
-                    borderColor: '#D3FF61',
+                    borderColor: '#C3E4FF',
                     borderWidth: 1,
                     cornerRadius: 8,
                     displayColors: false
@@ -531,5 +619,4 @@ body {
         });
     });
 </script>
-{% endblock %}
 {% endblock %}

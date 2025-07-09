@@ -6,11 +6,328 @@ Delete Legacy Client - {{ client.name }}
 {% endblock %}
 
 {% block content %}
+<style>
+    :root {
+        --bs-primary: #1C64FF;
+        --bs-secondary: #696969;
+        --bs-light: #FFFFFF;
+        --bs-border-color: #D9D9D9;
+        --bs-info: #C3E4FF;
+    }
+
+    .danger-card {
+        border: 2px solid #dc3545;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(220, 53, 69, 0.15);
+    }
+
+    .card {
+        border: 1px solid #D9D9D9;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        margin-bottom: 1.5rem;
+    }
+
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+
+    .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #D9D9D9;
+        font-weight: 600;
+        border-radius: 12px 12px 0 0 !important;
+        padding: 1.25rem 1.5rem;
+    }
+
+    .card-header.bg-danger {
+        background: linear-gradient(135deg, #dc3545, #bb2d3b) !important;
+        color: #FFFFFF !important;
+        border-bottom-color: #dc3545;
+    }
+
+    .card-header.bg-success {
+        background: linear-gradient(135deg, #198754, #157347) !important;
+        color: #FFFFFF !important;
+        border-bottom-color: #198754;
+    }
+
+    .card-header.bg-warning {
+        background: linear-gradient(135deg, #ffc107, #ffca2c) !important;
+        color: #000000 !important;
+        border-bottom-color: #ffc107;
+    }
+
+    .card-header.bg-light {
+        background: #f8f9fa !important;
+        color: #1C64FF !important;
+    }
+
+    .btn-primary {
+        background-color: #1C64FF;
+        border-color: #1C64FF;
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        background-color: #1557e6;
+        border-color: #1557e6;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(28, 100, 255, 0.3);
+    }
+
+    .btn-success {
+        background-color: #198754;
+        border-color: #198754;
+        font-weight: 600;
+    }
+
+    .btn-success:hover {
+        background-color: #157347;
+        border-color: #157347;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(25, 135, 84, 0.3);
+    }
+
+    .btn-danger {
+        background-color: #dc3545;
+        border-color: #dc3545;
+        font-weight: 600;
+    }
+
+    .btn-danger:hover {
+        background-color: #bb2d3b;
+        border-color: #bb2d3b;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    }
+
+    .btn-secondary {
+        background-color: #696969;
+        border-color: #696969;
+        font-weight: 500;
+    }
+
+    .btn-secondary:hover {
+        background-color: #5a5a5a;
+        border-color: #5a5a5a;
+    }
+
+    .btn-outline-info {
+        color: #0dcaf0;
+        border-color: #0dcaf0;
+        font-weight: 500;
+    }
+
+    .btn-outline-info:hover {
+        background-color: #0dcaf0;
+        border-color: #0dcaf0;
+    }
+
+    .alert {
+        border-radius: 8px;
+        border: none;
+        font-weight: 500;
+        padding: 1.25rem;
+    }
+
+    .alert-warning {
+        background-color: rgba(255, 193, 7, 0.1);
+        color: #856404;
+        border-left: 4px solid #ffc107;
+    }
+
+    .alert-danger {
+        background-color: rgba(220, 53, 69, 0.1);
+        color: #721c24;
+        border-left: 4px solid #dc3545;
+    }
+
+    .alert-success {
+        background-color: rgba(25, 135, 84, 0.1);
+        color: #0f5132;
+        border-left: 4px solid #198754;
+    }
+
+    .alert-info {
+        background-color: rgba(195, 228, 255, 0.2);
+        color: #1C64FF;
+        border-left: 4px solid #1C64FF;
+    }
+
+    .form-control {
+        border: 1px solid #D9D9D9;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        border-color: #1C64FF;
+        box-shadow: 0 0 0 0.2rem rgba(28, 100, 255, 0.25);
+    }
+
+    .form-control.is-valid {
+        border-color: #198754;
+        box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+    }
+
+    .form-control.is-invalid {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+    }
+
+    .form-select {
+        border: 1px solid #D9D9D9;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-select:focus {
+        border-color: #1C64FF;
+        box-shadow: 0 0 0 0.2rem rgba(28, 100, 255, 0.25);
+    }
+
+    .form-check-input:checked {
+        background-color: #1C64FF;
+        border-color: #1C64FF;
+    }
+
+    .form-check-input:focus {
+        box-shadow: 0 0 0 0.2rem rgba(28, 100, 255, 0.25);
+    }
+
+    .badge {
+        font-weight: 500;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+    }
+
+    .bg-primary {
+        background-color: #1C64FF !important;
+    }
+
+    .text-primary {
+        color: #1C64FF !important;
+    }
+
+    .text-secondary {
+        color: #696969 !important;
+    }
+
+    .text-muted {
+        color: #696969 !important;
+    }
+
+    .bg-success {
+        background-color: #198754 !important;
+    }
+
+    .bg-warning {
+        background-color: #ffc107 !important;
+    }
+
+    .bg-danger {
+        background-color: #dc3545 !important;
+    }
+
+    .bg-info {
+        background-color: #0dcaf0 !important;
+    }
+
+    .bg-secondary {
+        background-color: #696969 !important;
+    }
+
+    .border-success {
+        border-color: #198754 !important;
+    }
+
+    .border-danger {
+        border-color: #dc3545 !important;
+    }
+
+    .impact-metric {
+        text-align: center;
+        padding: 1.5rem;
+        border-radius: 8px;
+        background: #f8f9fa;
+        border: 1px solid #D9D9D9;
+        transition: all 0.3s ease;
+    }
+
+    .impact-metric:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .impact-metric .display-6 {
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+    }
+
+    .modal-content {
+        border-radius: 12px;
+        border: 1px solid #D9D9D9;
+    }
+
+    .modal-header.bg-info {
+        background: linear-gradient(135deg, #C3E4FF, #a8d4ff) !important;
+        color: #1C64FF !important;
+        border-bottom-color: #1C64FF;
+    }
+
+    .btn-close-white {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+
+    .fade-in {
+        animation: fadeIn 0.6s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .btn-lg {
+            padding: 0.75rem 1.25rem;
+            font-size: 1rem;
+        }
+        
+        .d-flex.justify-content-between {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .d-flex.justify-content-between > div {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+    }
+</style>
+
 <div class="container-fluid">
     <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card shadow border-danger">
-                <div class="card-header bg-danger text-white">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="card danger-card fade-in">
+                <div class="card-header bg-danger">
                     <h4 class="mb-0">
                         <i class="fas fa-trash-alt me-2"></i>
                         Delete Legacy Client Record
@@ -42,36 +359,42 @@ Delete Legacy Client - {{ client.name }}
                             <h5 class="mb-0">Legacy Client Information</h5>
                         </div>
                         <div class="card-body">
-                            <div class="row">
+                            <div class="row g-4">
                                 <div class="col-md-6">
-                                    <p class="mb-2">
-                                        <strong>Client Name:</strong> 
-                                        <span class="text-primary">{{ client.name }}</span>
-                                    </p>
-                                    <p class="mb-2">
-                                        <strong>Email:</strong> {{ client.email|default:"Not provided" }}
-                                    </p>
-                                    <p class="mb-2">
-                                        <strong>Phone:</strong> {{ client.phone|default:"Not provided" }}
-                                    </p>
-                                    <p class="mb-2">
-                                        <strong>Address:</strong> {{ client.address|default:"Not provided"|truncatechars:50 }}
-                                    </p>
+                                    <div class="mb-3">
+                                        <strong class="text-secondary">Client Name:</strong>
+                                        <div class="text-primary fw-bold">{{ client.name }}</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong class="text-secondary">Email:</strong>
+                                        <div>{{ client.email|default:"Not provided" }}</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong class="text-secondary">Phone:</strong>
+                                        <div>{{ client.phone|default:"Not provided" }}</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong class="text-secondary">Address:</strong>
+                                        <div>{{ client.address|default:"Not provided"|truncatechars:50 }}</div>
+                                    </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <p class="mb-2">
-                                        <strong>Client ID:</strong> #{{ client.pk }}
-                                    </p>
-                                    <p class="mb-2">
-                                        <strong>Created:</strong> {{ client.created_at|date:"M d, Y" }}
-                                    </p>
-                                    <p class="mb-2">
-                                        <strong>Last Updated:</strong> {{ client.updated_at|date:"M d, Y" }}
-                                    </p>
-                                    <p class="mb-2">
-                                        <strong>System:</strong> 
-                                        <span class="badge bg-secondary">Legacy</span>
-                                    </p>
+                                    <div class="mb-3">
+                                        <strong class="text-secondary">Client ID:</strong>
+                                        <div>#{{ client.pk }}</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong class="text-secondary">Created:</strong>
+                                        <div>{{ client.created_at|date:"M d, Y" }}</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong class="text-secondary">Last Updated:</strong>
+                                        <div>{{ client.updated_at|date:"M d, Y" }}</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong class="text-secondary">System:</strong>
+                                        <div><span class="badge bg-secondary">Legacy</span></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -79,7 +402,7 @@ Delete Legacy Client - {{ client.name }}
 
                     <!-- Migration Option -->
                     <div class="card mb-4 border-success">
-                        <div class="card-header bg-success text-white">
+                        <div class="card-header bg-success">
                             <h6 class="mb-0">
                                 <i class="fas fa-arrow-up me-2"></i>
                                 Recommended: Migrate to New System
@@ -90,7 +413,7 @@ Delete Legacy Client - {{ client.name }}
                                 Instead of deleting this legacy client, consider migrating them to the new Client Profile system. 
                                 This will preserve the data and provide better functionality.
                             </p>
-                            <div class="d-flex gap-2">
+                            <div class="d-flex flex-wrap gap-2">
                                 <a href="{% url 'client_profile_create' %}?migrate_from={{ client.pk }}" 
                                    class="btn btn-success">
                                     <i class="fas fa-plus me-2"></i>Migrate to Client Profile
@@ -104,40 +427,46 @@ Delete Legacy Client - {{ client.name }}
 
                     <!-- Related Data Warning -->
                     <div class="card mb-4">
-                        <div class="card-header bg-warning text-dark">
+                        <div class="card-header bg-warning">
                             <h6 class="mb-0">
                                 <i class="fas fa-database me-2"></i>
                                 Related Data Analysis
                             </h6>
                         </div>
                         <div class="card-body">
-                            <div class="row text-center">
+                            <div class="row g-4 text-center mb-4">
                                 <div class="col-md-4">
-                                    <div class="display-6 text-danger">
-                                        {{ client.related_records_count|default:0 }}
+                                    <div class="impact-metric">
+                                        <div class="display-6 text-danger">
+                                            {{ client.related_records_count|default:0 }}
+                                        </div>
+                                        <small class="text-muted">Related Record(s)</small>
                                     </div>
-                                    <small class="text-muted">Related Record(s)</small>
                                 </div>
                                 <div class="col-md-4">
-                                    <div class="display-6 text-warning">
-                                        {{ client.created_at|timesince }}
+                                    <div class="impact-metric">
+                                        <div class="display-6 text-warning">
+                                            {{ client.created_at|timesince }}
+                                        </div>
+                                        <small class="text-muted">Record Age</small>
                                     </div>
-                                    <small class="text-muted">Record Age</small>
                                 </div>
                                 <div class="col-md-4">
-                                    <div class="display-6 {% if client.has_recent_activity %}text-danger{% else %}text-success{% endif %}">
-                                        {% if client.has_recent_activity %}
-                                            <i class="fas fa-exclamation-triangle"></i>
-                                        {% else %}
-                                            <i class="fas fa-check-circle"></i>
-                                        {% endif %}
+                                    <div class="impact-metric">
+                                        <div class="display-6 {% if client.has_recent_activity %}text-danger{% else %}text-success{% endif %}">
+                                            {% if client.has_recent_activity %}
+                                                <i class="fas fa-exclamation-triangle"></i>
+                                            {% else %}
+                                                <i class="fas fa-check-circle"></i>
+                                            {% endif %}
+                                        </div>
+                                        <small class="text-muted">Recent Activity</small>
                                     </div>
-                                    <small class="text-muted">Recent Activity</small>
                                 </div>
                             </div>
                             
                             {% if client.has_recent_activity %}
-                            <div class="alert alert-warning mt-3">
+                            <div class="alert alert-warning">
                                 <i class="fas fa-exclamation-triangle me-2"></i>
                                 <strong>Warning:</strong> This client has recent activity. Deletion may impact active processes.
                             </div>
@@ -147,22 +476,22 @@ Delete Legacy Client - {{ client.name }}
 
                     <!-- Confirmation Section -->
                     <div class="card mb-4 border-danger">
-                        <div class="card-header bg-danger text-white">
+                        <div class="card-header bg-danger">
                             <h6 class="mb-0">Delete Confirmation Required</h6>
                         </div>
                         <div class="card-body">
                             <!-- Confirmation Checkbox -->
                             <div class="form-check mb-3">
                                 <input class="form-check-input" type="checkbox" id="confirmLegacyDelete" required>
-                                <label class="form-check-label text-danger" for="confirmLegacyDelete">
-                                    <strong>I understand this is a legacy record and deletion is permanent</strong>
+                                <label class="form-check-label text-danger fw-bold" for="confirmLegacyDelete">
+                                    I understand this is a legacy record and deletion is permanent
                                 </label>
                             </div>
 
                             <!-- Type client name confirmation -->
                             <div class="mb-3">
-                                <label for="confirmName" class="form-label">
-                                    <strong>Type the client's name to confirm deletion:</strong>
+                                <label for="confirmName" class="form-label fw-bold">
+                                    Type the client's name to confirm deletion:
                                 </label>
                                 <input 
                                     type="text" 
@@ -178,8 +507,8 @@ Delete Legacy Client - {{ client.name }}
 
                             <!-- Reason for deletion -->
                             <div class="mb-3">
-                                <label for="deleteReason" class="form-label">
-                                    <strong>Reason for deletion (required):</strong>
+                                <label for="deleteReason" class="form-label fw-bold">
+                                    Reason for deletion (required):
                                 </label>
                                 <select class="form-select" id="deleteReason" required>
                                     <option value="">Select a reason...</option>
@@ -192,8 +521,8 @@ Delete Legacy Client - {{ client.name }}
                             </div>
 
                             <div class="mb-3" id="otherReasonDiv" style="display: none;">
-                                <label for="otherReason" class="form-label">
-                                    <strong>Please specify:</strong>
+                                <label for="otherReason" class="form-label fw-bold">
+                                    Please specify:
                                 </label>
                                 <textarea class="form-control" id="otherReason" rows="2" 
                                          placeholder="Please provide specific reason..."></textarea>
@@ -202,13 +531,13 @@ Delete Legacy Client - {{ client.name }}
                     </div>
 
                     <!-- Action Buttons -->
-                    <div class="d-flex justify-content-between">
-                        <div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex flex-wrap gap-2">
                             <a href="{% url 'client_profile_list' %}" class="btn btn-secondary btn-lg">
                                 <i class="fas fa-arrow-left me-2"></i>Cancel
                             </a>
                             <a href="{% url 'client_profile_create' %}?migrate_from={{ client.pk }}" 
-                               class="btn btn-success btn-lg ms-2">
+                               class="btn btn-success btn-lg">
                                 <i class="fas fa-arrow-up me-2"></i>Migrate Instead
                             </a>
                         </div>
@@ -235,19 +564,19 @@ Delete Legacy Client - {{ client.name }}
 </div>
 
 <!-- Migration Info Modal -->
-<div class="modal fade" id="migrationInfoModal" tabindex="-1">
+<div class="modal fade" id="migrationInfoModal" tabindex="-1" aria-labelledby="migrationInfoModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title">
+            <div class="modal-header bg-info">
+                <h5 class="modal-title" id="migrationInfoModalLabel">
                     <i class="fas fa-info-circle me-2"></i>
                     Migration to Client Profile System
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <h6>Benefits of Migration:</h6>
-                <ul>
+                <h6 class="text-primary">Benefits of Migration:</h6>
+                <ul class="mb-4">
                     <li>Enhanced data structure with better validation</li>
                     <li>Improved role-based access control</li>
                     <li>Better audit trail and modification tracking</li>
@@ -255,8 +584,8 @@ Delete Legacy Client - {{ client.name }}
                     <li>Future-proof data storage</li>
                 </ul>
 
-                <h6 class="mt-4">Migration Process:</h6>
-                <ol>
+                <h6 class="text-primary">Migration Process:</h6>
+                <ol class="mb-4">
                     <li>Click "Migrate to Client Profile" button</li>
                     <li>Review and complete the client profile form</li>
                     <li>Verify all migrated data is accurate</li>
@@ -264,7 +593,7 @@ Delete Legacy Client - {{ client.name }}
                     <li>Legacy record will be safely archived</li>
                 </ol>
 
-                <div class="alert alert-success mt-3">
+                <div class="alert alert-success">
                     <i class="fas fa-shield-alt me-2"></i>
                     <strong>Data Safety:</strong> Migration preserves all existing data while upgrading to the new system.
                 </div>
@@ -340,9 +669,22 @@ document.addEventListener('DOMContentLoaded', function() {
         
         hiddenDeleteReason.value = reason;
         
+        // Add loading state to button
+        deleteButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+        deleteButton.disabled = true;
+        
         if (!confirm(`FINAL CONFIRMATION: Are you absolutely sure you want to permanently delete the legacy client record for "${clientName}"?\n\nThis action CANNOT be undone!\n\nConsider using migration instead.`)) {
             e.preventDefault();
+            // Restore button state
+            deleteButton.innerHTML = '<i class="fas fa-trash-alt me-2"></i>Delete Legacy Client';
+            checkFormValidity();
         }
+    });
+
+    // Add animation delays to elements
+    const elements = document.querySelectorAll('.fade-in, .card, .alert');
+    elements.forEach((element, index) => {
+        element.style.animationDelay = `${index * 0.1}s`;
     });
 });
 </script>

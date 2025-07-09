@@ -1,810 +1,699 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Operations Executive Dashboard</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-        
-        :root {
-            --bg-primary: #D3FF61;
-            --bg-secondary: #EFFFAB;
-            --bg-card: #FFFFFF;
-            --bg-accent: #F8FFF0;
-            --bg-overlay: rgba(255, 255, 255, 0.95);
-            --text-primary: #1A1A1A;
-            --text-secondary: #404040;
-            --text-muted: #6B7280;
-            --text-contrast: #FFFFFF;
-            --accent-primary: #000000;
-            --accent-success: #059669;
-            --accent-warning: #D97706;
-            --accent-danger: #DC2626;
-            --accent-purple: #7C3AED;
-            --accent-cyan: #0891B2;
-            --accent-pink: #DB2777;
-            --border-light: #E5E7EB;
-            --border-accent: #D1D5DB;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            --gradient-primary: linear-gradient(135deg, #D3FF61 0%, #EFFFAB 100%);
-            --gradient-dark: linear-gradient(135deg, #1A1A1A 0%, #404040 100%);
-            --gradient-success: linear-gradient(135deg, #059669 0%, #10B981 100%);
-            --gradient-warning: linear-gradient(135deg, #D97706 0%, #F59E0B 100%);
-            --gradient-danger: linear-gradient(135deg, #DC2626 0%, #EF4444 100%);
-            --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-            --gradient-mesh: radial-gradient(circle at 20% 20%, rgba(211, 255, 97, 0.3) 0%, transparent 50%),
-                             radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.3) 0%, transparent 50%),
-                             radial-gradient(circle at 40% 40%, rgba(0, 0, 0, 0.1) 0%, transparent 50%);
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            background: var(--bg-primary);
-            background-image: var(--gradient-mesh);
-            color: var(--text-primary);
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            overflow-x: hidden;
-            min-height: 100vh;
-        }
-
-        .dashboard-container {
-            max-width: 1920px;
-            margin: 0 auto;
-            padding: 2rem;
-            position: relative;
-            animation: fadeInUp 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
-
-        .dashboard-container::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(45deg, transparent 0%, rgba(255, 255, 255, 0.02) 50%, transparent 100%);
-            animation: shimmer 3s ease-in-out infinite;
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        /* Header Styles */
-        .header-section {
-            background: var(--bg-card);
-            border-radius: 24px;
-            padding: 2rem;
-            margin-bottom: 3rem;
-            box-shadow: var(--shadow-lg);
-            position: relative;
-            overflow: hidden;
-            backdrop-filter: blur(10px);
-            z-index: 10;
-        }
-
-        .header-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 5px;
-            background: var(--gradient-dark);
-            border-radius: 24px 24px 0 0;
-        }
-
-        .navbar-brand {
-            font-size: 1.8rem;
-            font-weight: 800;
-            color: var(--text-primary);
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .brand-icon {
-            width: 50px;
-            height: 50px;
-            background: var(--gradient-dark);
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-contrast);
-            font-size: 1.5rem;
-            box-shadow: var(--shadow-md);
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 1.5rem;
-            align-items: center;
-        }
-
-        .nav-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 1rem 1.5rem;
-            background: var(--bg-accent);
-            color: var(--text-primary);
-            text-decoration: none;
-            border-radius: 16px;
-            font-weight: 600;
-            font-size: 0.95rem;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border: 2px solid var(--border-light);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .nav-link:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-            border-color: var(--accent-primary);
-            background: var(--accent-primary);
-            color: var(--text-contrast);
-        }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 2rem;
-        }
-
-        /* Dashboard Title */
-        .dashboard-title {
-            font-size: clamp(2rem, 4vw, 3rem);
-            font-weight: 900;
-            background: var(--gradient-dark);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 0.5rem;
-            letter-spacing: -0.02em;
-        }
-
-        .role-subtitle {
-            font-size: 1.2rem;
-            color: var(--text-secondary);
-            font-weight: 600;
-            margin-bottom: 2rem;
-        }
-
-        /* KPI Cards */
-        .kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
-
-        .kpi-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-light);
-            border-radius: 24px;
-            padding: 2.5rem;
-            position: relative;
-            overflow: hidden;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            cursor: pointer;
-            box-shadow: var(--shadow-md);
-            backdrop-filter: blur(10px);
-        }
-
-        .kpi-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 5px;
-            border-radius: 24px 24px 0 0;
-        }
-
-        .kpi-card:hover {
-            transform: translateY(-12px) scale(1.02);
-            box-shadow: var(--shadow-2xl);
-        }
-
-        .kpi-card.primary::before { 
-            background: var(--gradient-primary); 
-        }
-        
-        .kpi-card.success::before { 
-            background: var(--gradient-success); 
-        }
-        
-        .kpi-card.warning::before { 
-            background: var(--gradient-warning); 
-        }
-        
-        .kpi-card.danger::before { 
-            background: var(--gradient-danger); 
-        }
-
-        .kpi-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 2rem;
-        }
-
-        .kpi-icon {
-            width: 70px;
-            height: 70px;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.2rem;
-            background: linear-gradient(135deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.05));
-            color: var(--text-primary);
-            box-shadow: var(--shadow-md);
-            transition: all 0.3s ease;
-        }
-
-        .kpi-card:hover .kpi-icon {
-            transform: scale(1.1);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .kpi-card.success .kpi-icon {
-            background: linear-gradient(135deg, rgba(5, 150, 105, 0.2), rgba(16, 185, 129, 0.1));
-            color: var(--accent-success);
-        }
-
-        .kpi-card.warning .kpi-icon {
-            background: linear-gradient(135deg, rgba(217, 119, 6, 0.2), rgba(245, 158, 11, 0.1));
-            color: var(--accent-warning);
-        }
-
-        .kpi-card.danger .kpi-icon {
-            background: linear-gradient(135deg, rgba(220, 38, 38, 0.2), rgba(239, 68, 68, 0.1));
-            color: var(--accent-danger);
-        }
-
-        .kpi-label {
-            font-size: 0.9rem;
-            color: var(--text-muted);
-            font-weight: 600;
-            margin-bottom: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-        }
-
-        .kpi-value {
-            font-size: 2.8rem;
-            font-weight: 900;
-            color: var(--text-primary);
-            line-height: 1;
-            margin-bottom: 0.5rem;
-            font-variant-numeric: tabular-nums;
-        }
-
-        .kpi-subtitle {
-            font-size: 1rem;
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-
-        .kpi-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-
-        .badge-pending {
-            background: rgba(217, 119, 6, 0.1);
-            color: var(--accent-warning);
-            border: 1px solid rgba(217, 119, 6, 0.2);
-        }
-
-        /* Content Sections */
-        .section-title {
-            font-size: 2rem;
-            font-weight: 800;
-            color: var(--text-primary);
-            margin-bottom: 2.5rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .section-icon {
-            width: 50px;
-            height: 50px;
-            background: var(--gradient-dark);
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-contrast);
-            font-size: 1.5rem;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .content-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
-
-        .content-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-light);
-            border-radius: 24px;
-            overflow: hidden;
-            box-shadow: var(--shadow-lg);
-            backdrop-filter: blur(10px);
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .content-card:hover {
-            transform: translateY(-8px);
-            box-shadow: var(--shadow-2xl);
-        }
-
-        .card-header {
-            background: var(--bg-accent);
-            padding: 2rem 2rem 1.5rem;
-            border-bottom: 1px solid var(--border-light);
-            position: relative;
-        }
-
-        .card-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: var(--gradient-primary);
-        }
-
-        .card-title {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .card-body {
-            padding: 2rem;
-        }
-
-        .view-all-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.75rem 1.5rem;
-            background: var(--bg-card);
-            color: var(--text-primary);
-            text-decoration: none;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-            border: 2px solid var(--border-light);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .view-all-btn:hover {
-            background: var(--accent-primary);
-            color: var(--text-contrast);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
-        }
-
-        /* List Items */
-        .list-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            padding: 1.5rem 0;
-            border-bottom: 1px solid var(--border-light);
-            transition: all 0.3s ease;
-        }
-
-        .list-item:hover {
-            background: var(--bg-accent);
-            margin: 0 -2rem;
-            padding: 1.5rem 2rem;
-            border-radius: 12px;
-            border-bottom: 1px solid transparent;
-        }
-
-        .list-item:last-child {
-            border-bottom: none;
-        }
-
-        .item-content h6 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 0.5rem;
-        }
-
-        .item-meta {
-            font-size: 0.9rem;
-            color: var(--text-muted);
-            margin-bottom: 0.25rem;
-        }
-
-        .item-description {
-            font-size: 0.95rem;
-            color: var(--text-secondary);
-            line-height: 1.4;
-        }
-
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .badge-completed {
-            background: rgba(5, 150, 105, 0.1);
-            color: var(--accent-success);
-            border: 1px solid rgba(5, 150, 105, 0.2);
-        }
-
-        .badge-overdue {
-            background: rgba(220, 38, 38, 0.1);
-            color: var(--accent-danger);
-            border: 1px solid rgba(220, 38, 38, 0.2);
-        }
-
-        .badge-pending {
-            background: rgba(217, 119, 6, 0.1);
-            color: var(--accent-warning);
-            border: 1px solid rgba(217, 119, 6, 0.2);
-        }
-
-        .badge-open {
-            background: rgba(220, 38, 38, 0.1);
-            color: var(--accent-danger);
-            border: 1px solid rgba(220, 38, 38, 0.2);
-        }
-
-        .badge-in-progress {
-            background: rgba(217, 119, 6, 0.1);
-            color: var(--accent-warning);
-            border: 1px solid rgba(217, 119, 6, 0.2);
-        }
-
-        .badge-closed {
-            background: rgba(5, 150, 105, 0.1);
-            color: var(--accent-success);
-            border: 1px solid rgba(5, 150, 105, 0.2);
-        }
-
-        .badge-active {
-            background: rgba(5, 150, 105, 0.1);
-            color: var(--accent-success);
-            border: 1px solid rgba(5, 150, 105, 0.2);
-        }
-
-        .badge-inactive {
-            background: rgba(107, 114, 128, 0.1);
-            color: var(--text-muted);
-            border: 1px solid rgba(107, 114, 128, 0.2);
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 3rem 2rem;
-            color: var(--text-muted);
-            font-style: italic;
-        }
-
-        /* Quick Actions */
-        .quick-actions {
-            background: var(--bg-card);
-            border: 1px solid var(--border-light);
-            border-radius: 24px;
-            padding: 2.5rem;
-            margin-top: 2rem;
-            box-shadow: var(--shadow-lg);
-            backdrop-filter: blur(10px);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .quick-actions::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 5px;
-            background: var(--gradient-primary);
-            border-radius: 24px 24px 0 0;
-        }
-
-        .actions-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-top: 2rem;
-        }
-
-        .action-btn {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1rem;
-            padding: 2rem;
-            background: var(--bg-accent);
-            color: var(--text-primary);
-            text-decoration: none;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 1rem;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border: 2px solid var(--border-light);
-            box-shadow: var(--shadow-md);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .action-btn:hover {
-            transform: translateY(-8px) scale(1.05);
-            box-shadow: var(--shadow-xl);
-            border-color: var(--accent-primary);
-            background: var(--accent-primary);
-            color: var(--text-contrast);
-        }
-
-        .action-icon {
-            font-size: 2.5rem;
-            opacity: 0.8;
-        }
-
-        .add-note-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.75rem;
-            padding: 1rem 2rem;
-            background: var(--gradient-primary);
-            color: var(--text-primary);
-            text-decoration: none;
-            border-radius: 16px;
-            font-weight: 600;
-            font-size: 1rem;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border: 2px solid transparent;
-            box-shadow: var(--shadow-md);
-            width: 100%;
-            margin-top: 1rem;
-        }
-
-        .add-note-btn:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-xl);
-            background: var(--accent-primary);
-            color: var(--text-contrast);
-        }
-
-        /* Animations */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(40px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-        }
-
-        .floating {
-            animation: float 6s ease-in-out infinite;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 1024px) {
-            .dashboard-container {
-                padding: 1.5rem;
-            }
-            
-            .kpi-grid,
-            .content-grid {
-                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-                gap: 1.5rem;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .dashboard-container {
-                padding: 1rem;
-            }
-            
-            .header-content {
-                flex-direction: column;
-                gap: 1rem;
-            }
-            
-            .nav-links {
-                flex-wrap: wrap;
-                justify-content: center;
-            }
-            
-            .dashboard-title {
-                font-size: 2rem;
-                text-align: center;
-            }
-            
-            .kpi-grid,
-            .content-grid {
-                grid-template-columns: 1fr;
-                gap: 1rem;
-            }
-            
-            .kpi-card,
-            .content-card {
-                padding: 1.5rem;
-            }
-            
-            .card-header,
-            .card-body {
-                padding: 1.5rem;
-            }
-            
-            .actions-grid {
-                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            }
-        }
-
-        @media (max-width: 480px) {
-            .dashboard-container {
-                padding: 0.75rem;
-            }
-            
-            .kpi-card,
-            .content-card,
-            .quick-actions {
-                padding: 1.25rem;
-            }
-            
-            .card-header,
-            .card-body {
-                padding: 1.25rem;
-            }
-        }
-
-        /* Focus states for accessibility */
-        .nav-link:focus,
-        .view-all-btn:focus,
-        .action-btn:focus,
-        .add-note-btn:focus {
-            outline: 3px solid var(--accent-primary);
-            outline-offset: 2px;
-        }
-    </style>
-</head>
-<body>
-    <div class="dashboard-container">
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Operations Executive Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --bs-primary: #1C64FF;
+    --bs-secondary: #696969;
+    --bs-light: #FFFFFF;
+    --bs-border-color: #D9D9D9;
+    --bs-info: #C3E4FF;
+}
+
+.dashboard-container {
+    background: #f8f9fa;
+    min-height: 100vh;
+    padding: 2rem 0;
+}
+
+.dashboard-header {
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+    color: #FFFFFF;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(28, 100, 255, 0.3);
+}
+
+.dashboard-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+    50% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+}
+
+.dashboard-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    position: relative;
+    z-index: 1;
+}
+
+.dashboard-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin-bottom: 1.5rem;
+    position: relative;
+    z-index: 1;
+}
+
+.header-actions {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-nav {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #FFFFFF;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    backdrop-filter: blur(10px);
+}
+
+.btn-nav:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    color: #FFFFFF;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+}
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.kpi-card {
+    background: #FFFFFF;
+    border: 1px solid #D9D9D9;
+    border-radius: 16px;
+    padding: 2rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    border-radius: 16px 16px 0 0;
+}
+
+.kpi-card.primary::before {
+    background: linear-gradient(90deg, #1C64FF, #1557e6);
+}
+
+.kpi-card.success::before {
+    background: linear-gradient(90deg, #198754, #157347);
+}
+
+.kpi-card.warning::before {
+    background: linear-gradient(90deg, #ffc107, #ffb300);
+}
+
+.kpi-card.danger::before {
+    background: linear-gradient(90deg, #dc3545, #c82333);
+}
+
+.kpi-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+.kpi-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+}
+
+.kpi-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: #FFFFFF;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.kpi-card.primary .kpi-icon {
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+}
+
+.kpi-card.success .kpi-icon {
+    background: linear-gradient(135deg, #198754, #157347);
+}
+
+.kpi-card.warning .kpi-icon {
+    background: linear-gradient(135deg, #ffc107, #ffb300);
+}
+
+.kpi-card.danger .kpi-icon {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+}
+
+.kpi-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-pending {
+    background: rgba(255, 193, 7, 0.1);
+    color: #856404;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.badge-overdue {
+    background: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+    border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+.badge-open {
+    background: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+    border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+.badge-active {
+    background: rgba(25, 135, 84, 0.1);
+    color: #198754;
+    border: 1px solid rgba(25, 135, 84, 0.3);
+}
+
+.kpi-label {
+    color: #696969;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.kpi-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #333333;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+.kpi-subtitle {
+    color: #696969;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #D9D9D9;
+    position: relative;
+}
+
+.section-header::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 60px;
+    height: 2px;
+    background: linear-gradient(90deg, #1C64FF, #1557e6);
+}
+
+.section-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #333333;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.section-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #FFFFFF;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.content-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.content-card {
+    background: #FFFFFF;
+    border: 1px solid #D9D9D9;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+}
+
+.content-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+.card-header {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    padding: 1.5rem;
+    border-bottom: 1px solid #D9D9D9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+}
+
+.card-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #1C64FF, #1557e6);
+}
+
+.card-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #333333;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.view-all-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: #FFFFFF;
+    color: #1C64FF;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    border: 1px solid #1C64FF;
+}
+
+.view-all-btn:hover {
+    background: #1C64FF;
+    color: #FFFFFF;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(28, 100, 255, 0.3);
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+.list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1rem 0;
+    border-bottom: 1px solid #D9D9D9;
+    transition: all 0.3s ease;
+}
+
+.list-item:hover {
+    background: rgba(28, 100, 255, 0.05);
+    margin: 0 -1.5rem;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    border-bottom: 1px solid transparent;
+}
+
+.list-item:last-child {
+    border-bottom: none;
+}
+
+.item-content h6 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333333;
+    margin-bottom: 0.5rem;
+}
+
+.item-meta {
+    font-size: 0.85rem;
+    color: #696969;
+    margin-bottom: 0.25rem;
+}
+
+.item-description {
+    font-size: 0.9rem;
+    color: #696969;
+    line-height: 1.4;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-completed {
+    background: rgba(25, 135, 84, 0.1);
+    color: #198754;
+    border: 1px solid rgba(25, 135, 84, 0.3);
+}
+
+.badge-in-progress {
+    background: rgba(255, 193, 7, 0.1);
+    color: #856404;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.badge-closed {
+    background: rgba(25, 135, 84, 0.1);
+    color: #198754;
+    border: 1px solid rgba(25, 135, 84, 0.3);
+}
+
+.badge-inactive {
+    background: rgba(105, 105, 105, 0.1);
+    color: #696969;
+    border: 1px solid rgba(105, 105, 105, 0.3);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: #696969;
+    font-style: italic;
+}
+
+.quick-actions {
+    background: #FFFFFF;
+    border: 1px solid #D9D9D9;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.quick-actions::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #1C64FF, #1557e6);
+    border-radius: 16px 16px 0 0;
+}
+
+.actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 2rem;
+    background: #f8f9fa;
+    color: #333333;
+    text-decoration: none;
+    border-radius: 16px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    border: 1px solid #D9D9D9;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.action-btn:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    border-color: #1C64FF;
+    background: #1C64FF;
+    color: #FFFFFF;
+}
+
+.action-icon {
+    font-size: 2rem;
+    opacity: 0.8;
+}
+
+.add-note-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1rem 2rem;
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+    color: #FFFFFF;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(28, 100, 255, 0.3);
+    width: 100%;
+    margin-top: 1rem;
+}
+
+.add-note-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(28, 100, 255, 0.4);
+    color: #FFFFFF;
+}
+
+.fade-in {
+    animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-up {
+    animation: slideUp 0.8s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 1rem 0;
+    }
+    
+    .dashboard-header {
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .dashboard-title {
+        font-size: 2rem;
+    }
+    
+    .kpi-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .content-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    
+    .actions-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+    
+    .header-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-title {
+        font-size: 1.75rem;
+    }
+
+    .kpi-card {
+        padding: 1.5rem;
+    }
+
+    .kpi-value {
+        font-size: 2rem;
+    }
+
+    .content-card {
+        margin: 0 -0.5rem;
+    }
+
+    .card-header,
+    .card-body {
+        padding: 1rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="container-fluid">
         <!-- Header Section -->
-        <div class="header-section">
-            <div class="header-content">
-                <div>
-                    <a href="{% url 'dashboard' %}" class="navbar-brand">
-                        <div class="brand-icon">⚡</div>
-                        <div>
-                            <div class="dashboard-title">Operations Hub</div>
-                            <div class="role-subtitle">CRM - Operations Executive</div>
-                        </div>
-                    </a>
-                </div>
-                <div class="nav-links">
-                    <a href="{% url 'notes_dashboard' %}" class="nav-link">
-                        📝 Notes
-                    </a>
-                    <a href="{% url 'logout' %}" class="nav-link">
-                        🚪 Logout
-                    </a>
-                </div>
+        <div class="dashboard-header fade-in">
+            <h1 class="dashboard-title">Operations Hub</h1>
+            <p class="dashboard-subtitle">CRM - Operations Executive Dashboard</p>
+            <div class="header-actions">
+                <a href="{% url 'notes_dashboard' %}" class="btn-nav">
+                    <i class="fas fa-sticky-note"></i> Notes
+                </a>
+                <a href="{% url 'logout' %}" class="btn-nav">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
             </div>
         </div>
 
         <!-- KPI Cards -->
-        <div class="kpi-grid">
-            <div class="kpi-card primary floating">
+        <div class="kpi-grid slide-up">
+            <div class="kpi-card primary">
                 <div class="kpi-header">
-                    <div class="kpi-icon">📋</div>
+                    <div class="kpi-icon">
+                        <i class="fas fa-tasks"></i>
+                    </div>
                     <div class="kpi-badge badge-pending">{{ pending_tasks }} pending</div>
                 </div>
                 <div class="kpi-label">My Tasks</div>
-                <div class="kpi-value">{{ my_tasks.count }}</div>
+                <div class="kpi-value">{{ my_tasks.count|default:0 }}</div>
                 <div class="kpi-subtitle">Active assignments</div>
             </div>
 
-            <div class="kpi-card warning floating">
+            <div class="kpi-card warning">
                 <div class="kpi-header">
-                    <div class="kpi-icon">⚠️</div>
+                    <div class="kpi-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
                     <div class="kpi-badge badge-overdue">Immediate</div>
                 </div>
                 <div class="kpi-label">Overdue</div>
-                <div class="kpi-value">{{ overdue_tasks }}</div>
+                <div class="kpi-value">{{ overdue_tasks|default:0 }}</div>
                 <div class="kpi-subtitle">Tasks past due date</div>
             </div>
 
-            <div class="kpi-card danger floating">
+            <div class="kpi-card danger">
                 <div class="kpi-header">
-                    <div class="kpi-icon">🎧</div>
+                    <div class="kpi-icon">
+                        <i class="fas fa-headset"></i>
+                    </div>
                     <div class="kpi-badge badge-open">Active</div>
                 </div>
                 <div class="kpi-label">Open Requests</div>
-                <div class="kpi-value">{{ open_requests }}</div>
+                <div class="kpi-value">{{ open_requests|default:0 }}</div>
                 <div class="kpi-subtitle">Service requests</div>
             </div>
 
-            <div class="kpi-card success floating">
+            <div class="kpi-card success">
                 <div class="kpi-header">
-                    <div class="kpi-icon">👥</div>
+                    <div class="kpi-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
                     <div class="kpi-badge badge-active">Active</div>
                 </div>
                 <div class="kpi-label">My Clients</div>
-                <div class="kpi-value">{{ my_client_profiles.count }}</div>
+                <div class="kpi-value">{{ my_client_profiles.count|default:0 }}</div>
                 <div class="kpi-subtitle">Client profiles</div>
             </div>
         </div>
 
         <!-- Recent Activities Section -->
-        <h2 class="section-title">
-            <div class="section-icon">📊</div>
-            Recent Activities
-        </h2>
+        <div class="section-header">
+            <h2 class="section-title">
+                <div class="section-icon"><i class="fas fa-chart-line"></i></div>
+                Recent Activities
+            </h2>
+        </div>
 
-        <div class="content-grid">
+        <div class="content-grid slide-up">
             <!-- Recent Tasks -->
             <div class="content-card">
                 <div class="card-header">
                     <div class="card-title">
-                        ✅ Recent Tasks
+                        <i class="fas fa-check-circle"></i> Recent Tasks
                     </div>
-                    <a href="{% url 'task_list' %}" class="view-all-btn">View All →</a>
+                    <a href="{% url 'task_list' %}" class="view-all-btn">
+                        View All <i class="fas fa-arrow-right"></i>
+                    </a>
                 </div>
                 <div class="card-body">
                     {% for task in recent_tasks %}
@@ -825,6 +714,9 @@
                     </div>
                     {% empty %}
                     <div class="empty-state">
+                        <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;">
+                            <i class="fas fa-tasks"></i>
+                        </div>
                         <p>No recent tasks</p>
                     </div>
                     {% endfor %}
@@ -835,9 +727,11 @@
             <div class="content-card">
                 <div class="card-header">
                     <div class="card-title">
-                        🎧 Recent Service Requests
+                        <i class="fas fa-headset"></i> Recent Service Requests
                     </div>
-                    <a href="{% url 'service_request_list' %}" class="view-all-btn">View All →</a>
+                    <a href="{% url 'service_request_list' %}" class="view-all-btn">
+                        View All <i class="fas fa-arrow-right"></i>
+                    </a>
                 </div>
                 <div class="card-body">
                     {% for request in recent_service_requests %}
@@ -854,6 +748,9 @@
                     </div>
                     {% empty %}
                     <div class="empty-state">
+                        <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;">
+                            <i class="fas fa-headset"></i>
+                        </div>
                         <p>No recent service requests</p>
                     </div>
                     {% endfor %}
@@ -862,14 +759,16 @@
         </div>
 
         <!-- Client Profiles and Notes Section -->
-        <div class="content-grid">
+        <div class="content-grid slide-up">
             <!-- Recent Client Profiles -->
             <div class="content-card">
                 <div class="card-header">
                     <div class="card-title">
-                        👥 Recent Client Profiles
+                        <i class="fas fa-user-friends"></i> Recent Client Profiles
                     </div>
-                    <a href="{% url 'client_profile_list' %}" class="view-all-btn">View All →</a>
+                    <a href="{% url 'client_profile_list' %}" class="view-all-btn">
+                        View All <i class="fas fa-arrow-right"></i>
+                    </a>
                 </div>
                 <div class="card-body">
                     {% for profile in recent_client_profiles %}
@@ -886,6 +785,9 @@
                     </div>
                     {% empty %}
                     <div class="empty-state">
+                        <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;">
+                            <i class="fas fa-user-friends"></i>
+                        </div>
                         <p>No recent client profiles</p>
                     </div>
                     {% endfor %}
@@ -896,9 +798,11 @@
             <div class="content-card">
                 <div class="card-header">
                     <div class="card-title">
-                        📝 My Notes
+                        <i class="fas fa-sticky-note"></i> My Notes
                     </div>
-                    <a href="{% url 'notes_dashboard' %}" class="view-all-btn">View All →</a>
+                    <a href="{% url 'notes_dashboard' %}" class="view-all-btn">
+                        View All <i class="fas fa-arrow-right"></i>
+                    </a>
                 </div>
                 <div class="card-body">
                     {% for note in recent_notes %}
@@ -911,50 +815,143 @@
                     </div>
                     {% empty %}
                     <div class="empty-state">
+                        <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;">
+                            <i class="fas fa-sticky-note"></i>
+                        </div>
                         <p>No recent notes</p>
                     </div>
                     {% endfor %}
                     <a href="{% url 'note_create' %}" class="add-note-btn">
-                        ➕ Add Note
+                        <i class="fas fa-plus"></i> Add Note
                     </a>
                 </div>
             </div>
         </div>
 
         <!-- Quick Actions -->
-        <div class="quick-actions">
-            <h2 class="section-title">
-                <div class="section-icon">⚡</div>
-                Quick Actions
-            </h2>
+        <div class="quick-actions slide-up">
+            <div class="section-header" style="border-bottom: none; padding-bottom: 0;">
+                <h2 class="section-title">
+                    <div class="section-icon"><i class="fas fa-bolt"></i></div>
+                    Quick Actions
+                </h2>
+            </div>
             
             <div class="actions-grid">
                 <a href="{% url 'task_list' %}" class="action-btn">
-                    <div class="action-icon">📋</div>
+                    <div class="action-icon"><i class="fas fa-tasks"></i></div>
                     <div>My Tasks</div>
                 </a>
                 <a href="{% url 'service_request_list' %}" class="action-btn">
-                    <div class="action-icon">🎧</div>
+                    <div class="action-icon"><i class="fas fa-headset"></i></div>
                     <div>Service Requests</div>
                 </a>
                 <a href="{% url 'client_profile_list' %}" class="action-btn">
-                    <div class="action-icon">👥</div>
+                    <div class="action-icon"><i class="fas fa-users"></i></div>
                     <div>Client Profiles</div>
                 </a>
                 <a href="{% url 'notes_dashboard' %}" class="action-btn">
-                    <div class="action-icon">📝</div>
+                    <div class="action-icon"><i class="fas fa-sticky-note"></i></div>
                     <div>Notes</div>
                 </a>
                 <a href="{% url 'note_create' %}" class="action-btn">
-                    <div class="action-icon">➕</div>
+                    <div class="action-icon"><i class="fas fa-plus"></i></div>
                     <div>Create Note</div>
                 </a>
                 <a href="{% url 'dashboard' %}" class="action-btn">
-                    <div class="action-icon">🏠</div>
+                    <div class="action-icon"><i class="fas fa-home"></i></div>
                     <div>Main Dashboard</div>
                 </a>
             </div>
         </div>
     </div>
-</body>
-</html>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animate KPI cards on load with staggered effect
+    const kpiCards = document.querySelectorAll('.kpi-card');
+    kpiCards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(30px)';
+        card.style.transition = 'all 0.6s ease';
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+
+    // Add hover effects to content cards
+    const contentCards = document.querySelectorAll('.content-card');
+    contentCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-4px) scale(1.02)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+        });
+    });
+
+    // Add click animations to action buttons
+    const actionButtons = document.querySelectorAll('.action-btn');
+    actionButtons.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            // Create ripple effect
+            const ripple = document.createElement('span');
+            const rect = this.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = e.clientX - rect.left - size / 2;
+            const y = e.clientY - rect.top - size / 2;
+            
+            ripple.style.cssText = `
+                position: absolute;
+                border-radius: 50%;
+                transform: scale(0);
+                animation: ripple 0.6s linear;
+                background-color: rgba(255, 255, 255, 0.3);
+                width: ${size}px;
+                height: ${size}px;
+                left: ${x}px;
+                top: ${y}px;
+                pointer-events: none;
+            `;
+            
+            this.style.position = 'relative';
+            this.style.overflow = 'hidden';
+            this.appendChild(ripple);
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
+        });
+    });
+
+    // Animate list items
+    const listItems = document.querySelectorAll('.list-item');
+    listItems.forEach((item, index) => {
+        item.style.opacity = '0';
+        item.style.transform = 'translateX(-20px)';
+        setTimeout(() => {
+            item.style.transition = 'all 0.5s ease';
+            item.style.opacity = '1';
+            item.style.transform = 'translateX(0)';
+        }, 50 * index);
+    });
+});
+
+// Add ripple animation keyframes
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes ripple {
+        to {
+            transform: scale(4);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

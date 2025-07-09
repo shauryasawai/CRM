@@ -1,268 +1,934 @@
+<!-- base/client_interaction_detail.html -->
 {% extends 'base/base.html' %}
 {% load static %}
 
-{% block title %}{{ client_profile.client_full_name }} - Client Profile{% endblock %}
+{% block title %}Interaction Details - {{ client_profile.client_full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --bs-primary: #1C64FF;
+    --bs-secondary: #696969;
+    --bs-light: #FFFFFF;
+    --bs-border-color: #D9D9D9;
+    --bs-info: #C3E4FF;
+}
+
+.detail-container {
+    background: #f8f9fa;
+    min-height: 100vh;
+    padding: 2rem 0;
+}
+
+.detail-card {
+    background: #FFFFFF;
+    border: 1px solid #D9D9D9;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    margin-bottom: 2rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.detail-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+.interaction-header {
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+    color: #FFFFFF;
+    padding: 2.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.interaction-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+    50% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+}
+
+.interaction-type-icon {
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.2);
+    color: #FFFFFF;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-right: 1.5rem;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.header-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.header-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin-bottom: 0;
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.btn-header {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #FFFFFF;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.btn-header:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    color: #FFFFFF;
+    transform: translateY(-1px);
+}
+
+.btn-header.danger {
+    background: rgba(220, 53, 69, 0.8);
+    border-color: rgba(220, 53, 69, 0.9);
+}
+
+.btn-header.danger:hover {
+    background: rgba(220, 53, 69, 1);
+    border-color: #dc3545;
+}
+
+.summary-section {
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border: 1px solid #D9D9D9;
+    border-radius: 12px;
+    padding: 2rem;
+    margin: 2rem;
+    transition: all 0.3s ease;
+}
+
+.summary-section:hover {
+    background: linear-gradient(135deg, rgba(28, 100, 255, 0.05) 0%, #ffffff 100%);
+    border-color: #1C64FF;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(28, 100, 255, 0.1);
+}
+
+.section-title {
+    color: #1C64FF;
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.interaction-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.badge-modern {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.badge-modern:hover {
+    transform: scale(1.05);
+}
+
+.badge-type {
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(28, 100, 255, 0.3);
+}
+
+.badge-priority-high {
+    background: linear-gradient(135deg, #dc3545, #bb2d3b);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+.badge-priority-urgent {
+    background: linear-gradient(135deg, #ff5722, #e64a19);
+    color: #FFFFFF;
+    animation: pulse 2s infinite;
+    box-shadow: 0 2px 8px rgba(255, 87, 34, 0.3);
+}
+
+.badge-priority-medium {
+    background: linear-gradient(135deg, #ffc107, #ffb300);
+    color: #000000;
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+}
+
+.badge-priority-low {
+    background: linear-gradient(135deg, #198754, #157347);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(25, 135, 84, 0.3);
+}
+
+.badge-follow-up {
+    background: linear-gradient(135deg, #ffc107, #ffb300);
+    color: #000000;
+    animation: pulse 2s infinite;
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: rgba(28, 100, 255, 0.05);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.info-item:hover {
+    background: rgba(28, 100, 255, 0.1);
+    transform: translateX(4px);
+}
+
+.info-item i {
+    color: #1C64FF;
+    width: 20px;
+    text-align: center;
+    margin-right: 0.75rem;
+}
+
+.info-item strong {
+    color: #333333;
+    margin-right: 0.5rem;
+}
+
+.creator-card {
+    background: rgba(28, 100, 255, 0.05);
+    border: 1px solid rgba(28, 100, 255, 0.2);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.creator-card:hover {
+    background: rgba(28, 100, 255, 0.1);
+    border-color: rgba(28, 100, 255, 0.3);
+}
+
+.creator-avatar {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+    color: #FFFFFF;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(28, 100, 255, 0.3);
+}
+
+.creator-info {
+    margin-left: 1rem;
+}
+
+.creator-name {
+    font-weight: 700;
+    color: #1C64FF;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+}
+
+.creator-time {
+    color: #696969;
+    font-size: 0.875rem;
+}
+
+.timestamp-card {
+    background: rgba(195, 228, 255, 0.3);
+    border: 1px solid #C3E4FF;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.timestamp-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.timestamp-item:last-child {
+    margin-bottom: 0;
+}
+
+.timestamp-item i {
+    color: #1C64FF;
+    width: 16px;
+    margin-right: 0.5rem;
+}
+
+.notes-section {
+    background: #FFFFFF;
+    border: 2px solid #D9D9D9;
+    border-radius: 12px;
+    padding: 2rem;
+    margin: 2rem;
+    min-height: 200px;
+    font-size: 1rem;
+    line-height: 1.7;
+    color: #333333;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.notes-section:hover {
+    border-color: #1C64FF;
+    box-shadow: 0 0 0 0.2rem rgba(28, 100, 255, 0.1);
+}
+
+.notes-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #1C64FF, #1557e6);
+    border-radius: 12px 12px 0 0;
+}
+
+.empty-notes {
+    text-align: center;
+    padding: 2rem;
+    color: #696969;
+}
+
+.empty-notes i {
+    font-size: 3rem;
+    opacity: 0.3;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.alert-modern {
+    border: none;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 2rem;
+    font-weight: 500;
+    position: relative;
+    overflow: hidden;
+}
+
+.alert-modern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+}
+
+.alert-info {
+    background: rgba(28, 100, 255, 0.1);
+    color: #1C64FF;
+}
+
+.alert-info::before {
+    background: linear-gradient(90deg, #1C64FF, #1557e6);
+}
+
+.alert-warning {
+    background: rgba(255, 193, 7, 0.1);
+    color: #856404;
+}
+
+.alert-warning::before {
+    background: linear-gradient(90deg, #ffc107, #ffb300);
+}
+
+.sidebar-card {
+    background: #FFFFFF;
+    border: 1px solid #D9D9D9;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.sidebar-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+.sidebar-header {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    color: #1C64FF;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #D9D9D9;
+    font-weight: 600;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.client-avatar-large {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+    color: #FFFFFF;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 auto 1rem auto;
+    box-shadow: 0 4px 12px rgba(28, 100, 255, 0.3);
+}
+
+.client-name {
+    color: #1C64FF;
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+}
+
+.client-id {
+    color: #696969;
+    font-size: 0.875rem;
+    margin-bottom: 1.5rem;
+}
+
+.client-detail-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+}
+
+.client-detail-item i {
+    color: #1C64FF;
+    width: 20px;
+    margin-right: 0.75rem;
+}
+
+.client-detail-item strong {
+    color: #333333;
+    margin-right: 0.5rem;
+}
+
+.quick-actions {
+    padding: 1.5rem;
+}
+
+.action-btn {
+    width: 100%;
+    margin-bottom: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.action-btn:hover {
+    transform: translateX(4px);
+}
+
+.btn-outline-primary {
+    color: #1C64FF;
+    border-color: #1C64FF;
+}
+
+.btn-outline-primary:hover {
+    background-color: #1C64FF;
+    border-color: #1C64FF;
+    color: #FFFFFF;
+}
+
+.btn-outline-secondary {
+    color: #696969;
+    border-color: #696969;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #696969;
+    border-color: #696969;
+    color: #FFFFFF;
+}
+
+.btn-outline-success {
+    color: #198754;
+    border-color: #198754;
+}
+
+.btn-outline-success:hover {
+    background-color: #198754;
+    border-color: #198754;
+    color: #FFFFFF;
+}
+
+.stats-section {
+    padding: 1.5rem;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 1rem;
+    background: rgba(28, 100, 255, 0.05);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.stat-item:hover {
+    background: rgba(28, 100, 255, 0.1);
+    transform: translateY(-2px);
+}
+
+.stat-number {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.stat-number.primary {
+    color: #1C64FF;
+}
+
+.stat-number.success {
+    color: #198754;
+}
+
+.stat-label {
+    color: #696969;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.fade-in {
+    animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-in {
+    animation: slideIn 0.6s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .detail-container {
+        padding: 1rem 0;
+    }
+    
+    .interaction-header {
+        padding: 2rem 1.5rem;
+    }
+    
+    .header-title {
+        font-size: 1.5rem;
+    }
+    
+    .header-actions {
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    
+    .summary-section,
+    .notes-section,
+    .alert-modern {
+        margin: 1rem;
+        padding: 1.5rem;
+    }
+    
+    .interaction-badges {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .info-item {
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+    }
+    
+    .creator-card {
+        text-align: center;
+    }
+    
+    .creator-info {
+        margin-left: 0;
+        margin-top: 1rem;
+    }
+    
+    .quick-actions {
+        padding: 1rem;
+    }
+    
+    .stats-section {
+        padding: 1rem;
+    }
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <!-- Profile Header -->
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h3 class="card-title">
-                        {{ client_profile.client_full_name }}
-                        {% if client_profile.status == 'active' %}
-                            <span class="badge badge-success ml-2">Active</span>
-                        {% elif client_profile.status == 'muted' %}
-                            <span class="badge badge-warning ml-2">Muted</span>
-                        {% endif %}
-                    </h3>
-                    <div class="btn-group">
-                        {% if can_modify %}
-                            <a href="{% url 'client_profile_update' client_profile.pk %}" class="btn btn-warning">
-                                <i class="fas fa-edit"></i> Edit Profile
-                            </a>
-                        {% endif %}
-                        {% if can_mute %}
-                            <a href="{% url 'client_profile_mute' client_profile.pk %}" class="btn btn-secondary">
-                                <i class="fas fa-volume-mute"></i> 
-                                {% if client_profile.status == 'muted' %}Unmute{% else %}Mute{% endif %}
-                            </a>
-                        {% endif %}
-                        <a href="{% url 'client_profile_list' %}" class="btn btn-primary">
-                            <i class="fas fa-arrow-left"></i> Back to List
+<div class="detail-container">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card detail-card fade-in">
+                    <!-- Interaction Header -->
+                    <div class="interaction-header">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="d-flex align-items-center">
+                                <div class="interaction-type-icon">
+                                    <i class="fas fa-comments"></i>
+                                </div>
+                                <div>
+                                    <h1 class="header-title">Interaction Details</h1>
+                                    <p class="header-subtitle">{{ client_profile.client_full_name }}</p>
+                                </div>
+                            </div>
+                            <div class="header-actions">
+                                {% if can_edit %}
+                                    <a href="{% url 'client_interaction_update' client_profile.id interaction.id %}" 
+                                       class="btn btn-header">
+                                        <i class="fas fa-edit me-1"></i>Edit
+                                    </a>
+                                    <a href="{% url 'client_interaction_delete' client_profile.id interaction.id %}" 
+                                       class="btn btn-header danger">
+                                        <i class="fas fa-trash me-1"></i>Delete
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Interaction Summary -->
+                    <div class="summary-section slide-in">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="section-title">
+                                    <i class="fas fa-info-circle"></i>
+                                    Interaction Summary
+                                </h6>
+                                <div class="interaction-badges">
+                                    <span class="badge-modern badge-type">
+                                        <i class="fas fa-comments"></i>
+                                        {{ interaction.get_interaction_type_display }}
+                                    </span>
+                                    <span class="badge-modern badge-priority-{{ interaction.priority }}">
+                                        <i class="fas fa-flag"></i>
+                                        {{ interaction.get_priority_display }}
+                                    </span>
+                                    {% if interaction.follow_up_required %}
+                                        <span class="badge-modern badge-follow-up">
+                                            <i class="fas fa-bell"></i>
+                                            Follow-up Required
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                <div class="info-items">
+                                    <div class="info-item">
+                                        <i class="fas fa-calendar-alt"></i>
+                                        <strong>Date & Time:</strong>
+                                        <span>{{ interaction.interaction_date|date:"M d, Y H:i" }}</span>
+                                    </div>
+                                    {% if interaction.duration_minutes %}
+                                        <div class="info-item">
+                                            <i class="fas fa-clock"></i>
+                                            <strong>Duration:</strong>
+                                            <span>{{ interaction.duration_minutes }} minutes</span>
+                                        </div>
+                                    {% endif %}
+                                    {% if interaction.follow_up_date %}
+                                        <div class="info-item">
+                                            <i class="fas fa-calendar-check"></i>
+                                            <strong>Follow-up Date:</strong>
+                                            <span>{{ interaction.follow_up_date|date:"M d, Y" }}</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="section-title">
+                                    <i class="fas fa-user"></i>
+                                    Created By
+                                </h6>
+                                <div class="creator-card">
+                                    <div class="d-flex align-items-center">
+                                        <div class="creator-avatar">
+                                            {{ interaction.created_by.get_full_name|first|default:interaction.created_by.username|first }}
+                                        </div>
+                                        <div class="creator-info">
+                                            <div class="creator-name">{{ interaction.created_by.get_full_name|default:interaction.created_by.username }}</div>
+                                            <div class="creator-time">{{ interaction.get_time_since_creation }} ago</div>
+                                        </div>
+                                    </div>
+                                    <div class="timestamp-card">
+                                        <div class="timestamp-item">
+                                            <i class="fas fa-plus-circle"></i>
+                                            <strong>Created:</strong> {{ interaction.created_at|date:"M d, Y H:i" }}
+                                        </div>
+                                        {% if interaction.updated_at != interaction.created_at %}
+                                            <div class="timestamp-item">
+                                                <i class="fas fa-edit"></i>
+                                                <strong>Updated:</strong> {{ interaction.updated_at|date:"M d, Y H:i" }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes Section -->
+                    <div>
+                        <h6 class="section-title" style="margin: 0 2rem;">
+                            <i class="fas fa-sticky-note"></i>
+                            Interaction Notes
+                        </h6>
+                        <div class="notes-section">
+                            {% if interaction.notes %}
+                                {{ interaction.notes|linebreaks }}
+                            {% else %}
+                                <div class="empty-notes">
+                                    <i class="fas fa-file-alt"></i>
+                                    <p class="mb-0">No notes provided for this interaction</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Edit Status -->
+                    {% if can_edit %}
+                        <div class="alert-modern alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Editable:</strong> This interaction can be edited or deleted within 24 hours of creation.
+                        </div>
+                    {% else %}
+                        <div class="alert-modern alert-warning">
+                            <i class="fas fa-lock me-2"></i>
+                            <strong>Read-only:</strong> This interaction is read-only. Interactions can only be edited within 24 hours of creation and only by the creator.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Client Info -->
+                <div class="card sidebar-card fade-in">
+                    <div class="sidebar-header">
+                        <i class="fas fa-user-circle"></i>
+                        Client Information
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="client-avatar-large">
+                            {{ client_profile.client_full_name|first }}
+                        </div>
+                        <div class="client-name">{{ client_profile.client_full_name }}</div>
+                        <div class="client-id">{{ client_profile.client_id }}</div>
+                        
+                        <div class="client-details text-start">
+                            <div class="client-detail-item">
+                                <i class="fas fa-id-card"></i>
+                                <strong>PAN:</strong> {{ client_profile.pan_number|default:"Not provided" }}
+                            </div>
+                            <div class="client-detail-item">
+                                <i class="fas fa-envelope"></i>
+                                <strong>Email:</strong> {{ client_profile.email|default:"Not provided" }}
+                            </div>
+                            <div class="client-detail-item">
+                                <i class="fas fa-phone"></i>
+                                <strong>Mobile:</strong> {{ client_profile.mobile_number|default:"Not provided" }}
+                            </div>
+                            <div class="client-detail-item">
+                                <i class="fas fa-user-tie"></i>
+                                <strong>RM:</strong> {{ client_profile.mapped_rm|default:"Not assigned" }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer" style="background: #f8f9fa; padding: 1rem 1.5rem;">
+                        <a href="{% url 'client_profile_detail' client_profile.id %}" 
+                           class="btn btn-outline-primary w-100">
+                            <i class="fas fa-user me-2"></i>View Full Profile
                         </a>
                     </div>
                 </div>
-            </div>
 
-            <div class="row">
-                <!-- Client Information -->
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4 class="card-title">Personal Information</h4>
-                        </div>
-                        <div class="card-body">
-                            <table class="table table-borderless">
-                                <tr>
-                                    <td><strong>Full Name:</strong></td>
-                                    <td>{{ client_profile.client_full_name }}</td>
-                                </tr>
-                                {% if client_profile.family_head_name %}
-                                <tr>
-                                    <td><strong>Family Head:</strong></td>
-                                    <td>{{ client_profile.family_head_name }}</td>
-                                </tr>
-                                {% endif %}
-                                {% if client_profile.date_of_birth %}
-                                <tr>
-                                    <td><strong>Date of Birth:</strong></td>
-                                    <td>{{ client_profile.date_of_birth|date:"F d, Y" }}</td>
-                                </tr>
-                                {% endif %}
-                                {% if client_profile.pan_number %}
-                                <tr>
-                                    <td><strong>PAN Number:</strong></td>
-                                    <td>{{ client_profile.pan_number }}</td>
-                                </tr>
-                                {% endif %}
-                                {% if client_profile.address_kyc %}
-                                <tr>
-                                    <td><strong>KYC Address:</strong></td>
-                                    <td>{{ client_profile.address_kyc|linebreaks }}</td>
-                                </tr>
-                                {% endif %}
-                            </table>
-                        </div>
+                <!-- Quick Actions -->
+                <div class="card sidebar-card slide-in">
+                    <div class="sidebar-header">
+                        <i class="fas fa-bolt"></i>
+                        Quick Actions
+                    </div>
+                    <div class="quick-actions">
+                        <a href="{% url 'client_interaction_list' client_profile.id %}" 
+                           class="btn btn-outline-secondary action-btn">
+                            <i class="fas fa-list"></i>All Interactions
+                        </a>
+                        {% if request.user.role == 'rm' and client_profile.mapped_rm == request.user %}
+                            <a href="{% url 'client_interaction_create' client_profile.id %}" 
+                               class="btn btn-outline-primary action-btn">
+                                <i class="fas fa-plus"></i>New Interaction
+                            </a>
+                        {% endif %}
+                        <a href="{% url 'client_profile_detail' client_profile.id %}" 
+                           class="btn btn-outline-success action-btn">
+                            <i class="fas fa-arrow-left"></i>Back to Profile
+                        </a>
                     </div>
                 </div>
 
-                <!-- Contact & Assignment Information -->
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4 class="card-title">Contact & Assignment</h4>
-                        </div>
-                        <div class="card-body">
-                            <table class="table table-borderless">
-                                {% if client_profile.email %}
-                                <tr>
-                                    <td><strong>Email:</strong></td>
-                                    <td>
-                                        <a href="mailto:{{ client_profile.email }}">{{ client_profile.email }}</a>
-                                    </td>
-                                </tr>
-                                {% endif %}
-                                {% if client_profile.mobile_number %}
-                                <tr>
-                                    <td><strong>Mobile:</strong></td>
-                                    <td>
-                                        <a href="tel:{{ client_profile.mobile_number }}">{{ client_profile.mobile_number }}</a>
-                                    </td>
-                                </tr>
-                                {% endif %}
-                                <tr>
-                                    <td><strong>Relationship Manager:</strong></td>
-                                    <td>
-                                        {% if client_profile.mapped_rm %}
-                                            {{ client_profile.mapped_rm.get_full_name }}
-                                        {% else %}
-                                            <span class="text-muted">Not Assigned</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Operations Executive:</strong></td>
-                                    <td>
-                                        {% if client_profile.mapped_ops_exec %}
-                                            {{ client_profile.mapped_ops_exec.get_full_name }}
-                                        {% else %}
-                                            <span class="text-muted">Not Assigned</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% if client_profile.first_investment_date %}
-                                <tr>
-                                    <td><strong>First Investment:</strong></td>
-                                    <td>{{ client_profile.first_investment_date|date:"F d, Y" }}</td>
-                                </tr>
-                                {% endif %}
-                                <tr>
-                                    <td><strong>Created:</strong></td>
-                                    <td>{{ client_profile.created_at|date:"F d, Y H:i" }}</td>
-                                </tr>
-                            </table>
-                        </div>
+                <!-- Interaction Stats -->
+                <div class="card sidebar-card slide-in">
+                    <div class="sidebar-header">
+                        <i class="fas fa-chart-bar"></i>
+                        Interaction Stats
                     </div>
-                </div>
-            </div>
-
-            <!-- Accounts Information -->
-            <div class="row">
-                {% if mfu_accounts %}
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4 class="card-title">MFU Accounts</h4>
-                        </div>
-                        <div class="card-body">
-                            {% for account in mfu_accounts %}
-                            <div class="mb-2">
-                                <strong>{{ account.account_number }}</strong>
-                                {% if account.status %}
-                                    <span class="badge badge-success">{{ account.status|title }}</span>
-                                {% endif %}
+                    <div class="stats-section">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="stat-item">
+                                    <div class="stat-number primary">{{ client_profile.interactions.count }}</div>
+                                    <div class="stat-label">Total</div>
+                                </div>
                             </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-
-                {% if motilal_accounts %}
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4 class="card-title">Motilal Accounts</h4>
-                        </div>
-                        <div class="card-body">
-                            {% for account in motilal_accounts %}
-                            <div class="mb-2">
-                                <strong>{{ account.account_number }}</strong>
-                                {% if account.status %}
-                                    <span class="badge badge-success">{{ account.status|title }}</span>
-                                {% endif %}
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-
-                {% if prabhudas_accounts %}
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4 class="card-title">Prabhudas Accounts</h4>
-                        </div>
-                        <div class="card-body">
-                            {% for account in prabhudas_accounts %}
-                            <div class="mb-2">
-                                <strong>{{ account.account_number }}</strong>
-                                {% if account.status %}
-                                    <span class="badge badge-success">{{ account.status|title }}</span>
-                                {% endif %}
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-
-            <!-- Modification History -->
-            {% if modifications %}
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h4 class="card-title">Recent Modifications</h4>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-striped">
-                                    <thead>
-                                        <tr>
-                                            <th>Requested By</th>
-                                            <th>Modification Type</th>
-                                            <th>Status</th>
-                                            <th>Requested Date</th>
-                                            <th>Approved By</th>
-                                            <th>Approved Date</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for modification in modifications %}
-                                        <tr>
-                                            <td>{{ modification.requested_by.get_full_name }}</td>
-                                            <td>{{ modification.reason }}</td>
-                                            <td>
-                                                {% if modification.status == 'approved' %}
-                                                    <span class="badge badge-success">Approved</span>
-                                                {% elif modification.status == 'rejected' %}
-                                                    <span class="badge badge-danger">Rejected</span>
-                                                {% else %}
-                                                    <span class="badge badge-warning">Pending</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>{{ modification.requested_at|date:"M d, Y H:i" }}</td>
-                                            <td>
-                                                {% if modification.approved_by %}
-                                                    {{ modification.approved_by.get_full_name }}
-                                                {% else %}
-                                                    -
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                {% if modification.approved_at %}
-                                                    {{ modification.approved_at|date:"M d, Y H:i" }}
-                                                {% else %}
-                                                    -
-                                                {% endif %}
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
+                            <div class="col-6">
+                                <div class="stat-item">
+                                    <div class="stat-number success">{{ client_profile.interactions.filter(follow_up_required=True).count }}</div>
+                                    <div class="stat-label">Follow-ups</div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            {% endif %}
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add animation delays to cards
+    const fadeElements = document.querySelectorAll('.fade-in');
+    const slideElements = document.querySelectorAll('.slide-in');
+    
+    fadeElements.forEach((element, index) => {
+        element.style.animationDelay = `${index * 0.1}s`;
+    });
+    
+    slideElements.forEach((element, index) => {
+        element.style.animationDelay = `${(index + fadeElements.length) * 0.1}s`;
+    });
+
+    // Add hover effects to action buttons
+    const actionButtons = document.querySelectorAll('.action-btn');
+    actionButtons.forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateX(4px)';
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateX(0)';
+        });
+    });
+
+    // Add confirmation for delete action
+    const deleteButton = document.querySelector('a[href*="delete"]');
+    if (deleteButton) {
+        deleteButton.addEventListener('click', function(e) {
+            if (!confirm('Are you sure you want to delete this interaction? This action cannot be undone.')) {
+                e.preventDefault();
+            }
+        });
+    }
+
+    // Add smooth scrolling for internal links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

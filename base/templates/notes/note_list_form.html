@@ -8,139 +8,88 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-            --danger-gradient: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
-            --info-gradient: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-            --dark-bg: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            --glass-bg: rgba(255, 255, 255, 0.1);
-            --glass-border: rgba(255, 255, 255, 0.2);
-            --text-light: #e2e8f0;
-            --card-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
-        }
-
-        * {
-            box-sizing: border-box;
+            --primary-color: #1C64FF;
+            --secondary-text: #696969;
+            --background: #FFFFFF;
+            --border-muted: #D9D9D9;
+            --highlight-accent: #C3E4FF;
+            --primary-hover: #1557E6;
+            --text-dark: #2C3E50;
+            --success-color: #28A745;
+            --warning-color: #FFC107;
+            --danger-color: #DC3545;
+            --light-bg: #F8F9FA;
+            --info-color: #17A2B8;
         }
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--dark-bg);
+            background-color: var(--light-bg);
+            color: var(--text-dark);
+            line-height: 1.6;
             min-height: 100vh;
-            margin: 0;
-            padding: 0;
-            color: var(--text-light);
-            overflow-x: hidden;
         }
 
-        /* Animated background particles */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1" fill="rgba(255,255,255,0.08)"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
-            animation: float 25s ease-in-out infinite;
-            pointer-events: none;
-            z-index: -1;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-20px) rotate(180deg); }
-        }
-
-        .form-container {
-            padding: 2rem 0;
-            min-height: 100vh;
-            animation: fadeInUp 0.8s ease-out;
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
+        /* Modern Navbar */
         .modern-navbar {
-            background: var(--glass-bg) !important;
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--glass-border);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            margin-bottom: 3rem;
+            background-color: var(--background) !important;
+            border-bottom: 2px solid var(--border-muted);
+            box-shadow: 0 2px 10px rgba(28, 100, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
         }
 
         .modern-navbar .navbar-brand {
-            font-weight: 800;
+            font-weight: 700;
             font-size: 1.5rem;
-            background: var(--primary-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            color: var(--primary-color) !important;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .modern-navbar .nav-link {
-            color: var(--text-light) !important;
-            font-weight: 600;
-            padding: 0.75rem 1.5rem !important;
-            border-radius: 50px;
+            color: var(--secondary-text) !important;
+            font-weight: 500;
+            padding: 0.5rem 1rem !important;
+            border-radius: 8px;
             transition: all 0.3s ease;
             margin: 0 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .modern-navbar .nav-link:hover {
-            background: var(--glass-bg);
-            color: white !important;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            background-color: var(--highlight-accent);
+            color: var(--primary-color) !important;
         }
 
+        /* Form Container */
+        .form-container {
+            padding: 2rem 0;
+        }
+
+        /* Modern Card */
         .modern-card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 24px;
-            box-shadow: var(--card-shadow);
-            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            background: var(--background);
+            border: 2px solid var(--border-muted);
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(28, 100, 255, 0.1);
+            transition: all 0.3s ease;
             overflow: hidden;
-            position: relative;
             margin-bottom: 2rem;
-            animation: slideInUp 0.8s ease-out;
-        }
-
-        @keyframes slideInUp {
-            from {
-                opacity: 0;
-                transform: translateY(50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
 
         .modern-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 35px 70px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 12px 40px rgba(28, 100, 255, 0.15);
+            border-color: var(--primary-color);
         }
 
         .form-header {
-            background: var(--primary-gradient);
-            padding: 3rem 2rem 2rem;
-            color: white;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+            color: var(--background);
+            padding: 2.5rem;
             position: relative;
             overflow: hidden;
         }
@@ -149,24 +98,27 @@
             content: '';
             position: absolute;
             top: 0;
-            left: 0;
             right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid2" width="15" height="15" patternUnits="userSpaceOnUse"><path d="M 15 0 L 0 0 0 15" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid2)"/></svg>');
-            opacity: 0.3;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            transform: translate(40px, -40px);
         }
 
         .form-header h4 {
-            font-size: 2rem;
-            font-weight: 900;
-            margin-bottom: 0.5rem;
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
             position: relative;
             z-index: 1;
-            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
         }
 
         .form-header p {
-            font-size: 1.1rem;
+            font-size: 1rem;
             margin: 0;
             position: relative;
             z-index: 1;
@@ -174,69 +126,58 @@
         }
 
         .modern-card-body {
-            padding: 3rem;
-            color: rgba(255, 255, 255, 0.9);
+            padding: 2.5rem;
         }
 
+        /* Form Groups */
         .modern-form-group {
-            margin-bottom: 2.5rem;
+            margin-bottom: 2rem;
             position: relative;
         }
 
         .modern-form-label {
-            color: white;
-            font-weight: 700;
+            color: var(--text-dark);
+            font-weight: 600;
             margin-bottom: 0.75rem;
-            display: block;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
             font-size: 1rem;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .modern-form-label i {
+            color: var(--primary-color);
+            font-size: 1.1rem;
         }
 
         .required-asterisk {
-            color: #ff9a9e;
-            font-weight: 800;
+            color: var(--danger-color);
+            font-weight: 700;
             margin-left: 0.25rem;
         }
 
-        .icon-input {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-
-        .icon-input i {
-            position: absolute;
-            left: 1.25rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #667eea;
-            font-size: 1.1rem;
-            z-index: 2;
-        }
-
+        /* Form Controls */
         .modern-input, .modern-textarea {
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-radius: 16px;
-            color: white;
-            padding: 1rem 1.5rem 1rem 3rem;
+            background: var(--background);
+            border: 2px solid var(--border-muted);
+            border-radius: 12px;
+            color: var(--text-dark);
+            padding: 1rem 1.25rem;
             font-size: 1rem;
-            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
             width: 100%;
-            position: relative;
         }
 
         .modern-input:focus, .modern-textarea:focus {
             outline: none;
-            background: rgba(255, 255, 255, 0.15);
-            border-color: #667eea;
-            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+            background: var(--background);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(28, 100, 255, 0.1);
             transform: translateY(-2px);
         }
 
         .modern-input::placeholder, .modern-textarea::placeholder {
-            color: rgba(255, 255, 255, 0.6);
+            color: var(--secondary-text);
         }
 
         .modern-textarea {
@@ -246,23 +187,24 @@
             line-height: 1.6;
         }
 
+        /* Character Counter */
         .character-counter {
             position: absolute;
             bottom: -1.5rem;
             right: 0;
-            background: rgba(0, 0, 0, 0.5);
-            color: rgba(255, 255, 255, 0.8);
+            background: var(--light-bg);
+            color: var(--secondary-text);
             padding: 0.25rem 0.75rem;
-            border-radius: 50px;
+            border-radius: 20px;
             font-size: 0.8rem;
-            font-weight: 600;
-            backdrop-filter: blur(10px);
+            font-weight: 500;
+            border: 1px solid var(--border-muted);
             transition: all 0.3s ease;
         }
 
         .character-counter.warning {
-            background: var(--warning-gradient);
-            color: white;
+            background: var(--warning-color);
+            color: var(--text-dark);
             animation: pulse 1s ease-in-out infinite;
         }
 
@@ -271,66 +213,65 @@
             50% { transform: scale(1.05); }
         }
 
+        /* Suggestions */
         .suggestions {
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
+            background: var(--background);
+            border: 2px solid var(--border-muted);
             border-radius: 16px;
             padding: 1.5rem;
             margin-top: 1rem;
-            animation: slideInDown 0.5s ease-out;
+            box-shadow: 0 4px 20px rgba(28, 100, 255, 0.08);
+            transition: all 0.3s ease;
         }
 
-        @keyframes slideInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .suggestions:hover {
+            box-shadow: 0 8px 30px rgba(28, 100, 255, 0.15);
+            border-color: var(--primary-color);
         }
 
         .suggestions h6 {
-            color: white;
-            font-weight: 700;
+            color: var(--text-dark);
+            font-weight: 600;
             margin-bottom: 1rem;
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
 
+        .suggestions h6 i {
+            color: var(--primary-color);
+        }
+
         .suggestion-item {
             cursor: pointer;
-            padding: 0.75rem 1rem;
+            padding: 0.875rem 1rem;
             border-radius: 12px;
             transition: all 0.3s ease;
-            color: rgba(255, 255, 255, 0.8);
+            color: var(--text-dark);
             margin-bottom: 0.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid var(--border-muted);
+            background: var(--light-bg);
             display: flex;
             align-items: center;
             gap: 0.75rem;
         }
 
         .suggestion-item:hover {
-            background: rgba(255, 255, 255, 0.15);
-            color: white;
-            transform: translateX(5px);
-            border-color: rgba(102, 126, 234, 0.5);
+            background: var(--highlight-accent);
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
         }
 
         .suggestion-item i {
-            color: #4facfe;
+            color: var(--primary-color);
             width: 20px;
             text-align: center;
         }
 
+        /* Invalid Feedback */
         .invalid-feedback {
-            color: #ff9a9e;
-            font-weight: 600;
+            color: var(--danger-color);
+            font-weight: 500;
             margin-top: 0.5rem;
             display: flex;
             align-items: center;
@@ -343,84 +284,80 @@
             font-weight: 900;
         }
 
+        /* Modern Buttons */
         .modern-btn {
-            padding: 1rem 2rem;
-            border-radius: 50px;
-            font-weight: 700;
+            padding: 0.875rem 1.75rem;
+            border-radius: 8px;
+            font-weight: 500;
             font-size: 0.95rem;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 0.75rem;
-            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            border: 2px solid;
-            position: relative;
-            overflow: hidden;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
             cursor: pointer;
         }
 
-        .modern-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-            transition: left 0.6s;
-        }
-
-        .modern-btn:hover::before {
-            left: 100%;
-        }
-
         .modern-btn:hover {
-            transform: translateY(-3px) scale(1.05);
             text-decoration: none;
+            transform: translateY(-2px);
+        }
+
+        .modern-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
         }
 
         .btn-primary {
-            background: var(--primary-gradient);
-            border-color: rgba(102, 126, 234, 0.5);
-            color: white;
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: var(--background);
         }
 
         .btn-primary:hover {
-            box-shadow: 0 12px 35px rgba(102, 126, 234, 0.6);
-            color: white;
+            background-color: var(--primary-hover);
+            border-color: var(--primary-hover);
+            color: var(--background);
+            box-shadow: 0 4px 15px rgba(28, 100, 255, 0.3);
         }
 
         .btn-outline-secondary {
-            background: transparent;
-            border-color: rgba(255, 255, 255, 0.3);
-            color: rgba(255, 255, 255, 0.9);
+            background-color: transparent;
+            border-color: var(--border-muted);
+            color: var(--secondary-text);
         }
 
         .btn-outline-secondary:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.5);
-            color: white;
-            box-shadow: 0 8px 25px rgba(255, 255, 255, 0.2);
+            background-color: var(--light-bg);
+            border-color: var(--secondary-text);
+            color: var(--text-dark);
         }
 
+        /* Tips Card */
         .tips-card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 24px;
-            box-shadow: var(--card-shadow);
+            background: var(--background);
+            border: 2px solid var(--border-muted);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(28, 100, 255, 0.08);
+            transition: all 0.3s ease;
             overflow: hidden;
-            animation: slideInUp 0.8s ease-out 0.3s both;
+        }
+
+        .tips-card:hover {
+            box-shadow: 0 8px 30px rgba(28, 100, 255, 0.15);
+            border-color: var(--primary-color);
         }
 
         .tips-header {
-            background: var(--info-gradient);
+            background: linear-gradient(135deg, var(--info-color) 0%, #138496 100%);
+            color: var(--background);
             padding: 1.5rem 2rem;
-            color: white;
-            font-weight: 700;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
         }
 
         .tips-body {
@@ -428,38 +365,96 @@
         }
 
         .tip-item {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
+            background-color: var(--light-bg);
+            border: 2px solid var(--border-muted);
+            border-radius: 12px;
             padding: 1.5rem;
             margin-bottom: 1rem;
             transition: all 0.3s ease;
-            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .tip-item:hover {
-            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary-color);
+            background-color: var(--highlight-accent);
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
 
         .tip-item h6 {
-            color: white;
-            font-weight: 700;
+            color: var(--text-dark);
+            font-weight: 600;
             margin-bottom: 0.75rem;
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
 
-        .tip-item i {
-            color: #4facfe;
-            font-size: 1.2rem;
+        .tip-item h6 i {
+            color: var(--primary-color);
         }
 
         .tip-item p {
-            color: rgba(255, 255, 255, 0.8);
+            color: var(--secondary-text);
             margin: 0;
             line-height: 1.5;
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            z-index: 9999;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            color: var(--background);
+            font-weight: 500;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            max-width: 400px;
+            cursor: pointer;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background-color: var(--success-color);
+        }
+
+        .notification.error {
+            background-color: var(--danger-color);
+        }
+
+        .notification.info {
+            background-color: var(--info-color);
+        }
+
+        /* Loading Button */
+        .loading-btn {
+            position: relative;
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .loading-btn::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        @keyframes spin {
+            from { transform: translateY(-50%) rotate(0deg); }
+            to { transform: translateY(-50%) rotate(360deg); }
         }
 
         /* Responsive Design */
@@ -469,20 +464,20 @@
             }
 
             .modern-card-body {
-                padding: 2rem 1.5rem;
+                padding: 1.5rem;
             }
 
             .form-header {
-                padding: 2rem 1.5rem 1.5rem;
+                padding: 2rem 1.5rem;
             }
 
             .form-header h4 {
-                font-size: 1.75rem;
+                font-size: 1.5rem;
             }
 
             .modern-btn {
-                padding: 0.875rem 1.5rem;
-                font-size: 0.875rem;
+                padding: 0.75rem 1.5rem;
+                font-size: 0.9rem;
                 width: 100%;
                 justify-content: center;
                 margin-bottom: 0.75rem;
@@ -504,46 +499,29 @@
             }
 
             .suggestion-item {
-                padding: 0.5rem 0.75rem;
+                padding: 0.75rem;
+            }
+
+            .tips-body {
+                padding: 1.5rem;
             }
         }
 
-        /* Loading animation */
-        .loading-btn {
-            position: relative;
-            pointer-events: none;
-            opacity: 0.8;
+        /* Utility Classes */
+        .text-muted {
+            color: var(--secondary-text) !important;
         }
 
-        .loading-btn::after {
-            content: '';
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            border: 2px solid transparent;
-            border-top: 2px solid white;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            right: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
+        .border-primary {
+            border-color: var(--primary-color) !important;
         }
 
-        @keyframes spin {
-            from { transform: translateY(-50%) rotate(0deg); }
-            to { transform: translateY(-50%) rotate(360deg); }
-        }
-
-        /* Focus ring for accessibility */
-        .modern-input:focus-visible,
-        .modern-textarea:focus-visible,
-        .modern-btn:focus-visible {
-            outline: 2px solid #4facfe;
-            outline-offset: 2px;
+        .bg-light {
+            background-color: var(--light-bg) !important;
         }
     </style>
 </head>
-<body class="form-container">
+<body>
     <div class="container-fluid">
         <!-- Modern Header -->
         <div class="row">
@@ -551,14 +529,17 @@
                 <nav class="navbar navbar-expand-lg modern-navbar">
                     <div class="container-fluid">
                         <a class="navbar-brand" href="{% url 'note_list_management' %}">
-                            <i class="fas fa-folder-plus"></i> {{ action }} Note List
+                            <i class="fas fa-folder-plus"></i>
+                            {{ action }} Note List
                         </a>
                         <div class="navbar-nav ms-auto">
                             <a class="nav-link" href="{% url 'note_list_management' %}">
-                                <i class="fas fa-arrow-left"></i> Back to Lists
+                                <i class="fas fa-arrow-left"></i>
+                                Back to Lists
                             </a>
                             <a class="nav-link" href="{% url 'notes_dashboard' %}">
-                                <i class="fas fa-home"></i> Notes Dashboard
+                                <i class="fas fa-home"></i>
+                                Notes Dashboard
                             </a>
                         </div>
                     </div>
@@ -566,35 +547,36 @@
             </div>
         </div>
 
-        <!-- Form Content -->
-        <div class="row justify-content-center">
-            <div class="col-md-8 col-lg-6">
-                <div class="modern-card">
-                    <div class="form-header">
-                        <h4>
-                            <i class="fas fa-{% if action == 'Create' %}plus{% else %}edit{% endif %}"></i> 
-                            {{ action }} Note List
-                        </h4>
-                        <p>
-                            {% if action == 'Create' %}
-                                Create a new list to organize your notes by topic or project
-                            {% else %}
-                                Update your note list details and organization
-                            {% endif %}
-                        </p>
-                    </div>
-                    
-                    <div class="modern-card-body">
-                        <form method="post" class="needs-validation" novalidate id="listForm">
-                            {% csrf_token %}
-                            
-                            <!-- List Name -->
-                            <div class="modern-form-group">
-                                <label for="{{ form.name.id_for_label }}" class="modern-form-label">
-                                    List Name <span class="required-asterisk">*</span>
-                                </label>
-                                <div class="icon-input">
-                                    <i class="fas fa-folder"></i>
+        <div class="container form-container">
+            <!-- Form Content -->
+            <div class="row justify-content-center">
+                <div class="col-md-8 col-lg-6">
+                    <div class="modern-card">
+                        <div class="form-header">
+                            <h4>
+                                <i class="fas fa-{% if action == 'Create' %}plus{% else %}edit{% endif %}"></i>
+                                {{ action }} Note List
+                            </h4>
+                            <p>
+                                {% if action == 'Create' %}
+                                    Create a new list to organize your notes by topic or project
+                                {% else %}
+                                    Update your note list details and organization
+                                {% endif %}
+                            </p>
+                        </div>
+                        
+                        <div class="modern-card-body">
+                            <form method="post" class="needs-validation" novalidate id="listForm">
+                                {% csrf_token %}
+                                
+                                <!-- List Name -->
+                                <div class="modern-form-group">
+                                    <label for="{{ form.name.id_for_label }}" class="modern-form-label">
+                                        <i class="fas fa-folder"></i>
+                                        List Name
+                                        <span class="required-asterisk">*</span>
+                                    </label>
                                     <input type="text" 
                                            id="{{ form.name.id_for_label }}" 
                                            name="{{ form.name.name }}" 
@@ -603,110 +585,124 @@
                                            value="{{ form.name.value|default:'' }}"
                                            maxlength="100" 
                                            required>
+                                    {% if form.name.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.name.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                    <div class="character-counter" id="nameCounter">0 / 100 characters</div>
                                 </div>
-                                {% if form.name.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {{ form.name.errors.0 }}
-                                    </div>
-                                {% endif %}
-                                <div class="character-counter" id="nameCounter">0 / 100 characters</div>
-                            </div>
 
-                            <!-- Description -->
-                            <div class="modern-form-group">
-                                <label for="{{ form.description.id_for_label }}" class="modern-form-label">
-                                    Description
-                                </label>
-                                <div class="icon-input">
-                                    <i class="fas fa-align-left"></i>
+                                <!-- Description -->
+                                <div class="modern-form-group">
+                                    <label for="{{ form.description.id_for_label }}" class="modern-form-label">
+                                        <i class="fas fa-align-left"></i>
+                                        Description
+                                    </label>
                                     <textarea id="{{ form.description.id_for_label }}" 
                                               name="{{ form.description.name }}" 
                                               class="modern-textarea" 
                                               placeholder="Describe what this list will contain and how you'll use it..."
                                               maxlength="250">{{ form.description.value|default:'' }}</textarea>
+                                    {% if form.description.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.description.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                    <div class="character-counter" id="descriptionCounter">0 / 250 characters</div>
                                 </div>
-                                {% if form.description.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {{ form.description.errors.0 }}
-                                    </div>
-                                {% endif %}
-                                <div class="character-counter" id="descriptionCounter">0 / 250 characters</div>
-                            </div>
 
-                            <!-- Name Suggestions -->
-                            <div class="suggestions" id="nameSuggestions">
-                                <h6><i class="fas fa-lightbulb"></i> Popular List Names</h6>
-                                <div class="suggestion-item" data-suggestion="Meeting Notes">
-                                    <i class="fas fa-users"></i>
-                                    <span>Meeting Notes</span>
+                                <!-- Action Buttons -->
+                                <div class="d-flex justify-content-between align-items-center mt-4">
+                                    <a href="{% url 'note_list_management' %}" class="modern-btn btn-outline-secondary">
+                                        <i class="fas fa-arrow-left"></i>
+                                        Cancel
+                                    </a>
+                                    
+                                    <button type="submit" class="modern-btn btn-primary" id="submitBtn">
+                                        <i class="fas fa-save"></i>
+                                        {{ action }} List
+                                    </button>
                                 </div>
-                                <div class="suggestion-item" data-suggestion="Project Ideas">
-                                    <i class="fas fa-lightbulb"></i>
-                                    <span>Project Ideas</span>
-                                </div>
-                                <div class="suggestion-item" data-suggestion="Daily Tasks">
-                                    <i class="fas fa-tasks"></i>
-                                    <span>Daily Tasks</span>
-                                </div>
-                                <div class="suggestion-item" data-suggestion="Research Notes">
-                                    <i class="fas fa-search"></i>
-                                    <span>Research Notes</span>
-                                </div>
-                                <div class="suggestion-item" data-suggestion="Personal Journal">
-                                    <i class="fas fa-book"></i>
-                                    <span>Personal Journal</span>
-                                </div>
-                                <div class="suggestion-item" data-suggestion="Work Planning">
-                                    <i class="fas fa-briefcase"></i>
-                                    <span>Work Planning</span>
-                                </div>
-                            </div>
-
-                            <!-- Action Buttons -->
-                            <div class="d-flex justify-content-between align-items-center mt-4">
-                                <a href="{% url 'note_list_management' %}" class="modern-btn btn-outline-secondary">
-                                    <i class="fas fa-arrow-left"></i> Cancel
-                                </a>
-                                
-                                <button type="submit" class="modern-btn btn-primary" id="submitBtn">
-                                    <i class="fas fa-save"></i> {{ action }} List
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- Modern Tips -->
-                <div class="tips-card">
-                    <div class="tips-header">
-                        <h6 class="mb-0"><i class="fas fa-lightbulb"></i> List Organization Tips</h6>
-                    </div>
-                    <div class="tips-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="tip-item">
-                                    <h6><i class="fas fa-tags"></i> Naming Strategy</h6>
-                                    <p>Use clear, descriptive names that instantly tell you what the list contains. Avoid generic names like "List 1".</p>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="tip-item">
-                                    <h6><i class="fas fa-project-diagram"></i> Purpose-Driven</h6>
-                                    <p>Create lists based on specific purposes: projects, topics, or time periods for better organization.</p>
-                                </div>
-                            </div>
+                            </form>
                         </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="tip-item">
-                                    <h6><i class="fas fa-layer-group"></i> Keep It Simple</h6>
-                                    <p>Don't create too many lists. Start with 3-5 main categories and expand only when needed.</p>
+                    </div>
+
+                    <!-- Name Suggestions -->
+                    <div class="suggestions" id="nameSuggestions">
+                        <h6>
+                            <i class="fas fa-lightbulb"></i>
+                            Popular List Names
+                        </h6>
+                        <div class="suggestion-item" data-suggestion="Meeting Notes">
+                            <i class="fas fa-users"></i>
+                            <span>Meeting Notes</span>
+                        </div>
+                        <div class="suggestion-item" data-suggestion="Project Ideas">
+                            <i class="fas fa-lightbulb"></i>
+                            <span>Project Ideas</span>
+                        </div>
+                        <div class="suggestion-item" data-suggestion="Daily Tasks">
+                            <i class="fas fa-tasks"></i>
+                            <span>Daily Tasks</span>
+                        </div>
+                        <div class="suggestion-item" data-suggestion="Research Notes">
+                            <i class="fas fa-search"></i>
+                            <span>Research Notes</span>
+                        </div>
+                        <div class="suggestion-item" data-suggestion="Personal Journal">
+                            <i class="fas fa-book"></i>
+                            <span>Personal Journal</span>
+                        </div>
+                        <div class="suggestion-item" data-suggestion="Work Planning">
+                            <i class="fas fa-briefcase"></i>
+                            <span>Work Planning</span>
+                        </div>
+                    </div>
+
+                    <!-- Modern Tips -->
+                    <div class="tips-card">
+                        <div class="tips-header">
+                            <i class="fas fa-lightbulb"></i>
+                            List Organization Tips
+                        </div>
+                        <div class="tips-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="tip-item">
+                                        <h6>
+                                            <i class="fas fa-tags"></i>
+                                            Naming Strategy
+                                        </h6>
+                                        <p>Use clear, descriptive names that instantly tell you what the list contains. Avoid generic names like "List 1".</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="tip-item">
-                                    <h6><i class="fas fa-sync-alt"></i> Review Regularly</h6>
-                                    <p>Periodically review and update your lists. Archive old lists and create new ones as your needs change.</p>
+                                <div class="col-md-6">
+                                    <div class="tip-item">
+                                        <h6>
+                                            <i class="fas fa-project-diagram"></i>
+                                            Purpose-Driven
+                                        </h6>
+                                        <p>Create lists based on specific purposes: projects, topics, or time periods for better organization.</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="tip-item">
+                                        <h6>
+                                            <i class="fas fa-layer-group"></i>
+                                            Keep It Simple
+                                        </h6>
+                                        <p>Don't create too many lists. Start with 3-5 main categories and expand only when needed.</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="tip-item">
+                                        <h6>
+                                            <i class="fas fa-sync-alt"></i>
+                                            Review Regularly
+                                        </h6>
+                                        <p>Periodically review and update your lists. Archive old lists and create new ones as your needs change.</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -718,83 +714,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Enhanced animations and interactions
-        document.addEventListener('DOMContentLoaded', function() {
-            // Form fields animation
-            const formGroups = document.querySelectorAll('.modern-form-group');
-            formGroups.forEach((group, index) => {
-                group.style.opacity = '0';
-                group.style.transform = 'translateY(20px)';
-                
-                setTimeout(() => {
-                    group.style.transition = 'all 0.6s ease';
-                    group.style.opacity = '1';
-                    group.style.transform = 'translateY(0)';
-                }, index * 150);
-            });
-
-            // Enhanced input focus effects
-            const inputs = document.querySelectorAll('.modern-input, .modern-textarea');
-            inputs.forEach(input => {
-                input.addEventListener('focus', function() {
-                    this.parentElement.parentElement.style.transform = 'translateY(-3px)';
-                    this.parentElement.parentElement.style.transition = 'transform 0.3s ease';
-                });
-                
-                input.addEventListener('blur', function() {
-                    this.parentElement.parentElement.style.transform = 'translateY(0)';
-                });
-
-                // Add typing animation
-                input.addEventListener('input', function() {
-                    this.style.borderColor = '#667eea';
-                    setTimeout(() => {
-                        this.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-                    }, 300);
-                });
-            });
-
-            // Button hover enhancements
-            const buttons = document.querySelectorAll('.modern-btn');
-            buttons.forEach(btn => {
-                btn.addEventListener('mouseenter', function() {
-                    this.style.transform = 'translateY(-3px) scale(1.05)';
-                });
-                
-                btn.addEventListener('mouseleave', function() {
-                    this.style.transform = 'translateY(0) scale(1)';
-                });
-
-                // Ripple effect
-                btn.addEventListener('click', function(e) {
-                    const ripple = document.createElement('span');
-                    const rect = this.getBoundingClientRect();
-                    const size = Math.max(rect.width, rect.height);
-                    const x = e.clientX - rect.left - size / 2;
-                    const y = e.clientY - rect.top - size / 2;
-                    
-                    ripple.style.cssText = `
-                        position: absolute;
-                        width: ${size}px;
-                        height: ${size}px;
-                        left: ${x}px;
-                        top: ${y}px;
-                        background: rgba(255, 255, 255, 0.3);
-                        border-radius: 50%;
-                        transform: scale(0);
-                        animation: ripple 0.6s ease-out;
-                        pointer-events: none;
-                    `;
-                    
-                    this.style.position = 'relative';
-                    this.appendChild(ripple);
-                    
-                    setTimeout(() => ripple.remove(), 600);
-                });
-            });
-        });
-
-        // Enhanced Character counters
+        // Character counters
         const nameField = document.getElementById('{{ form.name.id_for_label }}');
         const nameCounter = document.getElementById('nameCounter');
         const descriptionField = document.getElementById('{{ form.description.id_for_label }}');
@@ -842,31 +762,31 @@
                 updateNameCounter();
                 
                 // Add visual feedback
-                this.style.background = 'rgba(102, 126, 234, 0.3)';
-                this.style.transform = 'translateX(10px) scale(1.02)';
+                this.style.background = var(--highlight-accent);
+                this.style.borderColor = var(--primary-color);
+                this.style.transform = 'translateY(-2px) scale(1.02)';
                 
                 setTimeout(() => {
-                    this.style.background = 'rgba(255, 255, 255, 0.05)';
-                    this.style.transform = 'translateX(0) scale(1)';
+                    this.style.background = 'var(--light-bg)';
+                    this.style.borderColor = 'var(--border-muted)';
+                    this.style.transform = 'translateY(0) scale(1)';
                 }, 300);
                 
                 // Focus on description field
                 descriptionField.focus();
             });
 
-            // Enhanced hover effects
+            // Hover effects
             item.addEventListener('mouseenter', function() {
-                this.style.transform = 'translateX(8px) scale(1.02)';
-                this.style.boxShadow = '0 5px 15px rgba(0, 0, 0, 0.2)';
+                this.style.transform = 'translateY(-2px)';
             });
             
             item.addEventListener('mouseleave', function() {
-                this.style.transform = 'translateX(0) scale(1)';
-                this.style.boxShadow = 'none';
+                this.style.transform = 'translateY(0)';
             });
         });
 
-        // Enhanced Bootstrap form validation
+        // Bootstrap form validation
         const form = document.getElementById('listForm');
         const submitBtn = document.getElementById('submitBtn');
         
@@ -894,6 +814,9 @@
                 
                 // Show success message
                 showNotification('Saving your list...', 'info');
+                
+                // Clear draft when successfully submitting
+                localStorage.removeItem('list_draft');
             }
             
             form.classList.add('was-validated');
@@ -902,7 +825,6 @@
         // Smart suggestions based on input
         nameField.addEventListener('input', function() {
             const value = this.value.toLowerCase();
-            const suggestions = document.getElementById('nameSuggestions');
             
             if (value.length > 0) {
                 // Filter suggestions based on input
@@ -950,7 +872,7 @@
                 
                 // Add a divider and smart suggestions
                 const divider = document.createElement('div');
-                divider.innerHTML = '<h6 style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);"><i class="fas fa-magic"></i> Smart Suggestions</h6>';
+                divider.innerHTML = '<h6 style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid var(--border-muted); color: var(--text-dark);"><i class="fas fa-magic" style="color: var(--primary-color);"></i> Smart Suggestions</h6>';
                 divider.id = 'smart-divider';
                 
                 if (!document.getElementById('smart-divider')) {
@@ -961,13 +883,19 @@
                         item.className = 'suggestion-item smart-suggestion';
                         item.setAttribute('data-suggestion', suggestion);
                         item.innerHTML = `<i class="fas fa-sparkles"></i><span>${suggestion}</span>`;
-                        item.style.animationDelay = `${index * 0.1}s`;
-                        item.style.animation = 'slideInLeft 0.5s ease-out both';
                         
                         item.addEventListener('click', function() {
                             nameField.value = suggestion;
                             updateNameCounter();
                             descriptionField.focus();
+                        });
+                        
+                        item.addEventListener('mouseenter', function() {
+                            this.style.transform = 'translateY(-2px)';
+                        });
+                        
+                        item.addEventListener('mouseleave', function() {
+                            this.style.transform = 'translateY(0)';
                         });
                         
                         suggestionsContainer.appendChild(item);
@@ -979,32 +907,13 @@
         // Notification system
         function showNotification(message, type) {
             const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 2rem;
-                right: 2rem;
-                z-index: 9999;
-                padding: 1rem 2rem;
-                border-radius: 12px;
-                color: white;
-                font-weight: 600;
-                backdrop-filter: blur(20px);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-                transform: translateX(100%);
-                transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-                max-width: 400px;
-            `;
-
-            // Set background based on type
+            notification.className = `notification ${type}`;
+            
             if (type === 'success') {
-                notification.style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
                 notification.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
             } else if (type === 'error') {
-                notification.style.background = 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)';
                 notification.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
             } else if (type === 'info') {
-                notification.style.background = 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)';
                 notification.innerHTML = `<i class="fas fa-info-circle"></i> ${message}`;
             }
 
@@ -1012,39 +921,82 @@
 
             // Animate in
             setTimeout(() => {
-                notification.style.transform = 'translateX(0)';
+                notification.classList.add('show');
             }, 100);
 
             // Auto remove after 4 seconds
             setTimeout(() => {
-                notification.style.transform = 'translateX(100%)';
-                setTimeout(() => {
-                    if (notification.parentNode) {
-                        notification.parentNode.removeChild(notification);
-                    }
-                }, 300);
+                dismissNotification(notification);
             }, 4000);
 
             // Click to dismiss
             notification.addEventListener('click', () => {
-                notification.style.transform = 'translateX(100%)';
-                setTimeout(() => {
-                    if (notification.parentNode) {
-                        notification.parentNode.removeChild(notification);
-                    }
-                }, 300);
+                dismissNotification(notification);
             });
         }
 
-        // Enhanced navbar interactions
-        const navLinks = document.querySelectorAll('.nav-link');
-        navLinks.forEach(link => {
-            link.addEventListener('mouseenter', function() {
-                this.style.transform = 'translateY(-2px)';
+        function dismissNotification(notification) {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }
+
+        // Enhanced interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            // Input focus effects
+            const inputs = document.querySelectorAll('.modern-input, .modern-textarea');
+            inputs.forEach(input => {
+                input.addEventListener('focus', function() {
+                    this.parentElement.style.transform = 'translateY(-2px)';
+                    this.parentElement.style.transition = 'transform 0.3s ease';
+                });
+                
+                input.addEventListener('blur', function() {
+                    this.parentElement.style.transform = 'translateY(0)';
+                });
             });
-            
-            link.addEventListener('mouseleave', function() {
-                this.style.transform = 'translateY(0)';
+
+            // Button hover effects
+            const buttons = document.querySelectorAll('.modern-btn, .nav-link');
+            buttons.forEach(btn => {
+                btn.addEventListener('mouseenter', function() {
+                    if (!this.disabled) {
+                        this.style.transform = 'translateY(-2px)';
+                    }
+                });
+                
+                btn.addEventListener('mouseleave', function() {
+                    if (!this.disabled) {
+                        this.style.transform = 'translateY(0)';
+                    }
+                });
+            });
+
+            // Card hover effects
+            const cards = document.querySelectorAll('.modern-card, .tips-card, .suggestions');
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-2px)';
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+            });
+
+            // Tip items hover effects
+            const tipItems = document.querySelectorAll('.tip-item');
+            tipItems.forEach(item => {
+                item.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-2px)';
+                });
+                
+                item.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
             });
         });
 
@@ -1063,59 +1015,7 @@
             }
         });
 
-        // Add CSS for additional animations
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes ripple {
-                to {
-                    transform: scale(2);
-                    opacity: 0;
-                }
-            }
-            
-            @keyframes shake {
-                0%, 100% { transform: translateX(0); }
-                25% { transform: translateX(-5px); }
-                75% { transform: translateX(5px); }
-            }
-            
-            @keyframes slideInLeft {
-                from {
-                    opacity: 0;
-                    transform: translateX(-30px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateX(0);
-                }
-            }
-        `;
-        document.head.appendChild(style);
-
-        // Performance optimization: Debounced input handlers
-        function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
-        }
-
-        // Apply debouncing to search functionality
-        const debouncedSearch = debounce((value) => {
-            // Additional search logic can go here
-            console.log('Searching for:', value);
-        }, 300);
-
-        nameField.addEventListener('input', function() {
-            debouncedSearch(this.value);
-        });
-
-        // Auto-save draft functionality (optional)
+        // Auto-save draft functionality
         let autoSaveTimer;
         const formFields = [nameField, descriptionField];
         
@@ -1165,12 +1065,16 @@
             }
         });
 
-        // Clear draft on successful submission
-        form.addEventListener('submit', function() {
-            if (form.checkValidity()) {
-                localStorage.removeItem('list_draft');
+        // Add CSS for animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-5px); }
+                75% { transform: translateX(5px); }
             }
-        });
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>

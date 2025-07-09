@@ -1,194 +1,604 @@
 <!-- base/client_interaction_form.html -->
+{% extends 'base/base.html' %}
 {% load static %}
 
 {% block title %}{{ title }}{% endblock %}
 
 {% block extra_css %}
 <style>
-.form-section {
-    background: #f8f9fa;
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-}
-.required-field {
-    color: #dc3545;
-}
+    :root {
+        --bs-primary: #1C64FF;
+        --bs-secondary: #696969;
+        --bs-light: #FFFFFF;
+        --bs-border-color: #D9D9D9;
+        --bs-info: #C3E4FF;
+    }
+
+    .form-container {
+        background: #f8f9fa;
+        min-height: 100vh;
+        padding: 2rem 0;
+    }
+
+    .form-card {
+        border: 1px solid #D9D9D9;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+
+    .form-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, #1C64FF, #1557e6);
+        color: #FFFFFF;
+        border: none;
+        padding: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .card-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="%23C3E4FF" stroke-width="0.5" opacity="0.3"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+        opacity: 0.2;
+    }
+
+    .card-header h5 {
+        position: relative;
+        z-index: 2;
+        font-weight: 700;
+        font-size: 1.5rem;
+        margin: 0;
+    }
+
+    .card-body {
+        padding: 2.5rem;
+        background: #FFFFFF;
+    }
+
+    .form-section {
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        border: 1px solid #D9D9D9;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .form-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(180deg, #1C64FF, #1557e6);
+        border-radius: 2px 0 0 2px;
+    }
+
+    .form-section:hover {
+        background: linear-gradient(135deg, rgba(195, 228, 255, 0.1) 0%, #ffffff 100%);
+        border-color: #1C64FF;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(28, 100, 255, 0.1);
+    }
+
+    .form-section h6 {
+        color: #1C64FF;
+        font-weight: 700;
+        font-size: 1.1rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .form-section h6::before {
+        content: '';
+        width: 8px;
+        height: 8px;
+        background: #1C64FF;
+        border-radius: 50%;
+        margin-right: 0.75rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #333333;
+        margin-bottom: 0.75rem;
+        font-size: 0.95rem;
+    }
+
+    .required-field {
+        color: #dc3545;
+        font-weight: 700;
+    }
+
+    .form-control {
+        border: 1px solid #D9D9D9;
+        border-radius: 8px;
+        padding: 0.875rem 1rem;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+        background: #FFFFFF;
+    }
+
+    .form-control:focus {
+        border-color: #1C64FF;
+        box-shadow: 0 0 0 0.2rem rgba(28, 100, 255, 0.25);
+        background: #FFFFFF;
+    }
+
+    .form-control:hover {
+        border-color: #1C64FF;
+    }
+
+    .form-select {
+        border: 1px solid #D9D9D9;
+        border-radius: 8px;
+        padding: 0.875rem 1rem;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+        background: #FFFFFF;
+    }
+
+    .form-select:focus {
+        border-color: #1C64FF;
+        box-shadow: 0 0 0 0.2rem rgba(28, 100, 255, 0.25);
+    }
+
+    .form-select:hover {
+        border-color: #1C64FF;
+    }
+
+    .form-check-input {
+        border: 2px solid #D9D9D9;
+        border-radius: 4px;
+        width: 1.25rem;
+        height: 1.25rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-check-input:checked {
+        background-color: #1C64FF;
+        border-color: #1C64FF;
+    }
+
+    .form-check-input:focus {
+        box-shadow: 0 0 0 0.2rem rgba(28, 100, 255, 0.25);
+    }
+
+    .form-check-label {
+        font-weight: 500;
+        color: #333333;
+        margin-left: 0.5rem;
+    }
+
+    .form-text {
+        color: #696969;
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+        font-style: italic;
+    }
+
+    .text-danger {
+        color: #dc3545 !important;
+        font-weight: 500;
+        font-size: 0.875rem;
+    }
+
+    .client-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        background: rgba(195, 228, 255, 0.1);
+        border: 1px solid #C3E4FF;
+        border-radius: 8px;
+        padding: 1.5rem;
+    }
+
+    .client-info-item {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem 0;
+    }
+
+    .client-info-item i {
+        color: #1C64FF;
+        margin-right: 0.75rem;
+        width: 16px;
+        text-align: center;
+    }
+
+    .client-info-label {
+        font-weight: 600;
+        color: #696969;
+        margin-right: 0.5rem;
+    }
+
+    .client-info-value {
+        color: #333333;
+        font-weight: 500;
+    }
+
+    .btn-primary {
+        background-color: #1C64FF;
+        border-color: #1C64FF;
+        font-weight: 600;
+        padding: 0.875rem 2rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        font-size: 1rem;
+    }
+
+    .btn-primary:hover {
+        background-color: #1557e6;
+        border-color: #1557e6;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(28, 100, 255, 0.3);
+    }
+
+    .btn-outline-secondary {
+        color: #696969;
+        border-color: #696969;
+        font-weight: 500;
+        padding: 0.875rem 2rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        font-size: 1rem;
+    }
+
+    .btn-outline-secondary:hover {
+        background-color: #696969;
+        border-color: #696969;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(105, 105, 105, 0.3);
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 2rem;
+        border-top: 1px solid #D9D9D9;
+        margin-top: 2rem;
+    }
+
+    .follow-up-section {
+        background: rgba(255, 193, 7, 0.05);
+        border: 1px solid rgba(255, 193, 7, 0.2);
+        border-radius: 8px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .follow-up-section.active {
+        background: rgba(25, 135, 84, 0.05);
+        border-color: rgba(25, 135, 84, 0.2);
+    }
+
+    .fade-in {
+        animation: fadeIn 0.6s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .slide-down {
+        animation: slideDown 0.3s ease-out;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            max-height: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            max-height: 200px;
+            transform: translateY(0);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .form-container {
+            padding: 1rem 0;
+        }
+        
+        .card-body {
+            padding: 1.5rem;
+        }
+        
+        .form-section {
+            padding: 1.5rem;
+        }
+        
+        .client-info-grid {
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+        }
+        
+        .form-actions {
+            flex-direction: column-reverse;
+            gap: 1rem;
+        }
+        
+        .form-actions .btn {
+            width: 100%;
+        }
+    }
+
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.9);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+
+    .loading-spinner {
+        width: 3rem;
+        height: 3rem;
+        border: 0.3rem solid #C3E4FF;
+        border-top: 0.3rem solid #1C64FF;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-comments"></i> {{ title }}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <form method="post" id="interactionForm">
-                        {% csrf_token %}
-                        
-                        <!-- Client Info -->
-                        <div class="form-section">
-                            <h6 class="mb-3">Client Information</h6>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <strong>Name:</strong> {{ client_profile.client_full_name }}
-                                </div>
-                                <div class="col-md-6">
-                                    <strong>Client ID:</strong> {{ client_profile.client_id }}
-                                </div>
-                                <div class="col-md-6 mt-2">
-                                    <strong>PAN:</strong> {{ client_profile.pan_number }}
-                                </div>
-                                <div class="col-md-6 mt-2">
-                                    <strong>RM:</strong> {{ client_profile.mapped_rm|default:"Not assigned" }}
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Interaction Details -->
-                        <div class="form-section">
-                            <h6 class="mb-3">Interaction Details</h6>
+<div class="form-container">
+    <div class="container-fluid">
+        <div class="row justify-content-center">
+            <div class="col-xl-8 col-lg-10">
+                <div class="card form-card fade-in">
+                    <div class="card-header">
+                        <h5>
+                            <i class="fas fa-comments me-3"></i>
+                            {{ title }}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" id="interactionForm">
+                            {% csrf_token %}
                             
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="{{ form.interaction_type.id_for_label }}" class="form-label">
-                                            Interaction Type <span class="required-field">*</span>
-                                        </label>
-                                        {{ form.interaction_type }}
-                                        {% if form.interaction_type.errors %}
-                                            <div class="text-danger small">{{ form.interaction_type.errors }}</div>
-                                        {% endif %}
+                            <!-- Client Info Section -->
+                            <div class="form-section">
+                                <h6>
+                                    <i class="fas fa-user-circle me-2"></i>
+                                    Client Information
+                                </h6>
+                                <div class="client-info-grid">
+                                    <div class="client-info-item">
+                                        <i class="fas fa-user"></i>
+                                        <span class="client-info-label">Name:</span>
+                                        <span class="client-info-value">{{ client_profile.client_full_name }}</span>
                                     </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="{{ form.interaction_date.id_for_label }}" class="form-label">
-                                            Interaction Date & Time <span class="required-field">*</span>
-                                        </label>
-                                        {{ form.interaction_date }}
-                                        {% if form.interaction_date.errors %}
-                                            <div class="text-danger small">{{ form.interaction_date.errors }}</div>
-                                        {% endif %}
+                                    <div class="client-info-item">
+                                        <i class="fas fa-id-badge"></i>
+                                        <span class="client-info-label">Client ID:</span>
+                                        <span class="client-info-value">{{ client_profile.client_id }}</span>
                                     </div>
-                                </div>
-                            </div>
-
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="{{ form.duration_minutes.id_for_label }}" class="form-label">
-                                            Duration (minutes)
-                                        </label>
-                                        {{ form.duration_minutes }}
-                                        {% if form.duration_minutes.errors %}
-                                            <div class="text-danger small">{{ form.duration_minutes.errors }}</div>
-                                        {% endif %}
+                                    <div class="client-info-item">
+                                        <i class="fas fa-id-card"></i>
+                                        <span class="client-info-label">PAN:</span>
+                                        <span class="client-info-value">{{ client_profile.pan_number|default:"Not provided" }}</span>
                                     </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="{{ form.priority.id_for_label }}" class="form-label">
-                                            Priority <span class="required-field">*</span>
-                                        </label>
-                                        {{ form.priority }}
-                                        {% if form.priority.errors %}
-                                            <div class="text-danger small">{{ form.priority.errors }}</div>
-                                        {% endif %}
+                                    <div class="client-info-item">
+                                        <i class="fas fa-user-tie"></i>
+                                        <span class="client-info-label">RM:</span>
+                                        <span class="client-info-value">{{ client_profile.mapped_rm|default:"Not assigned" }}</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <label for="{{ form.notes.id_for_label }}" class="form-label">
-                                    Notes <span class="required-field">*</span>
-                                </label>
-                                {{ form.notes }}
-                                {% if form.notes.errors %}
-                                    <div class="text-danger small">{{ form.notes.errors }}</div>
-                                {% endif %}
-                                <div class="form-text">Provide detailed notes about the interaction</div>
-                            </div>
-                        </div>
-
-                        <!-- Follow-up Section -->
-                        <div class="form-section">
-                            <h6 class="mb-3">Follow-up</h6>
-                            
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <div class="form-check">
-                                            {{ form.follow_up_required }}
-                                            <label class="form-check-label" for="{{ form.follow_up_required.id_for_label }}">
-                                                Follow-up Required
+                            <!-- Interaction Details Section -->
+                            <div class="form-section">
+                                <h6>
+                                    <i class="fas fa-clipboard-list me-2"></i>
+                                    Interaction Details
+                                </h6>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.interaction_type.id_for_label }}" class="form-label">
+                                                <i class="fas fa-tag me-2"></i>
+                                                Interaction Type <span class="required-field">*</span>
                                             </label>
+                                            {{ form.interaction_type }}
+                                            {% if form.interaction_type.errors %}
+                                                <div class="text-danger">{{ form.interaction_type.errors }}</div>
+                                            {% endif %}
                                         </div>
-                                        {% if form.follow_up_required.errors %}
-                                            <div class="text-danger small">{{ form.follow_up_required.errors }}</div>
-                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.interaction_date.id_for_label }}" class="form-label">
+                                                <i class="fas fa-calendar-alt me-2"></i>
+                                                Interaction Date & Time <span class="required-field">*</span>
+                                            </label>
+                                            {{ form.interaction_date }}
+                                            {% if form.interaction_date.errors %}
+                                                <div class="text-danger">{{ form.interaction_date.errors }}</div>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="{{ form.follow_up_date.id_for_label }}" class="form-label">
-                                            Follow-up Date
-                                        </label>
-                                        {{ form.follow_up_date }}
-                                        {% if form.follow_up_date.errors %}
-                                            <div class="text-danger small">{{ form.follow_up_date.errors }}</div>
-                                        {% endif %}
-                                        <div class="form-text">Required if follow-up is marked as needed</div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.duration_minutes.id_for_label }}" class="form-label">
+                                                <i class="fas fa-clock me-2"></i>
+                                                Duration (minutes)
+                                            </label>
+                                            {{ form.duration_minutes }}
+                                            {% if form.duration_minutes.errors %}
+                                                <div class="text-danger">{{ form.duration_minutes.errors }}</div>
+                                            {% endif %}
+                                            <div class="form-text">Optional: How long did the interaction last?</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.priority.id_for_label }}" class="form-label">
+                                                <i class="fas fa-exclamation-circle me-2"></i>
+                                                Priority <span class="required-field">*</span>
+                                            </label>
+                                            {{ form.priority }}
+                                            {% if form.priority.errors %}
+                                                <div class="text-danger">{{ form.priority.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="{{ form.notes.id_for_label }}" class="form-label">
+                                        <i class="fas fa-sticky-note me-2"></i>
+                                        Interaction Notes <span class="required-field">*</span>
+                                    </label>
+                                    {{ form.notes }}
+                                    {% if form.notes.errors %}
+                                        <div class="text-danger">{{ form.notes.errors }}</div>
+                                    {% endif %}
+                                    <div class="form-text">Provide detailed notes about the interaction, including key discussion points and outcomes</div>
+                                </div>
+                            </div>
+
+                            <!-- Follow-up Section -->
+                            <div class="form-section follow-up-section" id="followUpSection">
+                                <h6>
+                                    <i class="fas fa-calendar-check me-2"></i>
+                                    Follow-up Requirements
+                                </h6>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                {{ form.follow_up_required }}
+                                                <label class="form-check-label" for="{{ form.follow_up_required.id_for_label }}">
+                                                    <i class="fas fa-bell me-2"></i>
+                                                    Follow-up Required
+                                                </label>
+                                            </div>
+                                            {% if form.follow_up_required.errors %}
+                                                <div class="text-danger">{{ form.follow_up_required.errors }}</div>
+                                            {% endif %}
+                                            <div class="form-text">Check if this interaction requires a follow-up action</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3" id="followUpDateGroup">
+                                            <label for="{{ form.follow_up_date.id_for_label }}" class="form-label">
+                                                <i class="fas fa-calendar-plus me-2"></i>
+                                                Follow-up Date <span class="required-field" id="followUpRequired">*</span>
+                                            </label>
+                                            {{ form.follow_up_date }}
+                                            {% if form.follow_up_date.errors %}
+                                                <div class="text-danger">{{ form.follow_up_date.errors }}</div>
+                                            {% endif %}
+                                            <div class="form-text">When should the follow-up be completed?</div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Form Actions -->
-                        <div class="d-flex justify-content-between">
-                            <a href="{% url 'client_profile_detail' client_profile.id %}" class="btn btn-outline-secondary">
-                                <i class="fas fa-times"></i> Cancel
-                            </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Save Interaction
-                            </button>
-                        </div>
-                    </form>
+                            <!-- Form Actions -->
+                            <div class="form-actions">
+                                <a href="{% url 'client_profile_detail' client_profile.id %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-arrow-left me-2"></i>Cancel
+                                </a>
+                                <button type="submit" class="btn btn-primary" id="submitBtn">
+                                    <i class="fas fa-save me-2"></i>Save Interaction
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Auto-show/hide follow-up date based on checkbox
     const followUpRequired = document.getElementById('{{ form.follow_up_required.id_for_label }}');
     const followUpDate = document.getElementById('{{ form.follow_up_date.id_for_label }}');
-    const followUpDateGroup = followUpDate.closest('.mb-3');
+    const followUpDateGroup = document.getElementById('followUpDateGroup');
+    const followUpSection = document.getElementById('followUpSection');
+    const followUpRequiredSpan = document.getElementById('followUpRequired');
+    const form = document.getElementById('interactionForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const loadingOverlay = document.getElementById('loadingOverlay');
     
+    // Toggle follow-up date visibility and requirements
     function toggleFollowUpDate() {
         if (followUpRequired.checked) {
             followUpDateGroup.style.display = 'block';
+            followUpDateGroup.classList.add('slide-down');
             followUpDate.required = true;
+            followUpSection.classList.add('active');
+            followUpRequiredSpan.style.display = 'inline';
+            
+            // Set minimum date to today
+            const today = new Date().toISOString().split('T')[0];
+            followUpDate.min = today;
         } else {
             followUpDateGroup.style.display = 'none';
             followUpDate.required = false;
             followUpDate.value = '';
+            followUpSection.classList.remove('active');
+            followUpRequiredSpan.style.display = 'none';
         }
     }
     
+    // Event listeners
     followUpRequired.addEventListener('change', toggleFollowUpDate);
-    toggleFollowUpDate(); // Initial state
     
-    // Set default datetime to now
+    // Initialize follow-up date visibility
+    toggleFollowUpDate();
+    
+    // Set default interaction date to current time if empty
     const interactionDate = document.getElementById('{{ form.interaction_date.id_for_label }}');
     if (!interactionDate.value) {
         const now = new Date();
@@ -199,6 +609,92 @@ document.addEventListener('DOMContentLoaded', function() {
         const minutes = String(now.getMinutes()).padStart(2, '0');
         interactionDate.value = `${year}-${month}-${day}T${hours}:${minutes}`;
     }
+    
+    // Form submission handling
+    form.addEventListener('submit', function(e) {
+        // Show loading overlay
+        loadingOverlay.style.display = 'flex';
+        
+        // Update submit button
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+        submitBtn.disabled = true;
+        
+        // Validate follow-up requirements
+        if (followUpRequired.checked && !followUpDate.value) {
+            e.preventDefault();
+            loadingOverlay.style.display = 'none';
+            submitBtn.innerHTML = '<i class="fas fa-save me-2"></i>Save Interaction';
+            submitBtn.disabled = false;
+            
+            alert('Please select a follow-up date when follow-up is required.');
+            followUpDate.focus();
+            return false;
+        }
+        
+        // Re-enable button after 10 seconds as fallback
+        setTimeout(() => {
+            loadingOverlay.style.display = 'none';
+            submitBtn.innerHTML = '<i class="fas fa-save me-2"></i>Save Interaction';
+            submitBtn.disabled = false;
+        }, 10000);
+    });
+    
+    // Auto-resize textarea
+    const notesTextarea = document.getElementById('{{ form.notes.id_for_label }}');
+    if (notesTextarea) {
+        notesTextarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+        
+        // Initial resize
+        notesTextarea.style.height = 'auto';
+        notesTextarea.style.height = (notesTextarea.scrollHeight) + 'px';
+    }
+    
+    // Add animation delays to form sections
+    const formSections = document.querySelectorAll('.form-section');
+    formSections.forEach((section, index) => {
+        section.style.animationDelay = `${index * 0.1}s`;
+        section.classList.add('fade-in');
+    });
+    
+    // Enhanced form validation
+    const requiredFields = document.querySelectorAll('input[required], select[required], textarea[required]');
+    requiredFields.forEach(field => {
+        field.addEventListener('blur', function() {
+            if (!this.value.trim()) {
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+            }
+        });
+        
+        field.addEventListener('input', function() {
+            if (this.value.trim()) {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+            }
+        });
+    });
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + S to save
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            form.submit();
+        }
+        
+        // Escape to cancel
+        if (e.key === 'Escape') {
+            const cancelBtn = document.querySelector('.btn-outline-secondary');
+            if (cancelBtn && confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
+                cancelBtn.click();
+            }
+        }
+    });
 });
 </script>
 {% endblock %}

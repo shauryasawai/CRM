@@ -4,117 +4,798 @@
 {% block title %}Team Management{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Team Management</h1>
-        {% if user_role in 'business_head,top_management' %}
-        <a href="{% url 'create_team' %}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Create Team
-        </a>
-        {% endif %}
+<div class="container py-4">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="background-color: #FFFFFF; border-left: 4px solid #1C64FF !important;">
+                <div class="card-body py-4">
+                    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3">
+                        <div>
+                            <h1 class="display-5 fw-bold mb-2" style="color: #1C64FF;">
+                                <i class="fas fa-users-cog me-3"></i>Team Management
+                            </h1>
+                            <p class="text-muted mb-0" style="color: #696969;">Manage teams and users across your organization</p>
+                        </div>
+                        {% if user_role in 'business_head,top_management' %}
+                        <a href="{% url 'create_team' %}" class="btn btn-primary btn-lg px-4 py-2 d-flex align-items-center gap-2" style="background-color: #1C64FF; border-color: #1C64FF;">
+                            <i class="fas fa-plus"></i>
+                            <span>Create Team</span>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <ul class="nav nav-tabs mb-4">
-        <li class="nav-item">
-            <a class="nav-link active" data-toggle="tab" href="#teams">Teams</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" data-toggle="tab" href="#users">Users</a>
-        </li>
-    </ul>
+    <!-- Navigation Tabs -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="background-color: #FFFFFF; border: 1px solid #D9D9D9;">
+                <div class="card-body p-0">
+                    <ul class="nav nav-tabs border-0" id="managementTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active px-4 py-3 fw-semibold border-0" 
+                                    id="teams-tab" 
+                                    data-bs-toggle="tab" 
+                                    data-bs-target="#teams" 
+                                    type="button" 
+                                    role="tab" 
+                                    aria-controls="teams" 
+                                    aria-selected="true"
+                                    style="color: #1C64FF; border-bottom: 3px solid #1C64FF !important;">
+                                <i class="fas fa-users me-2"></i>Teams
+                                <span class="badge rounded-pill ms-2" style="background-color: #1C64FF; color: white;">{{ teams.count }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link px-4 py-3 fw-semibold border-0" 
+                                    id="users-tab" 
+                                    data-bs-toggle="tab" 
+                                    data-bs-target="#users" 
+                                    type="button" 
+                                    role="tab" 
+                                    aria-controls="users" 
+                                    aria-selected="false"
+                                    style="color: #696969;">
+                                <i class="fas fa-user-friends me-2"></i>Users
+                                <span class="badge rounded-pill ms-2" style="background-color: #696969; color: white;">{{ all_users.count }}</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    <div class="tab-content">
-        <div class="tab-pane fade show active" id="teams">
+    <!-- Tab Content -->
+    <div class="tab-content" id="managementTabsContent">
+        <!-- Teams Tab -->
+        <div class="tab-pane fade show active" id="teams" role="tabpanel" aria-labelledby="teams-tab">
             {% if teams %}
-            <div class="row">
+            <div class="row g-4">
                 {% for team in teams %}
-                <div class="col-md-4 mb-4">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <h5 class="card-title">{{ team.name }}</h5>
-                            <h6 class="card-subtitle mb-2 text-muted">
-                                Leader: {{ team.leader.get_full_name|default:team.leader.username }}
-                            </h6>
-                            <p class="card-text">
-                                <i class="fas fa-users"></i> {{ team.members.count }} members
-                            </p>
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card h-100 border-0 shadow-sm team-card" style="background-color: #FFFFFF; border: 1px solid #D9D9D9; transition: all 0.3s ease;">
+                        <div class="card-header border-0 py-3" style="background-color: #C3E4FF;">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <h5 class="mb-0 fw-bold" style="color: #1C64FF;">
+                                    <i class="fas fa-users me-2"></i>{{ team.name }}
+                                </h5>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-primary dropdown-toggle" 
+                                            type="button" 
+                                            data-bs-toggle="dropdown" 
+                                            aria-expanded="false"
+                                            style="border-color: #1C64FF; color: #1C64FF;">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu shadow border-0" style="border: 1px solid #D9D9D9;">
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'team_detail' team.id %}">
+                                                <i class="fas fa-eye me-2" style="color: #1C64FF;"></i>View Details
+                                            </a>
+                                        </li>
+                                        {% if user_role in 'business_head,top_management' or team.leader == request.user %}
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'edit_team' team.id %}">
+                                                <i class="fas fa-edit me-2" style="color: #696969;"></i>Edit Team
+                                            </a>
+                                        </li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
-                        <div class="card-footer bg-transparent">
-                            <a href="{% url 'team_detail' team.id %}" class="btn btn-sm btn-outline-primary">
-                                View
-                            </a>
-                            {% if user_role in 'business_head,top_management' or team.leader == request.user %}
-                            <a href="{% url 'edit_team' team.id %}" class="btn btn-sm btn-outline-secondary">
-                                Edit
-                            </a>
-                            {% endif %}
+                        <div class="card-body p-4">
+                            <div class="mb-3">
+                                <div class="d-flex align-items-center p-3 rounded" style="background-color: rgba(28, 100, 255, 0.05); border-left: 3px solid #1C64FF;">
+                                    <div class="me-3">
+                                        <div class="d-flex align-items-center justify-content-center rounded-circle" 
+                                             style="width: 40px; height: 40px; background-color: #1C64FF;">
+                                            <i class="fas fa-crown text-white"></i>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 fw-semibold" style="color: #1C64FF;">Team Leader</h6>
+                                        <p class="mb-0 small" style="color: #696969;">
+                                            {{ team.leader.get_full_name|default:team.leader.username }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center" style="color: #696969;">
+                                    <i class="fas fa-users me-2" style="color: #1C64FF;"></i>
+                                    <span class="fw-semibold">{{ team.members.count }} member{{ team.members.count|pluralize }}</span>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <a href="{% url 'team_detail' team.id %}" 
+                                       class="btn btn-outline-primary btn-sm px-3" 
+                                       style="border-color: #1C64FF; color: #1C64FF;">
+                                        <i class="fas fa-eye me-1"></i>View
+                                    </a>
+                                    {% if user_role in 'business_head,top_management' or team.leader == request.user %}
+                                    <a href="{% url 'edit_team' team.id %}" 
+                                       class="btn btn-outline-secondary btn-sm px-3" 
+                                       style="border-color: #D9D9D9; color: #696969;">
+                                        <i class="fas fa-edit me-1"></i>Edit
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
                 {% endfor %}
             </div>
             {% else %}
-            <div class="alert alert-info">
-                No teams found.
+            <!-- Empty State for Teams -->
+            <div class="card border-0 shadow-sm text-center py-5" style="background-color: #FFFFFF;">
+                <div class="card-body">
+                    <div class="mb-4">
+                        <i class="fas fa-users fa-4x" style="color: #D9D9D9;"></i>
+                    </div>
+                    <h3 class="fw-bold mb-3" style="color: #1C64FF;">No Teams Found</h3>
+                    <p class="text-muted mb-4" style="color: #696969;">
+                        Get started by creating your first team to organize your workforce.
+                    </p>
+                    {% if user_role in 'business_head,top_management' %}
+                    <a href="{% url 'create_team' %}" class="btn btn-primary btn-lg px-4 py-2" style="background-color: #1C64FF; border-color: #1C64FF;">
+                        <i class="fas fa-plus me-2"></i>Create Your First Team
+                    </a>
+                    {% endif %}
+                </div>
             </div>
             {% endif %}
         </div>
 
-        <div class="tab-pane fade" id="users">
+        <!-- Users Tab -->
+        <div class="tab-pane fade" id="users" role="tabpanel" aria-labelledby="users-tab">
             {% if all_users %}
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead class="thead-light">
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Role</th>
-                            <th>Team</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for user in all_users %}
-                        <tr {% if user == request.user %}class="table-active"{% endif %}>
-                            <td>{{ user.get_full_name|default:user.username }}</td>
-                            <td>{{ user.email }}</td>
-                            <td>
-                                <span class="badge 
-                                    {% if user.role == 'rm' %}badge-primary
-                                    {% elif user.role == 'rm_head' %}badge-success
-                                    {% elif user.role == 'business_head' %}badge-warning
-                                    {% else %}badge-dark{% endif %}">
-                                    {{ user.get_role_display }}
-                                </span>
-                            </td>
-                            <td>
-                                {% if user.teams.first %}
-                                {{ user.teams.first.name }}
-                                {% else %}
-                                <span class="text-muted">No team</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <a href="{% url 'user_profile' user.id %}" class="btn btn-sm btn-outline-info">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                {% if user_role in 'business_head,top_management' %}
-                                <a href="{% url 'edit_user' user.id %}" class="btn btn-sm btn-outline-secondary">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div class="card border-0 shadow-sm" style="background-color: #FFFFFF; border: 1px solid #D9D9D9;">
+                <div class="card-header py-3 border-0 d-flex justify-content-between align-items-center" style="background-color: #C3E4FF;">
+                    <h5 class="mb-0 fw-semibold d-flex align-items-center" style="color: #1C64FF;">
+                        <i class="fas fa-user-friends me-2"></i>All Users
+                    </h5>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="badge rounded-pill px-3 py-2" style="background-color: #1C64FF; color: white;">
+                            {{ all_users.count }} user{{ all_users.count|pluralize }}
+                        </span>
+                        <div class="input-group" style="width: 250px;">
+                            <span class="input-group-text border-0" style="background-color: #FFFFFF; border: 1px solid #D9D9D9;">
+                                <i class="fas fa-search" style="color: #696969;"></i>
+                            </span>
+                            <input type="text" 
+                                   class="form-control border-0" 
+                                   id="userSearch" 
+                                   placeholder="Search users..."
+                                   style="border: 1px solid #D9D9D9;">
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="usersTable">
+                            <thead style="background-color: #1C64FF;">
+                                <tr>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">
+                                        <i class="fas fa-user me-2"></i>Name
+                                    </th>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">
+                                        <i class="fas fa-envelope me-2"></i>Email
+                                    </th>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">
+                                        <i class="fas fa-id-badge me-2"></i>Role
+                                    </th>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">
+                                        <i class="fas fa-users me-2"></i>Team
+                                    </th>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">
+                                        <i class="fas fa-cog me-2"></i>Actions
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in all_users %}
+                                <tr class="user-row {% if user == request.user %}table-light{% endif %}" 
+                                    style="border-bottom: 1px solid #D9D9D9;">
+                                    <td class="py-3 px-4 align-middle">
+                                        <div class="d-flex align-items-center">
+                                            <div class="me-3">
+                                                <div class="d-flex align-items-center justify-content-center rounded-circle" 
+                                                     style="width: 40px; height: 40px; background-color: #C3E4FF; color: #1C64FF;">
+                                                    <i class="fas fa-user"></i>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0 fw-semibold text-dark user-name">
+                                                    {{ user.get_full_name|default:user.username }}
+                                                </h6>
+                                                {% if user == request.user %}
+                                                <small class="text-muted d-flex align-items-center mt-1">
+                                                    <i class="fas fa-star me-1" style="color: #ffc107;"></i>
+                                                    You
+                                                </small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4 align-middle">
+                                        <div class="d-flex align-items-center user-email" style="color: #696969;">
+                                            <i class="fas fa-envelope me-2" style="color: #1C64FF;"></i>
+                                            <span>{{ user.email }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4 align-middle">
+                                        {% if user.role == 'rm' %}
+                                            <span class="badge rounded-pill px-3 py-2 user-role" style="background-color: #e3f2fd; color: #1976d2; border: 1px solid #bbdefb;">
+                                                <i class="fas fa-user me-1"></i>{{ user.get_role_display }}
+                                            </span>
+                                        {% elif user.role == 'rm_head' %}
+                                            <span class="badge rounded-pill px-3 py-2 user-role" style="background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9;">
+                                                <i class="fas fa-user-tie me-1"></i>{{ user.get_role_display }}
+                                            </span>
+                                        {% elif user.role == 'business_head' %}
+                                            <span class="badge rounded-pill px-3 py-2 user-role" style="background-color: #fff3e0; color: #f57c00; border: 1px solid #ffcc02;">
+                                                <i class="fas fa-briefcase me-1"></i>{{ user.get_role_display }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge rounded-pill px-3 py-2 user-role" style="background-color: #f5f5f5; color: #424242; border: 1px solid #e0e0e0;">
+                                                <i class="fas fa-user-circle me-1"></i>{{ user.get_role_display }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-3 px-4 align-middle">
+                                        {% if user.teams.first %}
+                                            <div class="d-flex align-items-center user-team" style="color: #696969;">
+                                                <i class="fas fa-users me-2" style="color: #1C64FF;"></i>
+                                                <span>{{ user.teams.first.name }}</span>
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted user-team">
+                                                <i class="fas fa-minus me-2"></i>No team
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-3 px-4 align-middle">
+                                        <div class="d-flex gap-2">
+                                            <a href="{% url 'user_profile' user.id %}" 
+                                               class="btn btn-outline-primary btn-sm px-3 py-2" 
+                                               style="border-color: #1C64FF; color: #1C64FF;">
+                                                <i class="fas fa-eye me-1"></i>View
+                                            </a>
+                                            {% if user_role in 'business_head,top_management' %}
+                                            <a href="{% url 'edit_user' user.id %}" 
+                                               class="btn btn-outline-secondary btn-sm px-3 py-2" 
+                                               style="border-color: #D9D9D9; color: #696969;">
+                                                <i class="fas fa-edit me-1"></i>Edit
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
             {% else %}
-            <div class="alert alert-info">
-                No users found.
+            <!-- Empty State for Users -->
+            <div class="card border-0 shadow-sm text-center py-5" style="background-color: #FFFFFF;">
+                <div class="card-body">
+                    <div class="mb-4">
+                        <i class="fas fa-user-friends fa-4x" style="color: #D9D9D9;"></i>
+                    </div>
+                    <h3 class="fw-bold mb-3" style="color: #1C64FF;">No Users Found</h3>
+                    <p class="text-muted mb-4" style="color: #696969;">
+                        There are no users in the system yet.
+                    </p>
+                </div>
             </div>
             {% endif %}
         </div>
     </div>
 </div>
+
+<!-- Toast Container for Notifications -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+    <div id="infoToast" class="toast border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header border-0" style="background-color: #C3E4FF;">
+            <i class="fas fa-info-circle text-primary me-2" style="color: #1C64FF !important;"></i>
+            <strong class="me-auto" style="color: #1C64FF;">Team Management</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" style="background-color: #FFFFFF; color: #696969;">
+            <span id="toastMessage"></span>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Enhanced tab functionality
+    const tabButtons = document.querySelectorAll('[data-bs-toggle="tab"]');
+    tabButtons.forEach(button => {
+        button.addEventListener('shown.bs.tab', function(e) {
+            // Update active tab styling
+            tabButtons.forEach(btn => {
+                btn.style.color = '#696969';
+                btn.style.borderBottom = 'none';
+            });
+            
+            this.style.color = '#1C64FF';
+            this.style.borderBottom = '3px solid #1C64FF';
+        });
+    });
+
+    // Enhanced team card hover effects
+    const teamCards = document.querySelectorAll('.team-card');
+    teamCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px)';
+            this.style.boxShadow = '0 8px 25px rgba(28, 100, 255, 0.15)';
+            this.style.borderColor = '#1C64FF';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '';
+            this.style.borderColor = '#D9D9D9';
+        });
+    });
+
+    // Enhanced button hover effects
+    const buttons = document.querySelectorAll('.btn');
+    buttons.forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+            this.style.transition = 'all 0.2s ease';
+            
+            if (this.classList.contains('btn-primary') || this.classList.contains('btn-outline-primary')) {
+                this.style.boxShadow = '0 8px 25px rgba(28, 100, 255, 0.3)';
+            } else {
+                this.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+            }
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '';
+        });
+    });
+
+    // Enhanced table row interactions
+    const tableRows = document.querySelectorAll('.user-row');
+    tableRows.forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            if (!this.classList.contains('table-light')) {
+                this.style.backgroundColor = '#C3E4FF';
+            }
+            this.style.transition = 'background-color 0.2s ease';
+            this.style.cursor = 'pointer';
+        });
+        
+        row.addEventListener('mouseleave', function() {
+            if (!this.classList.contains('table-light')) {
+                this.style.backgroundColor = '';
+            } else {
+                this.style.backgroundColor = '#f8f9fa';
+            }
+        });
+        
+        // Add click to view profile functionality
+        row.addEventListener('click', function(e) {
+            // Don't trigger if clicking on action buttons
+            if (!e.target.closest('.btn') && !e.target.closest('.dropdown')) {
+                const profileLink = this.querySelector('a[href*="user_profile"]');
+                if (profileLink) {
+                    window.location.href = profileLink.href;
+                }
+            }
+        });
+    });
+
+    // User search functionality
+    const searchInput = document.getElementById('userSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const rows = document.querySelectorAll('.user-row');
+            
+            rows.forEach(row => {
+                const name = row.querySelector('.user-name').textContent.toLowerCase();
+                const email = row.querySelector('.user-email span').textContent.toLowerCase();
+                const role = row.querySelector('.user-role').textContent.toLowerCase();
+                const team = row.querySelector('.user-team').textContent.toLowerCase();
+                
+                const matches = name.includes(searchTerm) || 
+                              email.includes(searchTerm) || 
+                              role.includes(searchTerm) ||
+                              team.includes(searchTerm);
+                
+                row.style.display = matches ? '' : 'none';
+            });
+            
+            // Show/hide no results message
+            const visibleRows = Array.from(rows).filter(row => row.style.display !== 'none');
+            let noResultsMsg = document.getElementById('noResultsMessage');
+            
+            if (visibleRows.length === 0 && searchTerm) {
+                if (!noResultsMsg) {
+                    noResultsMsg = document.createElement('tr');
+                    noResultsMsg.id = 'noResultsMessage';
+                    noResultsMsg.innerHTML = `
+                        <td colspan="5" class="text-center py-4" style="color: #696969;">
+                            <i class="fas fa-search me-2"></i>
+                            No users found matching "${searchTerm}"
+                        </td>
+                    `;
+                    document.querySelector('#usersTable tbody').appendChild(noResultsMsg);
+                }
+            } else if (noResultsMsg) {
+                noResultsMsg.remove();
+            }
+        });
+    }
+
+    // Add entrance animations
+    const cards = document.querySelectorAll('.card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.transition = 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+        
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+
+    // Add ripple effect to buttons
+    buttons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            // Create ripple effect
+            const ripple = document.createElement('span');
+            const rect = this.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = e.clientX - rect.left - size / 2;
+            const y = e.clientY - rect.top - size / 2;
+            
+            ripple.style.cssText = `
+                position: absolute;
+                width: ${size}px;
+                height: ${size}px;
+                left: ${x}px;
+                top: ${y}px;
+                background: rgba(255, 255, 255, 0.3);
+                border-radius: 50%;
+                transform: scale(0);
+                animation: ripple 0.6s ease-out;
+                pointer-events: none;
+            `;
+            
+            this.style.position = 'relative';
+            this.appendChild(ripple);
+            
+            setTimeout(() => ripple.remove(), 600);
+        });
+    });
+
+    // Add CSS for ripple animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes ripple {
+            to {
+                transform: scale(2);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Badge hover effects
+    const badges = document.querySelectorAll('.badge');
+    badges.forEach(badge => {
+        badge.addEventListener('mouseenter', function() {
+            this.style.transform = 'scale(1.05)';
+            this.style.transition = 'transform 0.2s ease';
+        });
+        
+        badge.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1)';
+        });
+    });
+
+    // Show welcome toast
+    function showWelcomeToast() {
+        const teamsCount = {{ teams.count }};
+        const usersCount = {{ all_users.count }};
+        
+        const message = `Managing ${teamsCount} team${teamsCount !== 1 ? 's' : ''} and ${usersCount} user${usersCount !== 1 ? 's' : ''}`;
+        
+        document.getElementById('toastMessage').textContent = message;
+        
+        const toastElement = document.getElementById('infoToast');
+        const toast = new bootstrap.Toast(toastElement, {
+            autohide: true,
+            delay: 4000
+        });
+        
+        setTimeout(() => {
+            toast.show();
+        }, 1000);
+    }
+
+    // Show welcome toast on page load
+    showWelcomeToast();
+
+    // Enhanced accessibility
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Tab') {
+            // Add focus indicators
+            document.addEventListener('focusin', function(e) {
+                if (e.target.matches('.btn, .nav-link')) {
+                    e.target.style.outline = '2px solid #1C64FF';
+                    e.target.style.outlineOffset = '2px';
+                }
+            });
+            
+            document.addEventListener('focusout', function(e) {
+                if (e.target.matches('.btn, .nav-link')) {
+                    e.target.style.outline = '';
+                    e.target.style.outlineOffset = '';
+                }
+            });
+        }
+    });
+
+    // Add loading states for navigation
+    const navLinks = document.querySelectorAll('a[href]');
+    navLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            if (!this.href.includes('#')) {
+                const icon = this.querySelector('i');
+                if (icon && !icon.classList.contains('fa-spin')) {
+                    const originalClass = icon.className;
+                    icon.className = 'fas fa-spinner fa-spin me-2';
+                    
+                    setTimeout(() => {
+                        icon.className = originalClass;
+                    }, 1000);
+                }
+            }
+        });
+    });
+
+    // Auto-refresh functionality (optional)
+    let refreshInterval;
+    function startAutoRefresh() {
+        refreshInterval = setInterval(() => {
+            // Only refresh if user is active (not idle)
+            if (document.hasFocus()) {
+                location.reload();
+            }
+        }, 300000); // 5 minutes
+    }
+
+    // Start auto-refresh
+    startAutoRefresh();
+
+    // Clear interval on page unload
+    window.addEventListener('beforeunload', function() {
+        if (refreshInterval) {
+            clearInterval(refreshInterval);
+        }
+    });
+});
+</script>
+
+<style>
+/* Enhanced button styles */
+.btn-primary {
+    background-color: #1C64FF !important;
+    border-color: #1C64FF !important;
+}
+
+.btn-primary:hover {
+    background-color: #1557e6 !important;
+    border-color: #1557e6 !important;
+}
+
+.btn-outline-primary {
+    border-color: #1C64FF !important;
+    color: #1C64FF !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: #1C64FF !important;
+    border-color: #1C64FF !important;
+    color: white !important;
+}
+
+.btn-outline-secondary {
+    border-color: #D9D9D9 !important;
+    color: #696969 !important;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #D9D9D9 !important;
+    border-color: #D9D9D9 !important;
+    color: #495057 !important;
+}
+
+/* Enhanced focus styles */
+.btn:focus,
+.form-control:focus,
+.nav-link:focus {
+    box-shadow: 0 0 0 0.25rem rgba(28, 100, 255, 0.25) !important;
+}
+
+/* Smooth transitions */
+.btn,
+.card,
+.badge,
+.nav-link,
+.table tbody tr {
+    transition: all 0.2s ease !important;
+}
+
+/* Enhanced nav-tabs styling */
+.nav-tabs .nav-link {
+    border: none !important;
+    border-radius: 0 !important;
+}
+
+.nav-tabs .nav-link.active {
+    background-color: transparent !important;
+    border-bottom: 3px solid #1C64FF !important;
+    color: #1C64FF !important;
+}
+
+.nav-tabs .nav-link:not(.active) {
+    color: #696969 !important;
+}
+
+.nav-tabs .nav-link:hover:not(.active) {
+    color: #1C64FF !important;
+    border-bottom: 2px solid rgba(28, 100, 255, 0.3) !important;
+}
+
+/* Enhanced table styling */
+.table tbody tr:hover {
+    background-color: #C3E4FF !important;
+}
+
+.table-light {
+    background-color: #f8f9fa !important;
+}
+
+/* Badge enhancements */
+.badge {
+    font-weight: 500 !important;
+    font-size: 0.75rem !important;
+}
+
+/* Card shadow enhancements */
+.shadow-sm {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+}
+
+/* Dropdown enhancements */
+.dropdown-menu {
+    border: 1px solid #D9D9D9 !important;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.dropdown-item:hover {
+    background-color: #C3E4FF !important;
+    color: #1C64FF !important;
+}
+
+/* Search input styling */
+.input-group-text {
+    background-color: #FFFFFF !important;
+    border: 1px solid #D9D9D9 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .display-5 {
+        font-size: 1.75rem !important;
+    }
+    
+    .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .d-flex.gap-2,
+    .d-flex.gap-3 {
+        flex-direction: column !important;
+    }
+    
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+    
+    .input-group {
+        width: 100% !important;
+        margin-top: 1rem;
+    }
+}
+
+/* Loading animation */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.fa-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Enhanced accessibility */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .card {
+        border: 2px solid #000 !important;
+    }
+    
+    .btn {
+        border-width: 2px !important;
+    }
+}
+
+/* Print styles */
+@media print {
+    .btn,
+    .dropdown,
+    .toast-container {
+        display: none !important;
+    }
+    
+    .card {
+        border: 1px solid #000 !important;
+        box-shadow: none !important;
+    }
+    
+    .table {
+        font-size: 0.8rem !important;
+    }
+}
+</style>
 {% endblock %}

@@ -481,6 +481,135 @@
             0 0 0 3px rgba(255, 71, 87, 0.3),
             0 12px 30px rgba(255, 71, 87, 0.4);
     }
+
+    /* Enhanced button styles */
+    .btn-danger {
+        background-color: #dc3545 !important;
+        border-color: #dc3545 !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .btn-danger:hover {
+        background-color: #c82333 !important;
+        border-color: #bd2130 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(220, 53, 69, 0.3) !important;
+    }
+
+    .btn-danger:active {
+        transform: translateY(0) !important;
+    }
+
+    .btn-outline-secondary {
+        border-color: #D9D9D9 !important;
+        color: #696969 !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .btn-outline-secondary:hover {
+        background-color: #D9D9D9 !important;
+        border-color: #D9D9D9 !important;
+        color: #495057 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .btn-outline-secondary:active {
+        transform: translateY(0) !important;
+    }
+
+    /* Warning icon animation */
+    .warning-icon {
+        animation: warningPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes warningPulse {
+        0%, 100% { 
+            transform: scale(1); 
+            box-shadow: 0 10px 30px rgba(220, 53, 69, 0.3);
+        }
+        50% { 
+            transform: scale(1.05); 
+            box-shadow: 0 15px 40px rgba(220, 53, 69, 0.4);
+        }
+    }
+
+    /* Card entrance animation */
+    .card {
+        animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes slideUpFade {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Enhanced focus styles */
+    .btn:focus {
+        box-shadow: 0 0 0 0.25rem rgba(28, 100, 255, 0.25) !important;
+    }
+
+    .btn-danger:focus {
+        box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important;
+    }
+
+    /* Loading state */
+    .btn.loading {
+        pointer-events: none;
+        opacity: 0.8;
+    }
+
+    /* Smooth transitions */
+    .btn,
+    .card,
+    .alert {
+        transition: all 0.3s ease !important;
+    }
+
+    /* Enhanced accessibility */
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+
+    /* High contrast mode support */
+    @media (prefers-contrast: high) {
+        .card {
+            border: 2px solid #000 !important;
+        }
+        
+        .btn {
+            border-width: 2px !important;
+        }
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 576px) {
+        .warning-icon {
+            width: 80px !important;
+            height: 80px !important;
+        }
+        
+        .warning-icon i {
+            font-size: 2rem !important;
+        }
+        
+        .btn-lg {
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+        }
+    }
 </style>
 
 <div class="bg-decoration">
@@ -489,32 +618,163 @@
     <div class="geometric-shape"></div>
 </div>
 
-<div class="container">
-    <div class="delete-card">
-        <div class="warning-icon"></div>
+<div class="container-fluid d-flex align-items-center justify-content-center min-vh-100 py-4" style="background-color: #FFFFFF;">
+    <div class="row justify-content-center w-100">
+        <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5">
+            <!-- Main Confirmation Card -->
+            <div class="card border-0 shadow-lg" style="background-color: #FFFFFF; border: 1px solid #D9D9D9; border-radius: 20px;">
+                <!-- Header with Warning Icon -->
+                <div class="card-header text-center py-5 border-0" style="background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%); border-radius: 20px 20px 0 0;">
+                    <div class="mb-4">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle warning-icon" 
+                             style="width: 100px; height: 100px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); box-shadow: 0 10px 30px rgba(220, 53, 69, 0.3);">
+                            <i class="fas fa-exclamation-triangle fa-3x text-white"></i>
+                        </div>
+                    </div>
+                    <h1 class="h2 fw-bold text-danger mb-2">Confirm Deletion</h1>
+                    <p class="text-muted mb-0" style="color: #696969;">This action cannot be undone</p>
+                </div>
 
-        <h2 class="title">Confirm Delete</h2>
+                <!-- Card Body -->
+                <div class="card-body p-5">
+                    <!-- Warning Message -->
+                    <div class="text-center mb-4">
+                        <h5 class="fw-semibold mb-3" style="color: #1C64FF;">
+                            Are you sure you want to delete this service request?
+                        </h5>
+                        <div class="p-4 rounded-3 mb-4" style="background-color: #C3E4FF; border-left: 4px solid #1C64FF;">
+                            <div class="d-flex align-items-center justify-content-center mb-2">
+                                <i class="fas fa-user me-2" style="color: #1C64FF;"></i>
+                                <strong style="color: #1C64FF;">Client:</strong>
+                            </div>
+                            <h6 class="mb-0 fw-bold text-dark">{{ service_request.client.name }}</h6>
+                        </div>
+                        
+                        {% if service_request.request_id %}
+                        <div class="p-3 rounded-3 mb-4" style="background-color: rgba(28, 100, 255, 0.05); border: 1px solid #D9D9D9;">
+                            <div class="d-flex align-items-center justify-content-center mb-1">
+                                <i class="fas fa-hashtag me-2" style="color: #696969;"></i>
+                                <small class="text-muted">Request ID:</small>
+                            </div>
+                            <code class="text-dark fw-bold">{{ service_request.request_id }}</code>
+                        </div>
+                        {% endif %}
+                    </div>
 
-        <p class="message">
-            Are you sure you want to delete the service request for client 
-            <span class="highlight">{{ service_request.client.name }}</span>?
-        </p>
+                    <!-- Danger Warning -->
+                    <div class="alert alert-danger border-0 mb-4" role="alert" style="background-color: rgba(220, 53, 69, 0.1); border-left: 4px solid #dc3545 !important;">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-exclamation-circle me-3 text-danger"></i>
+                            <div>
+                                <h6 class="alert-heading mb-1 fw-semibold text-danger">Warning: Permanent Action</h6>
+                                <p class="mb-0 small text-danger">
+                                    This will permanently delete the service request and all associated data including comments, documents, and workflow history.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
-        <div class="danger-warning">
-            ⚠️ This action cannot be undone. All related data will be permanently removed.
-        </div>
+                    <!-- Additional Information -->
+                    {% if service_request.description %}
+                    <div class="mb-4">
+                        <h6 class="fw-semibold mb-2" style="color: #696969;">
+                            <i class="fas fa-align-left me-2"></i>Request Description:
+                        </h6>
+                        <div class="p-3 rounded-3" style="background-color: rgba(105, 105, 105, 0.05); border: 1px solid #D9D9D9;">
+                            <p class="mb-0 small" style="color: #696969;">
+                                {{ service_request.description|truncatewords:20 }}
+                            </p>
+                        </div>
+                    </div>
+                    {% endif %}
 
-        <form method="post" id="deleteForm">
-            {% csrf_token %}
-            <div class="form-actions">
-                <button type="submit" class="btn btn-danger" id="deleteBtn">
-                    Yes, Delete
-                </button>
-                <a href="{% url 'service_request_list' %}" class="btn btn-secondary">
-                    Cancel
-                </a>
+                    <!-- Request Details -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-6">
+                            <div class="text-center p-3 rounded-3" style="background-color: rgba(28, 100, 255, 0.05);">
+                                <i class="fas fa-calendar-alt mb-2" style="color: #1C64FF;"></i>
+                                <div>
+                                    <small class="text-muted d-block">Created</small>
+                                    <strong class="small text-dark">{{ service_request.created_at|date:"M d, Y" }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center p-3 rounded-3" style="background-color: rgba(28, 100, 255, 0.05);">
+                                <i class="fas fa-info-circle mb-2" style="color: #1C64FF;"></i>
+                                <div>
+                                    <small class="text-muted d-block">Status</small>
+                                    <strong class="small text-dark">{{ service_request.get_status_display|default:service_request.status }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <form method="post" id="deleteForm" novalidate>
+                        {% csrf_token %}
+                        <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
+                            <button type="submit" 
+                                    class="btn btn-danger btn-lg px-4 fw-semibold" 
+                                    id="deleteBtn"
+                                    style="min-width: 160px;">
+                                <i class="fas fa-trash me-2"></i>
+                                <span class="btn-text">Yes, Delete</span>
+                                <span class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+                            </button>
+                            <a href="{% url 'service_request_list' %}" 
+                               class="btn btn-outline-secondary btn-lg px-4 fw-semibold" 
+                               id="cancelBtn"
+                               style="border-color: #D9D9D9; color: #696969; min-width: 160px;">
+                                <i class="fas fa-arrow-left me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+
+                    <!-- Keyboard Shortcuts Info -->
+                    <div class="mt-4 pt-3" style="border-top: 1px solid #D9D9D9;">
+                        <div class="d-flex justify-content-center gap-4">
+                            <small class="text-muted d-flex align-items-center">
+                                <kbd class="me-2" style="background-color: #f8f9fa; color: #696969; border: 1px solid #D9D9D9;">Esc</kbd>
+                                Cancel
+                            </small>
+                            <small class="text-muted d-flex align-items-center">
+                                <kbd class="me-2" style="background-color: #f8f9fa; color: #696969; border: 1px solid #D9D9D9;">Enter</kbd>
+                                Confirm
+                            </small>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </form>
+
+            <!-- Additional Safety Notice -->
+            <div class="text-center mt-4">
+                <div class="card border-0 shadow-sm" style="background-color: rgba(28, 100, 255, 0.05); border: 1px solid #C3E4FF !important;">
+                    <div class="card-body py-3">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <i class="fas fa-shield-alt me-2" style="color: #1C64FF;"></i>
+                            <small style="color: #696969;">
+                                <strong>Safety Tip:</strong> Consider archiving instead of deleting to preserve historical data
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container for Notifications -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+    <div id="errorToast" class="toast border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header border-0" style="background-color: #f8d7da;">
+            <i class="fas fa-exclamation-circle text-danger me-2"></i>
+            <strong class="me-auto text-danger">Error</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" style="background-color: #FFFFFF; color: #696969;">
+            <span id="errorMessage"></span>
+        </div>
     </div>
 </div>
 
@@ -522,56 +782,107 @@
     document.addEventListener('DOMContentLoaded', function() {
         const deleteForm = document.getElementById('deleteForm');
         const deleteBtn = document.getElementById('deleteBtn');
-        const cancelBtn = document.querySelector('.btn-secondary');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const btnText = deleteBtn.querySelector('.btn-text');
+        const spinner = deleteBtn.querySelector('.spinner-border');
 
-        // Enhanced delete button loading state
+        // Form submission handling
         deleteForm.addEventListener('submit', function(e) {
+            // Show loading state
             deleteBtn.classList.add('loading');
-            deleteBtn.textContent = 'Deleting...';
+            deleteBtn.disabled = true;
+            btnText.textContent = 'Deleting...';
+            spinner.classList.remove('d-none');
             
-            // Disable the cancel button too
+            // Disable cancel button
             cancelBtn.style.pointerEvents = 'none';
             cancelBtn.style.opacity = '0.6';
+            
+            // Show processing toast
+            showToast('Processing deletion request...', 'info');
         });
 
         // Keyboard shortcuts
         document.addEventListener('keydown', function(e) {
+            // Escape key to cancel
             if (e.key === 'Escape') {
                 e.preventDefault();
-                if (cancelBtn && !deleteBtn.classList.contains('loading')) {
-                    cancelBtn.click();
+                if (!deleteBtn.classList.contains('loading')) {
+                    window.location.href = cancelBtn.href;
                 }
             }
             
-            // Ctrl/Cmd + Enter to confirm (dangerous but some users expect it)
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            // Enter key to confirm (with caution)
+            if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') {
                 e.preventDefault();
                 if (!deleteBtn.classList.contains('loading')) {
-                    deleteBtn.click();
+                    // Add a small delay to prevent accidental confirmations
+                    setTimeout(() => {
+                        if (confirm('Are you absolutely sure you want to delete this service request?')) {
+                            deleteBtn.click();
+                        }
+                    }, 100);
                 }
             }
         });
 
-        // Enhanced focus management
-        deleteBtn.addEventListener('focus', function() {
-            this.style.transform = 'translateY(-2px) scale(1.01)';
-        });
-
-        deleteBtn.addEventListener('blur', function() {
-            this.style.transform = '';
-        });
-
-        // Add subtle hover sound effect preparation (if audio context is available)
+        // Enhanced button interactions
         const buttons = document.querySelectorAll('.btn');
-        buttons.forEach(btn => {
-            btn.addEventListener('mouseenter', function() {
-                this.style.willChange = 'transform, box-shadow';
+        buttons.forEach(button => {
+            button.addEventListener('mouseenter', function() {
+                if (!this.disabled && !this.classList.contains('loading')) {
+                    this.style.willChange = 'transform, box-shadow';
+                }
             });
             
-            btn.addEventListener('mouseleave', function() {
+            button.addEventListener('mouseleave', function() {
                 this.style.willChange = 'auto';
             });
+            
+            // Add ripple effect on click
+            button.addEventListener('click', function(e) {
+                if (this.disabled || this.classList.contains('loading')) return;
+                
+                const ripple = document.createElement('span');
+                const rect = this.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                const x = e.clientX - rect.left - size / 2;
+                const y = e.clientY - rect.top - size / 2;
+                
+                ripple.style.cssText = `
+                    position: absolute;
+                    width: ${size}px;
+                    height: ${size}px;
+                    left: ${x}px;
+                    top: ${y}px;
+                    background: rgba(255, 255, 255, 0.3);
+                    border-radius: 50%;
+                    transform: scale(0);
+                    animation: ripple 0.6s linear;
+                    pointer-events: none;
+                `;
+                
+                this.style.position = 'relative';
+                this.style.overflow = 'hidden';
+                this.appendChild(ripple);
+                
+                setTimeout(() => {
+                    ripple.remove();
+                }, 600);
+            });
         });
+
+        // Add CSS for ripple animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes ripple {
+                to {
+                    transform: scale(4);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
 
         // Prevent accidental double-clicks
         let deleteClicked = false;
@@ -582,6 +893,56 @@
             }
             deleteClicked = true;
         });
+
+        // Focus management
+        deleteBtn.addEventListener('focus', function() {
+            if (!this.classList.contains('loading')) {
+                this.style.transform = 'translateY(-1px) scale(1.02)';
+            }
+        });
+
+        deleteBtn.addEventListener('blur', function() {
+            this.style.transform = '';
+        });
+
+        // Auto-focus on the cancel button for safety
+        setTimeout(() => {
+            cancelBtn.focus();
+        }, 500);
+
+        // Toast notification function
+        function showToast(message, type = 'error') {
+            document.getElementById('errorMessage').textContent = message;
+            
+            const toastElement = document.getElementById('errorToast');
+            const toast = new bootstrap.Toast(toastElement, {
+                autohide: true,
+                delay: 3000
+            });
+            toast.show();
+        }
+
+        // Add entrance animation delay for better UX
+        const card = document.querySelector('.card');
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(30px)';
+        
+        setTimeout(() => {
+            card.style.transition = 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, 100);
+
+        // Add warning sound preparation (if Web Audio API is available)
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            deleteBtn.addEventListener('mouseenter', function() {
+                // Could add subtle warning sound here
+            });
+        } catch (e) {
+            // Audio context not available, continue without sound
+        }
     });
 </script>
 {% endblock %}

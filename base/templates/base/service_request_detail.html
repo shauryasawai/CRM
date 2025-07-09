@@ -1,803 +1,427 @@
 {% extends 'base/base.html' %}
 {% block title %}Service Request {{ service_request.request_id|default:service_request.id }}{% endblock %}
+
 {% block content %}
-<style>
-    :root {
-        --primary-bg: #D3FF61;
-        --card-bg: rgba(255, 255, 255, 0.95);
-        --text-primary: #000000;
-        --text-secondary: #333333;
-        --text-muted: #666666;
-        --border-color: rgba(0, 0, 0, 0.1);
-        --shadow-light: 0 2px 10px rgba(0, 0, 0, 0.08);
-        --shadow-medium: 0 4px 20px rgba(0, 0, 0, 0.12);
-        --gradient-dark: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-    }
-
-    * {
-        box-sizing: border-box;
-    }
-
-    body {
-        background: var(--primary-bg);
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        line-height: 1.6;
-        margin: 0;
-        padding: 0;
-        min-height: 100vh;
-    }
-
-    .detail-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 2rem;
-        animation: slideInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    @keyframes slideInUp {
-        from { opacity: 0; transform: translateY(30px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    .detail-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
-        flex-wrap: wrap;
-        gap: 1.5rem;
-    }
-
-    .request-title {
-        font-size: clamp(1.8rem, 4vw, 2.5rem);
-        font-weight: 800;
-        color: var(--text-primary);
-        margin: 0;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .request-id-badge {
-        background: var(--gradient-dark);
-        color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        font-size: 0.9rem;
-        font-family: 'Courier New', monospace;
-        font-weight: 700;
-    }
-
-    .back-btn {
-        background: var(--card-bg);
-        color: var(--text-secondary);
-        border: 1px solid var(--border-color);
-        padding: 0.75rem 1.5rem;
-        border-radius: 8px;
-        text-decoration: none;
-        font-weight: 600;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        box-shadow: var(--shadow-light);
-    }
-
-    .detail-grid {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 2rem;
-        margin-bottom: 2rem;
-    }
-
-    .main-content {
-        display: flex;
-        flex-direction: column;
-        gap: 2rem;
-    }
-
-    .sidebar {
-        display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
-    }
-
-    .detail-card {
-        background: var(--card-bg);
-        border-radius: 16px;
-        padding: 2rem;
-        box-shadow: var(--shadow-medium);
-        backdrop-filter: blur(10px);
-        border: 1px solid var(--border-color);
-    }
-
-    .card-title {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: var(--text-primary);
-        margin: 0 0 1.5rem 0;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .info-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1.5rem;
-    }
-
-    .info-item {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .info-label {
-        font-weight: 600;
-        color: var(--text-muted);
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    .info-value {
-        font-weight: 600;
-        color: var(--text-secondary);
-        font-size: 1rem;
-    }
-
-    .status-badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.5rem 1rem;
-        border-radius: 50px;
-        font-size: 0.85rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    .status-draft { color: #6b7280; background: rgba(107, 114, 128, 0.1); }
-    .status-submitted { color: #2563eb; background: rgba(37, 99, 235, 0.1); }
-    .status-documents-requested { color: #d97706; background: rgba(245, 158, 11, 0.1); }
-    .status-documents-received { color: #0891b2; background: rgba(8, 145, 178, 0.1); }
-    .status-in-progress { color: #7c3aed; background: rgba(124, 58, 237, 0.1); }
-    .status-resolved { color: #059669; background: rgba(5, 150, 105, 0.1); }
-    .status-client-verification { color: #dc2626; background: rgba(220, 38, 38, 0.1); }
-    .status-closed { color: #374151; background: rgba(55, 65, 81, 0.1); }
-    .status-on-hold { color: #ea580c; background: rgba(234, 88, 12, 0.1); }
-
-    .priority-badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        text-transform: uppercase;
-    }
-
-    .priority-low { color: #059669; background: rgba(5, 150, 105, 0.1); }
-    .priority-medium { color: #d97706; background: rgba(245, 158, 11, 0.1); }
-    .priority-high { color: #dc2626; background: rgba(220, 38, 38, 0.1); }
-    .priority-urgent { color: #7c2d12; background: rgba(124, 45, 18, 0.1); }
-
-    .description-box {
-        background: rgba(0, 0, 0, 0.02);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 1.5rem;
-        font-size: 1rem;
-        line-height: 1.6;
-        color: var(--text-secondary);
-    }
-
-    .actions-card {
-        position: sticky;
-        top: 2rem;
-    }
-
-    .action-btn {
-        width: 100%;
-        padding: 0.75rem 1rem;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 0.9rem;
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-        margin-bottom: 0.75rem;
-        border: none;
-        cursor: pointer;
-    }
-
-    .action-primary {
-        background: var(--gradient-dark);
-        color: white;
-    }
-
-    .action-secondary {
-        background: rgba(37, 99, 235, 0.1);
-        color: #2563eb;
-        border: 1px solid rgba(37, 99, 235, 0.2);
-    }
-
-    .action-warning {
-        background: rgba(245, 158, 11, 0.1);
-        color: #d97706;
-        border: 1px solid rgba(245, 158, 11, 0.2);
-    }
-
-    .action-success {
-        background: rgba(5, 150, 105, 0.1);
-        color: #059669;
-        border: 1px solid rgba(5, 150, 105, 0.2);
-    }
-
-    .action-danger {
-        background: rgba(239, 68, 68, 0.1);
-        color: #dc2626;
-        border: 1px solid rgba(239, 68, 68, 0.2);
-    }
-
-    .comments-section {
-        max-height: 400px;
-        overflow-y: auto;
-    }
-
-    .comment-item {
-        background: rgba(0, 0, 0, 0.02);
-        border-radius: 8px;
-        padding: 1rem;
-        margin-bottom: 1rem;
-        border-left: 4px solid var(--border-color);
-    }
-
-    .comment-internal {
-        border-left-color: #dc2626;
-        background: rgba(220, 38, 38, 0.05);
-    }
-
-    .comment-header {
-        display: flex;
-        justify-content: between;
-        align-items: center;
-        margin-bottom: 0.5rem;
-        gap: 1rem;
-    }
-
-    .comment-author {
-        font-weight: 600;
-        color: var(--text-primary);
-    }
-
-    .comment-date {
-        color: var(--text-muted);
-        font-size: 0.85rem;
-    }
-
-    .comment-content {
-        color: var(--text-secondary);
-        line-height: 1.5;
-    }
-
-    .internal-badge {
-        background: rgba(220, 38, 38, 0.1);
-        color: #dc2626;
-        padding: 0.2rem 0.5rem;
-        border-radius: 4px;
-        font-size: 0.7rem;
-        font-weight: 600;
-        text-transform: uppercase;
-    }
-
-    .documents-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-    }
-
-    .document-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 1rem;
-        background: rgba(0, 0, 0, 0.02);
-        border-radius: 8px;
-        border: 1px solid var(--border-color);
-    }
-
-    .document-info {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-
-    .document-icon {
-        color: var(--text-muted);
-        font-size: 1.2rem;
-    }
-
-    .document-details {
-        display: flex;
-        flex-direction: column;
-        gap: 0.2rem;
-    }
-
-    .document-name {
-        font-weight: 600;
-        color: var(--text-secondary);
-    }
-
-    .document-meta {
-        font-size: 0.8rem;
-        color: var(--text-muted);
-    }
-
-    .document-actions {
-        display: flex;
-        gap: 0.5rem;
-    }
-
-    .doc-btn {
-        padding: 0.5rem;
-        border-radius: 6px;
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        font-size: 0.8rem;
-    }
-
-    .doc-download {
-        background: rgba(5, 150, 105, 0.1);
-        color: #059669;
-    }
-
-    .doc-delete {
-        background: rgba(239, 68, 68, 0.1);
-        color: #dc2626;
-    }
-
-    .timeline-item {
-        display: flex;
-        gap: 1rem;
-        padding: 1rem 0;
-        border-bottom: 1px solid var(--border-color);
-    }
-
-    .timeline-item:last-child {
-        border-bottom: none;
-    }
-
-    .timeline-dot {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: var(--text-muted);
-        margin-top: 0.5rem;
-        flex-shrink: 0;
-    }
-
-    .timeline-content {
-        flex: 1;
-    }
-
-    .timeline-title {
-        font-weight: 600;
-        color: var(--text-secondary);
-        margin-bottom: 0.25rem;
-    }
-
-    .timeline-date {
-        color: var(--text-muted);
-        font-size: 0.85rem;
-    }
-
-    .form-group {
-        margin-bottom: 1rem;
-    }
-
-    .form-label {
-        display: block;
-        font-weight: 600;
-        color: var(--text-secondary);
-        margin-bottom: 0.5rem;
-    }
-
-    .form-input, .form-textarea, .form-select {
-        width: 100%;
-        padding: 0.75rem;
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        font-size: 0.9rem;
-        background: white;
-        color: var(--text-secondary);
-    }
-
-    .form-textarea {
-        resize: vertical;
-        min-height: 100px;
-    }
-
-    .checkbox-group {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin-top: 0.5rem;
-    }
-
-    .modal {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 1000;
-        backdrop-filter: blur(5px);
-    }
-
-    .modal.active {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .modal-content {
-        background: var(--card-bg);
-        border-radius: 16px;
-        padding: 2rem;
-        max-width: 500px;
-        width: 90%;
-        max-height: 80vh;
-        overflow-y: auto;
-        box-shadow: var(--shadow-medium);
-    }
-
-    .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-    }
-
-    .modal-title {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: var(--text-primary);
-        margin: 0;
-    }
-
-    .close-btn {
-        background: none;
-        border: none;
-        font-size: 1.5rem;
-        cursor: pointer;
-        color: var(--text-muted);
-    }
-
-    .empty-state {
-        text-align: center;
-        padding: 2rem;
-        color: var(--text-muted);
-    }
-
-    .empty-state i {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-        opacity: 0.5;
-    }
-
-    /* Responsive Design */
-    @media (max-width: 768px) {
-        .detail-container {
-            padding: 1rem;
-        }
-
-        .detail-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .info-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .detail-header {
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        .request-title {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 0.5rem;
-        }
-
-        .actions-card {
-            position: static;
-        }
-
-        .comment-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 0.5rem;
-        }
-
-        .document-item {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 1rem;
-        }
-    }
-</style>
-
-<div class="detail-container">
-    <!-- Header -->
-    <div class="detail-header">
-        <h1 class="request-title">
-            Service Request
-            <span class="request-id-badge">{{ service_request.request_id|default:service_request.id }}</span>
-        </h1>
-        <a href="{% url 'service_request_list' %}" class="back-btn">
-            <i class="fas fa-arrow-left"></i> Back to List
-        </a>
+<div class="container-fluid py-4">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="background-color: #FFFFFF; border-left: 4px solid #1C64FF !important;">
+                <div class="card-body py-4">
+                    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3">
+                        <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center gap-3">
+                            <div>
+                                <h1 class="h3 fw-bold mb-2" style="color: #1C64FF;">
+                                    <i class="fas fa-headset me-3"></i>Service Request
+                                </h1>
+                                <p class="text-muted mb-0" style="color: #696969;">Request details and management</p>
+                            </div>
+                            <div>
+                                <span class="badge bg-dark px-3 py-2 fs-6" style="font-family: 'Courier New', monospace; background-color: #1C64FF !important;">
+                                    {{ service_request.request_id|default:service_request.id }}
+                                </span>
+                            </div>
+                        </div>
+                        <a href="{% url 'service_request_list' %}" class="btn btn-outline-secondary btn-lg px-4" style="border-color: #D9D9D9; color: #696969;">
+                            <i class="fas fa-arrow-left me-2"></i>Back to List
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Main Content Grid -->
-    <div class="detail-grid">
+    <div class="row g-4">
         <!-- Main Content -->
-        <div class="main-content">
+        <div class="col-12 col-lg-8">
             <!-- Request Information -->
-            <div class="detail-card">
-                <h2 class="card-title">
-                    <i class="fas fa-info-circle"></i> Request Information
-                </h2>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <div class="info-label">Client</div>
-                        <div class="info-value">{{ service_request.client.name }}</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Request Type</div>
-                        <div class="info-value">{{ service_request.request_type.name|default:"General Request" }}</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Status</div>
-                        <div class="info-value">
-                            <span class="status-badge status-{{ service_request.status|lower|slugify }}">
-                                {{ service_request.get_status_display|default:service_request.status }}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Priority</div>
-                        <div class="info-value">
-                            <span class="priority-badge priority-{{ service_request.priority|lower }}">
-                                {{ service_request.get_priority_display|default:service_request.priority }}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Raised By</div>
-                        <div class="info-value">{{ service_request.raised_by.get_full_name|default:service_request.raised_by.username }}</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Assigned To</div>
-                        <div class="info-value">
-                            {% if service_request.assigned_to %}
-                                {{ service_request.assigned_to.get_full_name|default:service_request.assigned_to.username }}
-                            {% else %}
-                                <span style="color: var(--text-muted);">Unassigned</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Created</div>
-                        <div class="info-value">{{ service_request.created_at|date:"M d, Y g:i A" }}</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Last Updated</div>
-                        <div class="info-value">{{ service_request.updated_at|date:"M d, Y g:i A" }}</div>
-                    </div>
+            <div class="card border-0 shadow-sm mb-4" style="background-color: #FFFFFF; border: 1px solid #D9D9D9;">
+                <div class="card-header py-3 border-0" style="background-color: #C3E4FF;">
+                    <h5 class="mb-0 fw-semibold d-flex align-items-center" style="color: #1C64FF;">
+                        <i class="fas fa-info-circle me-2"></i>Request Information
+                    </h5>
                 </div>
-                
-                <div style="margin-top: 1.5rem;">
-                    <div class="info-label">Description</div>
-                    <div class="description-box">{{ service_request.description }}</div>
-                </div>
+                <div class="card-body p-4">
+                    <div class="row g-4 mb-4">
+                        <div class="col-12 col-md-6">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="fas fa-user me-3" style="color: #1C64FF; width: 20px;"></i>
+                                <div>
+                                    <small class="text-muted d-block" style="color: #696969;">Client</small>
+                                    <strong class="text-dark">{{ service_request.client.name }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="fas fa-tag me-3" style="color: #1C64FF; width: 20px;"></i>
+                                <div>
+                                    <small class="text-muted d-block" style="color: #696969;">Request Type</small>
+                                    <strong class="text-dark">{{ service_request.request_type.name|default:"General Request" }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="fas fa-info-circle me-3" style="color: #1C64FF; width: 20px;"></i>
+                                <div>
+                                    <small class="text-muted d-block" style="color: #696969;">Status</small>
+                                    {% if service_request.status == 'draft' %}
+                                        <span class="badge rounded-pill px-3 py-2" style="background-color: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6;">
+                                            <i class="fas fa-edit me-1"></i>{{ service_request.get_status_display|default:service_request.status }}
+                                        </span>
+                                    {% elif service_request.status == 'submitted' %}
+                                        <span class="badge rounded-pill px-3 py-2" style="background-color: #e3f2fd; color: #1976d2; border: 1px solid #bbdefb;">
+                                            <i class="fas fa-paper-plane me-1"></i>{{ service_request.get_status_display|default:service_request.status }}
+                                        </span>
+                                    {% elif service_request.status == 'documents-requested' %}
+                                        <span class="badge rounded-pill px-3 py-2" style="background-color: #fff3e0; color: #f57c00; border: 1px solid #ffcc02;">
+                                            <i class="fas fa-file-import me-1"></i>{{ service_request.get_status_display|default:service_request.status }}
+                                        </span>
+                                    {% elif service_request.status == 'documents-received' %}
+                                        <span class="badge rounded-pill px-3 py-2" style="background-color: #e0f2f1; color: #00695c; border: 1px solid #b2dfdb;">
+                                            <i class="fas fa-file-check me-1"></i>{{ service_request.get_status_display|default:service_request.status }}
+                                        </span>
+                                    {% elif service_request.status == 'in-progress' %}
+                                        <span class="badge rounded-pill px-3 py-2" style="background-color: #f3e5f5; color: #7b1fa2; border: 1px solid #ce93d8;">
+                                            <i class="fas fa-spinner me-1"></i>{{ service_request.get_status_display|default:service_request.status }}
+                                        </span>
+                                    {% elif service_request.status == 'resolved' %}
+                                        <span class="badge rounded-pill px-3 py-2" style="background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9;">
+                                            <i class="fas fa-check-circle me-1"></i>{{ service_request.get_status_display|default:service_request.status }}
+                                        </span>
+                                    {% elif service_request.status == 'client-verification' %}
+                                        <span class="badge rounded-pill px-3 py-2" style="background-color: #ffebee; color: #d32f2f; border: 1px solid #ffcdd2;">
+                                            <i class="fas fa-user-check me-1"></i>{{ service_request.get_status_display|default:service_request.status }}
+                                        </span>
+                                    {% elif service_request.status == 'closed' %}
+                                        <span class="badge rounded-pill px-3 py-2" style="background-color: #f5f5f5; color: #424242; border: 1px solid #e0e0e0;">
+                                            <i class="fas fa-times-circle me-1"></i>{{ service_request.get_status_display|default:service_request.status }}
+                                        </span>
+                                    {% elif service_request.status == 'on-hold' %}
+                                        <span class="badge rounded-pill px-3 py-2" style="background-color: #fff8e1; color: #f57c00; border: 1px solid #ffcc02;">
+                                            <i class="fas fa-pause-circle me-1"></i>{{ service_request.get_status_display|default:service_request.status }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge rounded-pill px-3 py-2" style="background-color: #f5f5f5; color: #424242; border: 1px solid #e0e0e0;">
+                                            {{ service_request.get_status_display|default:service_request.status }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="fas fa-flag me-3" style="color: #1C64FF; width: 20px;"></i>
+                                <div>
+                                    <small class="text-muted d-block" style="color: #696969;">Priority</small>
+                                    {% if service_request.priority == 'low' %}
+                                        <span class="badge rounded-pill px-3 py-2" style="background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9;">
+                                            <i class="fas fa-arrow-down me-1"></i>{{ service_request.get_priority_display|default:service_request.priority }}
+                                        </span>
+                                    {% elif service_request.priority == 'medium' %}
+                                        <span class="badge rounded-pill px-3 py-2" style="background-color: #fff3e0; color: #f57c00; border: 1px solid #ffcc02;">
+                                            <i class="fas fa-minus me-1"></i>{{ service_request.get_priority_display|default:service_request.priority }}
+                                        </span>
+                                    {% elif service_request.priority == 'high' %}
+                                        <span class="badge rounded-pill px-3 py-2" style="background-color: #ffebee; color: #d32f2f; border: 1px solid #ffcdd2;">
+                                            <i class="fas fa-arrow-up me-1"></i>{{ service_request.get_priority_display|default:service_request.priority }}
+                                        </span>
+                                    {% elif service_request.priority == 'urgent' %}
+                                        <span class="badge rounded-pill px-3 py-2 urgent-pulse" style="background-color: #ffebee; color: #b71c1c; border: 1px solid #ffcdd2;">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>{{ service_request.get_priority_display|default:service_request.priority }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge rounded-pill px-3 py-2" style="background-color: #f5f5f5; color: #424242; border: 1px solid #e0e0e0;">
+                                            {{ service_request.get_priority_display|default:service_request.priority }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="fas fa-user-plus me-3" style="color: #1C64FF; width: 20px;"></i>
+                                <div>
+                                    <small class="text-muted d-block" style="color: #696969;">Raised By</small>
+                                    <strong class="text-dark">{{ service_request.raised_by.get_full_name|default:service_request.raised_by.username }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="fas fa-user-check me-3" style="color: #1C64FF; width: 20px;"></i>
+                                <div>
+                                    <small class="text-muted d-block" style="color: #696969;">Assigned To</small>
+                                    {% if service_request.assigned_to %}
+                                        <strong class="text-dark">{{ service_request.assigned_to.get_full_name|default:service_request.assigned_to.username }}</strong>
+                                    {% else %}
+                                        <span class="text-muted fst-italic">
+                                            <i class="fas fa-user-slash me-1"></i>Unassigned
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="fas fa-calendar me-3" style="color: #1C64FF; width: 20px;"></i>
+                                <div>
+                                    <small class="text-muted d-block" style="color: #696969;">Created</small>
+                                    <strong class="text-dark">{{ service_request.created_at|date:"M d, Y g:i A" }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="fas fa-clock me-3" style="color: #1C64FF; width: 20px;"></i>
+                                <div>
+                                    <small class="text-muted d-block" style="color: #696969;">Last Updated</small>
+                                    <strong class="text-dark">{{ service_request.updated_at|date:"M d, Y g:i A" }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-align-left me-3 mt-1" style="color: #1C64FF; width: 20px;"></i>
+                            <div class="flex-grow-1">
+                                <small class="text-muted d-block mb-2" style="color: #696969;">Description</small>
+                                <div class="p-3 rounded" style="background-color: rgba(28, 100, 255, 0.05); border-left: 3px solid #1C64FF;">
+                                    {{ service_request.description }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                {% if service_request.resolution_summary %}
-                <div style="margin-top: 1.5rem;">
-                    <div class="info-label">Resolution Summary</div>
-                    <div class="description-box">{{ service_request.resolution_summary }}</div>
+                    {% if service_request.resolution_summary %}
+                    <div>
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-check-circle me-3 mt-1" style="color: #28a745; width: 20px;"></i>
+                            <div class="flex-grow-1">
+                                <small class="text-muted d-block mb-2" style="color: #696969;">Resolution Summary</small>
+                                <div class="p-3 rounded" style="background-color: rgba(40, 167, 69, 0.05); border-left: 3px solid #28a745;">
+                                    {{ service_request.resolution_summary }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
-                {% endif %}
             </div>
 
             <!-- Comments Section -->
-            <div class="detail-card">
-                <h2 class="card-title">
-                    <i class="fas fa-comments"></i> Comments ({{ comments.count }})
-                </h2>
-                
-                {% if permissions.can_add_comment %}
-                <button class="action-btn action-primary" onclick="openModal('commentModal')">
-                    <i class="fas fa-plus"></i> Add Comment
-                </button>
-                {% endif %}
-
-                <div class="comments-section">
-                    {% for comment in comments %}
-                    <div class="comment-item {% if comment.is_internal %}comment-internal{% endif %}">
-                        <div class="comment-header">
-                            <div>
-                                <span class="comment-author">{{ comment.commented_by.get_full_name|default:comment.commented_by.username }}</span>
-                                {% if comment.is_internal %}
-                                <span class="internal-badge">Internal</span>
-                                {% endif %}
+            <div class="card border-0 shadow-sm mb-4" style="background-color: #FFFFFF; border: 1px solid #D9D9D9;">
+                <div class="card-header py-3 border-0 d-flex justify-content-between align-items-center" style="background-color: #C3E4FF;">
+                    <h5 class="mb-0 fw-semibold d-flex align-items-center" style="color: #1C64FF;">
+                        <i class="fas fa-comments me-2"></i>Comments
+                        <span class="badge rounded-pill ms-2" style="background-color: rgba(28, 100, 255, 0.2);">
+                            {{ comments.count }}
+                        </span>
+                    </h5>
+                    {% if permissions.can_add_comment %}
+                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#commentModal" style="background-color: #1C64FF; border-color: #1C64FF;">
+                        <i class="fas fa-plus me-1"></i>Add Comment
+                    </button>
+                    {% endif %}
+                </div>
+                <div class="card-body p-4">
+                    {% if comments %}
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            {% for comment in comments %}
+                            <div class="mb-3 p-3 rounded {% if comment.is_internal %}border-start border-danger border-3{% else %}border-start border-primary border-3{% endif %}" 
+                                 style="background-color: {% if comment.is_internal %}rgba(220, 53, 69, 0.05){% else %}rgba(28, 100, 255, 0.05){% endif %};">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <strong class="text-dark">{{ comment.commented_by.get_full_name|default:comment.commented_by.username }}</strong>
+                                        {% if comment.is_internal %}
+                                        <span class="badge bg-danger px-2 py-1" style="font-size: 0.7rem;">
+                                            <i class="fas fa-lock me-1"></i>Internal
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    <small class="text-muted" style="color: #696969;">{{ comment.created_at|date:"M d, Y g:i A" }}</small>
+                                </div>
+                                <p class="mb-0" style="color: #696969;">{{ comment.comment }}</p>
                             </div>
-                            <span class="comment-date">{{ comment.created_at|date:"M d, Y g:i A" }}</span>
+                            {% endfor %}
                         </div>
-                        <div class="comment-content">{{ comment.comment }}</div>
-                    </div>
-                    {% empty %}
-                    <div class="empty-state">
-                        <i class="fas fa-comment-slash"></i>
-                        <p>No comments yet</p>
-                    </div>
-                    {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-comment-slash fa-3x mb-3" style="color: #D9D9D9;"></i>
+                            <p class="text-muted mb-0" style="color: #696969;">No comments yet</p>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
 
             <!-- Documents Section -->
-            <div class="detail-card">
-                <h2 class="card-title">
-                    <i class="fas fa-paperclip"></i> Documents ({{ documents.count }})
-                </h2>
-                
-                {% if permissions.can_upload_document %}
-                <button class="action-btn action-secondary" onclick="openModal('documentModal')">
-                    <i class="fas fa-upload"></i> Upload Document
-                </button>
-                {% endif %}
-
-                <div class="documents-list">
-                    {% for document in documents %}
-                    <div class="document-item">
-                        <div class="document-info">
-                            <i class="fas fa-file document-icon"></i>
-                            <div class="document-details">
-                                <div class="document-name">{{ document.document_name }}</div>
-                                <div class="document-meta">
-                                    Uploaded by {{ document.uploaded_by.get_full_name|default:document.uploaded_by.username }}
-                                    on {{ document.uploaded_at|date:"M d, Y" }}
+            <div class="card border-0 shadow-sm" style="background-color: #FFFFFF; border: 1px solid #D9D9D9;">
+                <div class="card-header py-3 border-0 d-flex justify-content-between align-items-center" style="background-color: #C3E4FF;">
+                    <h5 class="mb-0 fw-semibold d-flex align-items-center" style="color: #1C64FF;">
+                        <i class="fas fa-paperclip me-2"></i>Documents
+                        <span class="badge rounded-pill ms-2" style="background-color: rgba(28, 100, 255, 0.2);">
+                            {{ documents.count }}
+                        </span>
+                    </h5>
+                    {% if permissions.can_upload_document %}
+                    <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#documentModal" style="border-color: #1C64FF; color: #1C64FF;">
+                        <i class="fas fa-upload me-1"></i>Upload Document
+                    </button>
+                    {% endif %}
+                </div>
+                <div class="card-body p-4">
+                    {% if documents %}
+                        {% for document in documents %}
+                        <div class="d-flex align-items-center justify-content-between p-3 mb-3 rounded" style="background-color: rgba(28, 100, 255, 0.05); border: 1px solid #D9D9D9;">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-file fa-2x me-3" style="color: #1C64FF;"></i>
+                                <div>
+                                    <h6 class="mb-1 fw-semibold text-dark">{{ document.document_name }}</h6>
+                                    <small class="text-muted" style="color: #696969;">
+                                        Uploaded by {{ document.uploaded_by.get_full_name|default:document.uploaded_by.username }}
+                                        on {{ document.uploaded_at|date:"M d, Y" }}
+                                    </small>
                                 </div>
                             </div>
+                            <div class="d-flex gap-2">
+                                {% if permissions.can_download_documents %}
+                                <a href="{{ document.document.url }}" class="btn btn-outline-success btn-sm" download>
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                {% endif %}
+                                {% if permissions.can_delete and document.uploaded_by == user %}
+                                <a href="{% url 'service_request_delete_document' document.id %}" 
+                                   class="btn btn-outline-danger btn-sm"
+                                   onclick="return confirm('Delete this document?')">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                                {% endif %}
+                            </div>
                         </div>
-                        <div class="document-actions">
-                            {% if permissions.can_download_documents %}
-                            <a href="{{ document.document.url }}" class="doc-btn doc-download" download>
-                                <i class="fas fa-download"></i>
-                            </a>
-                            {% endif %}
-                            {% if permissions.can_delete and document.uploaded_by == user %}
-                            <a href="{% url 'service_request_delete_document' document.id %}" 
-                               class="doc-btn doc-delete"
-                               onclick="return confirm('Delete this document?')">
-                                <i class="fas fa-trash"></i>
-                            </a>
-                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-file-slash fa-3x mb-3" style="color: #D9D9D9;"></i>
+                            <p class="text-muted mb-0" style="color: #696969;">No documents uploaded</p>
                         </div>
-                    </div>
-                    {% empty %}
-                    <div class="empty-state">
-                        <i class="fas fa-file-slash"></i>
-                        <p>No documents uploaded</p>
-                    </div>
-                    {% endfor %}
+                    {% endif %}
                 </div>
             </div>
         </div>
 
         <!-- Sidebar -->
-        <div class="sidebar">
+        <div class="col-12 col-lg-4">
             <!-- Actions Card -->
-            <div class="detail-card actions-card">
-                <h2 class="card-title">
-                    <i class="fas fa-cog"></i> Actions
-                </h2>
-                
-                {% if permissions.can_edit %}
-                <a href="{% url 'service_request_update' service_request.pk %}" class="action-btn action-secondary">
-                    <i class="fas fa-edit"></i> Edit Request
-                </a>
-                {% endif %}
+            <div class="card border-0 shadow-sm mb-4" style="background-color: #FFFFFF; border: 1px solid #D9D9D9;">
+                <div class="card-header py-3 border-0" style="background-color: #C3E4FF;">
+                    <h5 class="mb-0 fw-semibold d-flex align-items-center" style="color: #1C64FF;">
+                        <i class="fas fa-cog me-2"></i>Actions
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="d-grid gap-2">
+                        {% if permissions.can_edit %}
+                        <a href="{% url 'service_request_update' service_request.pk %}" class="btn btn-outline-primary" style="border-color: #1C64FF; color: #1C64FF;">
+                            <i class="fas fa-edit me-2"></i>Edit Request
+                        </a>
+                        {% endif %}
 
-                {% if 'submit' in available_actions %}
-                <form method="post" action="{% url 'service_request_submit' service_request.pk %}">
-                    {% csrf_token %}
-                    <button type="submit" class="action-btn action-primary">
-                        <i class="fas fa-paper-plane"></i> Submit Request
-                    </button>
-                </form>
-                {% endif %}
+                        {% if 'submit' in available_actions %}
+                        <form method="post" action="{% url 'service_request_submit' service_request.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary w-100" style="background-color: #1C64FF; border-color: #1C64FF;">
+                                <i class="fas fa-paper-plane me-2"></i>Submit Request
+                            </button>
+                        </form>
+                        {% endif %}
 
-                {% if 'request_documents' in available_actions %}
-                <button class="action-btn action-warning" onclick="openModal('requestDocumentsModal')">
-                    <i class="fas fa-file-alt"></i> Request Documents
-                </button>
-                {% endif %}
+                        {% if 'request_documents' in available_actions %}
+                        <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#requestDocumentsModal">
+                            <i class="fas fa-file-alt me-2"></i>Request Documents
+                        </button>
+                        {% endif %}
 
-                {% if 'submit_documents' in available_actions %}
-                <form method="post" action="{% url 'service_request_action' service_request.pk 'submit_documents' %}">
-                    {% csrf_token %}
-                    <button type="submit" class="action-btn action-success">
-                        <i class="fas fa-check"></i> Submit Documents
-                    </button>
-                </form>
-                {% endif %}
+                        {% if 'submit_documents' in available_actions %}
+                        <form method="post" action="{% url 'service_request_action' service_request.pk 'submit_documents' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="fas fa-check me-2"></i>Submit Documents
+                            </button>
+                        </form>
+                        {% endif %}
 
-                {% if 'start_processing' in available_actions %}
-                <form method="post" action="{% url 'service_request_action' service_request.pk 'start_processing' %}">
-                    {% csrf_token %}
-                    <button type="submit" class="action-btn action-primary">
-                        <i class="fas fa-play"></i> Start Processing
-                    </button>
-                </form>
-                {% endif %}
+                        {% if 'start_processing' in available_actions %}
+                        <form method="post" action="{% url 'service_request_action' service_request.pk 'start_processing' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary w-100" style="background-color: #1C64FF; border-color: #1C64FF;">
+                                <i class="fas fa-play me-2"></i>Start Processing
+                            </button>
+                        </form>
+                        {% endif %}
 
-                {% if 'resolve' in available_actions %}
-                <button class="action-btn action-success" onclick="openModal('resolveModal')">
-                    <i class="fas fa-check-circle"></i> Resolve Request
-                </button>
-                {% endif %}
+                        {% if 'resolve' in available_actions %}
+                        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#resolveModal">
+                            <i class="fas fa-check-circle me-2"></i>Resolve Request
+                        </button>
+                        {% endif %}
 
-                {% if 'verify' in available_actions %}
-                <button class="action-btn action-success" onclick="openModal('verifyModal')">
-                    <i class="fas fa-clipboard-check"></i> Verify Resolution
-                </button>
-                {% endif %}
+                        {% if 'verify' in available_actions %}
+                        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#verifyModal">
+                            <i class="fas fa-clipboard-check me-2"></i>Verify Resolution
+                        </button>
+                        {% endif %}
 
-                {% if permissions.can_delete %}
-                <a href="{% url 'service_request_delete' service_request.pk %}" 
-                   class="action-btn action-danger"
-                   onclick="return confirm('Are you sure you want to delete this request?')">
-                    <i class="fas fa-trash"></i> Delete Request
-                </a>
-                {% endif %}
+                        {% if permissions.can_delete %}
+                        <a href="{% url 'service_request_delete' service_request.pk %}" 
+                           class="btn btn-outline-danger"
+                           onclick="return confirm('Are you sure you want to delete this request?')">
+                            <i class="fas fa-trash me-2"></i>Delete Request
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
 
-            <!-- Quick Info Card -->
-            <div class="detail-card">
-                <h2 class="card-title">
-                    <i class="fas fa-clock"></i> Timeline
-                </h2>
-                {% if workflow_history %}
-                    {% for workflow in workflow_history %}
-                    <div class="timeline-item">
-                        <div class="timeline-dot"></div>
-                        <div class="timeline-content">
-                            <div class="timeline-title">
-                                {{ workflow.from_status|title }} → {{ workflow.to_status|title }}
-                            </div>
-                            <div class="timeline-date">{{ workflow.transition_date|date:"M d, Y g:i A" }}</div>
-                            {% if workflow.remarks %}
-                            <div style="margin-top: 0.25rem; color: var(--text-muted); font-size: 0.85rem;">
-                                {{ workflow.remarks }}
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                <div class="empty-state">
-                    <i class="fas fa-history"></i>
-                    <p>No workflow history</p>
+            <!-- Timeline Card -->
+            <div class="card border-0 shadow-sm" style="background-color: #FFFFFF; border: 1px solid #D9D9D9;">
+                <div class="card-header py-3 border-0" style="background-color: #C3E4FF;">
+                    <h5 class="mb-0 fw-semibold d-flex align-items-center" style="color: #1C64FF;">
+                        <i class="fas fa-history me-2"></i>Timeline
+                    </h5>
                 </div>
-                {% endif %}
+                <div class="card-body p-4">
+                    {% if workflow_history %}
+                        <div class="timeline">
+                            {% for workflow in workflow_history %}
+                            <div class="d-flex mb-3">
+                                <div class="me-3 mt-1">
+                                    <div class="rounded-circle" style="width: 12px; height: 12px; background-color: #1C64FF;"></div>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1 fw-semibold text-dark">
+                                        {{ workflow.from_status|title }} → {{ workflow.to_status|title }}
+                                    </h6>
+                                    <small class="text-muted d-block mb-1" style="color: #696969;">
+                                        {{ workflow.transition_date|date:"M d, Y g:i A" }}
+                                    </small>
+                                    {% if workflow.remarks %}
+                                    <small class="text-muted" style="color: #696969;">
+                                        {{ workflow.remarks }}
+                                    </small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-history fa-3x mb-3" style="color: #D9D9D9;"></i>
+                            <p class="text-muted mb-0" style="color: #696969;">No workflow history</p>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
@@ -806,185 +430,405 @@
 <!-- Modals -->
 {% if permissions.can_add_comment %}
 <!-- Add Comment Modal -->
-<div id="commentModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 class="modal-title">Add Comment</h3>
-            <button class="close-btn" onclick="closeModal('commentModal')">&times;</button>
+<div class="modal fade" id="commentModal" tabindex="-1" aria-labelledby="commentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border: 1px solid #D9D9D9;">
+            <div class="modal-header border-0" style="background-color: #C3E4FF;">
+                <h5 class="modal-title fw-semibold" id="commentModalLabel" style="color: #1C64FF;">
+                    <i class="fas fa-comment me-2"></i>Add Comment
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'service_request_add_comment' service_request.pk %}">
+                <div class="modal-body p-4">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" style="color: #1C64FF;">Comment</label>
+                        <textarea name="comment" class="form-control" rows="4" required placeholder="Enter your comment..." style="border-color: #D9D9D9;"></textarea>
+                    </div>
+                    {% if user.role in 'ops_exec,ops_team_lead,operations_head' %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="is_internal" id="is_internal" style="border-color: #D9D9D9;">
+                        <label class="form-check-label" for="is_internal" style="color: #696969;">
+                            Internal comment (not visible to client)
+                        </label>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer border-0" style="background-color: #f8f9fa;">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-color: #D9D9D9; color: #696969;">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="background-color: #1C64FF; border-color: #1C64FF;">
+                        <i class="fas fa-save me-2"></i>Add Comment
+                    </button>
+                </div>
+            </form>
         </div>
-        <form method="post" action="{% url 'service_request_add_comment' service_request.pk %}">
-            {% csrf_token %}
-            <div class="form-group">
-                <label class="form-label">Comment</label>
-                <textarea name="comment" class="form-textarea" required></textarea>
-            </div>
-            {% if user.role in 'ops_exec,ops_team_lead,operations_head' %}
-            <div class="checkbox-group">
-                <input type="checkbox" name="is_internal" id="is_internal">
-                <label for="is_internal">Internal comment (not visible to client)</label>
-            </div>
-            {% endif %}
-            <button type="submit" class="action-btn action-primary">
-                <i class="fas fa-save"></i> Add Comment
-            </button>
-        </form>
     </div>
 </div>
 {% endif %}
 
 {% if permissions.can_upload_document %}
 <!-- Upload Document Modal -->
-<div id="documentModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 class="modal-title">Upload Document</h3>
-            <button class="close-btn" onclick="closeModal('documentModal')">&times;</button>
-        </div>
-        <form method="post" action="{% url 'service_request_upload_document' service_request.pk %}" enctype="multipart/form-data">
-            {% csrf_token %}
-            <div class="form-group">
-                <label class="form-label">Select Documents</label>
-                <input type="file" name="documents" class="form-input" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx">
-                <small style="color: var(--text-muted);">Max 10MB per file. Allowed: PDF, Images, Word, Excel</small>
+<div class="modal fade" id="documentModal" tabindex="-1" aria-labelledby="documentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border: 1px solid #D9D9D9;">
+            <div class="modal-header border-0" style="background-color: #C3E4FF;">
+                <h5 class="modal-title fw-semibold" id="documentModalLabel" style="color: #1C64FF;">
+                    <i class="fas fa-upload me-2"></i>Upload Document
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <button type="submit" class="action-btn action-primary">
-                <i class="fas fa-upload"></i> Upload Documents
-            </button>
-        </form>
+            <form method="post" action="{% url 'service_request_upload_document' service_request.pk %}" enctype="multipart/form-data">
+                <div class="modal-body p-4">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" style="color: #1C64FF;">Select Documents</label>
+                        <input type="file" name="documents" class="form-control" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" style="border-color: #D9D9D9;">
+                        <div class="form-text" style="color: #696969;">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Max 10MB per file. Allowed: PDF, Images, Word, Excel
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0" style="background-color: #f8f9fa;">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-color: #D9D9D9; color: #696969;">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="background-color: #1C64FF; border-color: #1C64FF;">
+                        <i class="fas fa-upload me-2"></i>Upload Documents
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 {% endif %}
 
 {% if 'request_documents' in available_actions %}
 <!-- Request Documents Modal -->
-<div id="requestDocumentsModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 class="modal-title">Request Documents</h3>
-            <button class="close-btn" onclick="closeModal('requestDocumentsModal')">&times;</button>
-        </div>
-        <form method="post" action="{% url 'service_request_action' service_request.pk 'request_documents' %}">
-            {% csrf_token %}
-            <div class="form-group">
-                <label class="form-label">Required Documents</label>
-                <textarea name="document_list" class="form-textarea" 
-                          placeholder="List the documents required (comma-separated)&#10;Example: KYC Copy, Address Proof, Bank Statement" required></textarea>
+<div class="modal fade" id="requestDocumentsModal" tabindex="-1" aria-labelledby="requestDocumentsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border: 1px solid #D9D9D9;">
+            <div class="modal-header border-0" style="background-color: #fff3e0;">
+                <h5 class="modal-title fw-semibold" id="requestDocumentsModalLabel" style="color: #f57c00;">
+                    <i class="fas fa-file-alt me-2"></i>Request Documents
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <button type="submit" class="action-btn action-warning">
-                <i class="fas fa-file-alt"></i> Request Documents
-            </button>
-        </form>
+            <form method="post" action="{% url 'service_request_action' service_request.pk 'request_documents' %}">
+                <div class="modal-body p-4">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" style="color: #f57c00;">Required Documents</label>
+                        <textarea name="document_list" class="form-control" rows="4" required 
+                                  placeholder="List the documents required (comma-separated)&#10;Example: KYC Copy, Address Proof, Bank Statement" 
+                                  style="border-color: #D9D9D9;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0" style="background-color: #f8f9fa;">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-color: #D9D9D9; color: #696969;">Cancel</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-file-alt me-2"></i>Request Documents
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 {% endif %}
 
 {% if 'resolve' in available_actions %}
 <!-- Resolve Request Modal -->
-<div id="resolveModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 class="modal-title">Resolve Request</h3>
-            <button class="close-btn" onclick="closeModal('resolveModal')">&times;</button>
-        </div>
-        <form method="post" action="{% url 'service_request_action' service_request.pk 'resolve' %}">
-            {% csrf_token %}
-            <div class="form-group">
-                <label class="form-label">Resolution Summary</label>
-                <textarea name="resolution_summary" class="form-textarea" 
-                          placeholder="Describe how the request was resolved..." required></textarea>
+<div class="modal fade" id="resolveModal" tabindex="-1" aria-labelledby="resolveModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border: 1px solid #D9D9D9;">
+            <div class="modal-header border-0" style="background-color: #e8f5e9;">
+                <h5 class="modal-title fw-semibold" id="resolveModalLabel" style="color: #2e7d32;">
+                    <i class="fas fa-check-circle me-2"></i>Resolve Request
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <button type="submit" class="action-btn action-success">
-                <i class="fas fa-check-circle"></i> Mark as Resolved
-            </button>
-        </form>
+            <form method="post" action="{% url 'service_request_action' service_request.pk 'resolve' %}">
+                <div class="modal-body p-4">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" style="color: #2e7d32;">Resolution Summary</label>
+                        <textarea name="resolution_summary" class="form-control" rows="4" required 
+                                  placeholder="Describe how the request was resolved..." 
+                                  style="border-color: #D9D9D9;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0" style="background-color: #f8f9fa;">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-color: #D9D9D9; color: #696969;">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check-circle me-2"></i>Mark as Resolved
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 {% endif %}
 
 {% if 'verify' in available_actions %}
 <!-- Verify Resolution Modal -->
-<div id="verifyModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 class="modal-title">Verify Resolution</h3>
-            <button class="close-btn" onclick="closeModal('verifyModal')">&times;</button>
-        </div>
-        <div style="margin-bottom: 1.5rem;">
-            <div class="info-label">Resolution Summary</div>
-            <div class="description-box">{{ service_request.resolution_summary }}</div>
-        </div>
-        <div style="display: flex; gap: 1rem;">
-            <form method="post" action="{% url 'service_request_action' service_request.pk 'verify_resolution' %}" style="flex: 1;">
-                {% csrf_token %}
-                <input type="hidden" name="approved" value="true">
-                <button type="submit" class="action-btn action-success">
-                    <i class="fas fa-thumbs-up"></i> Approve Resolution
-                </button>
-            </form>
-            <form method="post" action="{% url 'service_request_action' service_request.pk 'verify_resolution' %}" style="flex: 1;">
-                {% csrf_token %}
-                <input type="hidden" name="approved" value="false">
-                <button type="submit" class="action-btn action-danger">
-                    <i class="fas fa-thumbs-down"></i> Reject & Rework
-                </button>
-            </form>
+<div class="modal fade" id="verifyModal" tabindex="-1" aria-labelledby="verifyModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border: 1px solid #D9D9D9;">
+            <div class="modal-header border-0" style="background-color: #e8f5e9;">
+                <h5 class="modal-title fw-semibold" id="verifyModalLabel" style="color: #2e7d32;">
+                    <i class="fas fa-clipboard-check me-2"></i>Verify Resolution
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-4">
+                    <label class="form-label fw-semibold" style="color: #2e7d32;">Resolution Summary</label>
+                    <div class="p-3 rounded" style="background-color: rgba(40, 167, 69, 0.05); border-left: 3px solid #28a745;">
+                        {{ service_request.resolution_summary }}
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <form method="post" action="{% url 'service_request_action' service_request.pk 'verify_resolution' %}" class="flex-fill">
+                        {% csrf_token %}
+                        <input type="hidden" name="approved" value="true">
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="fas fa-thumbs-up me-2"></i>Approve Resolution
+                        </button>
+                    </form>
+                    <form method="post" action="{% url 'service_request_action' service_request.pk 'verify_resolution' %}" class="flex-fill">
+                        {% csrf_token %}
+                        <input type="hidden" name="approved" value="false">
+                        <button type="submit" class="btn btn-outline-danger w-100">
+                            <i class="fas fa-thumbs-down me-2"></i>Reject & Rework
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 {% endif %}
 
+<!-- Toast Container for Notifications -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+    <div id="successToast" class="toast border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header border-0" style="background-color: #C3E4FF;">
+            <i class="fas fa-check-circle text-success me-2"></i>
+            <strong class="me-auto" style="color: #1C64FF;">Success</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" style="background-color: #FFFFFF; color: #696969;">
+            <span id="successMessage"></span>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Enhanced button styles */
+.btn-primary {
+    background-color: #1C64FF !important;
+    border-color: #1C64FF !important;
+}
+
+.btn-primary:hover {
+    background-color: #1557e6 !important;
+    border-color: #1557e6 !important;
+}
+
+.btn-outline-primary {
+    border-color: #1C64FF !important;
+    color: #1C64FF !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: #1C64FF !important;
+    border-color: #1C64FF !important;
+    color: white !important;
+}
+
+.btn-outline-secondary {
+    border-color: #D9D9D9 !important;
+    color: #696969 !important;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #D9D9D9 !important;
+    border-color: #D9D9D9 !important;
+    color: #495057 !important;
+}
+
+/* Enhanced focus styles */
+.form-control:focus {
+    border-color: #1C64FF !important;
+    box-shadow: 0 0 0 0.25rem rgba(28, 100, 255, 0.25) !important;
+}
+
+/* Smooth transitions */
+.btn,
+.card,
+.badge {
+    transition: all 0.2s ease !important;
+}
+
+/* Urgent priority pulse animation */
+@keyframes urgentPulse {
+    0%, 100% { 
+        opacity: 1; 
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 0.8; 
+        transform: scale(1.05);
+    }
+}
+
+.urgent-pulse {
+    animation: urgentPulse 2s infinite;
+}
+
+/* Enhanced accessibility */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .card {
+        border: 2px solid #000 !important;
+    }
+    
+    .btn {
+        border-width: 2px !important;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .btn-lg {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+    }
+}
+</style>
+
 <script>
-function openModal(modalId) {
-    document.getElementById(modalId).classList.add('active');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeModal(modalId) {
-    document.getElementById(modalId).classList.remove('active');
-    document.body.style.overflow = 'auto';
-}
-
-// Close modal when clicking outside
-document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('modal')) {
-        closeModal(e.target.id);
-    }
-});
-
-// Close modal with Escape key
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        const activeModal = document.querySelector('.modal.active');
-        if (activeModal) {
-            closeModal(activeModal.id);
-        }
-    }
-});
-
-// Auto-hide messages after 5 seconds
 document.addEventListener('DOMContentLoaded', function() {
-    const messages = document.querySelectorAll('.alert, .message');
-    messages.forEach(function(message) {
-        setTimeout(function() {
-            message.style.opacity = '0';
-            setTimeout(function() {
-                message.remove();
-            }, 300);
-        }, 5000);
+    // Enhanced button hover effects
+    const buttons = document.querySelectorAll('.btn');
+    buttons.forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+            this.style.transition = 'all 0.2s ease';
+            
+            if (this.classList.contains('btn-primary') || this.classList.contains('btn-outline-primary')) {
+                this.style.boxShadow = '0 8px 25px rgba(28, 100, 255, 0.3)';
+            } else {
+                this.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+            }
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '';
+        });
     });
-});
 
-// Confirmation for critical actions
-document.querySelectorAll('form').forEach(function(form) {
-    form.addEventListener('submit', function(e) {
-        const button = form.querySelector('button[type="submit"]');
-        if (button && button.classList.contains('action-danger')) {
+    // Badge hover effects
+    const badges = document.querySelectorAll('.badge');
+    badges.forEach(badge => {
+        badge.addEventListener('mouseenter', function() {
+            this.style.transform = 'scale(1.05)';
+            this.style.transition = 'transform 0.2s ease';
+        });
+        
+        badge.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1)';
+        });
+    });
+
+    // Add entrance animations
+    const cards = document.querySelectorAll('.card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.transition = 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+        
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+
+    // Form submission handling
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const submitBtn = this.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                const originalContent = submitBtn.innerHTML;
+                submitBtn.innerHTML = `
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Processing...
+                `;
+                
+                // Re-enable after 5 seconds (fallback)
+                setTimeout(() => {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalContent;
+                }, 5000);
+            }
+        });
+    });
+
+    // Toast notification function
+    function showToast(message, type = 'success') {
+        document.getElementById('successMessage').textContent = message;
+        
+        const toastElement = document.getElementById('successToast');
+        const toast = new bootstrap.Toast(toastElement, {
+            autohide: true,
+            delay: 4000
+        });
+        toast.show();
+    }
+
+    // Confirmation for critical actions
+    const dangerLinks = document.querySelectorAll('a[onclick*="confirm"], .btn-outline-danger');
+    dangerLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
             if (!confirm('Are you sure you want to perform this action?')) {
                 e.preventDefault();
             }
-        }
+        });
+    });
+
+    // Auto-hide alerts after 5 seconds
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(alert => {
+        setTimeout(() => {
+            alert.style.opacity = '0';
+            setTimeout(() => {
+                alert.remove();
+            }, 300);
+        }, 5000);
+    });
+
+    // Enhanced modal interactions
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        modal.addEventListener('shown.bs.modal', function() {
+            const firstInput = this.querySelector('input, textarea, select');
+            if (firstInput) {
+                firstInput.focus();
+            }
+        });
     });
 });
 </script>
-
 {% endblock %}

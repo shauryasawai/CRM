@@ -3,51 +3,376 @@
 {% block title %}Delete Interaction - {{ client_profile.client_full_name }}{% endblock %}
 
 {% block content %}
+<style>
+    :root {
+        --bs-primary: #1C64FF;
+        --bs-secondary: #696969;
+        --bs-light: #FFFFFF;
+        --bs-border-color: #D9D9D9;
+        --bs-info: #C3E4FF;
+    }
+
+    .danger-card {
+        border: 2px solid #dc3545;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(220, 53, 69, 0.15);
+        transition: all 0.3s ease;
+    }
+
+    .danger-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 32px rgba(220, 53, 69, 0.2);
+    }
+
+    .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #D9D9D9;
+        font-weight: 600;
+        border-radius: 12px 12px 0 0 !important;
+        padding: 1.25rem 1.5rem;
+    }
+
+    .card-header.bg-danger {
+        background: linear-gradient(135deg, #dc3545, #bb2d3b) !important;
+        color: #FFFFFF !important;
+        border-bottom-color: #dc3545;
+    }
+
+    .card-body {
+        padding: 2rem;
+    }
+
+    .btn-primary {
+        background-color: #1C64FF;
+        border-color: #1C64FF;
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        background-color: #1557e6;
+        border-color: #1557e6;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(28, 100, 255, 0.3);
+    }
+
+    .btn-danger {
+        background-color: #dc3545;
+        border-color: #dc3545;
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-danger:hover {
+        background-color: #bb2d3b;
+        border-color: #bb2d3b;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    }
+
+    .btn-secondary {
+        background-color: #696969;
+        border-color: #696969;
+        font-weight: 500;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-secondary:hover {
+        background-color: #5a5a5a;
+        border-color: #5a5a5a;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(105, 105, 105, 0.3);
+    }
+
+    .alert {
+        border-radius: 8px;
+        border: none;
+        font-weight: 500;
+        padding: 1.25rem;
+    }
+
+    .alert-danger {
+        background-color: rgba(220, 53, 69, 0.1);
+        color: #721c24;
+        border-left: 4px solid #dc3545;
+    }
+
+    .interaction-details {
+        background: #f8f9fa;
+        border: 1px solid #D9D9D9;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .interaction-details:hover {
+        background: rgba(195, 228, 255, 0.1);
+        border-color: #1C64FF;
+    }
+
+    .detail-item {
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .detail-item:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+
+    .detail-label {
+        font-weight: 600;
+        color: #696969;
+        margin-bottom: 0.25rem;
+    }
+
+    .detail-value {
+        color: #333333;
+        font-weight: 500;
+    }
+
+    .client-name {
+        color: #1C64FF;
+        font-weight: 600;
+    }
+
+    .interaction-type {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: #C3E4FF;
+        color: #1C64FF;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .interaction-notes {
+        background: rgba(195, 228, 255, 0.1);
+        border: 1px solid #C3E4FF;
+        border-radius: 6px;
+        padding: 0.75rem;
+        font-style: italic;
+        color: #696969;
+    }
+
+    .warning-icon {
+        font-size: 3rem;
+        color: #dc3545;
+        margin-bottom: 1rem;
+        display: block;
+        text-align: center;
+        opacity: 0.7;
+    }
+
+    .action-buttons {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .fade-in {
+        animation: fadeIn 0.6s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .action-buttons {
+            flex-direction: column-reverse;
+            gap: 0.75rem;
+        }
+        
+        .action-buttons .btn {
+            width: 100%;
+        }
+        
+        .card-body {
+            padding: 1.5rem;
+        }
+    }
+
+    .confirmation-text {
+        text-align: center;
+        margin: 1.5rem 0;
+        padding: 1rem;
+        background: rgba(220, 53, 69, 0.05);
+        border-radius: 8px;
+        border: 1px solid rgba(220, 53, 69, 0.2);
+    }
+</style>
+
 <div class="container-fluid">
     <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card border-danger">
-                <div class="card-header bg-danger text-white">
+        <div class="col-lg-6 col-md-8">
+            <div class="card danger-card fade-in">
+                <div class="card-header bg-danger">
                     <h5 class="mb-0">
-                        <i class="fas fa-exclamation-triangle"></i> Confirm Delete
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Confirm Delete Interaction
                     </h5>
                 </div>
+                
                 <div class="card-body">
+                    <!-- Warning Icon -->
+                    <div class="warning-icon">
+                        <i class="fas fa-trash-alt"></i>
+                    </div>
+
+                    <!-- Danger Alert -->
                     <div class="alert alert-danger">
-                        <h6>Are you sure you want to delete this interaction?</h6>
-                        <p class="mb-0">This action cannot be undone.</p>
-                    </div>
-
-                    <div class="bg-light p-3 rounded mb-4">
-                        <p class="mb-1">
-                            <strong>Client:</strong> {{ client_profile.client_full_name }}
-                        </p>
-                        <p class="mb-1">
-                            <strong>Type:</strong> {{ interaction.get_interaction_type_display }}
-                        </p>
-                        <p class="mb-1">
-                            <strong>Date:</strong> {{ interaction.interaction_date|date:"M d, Y H:i" }}
-                        </p>
+                        <h6 class="mb-2">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            Are you sure you want to delete this interaction?
+                        </h6>
                         <p class="mb-0">
-                            <strong>Notes:</strong> {{ interaction.notes|truncatewords:20 }}
+                            <strong>This action cannot be undone.</strong> The interaction record will be permanently removed from the system.
                         </p>
                     </div>
 
-                    <form method="post">
+                    <!-- Interaction Details -->
+                    <div class="interaction-details">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Interaction Details
+                        </h6>
+                        
+                        <div class="detail-item">
+                            <div class="detail-label">Client:</div>
+                            <div class="detail-value client-name">{{ client_profile.client_full_name }}</div>
+                        </div>
+                        
+                        <div class="detail-item">
+                            <div class="detail-label">Interaction Type:</div>
+                            <div class="detail-value">
+                                <span class="interaction-type">{{ interaction.get_interaction_type_display }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-item">
+                            <div class="detail-label">Date & Time:</div>
+                            <div class="detail-value">{{ interaction.interaction_date|date:"M d, Y H:i" }}</div>
+                        </div>
+                        
+                        <div class="detail-item">
+                            <div class="detail-label">Notes:</div>
+                            <div class="interaction-notes">
+                                {% if interaction.notes %}
+                                    {{ interaction.notes|truncatewords:20 }}
+                                    {% if interaction.notes|wordcount > 20 %}
+                                        <span class="text-muted">... (truncated)</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">No notes provided</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Confirmation Text -->
+                    <div class="confirmation-text">
+                        <i class="fas fa-shield-alt me-2 text-danger"></i>
+                        <strong>This interaction will be permanently deleted from {{ client_profile.client_full_name }}'s record.</strong>
+                    </div>
+
+                    <!-- Action Form -->
+                    <form method="post" id="deleteForm">
                         {% csrf_token %}
-                        <div class="d-flex justify-content-between">
+                        <div class="action-buttons">
                             <a href="{% url 'client_interaction_detail' client_profile.id interaction.id %}" 
                                class="btn btn-secondary">
-                                <i class="fas fa-times"></i> Cancel
+                                <i class="fas fa-arrow-left me-2"></i>Cancel
                             </a>
-                            <button type="submit" class="btn btn-danger">
-                                <i class="fas fa-trash"></i> Delete Interaction
+                            <button type="submit" class="btn btn-danger" id="deleteButton">
+                                <i class="fas fa-trash me-2"></i>Delete Interaction
                             </button>
                         </div>
                     </form>
+                </div>
+                
+                <div class="card-footer bg-light text-center">
+                    <small class="text-muted">
+                        <i class="fas fa-clock me-1"></i>
+                        Interaction created on {{ interaction.created_at|date:"M d, Y" }}
+                    </small>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteForm = document.getElementById('deleteForm');
+    const deleteButton = document.getElementById('deleteButton');
+    const clientName = "{{ client_profile.client_full_name|escapejs }}";
+    const interactionType = "{{ interaction.get_interaction_type_display|escapejs }}";
+    const interactionDate = "{{ interaction.interaction_date|date:'M d, Y H:i'|escapejs }}";
+    
+    // Add confirmation dialog
+    deleteForm.addEventListener('submit', function(e) {
+        const confirmMessage = `Are you absolutely sure you want to delete this interaction?\n\n` +
+                              `Client: ${clientName}\n` +
+                              `Type: ${interactionType}\n` +
+                              `Date: ${interactionDate}\n\n` +
+                              `This action cannot be undone!`;
+        
+        if (!confirm(confirmMessage)) {
+            e.preventDefault();
+            return false;
+        }
+        
+        // Add loading state to button
+        deleteButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Deleting...';
+        deleteButton.disabled = true;
+        
+        // Re-enable button after 5 seconds as fallback
+        setTimeout(() => {
+            deleteButton.innerHTML = '<i class="fas fa-trash me-2"></i>Delete Interaction';
+            deleteButton.disabled = false;
+        }, 5000);
+    });
+    
+    // Add hover effects to interaction details
+    const interactionDetails = document.querySelector('.interaction-details');
+    if (interactionDetails) {
+        interactionDetails.addEventListener('mouseenter', function() {
+            this.style.transform = 'scale(1.02)';
+        });
+        
+        interactionDetails.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1)';
+        });
+    }
+    
+    // Add keyboard shortcut for cancel (Escape key)
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const cancelButton = document.querySelector('.btn-secondary');
+            if (cancelButton) {
+                cancelButton.click();
+            }
+        }
+    });
+});
+</script>
 {% endblock %}

@@ -4,172 +4,115 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ note.heading|default:"Note Details" }} - Note Details</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-            --danger-gradient: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
-            --info-gradient: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-            --dark-bg: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            --glass-bg: rgba(255, 255, 255, 0.1);
-            --glass-border: rgba(255, 255, 255, 0.2);
-            --text-light: #e2e8f0;
-            --card-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+            --primary-color: #1C64FF;
+            --secondary-text: #696969;
+            --background: #FFFFFF;
+            --border-muted: #D9D9D9;
+            --highlight-accent: #C3E4FF;
+            --primary-hover: #1557E6;
+            --text-dark: #2C3E50;
+            --success-color: #28A745;
+            --warning-color: #FFC107;
+            --danger-color: #DC3545;
+            --light-bg: #F8F9FA;
+            --info-color: #17A2B8;
         }
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--dark-bg);
+            background-color: var(--light-bg);
+            color: var(--text-dark);
+            line-height: 1.6;
             min-height: 100vh;
-            color: var(--text-light);
-            overflow-x: hidden;
         }
 
-        /* Animated background particles */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1" fill="rgba(255,255,255,0.05)"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
-            animation: float 25s ease-in-out infinite;
-            pointer-events: none;
-            z-index: -1;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-20px) rotate(180deg); }
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
-            animation: fadeInUp 0.8s ease-out;
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
+        /* Modern Navbar */
         .modern-navbar {
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            padding: 1.5rem 2rem;
-            margin-bottom: 3rem;
-            box-shadow: var(--card-shadow);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
+            background-color: var(--background) !important;
+            border-bottom: 2px solid var(--border-muted);
+            box-shadow: 0 2px 10px rgba(28, 100, 255, 0.1);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
         }
 
-        .navbar-brand {
+        .modern-navbar .navbar-brand {
+            font-weight: 700;
             font-size: 1.5rem;
-            font-weight: 800;
-            color: white;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .navbar-brand i {
-            color: #4facfe;
-            font-size: 1.8rem;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .nav-link {
-            color: rgba(255, 255, 255, 0.9);
-            text-decoration: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 50px;
-            font-weight: 600;
-            transition: all 0.3s ease;
+            color: var(--primary-color) !important;
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            background: rgba(255, 255, 255, 0.05);
         }
 
-        .nav-link:hover {
-            background: rgba(255, 255, 255, 0.15);
-            color: white;
-            transform: translateY(-2px);
-            text-decoration: none;
+        .modern-navbar .nav-link {
+            color: var(--secondary-text) !important;
+            font-weight: 500;
+            padding: 0.5rem 1rem !important;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            margin: 0 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
+        .modern-navbar .nav-link:hover {
+            background-color: var(--highlight-accent);
+            color: var(--primary-color) !important;
+        }
+
+        /* Container */
+        .note-container {
+            padding: 2rem 0;
+        }
+
+        /* Modern Card */
+        .modern-card {
+            background: var(--background);
+            border: 2px solid var(--border-muted);
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(28, 100, 255, 0.1);
+            transition: all 0.3s ease;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .modern-card:hover {
+            box-shadow: 0 12px 40px rgba(28, 100, 255, 0.15);
+            border-color: var(--primary-color);
+        }
+
+        /* Note Header */
         .note-header {
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 24px;
-            padding: 3rem;
-            margin-bottom: 3rem;
-            box-shadow: var(--card-shadow);
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+            color: var(--background);
+            padding: 2.5rem;
             position: relative;
             overflow: hidden;
-            animation: slideInDown 0.8s ease-out;
-        }
-
-        @keyframes slideInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
 
         .note-header::before {
             content: '';
             position: absolute;
             top: 0;
-            left: 0;
             right: 0;
-            bottom: 0;
-            background: var(--primary-gradient);
-            opacity: 0.1;
-            z-index: -1;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            transform: translate(40px, -40px);
         }
 
         .note-title {
-            font-size: 2.5rem;
-            font-weight: 900;
-            color: white;
-            margin-bottom: 1rem;
-            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            font-size: 2.25rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            position: relative;
+            z-index: 1;
             line-height: 1.2;
         }
 
@@ -178,242 +121,218 @@
             flex-wrap: wrap;
             gap: 2rem;
             margin-bottom: 2rem;
+            position: relative;
+            z-index: 1;
         }
 
         .meta-item {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.5rem;
             color: rgba(255, 255, 255, 0.9);
-            font-weight: 600;
+            font-weight: 500;
         }
 
         .meta-item i {
-            color: #4facfe;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
         }
 
+        /* Status Badge */
         .note-status {
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            padding: 0.75rem 1.5rem;
-            border-radius: 50px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            font-size: 0.875rem;
+            padding: 0.75rem 1.25rem;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            position: relative;
+            z-index: 1;
         }
 
         .status-completed {
-            background: var(--success-gradient);
-            color: white;
-            box-shadow: 0 8px 25px rgba(79, 172, 254, 0.3);
+            background-color: var(--success-color);
+            color: var(--background);
         }
 
         .status-pending {
-            background: var(--warning-gradient);
-            color: white;
-            box-shadow: 0 8px 25px rgba(255, 193, 7, 0.3);
+            background-color: var(--warning-color);
+            color: var(--text-dark);
         }
 
         .status-overdue {
-            background: var(--danger-gradient);
-            color: white;
-            box-shadow: 0 8px 25px rgba(255, 154, 158, 0.3);
+            background-color: var(--danger-color);
+            color: var(--background);
         }
 
+        /* Action Buttons */
         .action-buttons {
             display: flex;
             gap: 1rem;
             flex-wrap: wrap;
             justify-content: flex-end;
+            position: relative;
+            z-index: 1;
         }
 
         .modern-btn {
-            padding: 1rem 2rem;
-            border-radius: 50px;
-            font-weight: 700;
+            padding: 0.875rem 1.75rem;
+            border-radius: 8px;
+            font-weight: 500;
             font-size: 0.95rem;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 0.75rem;
-            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            border: 2px solid;
-            position: relative;
-            overflow: hidden;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
             cursor: pointer;
         }
 
-        .modern-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-            transition: left 0.6s;
-        }
-
-        .modern-btn:hover::before {
-            left: 100%;
-        }
-
         .modern-btn:hover {
-            transform: translateY(-3px) scale(1.05);
             text-decoration: none;
+            transform: translateY(-2px);
         }
 
         .modern-btn:disabled {
-            opacity: 0.5;
+            opacity: 0.6;
             cursor: not-allowed;
             transform: none !important;
         }
 
         .btn-primary {
-            background: var(--primary-gradient);
-            border-color: rgba(102, 126, 234, 0.5);
-            color: white;
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            background-color: var(--background);
+            border-color: var(--background);
+            color: var(--primary-color);
         }
 
         .btn-primary:hover {
-            box-shadow: 0 12px 35px rgba(102, 126, 234, 0.6);
-            color: white;
+            background-color: var(--highlight-accent);
+            border-color: var(--highlight-accent);
+            color: var(--primary-color);
+            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.3);
         }
 
         .btn-secondary {
-            background: transparent;
+            background-color: transparent;
             border-color: rgba(255, 255, 255, 0.3);
             color: rgba(255, 255, 255, 0.9);
         }
 
         .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background-color: rgba(255, 255, 255, 0.1);
             border-color: rgba(255, 255, 255, 0.5);
-            color: white;
-            box-shadow: 0 8px 25px rgba(255, 255, 255, 0.2);
+            color: var(--background);
         }
 
         .btn-danger {
-            background: var(--danger-gradient);
-            border-color: rgba(255, 154, 158, 0.5);
-            color: white;
-            box-shadow: 0 8px 25px rgba(255, 154, 158, 0.4);
+            background-color: var(--danger-color);
+            border-color: var(--danger-color);
+            color: var(--background);
         }
 
         .btn-danger:hover {
-            box-shadow: 0 12px 35px rgba(255, 154, 158, 0.6);
-            color: white;
+            background-color: #C82333;
+            border-color: #C82333;
+            color: var(--background);
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
         }
 
+        /* Content Grid */
         .content-grid {
             display: grid;
             grid-template-columns: 2fr 1fr;
-            gap: 3rem;
-        }
-
-        .note-content-card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 24px;
-            padding: 3rem;
-            box-shadow: var(--card-shadow);
-            animation: slideInLeft 0.8s ease-out 0.2s both;
-        }
-
-        @keyframes slideInLeft {
-            from {
-                opacity: 0;
-                transform: translateX(-50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        .content-title {
-            color: white;
-            font-size: 1.5rem;
-            font-weight: 800;
-            margin-bottom: 2rem;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .content-title i {
-            color: #4facfe;
-        }
-
-        .note-content {
-            color: rgba(255, 255, 255, 0.9);
-            line-height: 1.8;
-            font-size: 1.1rem;
-            white-space: pre-wrap;
-            background: rgba(255, 255, 255, 0.05);
-            padding: 2rem;
-            border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .sidebar {
-            display: flex;
-            flex-direction: column;
             gap: 2rem;
         }
 
-        .info-card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            padding: 2rem;
-            box-shadow: var(--card-shadow);
-            animation: slideInRight 0.8s ease-out both;
+        /* Note Content Card */
+        .note-content-card {
+            background: var(--background);
+            border: 2px solid var(--border-muted);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(28, 100, 255, 0.08);
+            transition: all 0.3s ease;
+            overflow: hidden;
         }
 
-        .info-card:nth-child(1) { animation-delay: 0.3s; }
-        .info-card:nth-child(2) { animation-delay: 0.4s; }
-        .info-card:nth-child(3) { animation-delay: 0.5s; }
-
-        @keyframes slideInRight {
-            from {
-                opacity: 0;
-                transform: translateX(50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
+        .note-content-card:hover {
+            box-shadow: 0 8px 30px rgba(28, 100, 255, 0.15);
+            border-color: var(--primary-color);
         }
 
-        .info-card h3 {
-            color: white;
-            font-size: 1.2rem;
-            font-weight: 800;
-            margin-bottom: 1.5rem;
+        .content-title {
+            background-color: var(--light-bg);
+            color: var(--text-dark);
+            font-size: 1.25rem;
+            font-weight: 600;
+            padding: 1.5rem 2rem;
+            margin: 0;
             display: flex;
             align-items: center;
             gap: 0.75rem;
+            border-bottom: 2px solid var(--border-muted);
+        }
+
+        .content-title i {
+            color: var(--primary-color);
+        }
+
+        .note-content {
+            color: var(--text-dark);
+            line-height: 1.8;
+            font-size: 1.1rem;
+            white-space: pre-wrap;
+            padding: 2rem;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .info-card {
+            background: var(--background);
+            border: 2px solid var(--border-muted);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(28, 100, 255, 0.08);
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .info-card:hover {
+            box-shadow: 0 8px 30px rgba(28, 100, 255, 0.15);
+            border-color: var(--primary-color);
+        }
+
+        .info-card h3 {
+            background-color: var(--light-bg);
+            color: var(--text-dark);
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0;
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            border-bottom: 2px solid var(--border-muted);
         }
 
         .info-card h3 i {
-            color: #4facfe;
+            color: var(--primary-color);
+        }
+
+        .info-card-body {
+            padding: 1.5rem;
         }
 
         .info-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1rem 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border-muted);
         }
 
         .info-item:last-child {
@@ -421,18 +340,19 @@
         }
 
         .info-label {
-            color: rgba(255, 255, 255, 0.7);
-            font-weight: 600;
+            color: var(--secondary-text);
+            font-weight: 500;
         }
 
         .info-value {
-            color: white;
-            font-weight: 700;
+            color: var(--text-dark);
+            font-weight: 600;
         }
 
+        /* Attachment Item */
         .attachment-item {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background-color: var(--light-bg);
+            border: 2px solid var(--border-muted);
             border-radius: 12px;
             padding: 1.5rem;
             transition: all 0.3s ease;
@@ -442,58 +362,88 @@
         }
 
         .attachment-item:hover {
-            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary-color);
+            background-color: var(--highlight-accent);
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
 
         .attachment-icon {
             width: 50px;
             height: 50px;
             border-radius: 12px;
-            background: var(--info-gradient);
+            background: var(--primary-color);
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
+            color: var(--background);
             font-size: 1.5rem;
         }
 
         .attachment-info h4 {
-            color: white;
+            color: var(--text-dark);
             margin-bottom: 0.25rem;
             font-size: 1rem;
+            font-weight: 600;
         }
 
         .attachment-info p {
-            color: rgba(255, 255, 255, 0.7);
+            color: var(--secondary-text);
             margin: 0;
             font-size: 0.875rem;
         }
 
         .attachment-download {
-            color: #4facfe;
+            color: var(--primary-color);
             text-decoration: none;
-            font-weight: 600;
+            font-weight: 500;
             padding: 0.5rem 1rem;
             border-radius: 8px;
             transition: all 0.3s ease;
-            border: 1px solid rgba(79, 172, 254, 0.3);
+            border: 2px solid var(--primary-color);
         }
 
         .attachment-download:hover {
-            background: rgba(79, 172, 254, 0.2);
-            color: #00f2fe;
+            background-color: var(--primary-color);
+            color: var(--background);
             text-decoration: none;
         }
 
+        /* Empty State */
         .empty-attachment {
             text-align: center;
-            color: rgba(255, 255, 255, 0.6);
+            color: var(--secondary-text);
             font-style: italic;
             padding: 2rem;
         }
 
+        /* Error State */
+        .error-state {
+            background-color: #FFF5F5;
+            border: 2px solid #FECACA;
+            border-radius: 16px;
+            padding: 3rem;
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        .error-icon {
+            font-size: 4rem;
+            color: var(--danger-color);
+            margin-bottom: 2rem;
+        }
+
+        .error-state h3 {
+            color: var(--text-dark);
+            margin-bottom: 1rem;
+        }
+
+        .error-state p {
+            color: var(--secondary-text);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        /* Delete Modal */
         .delete-modal {
             display: none;
             position: fixed;
@@ -502,48 +452,42 @@
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
             opacity: 0;
             transition: opacity 0.3s ease;
         }
 
         .modal-content {
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
+            background: var(--background);
+            border: 2px solid var(--border-muted);
             margin: 10% auto;
-            padding: 3rem;
-            border-radius: 24px;
+            padding: 2.5rem;
+            border-radius: 16px;
             width: 90%;
             max-width: 500px;
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 20px 40px rgba(28, 100, 255, 0.2);
             text-align: center;
-            color: white;
+            color: var(--text-dark);
             transform: scale(0.8);
-            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transition: transform 0.3s ease;
         }
 
         .modal-icon {
             font-size: 4rem;
-            color: #ff9a9e;
+            color: var(--danger-color);
             margin-bottom: 2rem;
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
         }
 
         .modal-title {
-            font-size: 1.8rem;
-            font-weight: 800;
+            font-size: 1.5rem;
+            font-weight: 700;
             margin-bottom: 1rem;
+            color: var(--text-dark);
         }
 
         .modal-text {
-            color: rgba(255, 255, 255, 0.9);
+            color: var(--secondary-text);
             margin-bottom: 2rem;
             line-height: 1.6;
         }
@@ -555,33 +499,51 @@
             flex-wrap: wrap;
         }
 
-        .error-state {
-            background: rgba(255, 154, 158, 0.2);
-            padding: 3rem;
-            border-radius: 24px;
-            margin: 2rem 0;
-            border: 1px solid rgba(255, 154, 158, 0.3);
-            text-align: center;
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            z-index: 9999;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            color: var(--background);
+            font-weight: 500;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            max-width: 400px;
+            cursor: pointer;
         }
 
-        .error-icon {
-            font-size: 4rem;
-            color: #ff9a9e;
-            margin-bottom: 2rem;
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background-color: var(--success-color);
+        }
+
+        .notification.error {
+            background-color: var(--danger-color);
+        }
+
+        .notification.info {
+            background-color: var(--info-color);
         }
 
         /* Responsive Design */
         @media (max-width: 768px) {
-            .container {
-                padding: 1rem;
+            .note-container {
+                padding: 1rem 0;
             }
 
             .note-header {
-                padding: 2rem;
+                padding: 2rem 1.5rem;
             }
 
             .note-title {
-                font-size: 2rem;
+                font-size: 1.75rem;
             }
 
             .note-meta {
@@ -591,7 +553,7 @@
 
             .content-grid {
                 grid-template-columns: 1fr;
-                gap: 2rem;
+                gap: 1.5rem;
             }
 
             .action-buttons {
@@ -604,261 +566,282 @@
                 justify-content: center;
             }
 
-            .nav-links {
-                justify-content: center;
-                width: 100%;
-            }
-
-            .nav-link {
-                flex: 1;
-                justify-content: center;
-            }
-
             .modal-actions {
                 flex-direction: column;
             }
+
+            .modern-navbar .navbar-nav {
+                width: 100%;
+                justify-content: center;
+                margin-top: 1rem;
+            }
+
+            .modern-navbar .nav-link {
+                flex: 1;
+                justify-content: center;
+                margin: 0.25rem;
+            }
         }
 
-        /* Print styles */
+        /* Print Styles */
         @media print {
-            body::before { display: none; }
-            .modern-navbar, .action-buttons { display: none; }
-            .container { padding: 0; }
-            .note-header, .note-content-card, .info-card {
-                background: white;
-                color: black;
-                border: 1px solid #ddd;
+            .modern-navbar, .action-buttons, .delete-modal {
+                display: none !important;
+            }
+            
+            .note-container {
+                padding: 0;
+            }
+            
+            .modern-card, .info-card, .note-content-card {
                 box-shadow: none;
+                border: 1px solid #ddd;
+            }
+            
+            .note-header {
+                background: var(--light-bg) !important;
+                color: var(--text-dark) !important;
             }
         }
 
-        /* Additional animations */
-        @keyframes ripple {
-            to {
-                transform: scale(2);
-                opacity: 0;
-            }
+        /* Utility Classes */
+        .text-muted {
+            color: var(--secondary-text) !important;
         }
 
-        /* Selection styling */
-        ::selection {
-            background: rgba(102, 126, 234, 0.3);
-            color: white;
+        .border-primary {
+            border-color: var(--primary-color) !important;
         }
 
-        /* Scrollbar styling */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        .bg-light {
+            background-color: var(--light-bg) !important;
         }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="container-fluid">
         <!-- Modern Navigation -->
-        <nav class="modern-navbar">
-            <a href="{% url 'notes_dashboard' %}" class="navbar-brand">
-                <i class="fas fa-sticky-note"></i>
-                Note Details
-            </a>
-            <div class="nav-links">
-                <a href="{% url 'notes_dashboard' %}" class="nav-link">
-                    <i class="fas fa-home"></i> Dashboard
-                </a>
-                {% if note and note.note_list %}
-                <a href="{% url 'note_list' %}?list={{ note.note_list.id }}" class="nav-link">
-                    <i class="fas fa-list"></i> Back to List
-                </a>
-                {% endif %}
-                <a href="{% url 'note_list_management' %}" class="nav-link">
-                    <i class="fas fa-folder"></i> All Lists
-                </a>
-            </div>
-        </nav>
-
-        <!-- Note Header -->
-        {% if note and note.pk %}
-        <div class="note-header">
-            <h1 class="note-title">{{ note.heading|default:"Untitled Note" }}</h1>
-            
-            <div class="note-meta">
-                <div class="meta-item">
-                    <i class="fas fa-folder"></i>
-                    <span>{{ note.note_list.name|default:"No List" }}</span>
-                </div>
-                {% if note.created_at %}
-                <div class="meta-item">
-                    <i class="fas fa-calendar-plus"></i>
-                    <span>Created {{ note.created_at|date:"M d, Y" }}</span>
-                </div>
-                {% endif %}
-                {% if note.updated_at %}
-                <div class="meta-item">
-                    <i class="fas fa-clock"></i>
-                    <span>Updated {{ note.updated_at|timesince }} ago</span>
-                </div>
-                {% endif %}
-                <div class="meta-item">
-                    {% if note.is_completed %}
-                        <span class="note-status status-completed">
-                            <i class="fas fa-check-circle"></i> Completed
-                        </span>
-                    {% elif note.is_overdue %}
-                        <span class="note-status status-overdue">
-                            <i class="fas fa-exclamation-triangle"></i> Overdue
-                        </span>
-                    {% else %}
-                        <span class="note-status status-pending">
-                            <i class="fas fa-clock"></i> Pending
-                        </span>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="action-buttons">
-                <a href="{% url 'note_detail_update' note.pk %}" class="modern-btn btn-primary">
-                    <i class="fas fa-edit"></i> Edit Note
-                </a>
-                <button onclick="toggleComplete()" class="modern-btn btn-secondary" id="completeBtn">
-                    {% if note.is_completed %}
-                        <i class="fas fa-undo"></i> Mark Incomplete
-                    {% else %}
-                        <i class="fas fa-check"></i> Mark Complete
-                    {% endif %}
-                </button>
-                <button onclick="printNote()" class="modern-btn btn-secondary">
-                    <i class="fas fa-print"></i> Print
-                </button>
-                <button onclick="copyToClipboard()" class="modern-btn btn-secondary">
-                    <i class="fas fa-copy"></i> Copy
-                </button>
-                <button onclick="openDeleteModal()" class="modern-btn btn-danger">
-                    <i class="fas fa-trash"></i> Delete Note
-                </button>
-            </div>
-        </div>
-
-        <!-- Content Grid -->
-        <div class="content-grid">
-            <!-- Main Content -->
-            <div class="note-content-card">
-                <h2 class="content-title">
-                    <i class="fas fa-align-left"></i>
-                    Note Content
-                </h2>
-                <div class="note-content">{{ note.content|default:"No content provided for this note." }}</div>
-            </div>
-
-            <!-- Sidebar -->
-            <div class="sidebar">
-                <!-- Note Information -->
-                <div class="info-card">
-                    <h3>
-                        <i class="fas fa-info-circle"></i>
-                        Note Information
-                    </h3>
-                    <div class="info-item">
-                        <span class="info-label">Status:</span>
-                        <span class="info-value" id="sidebarStatus">
-                            {% if note.is_completed %}
-                                Completed
-                            {% elif note.is_overdue %}
-                                Overdue
-                            {% else %}
-                                Pending
-                            {% endif %}
-                        </span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">List:</span>
-                        <span class="info-value">{{ note.note_list.name|default:"No List" }}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Created:</span>
-                        <span class="info-value">{{ note.created_at|date:"M d, Y H:i" }}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Last Updated:</span>
-                        <span class="info-value">{{ note.updated_at|date:"M d, Y H:i" }}</span>
-                    </div>
-                </div>
-
-                <!-- Dates & Reminders -->
-                <div class="info-card">
-                    <h3>
-                        <i class="fas fa-calendar-alt"></i>
-                        Dates & Reminders
-                    </h3>
-                    {% if note.due_date %}
-                    <div class="info-item">
-                        <span class="info-label">Due Date:</span>
-                        <span class="info-value">{{ note.due_date|date:"M d, Y" }}</span>
-                    </div>
-                    {% endif %}
-                    {% if note.reminder_date %}
-                    <div class="info-item">
-                        <span class="info-label">Reminder:</span>
-                        <span class="info-value">{{ note.reminder_date|date:"M d, Y H:i" }}</span>
-                    </div>
-                    {% endif %}
-                    {% if not note.due_date and not note.reminder_date %}
-                    <div class="empty-attachment">
-                        No dates or reminders set for this note.
-                    </div>
-                    {% endif %}
-                </div>
-
-                <!-- Attachments -->
-                <div class="info-card">
-                    <h3>
-                        <i class="fas fa-paperclip"></i>
-                        Attachments
-                    </h3>
-                    {% if note.attachment %}
-                    <div class="attachment-item">
-                        <div class="attachment-icon">
-                            <i class="fas fa-file"></i>
-                        </div>
-                        <div class="attachment-info">
-                            <h4>{{ note.attachment.name|cut:"notes/"|cut:note.user.id|cut:"/" }}</h4>
-                            <p>{{ note.attachment.size|filesizeformat }}</p>
-                        </div>
-                        <a href="{{ note.attachment.url }}" target="_blank" class="attachment-download">
-                            <i class="fas fa-download"></i>
+        <div class="row">
+            <div class="col-12">
+                <nav class="navbar navbar-expand-lg modern-navbar">
+                    <div class="container-fluid">
+                        <a href="{% url 'notes_dashboard' %}" class="navbar-brand">
+                            <i class="fas fa-sticky-note"></i>
+                            Note Details
                         </a>
+                        <div class="navbar-nav ms-auto">
+                            <a href="{% url 'notes_dashboard' %}" class="nav-link">
+                                <i class="fas fa-home"></i>
+                                Dashboard
+                            </a>
+                            {% if note and note.note_list %}
+                            <a href="{% url 'note_list' %}?list={{ note.note_list.id }}" class="nav-link">
+                                <i class="fas fa-list"></i>
+                                Back to List
+                            </a>
+                            {% endif %}
+                            <a href="{% url 'note_list_management' %}" class="nav-link">
+                                <i class="fas fa-folder"></i>
+                                All Lists
+                            </a>
+                        </div>
                     </div>
-                    {% else %}
-                    <div class="empty-attachment">
-                        No attachments for this note.
-                    </div>
-                    {% endif %}
-                </div>
+                </nav>
             </div>
         </div>
 
-        {% else %}
-        <!-- Error State: No Note Object or Missing PK -->
-        <div class="note-header">
-            <h1 class="note-title">Note Not Found</h1>
+        <div class="container note-container">
+            {% if note and note.pk %}
+            <!-- Note Header -->
+            <div class="modern-card">
+                <div class="note-header">
+                    <h1 class="note-title">{{ note.heading|default:"Untitled Note" }}</h1>
+                    
+                    <div class="note-meta">
+                        <div class="meta-item">
+                            <i class="fas fa-folder"></i>
+                            <span>{{ note.note_list.name|default:"No List" }}</span>
+                        </div>
+                        {% if note.created_at %}
+                        <div class="meta-item">
+                            <i class="fas fa-calendar-plus"></i>
+                            <span>Created {{ note.created_at|date:"M d, Y" }}</span>
+                        </div>
+                        {% endif %}
+                        {% if note.updated_at %}
+                        <div class="meta-item">
+                            <i class="fas fa-clock"></i>
+                            <span>Updated {{ note.updated_at|timesince }} ago</span>
+                        </div>
+                        {% endif %}
+                        <div class="meta-item">
+                            {% if note.is_completed %}
+                                <span class="note-status status-completed">
+                                    <i class="fas fa-check-circle"></i>
+                                    Completed
+                                </span>
+                            {% elif note.is_overdue %}
+                                <span class="note-status status-overdue">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    Overdue
+                                </span>
+                            {% else %}
+                                <span class="note-status status-pending">
+                                    <i class="fas fa-clock"></i>
+                                    Pending
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <a href="{% url 'note_detail_update' note.pk %}" class="modern-btn btn-primary">
+                            <i class="fas fa-edit"></i>
+                            Edit Note
+                        </a>
+                        <button onclick="toggleComplete()" class="modern-btn btn-secondary" id="completeBtn">
+                            {% if note.is_completed %}
+                                <i class="fas fa-undo"></i>
+                                Mark Incomplete
+                            {% else %}
+                                <i class="fas fa-check"></i>
+                                Mark Complete
+                            {% endif %}
+                        </button>
+                        <button onclick="printNote()" class="modern-btn btn-secondary">
+                            <i class="fas fa-print"></i>
+                            Print
+                        </button>
+                        <button onclick="copyToClipboard()" class="modern-btn btn-secondary">
+                            <i class="fas fa-copy"></i>
+                            Copy
+                        </button>
+                        <button onclick="openDeleteModal()" class="modern-btn btn-danger">
+                            <i class="fas fa-trash"></i>
+                            Delete Note
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Grid -->
+            <div class="content-grid">
+                <!-- Main Content -->
+                <div class="note-content-card">
+                    <h2 class="content-title">
+                        <i class="fas fa-align-left"></i>
+                        Note Content
+                    </h2>
+                    <div class="note-content">{{ note.content|default:"No content provided for this note." }}</div>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="sidebar">
+                    <!-- Note Information -->
+                    <div class="info-card">
+                        <h3>
+                            <i class="fas fa-info-circle"></i>
+                            Note Information
+                        </h3>
+                        <div class="info-card-body">
+                            <div class="info-item">
+                                <span class="info-label">Status:</span>
+                                <span class="info-value" id="sidebarStatus">
+                                    {% if note.is_completed %}
+                                        Completed
+                                    {% elif note.is_overdue %}
+                                        Overdue
+                                    {% else %}
+                                        Pending
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">List:</span>
+                                <span class="info-value">{{ note.note_list.name|default:"No List" }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Created:</span>
+                                <span class="info-value">{{ note.created_at|date:"M d, Y H:i" }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Last Updated:</span>
+                                <span class="info-value">{{ note.updated_at|date:"M d, Y H:i" }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dates & Reminders -->
+                    <div class="info-card">
+                        <h3>
+                            <i class="fas fa-calendar-alt"></i>
+                            Dates & Reminders
+                        </h3>
+                        <div class="info-card-body">
+                            {% if note.due_date %}
+                            <div class="info-item">
+                                <span class="info-label">Due Date:</span>
+                                <span class="info-value">{{ note.due_date|date:"M d, Y" }}</span>
+                            </div>
+                            {% endif %}
+                            {% if note.reminder_date %}
+                            <div class="info-item">
+                                <span class="info-label">Reminder:</span>
+                                <span class="info-value">{{ note.reminder_date|date:"M d, Y H:i" }}</span>
+                            </div>
+                            {% endif %}
+                            {% if not note.due_date and not note.reminder_date %}
+                            <div class="empty-attachment">
+                                No dates or reminders set for this note.
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Attachments -->
+                    <div class="info-card">
+                        <h3>
+                            <i class="fas fa-paperclip"></i>
+                            Attachments
+                        </h3>
+                        <div class="info-card-body">
+                            {% if note.attachment %}
+                            <div class="attachment-item">
+                                <div class="attachment-icon">
+                                    <i class="fas fa-file"></i>
+                                </div>
+                                <div class="attachment-info">
+                                    <h4>{{ note.attachment.name|cut:"notes/"|cut:note.user.id|cut:"/" }}</h4>
+                                    <p>{{ note.attachment.size|filesizeformat }}</p>
+                                </div>
+                                <a href="{{ note.attachment.url }}" target="_blank" class="attachment-download">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                            </div>
+                            {% else %}
+                            <div class="empty-attachment">
+                                No attachments for this note.
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% else %}
+            <!-- Error State: No Note Object or Missing PK -->
+            <div class="modern-card">
+                <div class="note-header">
+                    <h1 class="note-title">Note Not Found</h1>
+                </div>
+            </div>
             
             <div class="error-state">
                 <div class="error-icon">
                     <i class="fas fa-exclamation-triangle"></i>
                 </div>
-                <h3 style="color: white; margin-bottom: 1rem;">Note Not Available</h3>
-                <p style="color: rgba(255, 255, 255, 0.9); margin-bottom: 2rem;">
+                <h3>Note Not Available</h3>
+                <p>
                     {% if not note %}
                         The note object was not found. This could mean:
                     {% else %}
@@ -870,14 +853,15 @@
                     • The note was deleted or moved<br>
                     • There's an issue with the URL parameters
                 </p>
-                <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-                    <a href="{% url 'note_list_management' %}" class="modern-btn btn-secondary">
-                        <i class="fas fa-list"></i> View All Notes
+                <div class="d-flex gap-3 justify-content-center flex-wrap">
+                    <a href="{% url 'note_list_management' %}" class="modern-btn btn-primary">
+                        <i class="fas fa-list"></i>
+                        View All Notes
                     </a>
                 </div>
             </div>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
 
     <!-- Delete Confirmation Modal -->
@@ -894,81 +878,20 @@
             </p>
             <div class="modal-actions">
                 <button onclick="closeDeleteModal()" class="modern-btn btn-secondary">
-                    <i class="fas fa-times"></i> Cancel
+                    <i class="fas fa-times"></i>
+                    Cancel
                 </button>
                 <a href="{% url 'note_delete' note.pk %}" class="modern-btn btn-danger">
-                    <i class="fas fa-trash"></i> Delete Note
+                    <i class="fas fa-trash"></i>
+                    Delete Note
                 </a>
             </div>
         </div>
     </div>
     {% endif %}
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Enhanced animations and interactions
-        document.addEventListener('DOMContentLoaded', function() {
-            // Smooth loading animations
-            const elements = document.querySelectorAll('.note-header, .note-content-card, .info-card');
-            elements.forEach((element, index) => {
-                element.style.opacity = '0';
-                element.style.transform = 'translateY(20px)';
-                
-                setTimeout(() => {
-                    element.style.transition = 'all 0.6s ease';
-                    element.style.opacity = '1';
-                    element.style.transform = 'translateY(0)';
-                }, index * 150);
-            });
-
-            // Enhanced button animations
-            const buttons = document.querySelectorAll('.modern-btn, .nav-link');
-            buttons.forEach(btn => {
-                btn.addEventListener('mouseenter', function() {
-                    if (!this.disabled) {
-                        this.style.transform = 'translateY(-3px) scale(1.05)';
-                    }
-                });
-                
-                btn.addEventListener('mouseleave', function() {
-                    if (!this.disabled) {
-                        this.style.transform = 'translateY(0) scale(1)';
-                    }
-                });
-
-                // Ripple effect
-                btn.addEventListener('click', function(e) {
-                    if (this.onclick || this.href === '#' || this.disabled) return;
-                    
-                    const ripple = document.createElement('span');
-                    const rect = this.getBoundingClientRect();
-                    const size = Math.max(rect.width, rect.height);
-                    const x = e.clientX - rect.left - size / 2;
-                    const y = e.clientY - rect.top - size / 2;
-                    
-                    ripple.style.cssText = `
-                        position: absolute;
-                        width: ${size}px;
-                        height: ${size}px;
-                        left: ${x}px;
-                        top: ${y}px;
-                        background: rgba(255, 255, 255, 0.3);
-                        border-radius: 50%;
-                        transform: scale(0);
-                        animation: ripple 0.6s ease-out;
-                        pointer-events: none;
-                    `;
-                    
-                    this.style.position = 'relative';
-                    this.appendChild(ripple);
-                    
-                    setTimeout(() => ripple.remove(), 600);
-                });
-            });
-
-            // Initialize tooltips
-            initializeTooltips();
-        });
-
         // Modal functions
         function openDeleteModal() {
             const modal = document.getElementById('deleteModal');
@@ -998,7 +921,7 @@
             }, 300);
         }
 
-        // Toggle Complete Function - Only works if note exists and has PK
+        // Toggle Complete Function
         function toggleComplete() {
             {% if note and note.pk %}
             const btn = document.getElementById('completeBtn');
@@ -1075,33 +998,13 @@
         // Notification system
         function showNotification(message, type = 'info') {
             const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 2rem;
-                right: 2rem;
-                z-index: 9999;
-                padding: 1rem 2rem;
-                border-radius: 12px;
-                color: white;
-                font-weight: 600;
-                backdrop-filter: blur(20px);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-                transform: translateX(100%);
-                transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-                max-width: 400px;
-                cursor: pointer;
-            `;
-
-            // Set background based on type
+            notification.className = `notification ${type}`;
+            
             if (type === 'success') {
-                notification.style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
                 notification.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
             } else if (type === 'error') {
-                notification.style.background = 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)';
                 notification.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
             } else if (type === 'info') {
-                notification.style.background = 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)';
                 notification.innerHTML = `<i class="fas fa-info-circle"></i> ${message}`;
             }
 
@@ -1109,7 +1012,7 @@
 
             // Animate in
             setTimeout(() => {
-                notification.style.transform = 'translateX(0)';
+                notification.classList.add('show');
             }, 100);
 
             // Auto remove after 3 seconds
@@ -1124,7 +1027,7 @@
         }
 
         function dismissNotification(notification) {
-            notification.style.transform = 'translateX(100%)';
+            notification.classList.remove('show');
             setTimeout(() => {
                 if (notification.parentNode) {
                     notification.parentNode.removeChild(notification);
@@ -1177,17 +1080,6 @@
             {% endif %}
         }
 
-        // Initialize tooltips
-        function initializeTooltips() {
-            const buttons = document.querySelectorAll('.modern-btn');
-            buttons.forEach(btn => {
-                if (!btn.title) {
-                    const text = btn.textContent.trim();
-                    btn.title = text;
-                }
-            });
-        }
-
         // Close modal when clicking outside
         document.addEventListener('click', function(e) {
             const modal = document.getElementById('deleteModal');
@@ -1236,36 +1128,47 @@
             {% endif %}
         });
 
-        // Enhanced attachment handling
-        document.querySelectorAll('.attachment-download').forEach(link => {
-            link.addEventListener('click', function(e) {
-                showNotification('Starting download...', 'info');
+        // Enhanced interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            // Button hover effects
+            const buttons = document.querySelectorAll('.modern-btn, .nav-link');
+            buttons.forEach(btn => {
+                btn.addEventListener('mouseenter', function() {
+                    if (!this.disabled) {
+                        this.style.transform = 'translateY(-2px)';
+                    }
+                });
+                
+                btn.addEventListener('mouseleave', function() {
+                    if (!this.disabled) {
+                        this.style.transform = 'translateY(0)';
+                    }
+                });
             });
-        });
 
-        // Auto-save scroll position
-        window.addEventListener('beforeunload', function() {
-            sessionStorage.setItem('noteDetailScrollPosition', window.scrollY);
-        });
+            // Card hover effects
+            const cards = document.querySelectorAll('.modern-card, .info-card, .note-content-card');
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-2px)';
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+            });
 
-        // Restore scroll position
-        window.addEventListener('load', function() {
-            const scrollPosition = sessionStorage.getItem('noteDetailScrollPosition');
-            if (scrollPosition) {
-                window.scrollTo(0, parseInt(scrollPosition));
-                sessionStorage.removeItem('noteDetailScrollPosition');
-            }
-        });
-
-        // Performance monitoring
-        window.addEventListener('load', function() {
-            console.log('Note detail page loaded in:', performance.now(), 'ms');
-            
-            // Auto-focus on content for better accessibility
-            const contentElement = document.querySelector('.note-content');
-            if (contentElement) {
-                contentElement.setAttribute('tabindex', '0');
-            }
+            // Attachment item hover effects
+            const attachmentItems = document.querySelectorAll('.attachment-item');
+            attachmentItems.forEach(item => {
+                item.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-2px)';
+                });
+                
+                item.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+            });
         });
 
         // Error handling for missing elements

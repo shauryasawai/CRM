@@ -3,560 +3,514 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-    
     :root {
-        --bg-primary: #D3FF61;
-        --bg-secondary: #EFFFAB;
-        --bg-card: #FFFFFF;
-        --bg-accent: #F8FFF0;
-        --bg-overlay: rgba(255, 255, 255, 0.95);
-        --text-primary: #1A1A1A;
-        --text-secondary: #404040;
-        --text-muted: #6B7280;
-        --text-contrast: #FFFFFF;
-        --accent-primary: #000000;
-        --accent-success: #059669;
-        --accent-warning: #D97706;
-        --accent-danger: #DC2626;
-        --accent-purple: #7C3AED;
-        --accent-cyan: #0891B2;
-        --accent-pink: #DB2777;
-        --border-light: #E5E7EB;
-        --border-accent: #D1D5DB;
-        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-        --gradient-primary: linear-gradient(135deg, #D3FF61 0%, #EFFFAB 100%);
-        --gradient-dark: linear-gradient(135deg, #1A1A1A 0%, #404040 100%);
-        --gradient-success: linear-gradient(135deg, #059669 0%, #10B981 100%);
-        --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-        --gradient-mesh: radial-gradient(circle at 20% 20%, rgba(211, 255, 97, 0.3) 0%, transparent 50%),
-                         radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.3) 0%, transparent 50%),
-                         radial-gradient(circle at 40% 40%, rgba(0, 0, 0, 0.1) 0%, transparent 50%);
-    }
-
-    * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
+        --primary-color: #1C64FF;
+        --secondary-text: #696969;
+        --background-color: #FFFFFF;
+        --border-color: #D9D9D9;
+        --highlight-color: #C3E4FF;
+        --success-color: #28a745;
+        --warning-color: #ffc107;
+        --danger-color: #dc3545;
+        --info-color: #17a2b8;
     }
 
     body {
-        background: var(--bg-primary);
-        background-image: var(--gradient-mesh);
-        color: var(--text-primary);
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background-color: #f8f9fa;
+        color: #333;
         line-height: 1.6;
-        overflow-x: hidden;
-        min-height: 100vh;
     }
 
-    .dashboard-container {
-        max-width: 1920px;
-        margin: 0 auto;
-        padding: 2rem;
+    .top-navigation {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .notification-bell {
         position: relative;
-        animation: fadeInUp 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        width: 45px;
+        height: 45px;
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     }
 
-    .dashboard-container::before {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(45deg, transparent 0%, rgba(255, 255, 255, 0.02) 50%, transparent 100%);
-        animation: shimmer 3s ease-in-out infinite;
-        pointer-events: none;
-        z-index: 1;
+    .notification-bell:hover {
+        background: var(--highlight-color);
+        border-color: var(--primary-color);
+        transform: translateY(-2px);
+    }
+
+    .notification-bell i {
+        font-size: 1.2rem;
+        color: #333;
+    }
+
+    .notification-badge {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: #ff4757;
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border: 2px solid white;
+    }
+
+    .command-center-badge {
+        background: var(--highlight-color);
+        border: 1px solid rgba(28, 100, 255, 0.2);
+        border-radius: 25px;
+        padding: 0.75rem 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .command-center-text {
+        text-align: center;
+    }
+
+    .command-center-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #333;
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .command-center-subtitle {
+        font-size: 0.8rem;
+        color: var(--secondary-text);
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .user-avatar {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .user-avatar:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
     }
 
     .dashboard-header {
-        text-align: center;
-        margin-bottom: 4rem;
-        position: relative;
-        z-index: 10;
+        background: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-bottom: 1px solid var(--border-color);
     }
 
-    .dashboard-title {
-        font-size: clamp(2.5rem, 5vw, 4rem);
-        font-weight: 900;
-        background: var(--gradient-dark);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        margin-bottom: 1rem;
-        letter-spacing: -0.05em;
-        line-height: 1.1;
-        position: relative;
-    }
-
-    .dashboard-title::after {
-        content: '';
-        position: absolute;
-        bottom: -10px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 60px;
-        height: 4px;
-        background: var(--gradient-primary);
-        border-radius: 2px;
+    .welcome-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
     }
 
     .welcome-text {
-        font-size: 1.3rem;
-        color: var(--text-secondary);
-        margin-bottom: 2rem;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #333;
+        margin: 0;
+    }
+
+    .user-name {
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+
+    .datetime-display {
+        text-align: right;
+        color: var(--secondary-text);
+    }
+
+    .date-text {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #333;
+        margin: 0;
+    }
+
+    .time-text {
+        font-size: 1rem;
+        color: var(--primary-color);
         font-weight: 500;
-        opacity: 0.9;
+        margin: 0;
+    }
+
+    .dashboard-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 1rem;
+        text-align: center;
     }
 
     .role-indicator {
         display: inline-flex;
         align-items: center;
-        gap: 0.75rem;
-        padding: 1rem 2rem;
-        background: var(--bg-card);
-        border: 2px solid var(--border-light);
-        border-radius: 50px;
-        color: var(--text-primary);
-        font-weight: 700;
-        font-size: 1rem;
-        letter-spacing: 0.05em;
-        position: relative;
-        overflow: hidden;
-        box-shadow: var(--shadow-lg);
-        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-
-    .role-indicator:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--shadow-xl);
-        border-color: var(--accent-primary);
-    }
-
-    .role-indicator::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.05), transparent);
-        animation: slideShimmer 3s infinite;
-    }
-
-    .role-icon {
-        font-size: 1.5rem;
-        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-    }
-
-    /* Role-specific styling */
-    .role-top-management {
-        background: linear-gradient(135deg, #DB2777 0%, #EC4899 100%);
-        color: var(--text-contrast);
-        border-color: #DB2777;
-    }
-
-    .role-business-head {
-        background: linear-gradient(135deg, #7C3AED 0%, #8B5CF6 100%);
-        color: var(--text-contrast);
-        border-color: #7C3AED;
-    }
-
-    .role-rm-head {
-        background: linear-gradient(135deg, #0891B2 0%, #06B6D4 100%);
-        color: var(--text-contrast);
-        border-color: #0891B2;
-    }
-
-    .role-rm {
-        background: linear-gradient(135deg, #059669 0%, #10B981 100%);
-        color: var(--text-contrast);
-        border-color: #059669;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: var(--highlight-color);
+        border: 1px solid var(--primary-color);
+        border-radius: 25px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--primary-color);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 1.5rem;
     }
 
     .header-actions {
         display: flex;
         justify-content: center;
-        gap: 1.5rem;
-        margin-top: 2rem;
+        gap: 1rem;
         flex-wrap: wrap;
     }
 
     .action-btn {
         display: inline-flex;
         align-items: center;
-        gap: 0.75rem;
-        padding: 1rem 2rem;
-        background: var(--bg-card);
-        color: var(--text-primary);
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        background: var(--primary-color);
+        border: 1px solid var(--primary-color);
+        color: white;
         text-decoration: none;
-        border-radius: 16px;
-        font-weight: 600;
-        font-size: 1rem;
-        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        border: 2px solid var(--border-light);
-        box-shadow: var(--shadow-md);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .action-btn:hover {
-        transform: translateY(-4px);
-        box-shadow: var(--shadow-xl);
-        border-color: var(--accent-primary);
-        background: var(--accent-primary);
-        color: var(--text-contrast);
-    }
-
-    .btn-hrms {
-        background: var(--gradient-dark);
-        color: var(--text-contrast);
-        border-color: var(--accent-primary);
-    }
-
-    .btn-hrms:hover {
-        background: var(--bg-card);
-        color: var(--text-primary);
-        transform: translateY(-4px) scale(1.05);
-    }
-
-    .dashboard-content {
-        position: relative;
-        z-index: 10;
-    }
-
-    .section-title {
-        font-size: 2rem;
-        font-weight: 800;
-        color: var(--text-primary);
-        margin-bottom: 2.5rem;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .section-icon {
-        width: 50px;
-        height: 50px;
-        background: var(--gradient-dark);
-        border-radius: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--text-contrast);
-        font-size: 1.5rem;
-        box-shadow: var(--shadow-lg);
-    }
-
-    /* KPI Grid for Top Management */
-    .kpi-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
-        gap: 2rem;
-        margin-bottom: 3rem;
-    }
-
-    .kpi-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border-light);
-        border-radius: 24px;
-        padding: 2.5rem;
-        position: relative;
-        overflow: hidden;
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        cursor: pointer;
-        box-shadow: var(--shadow-md);
-        backdrop-filter: blur(10px);
-    }
-
-    .kpi-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 5px;
-        background: var(--gradient-primary);
-        border-radius: 24px 24px 0 0;
-    }
-
-    .kpi-card:hover {
-        transform: translateY(-12px) scale(1.02);
-        box-shadow: var(--shadow-2xl);
-        border-color: var(--accent-primary);
-    }
-
-    .kpi-card.success::before { 
-        background: var(--gradient-success); 
-    }
-    
-    .kpi-card.warning::before { 
-        background: linear-gradient(135deg, #D97706 0%, #F59E0B 100%); 
-    }
-    
-    .kpi-card.danger::before { 
-        background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%); 
-    }
-
-    .kpi-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 2rem;
-    }
-
-    .kpi-icon {
-        width: 70px;
-        height: 70px;
-        border-radius: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 2.2rem;
-        background: linear-gradient(135deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.05));
-        color: var(--text-primary);
-        box-shadow: var(--shadow-md);
+        border-radius: 8px;
+        font-weight: 500;
         transition: all 0.3s ease;
     }
 
-    .kpi-card:hover .kpi-icon {
-        transform: scale(1.1);
-        box-shadow: var(--shadow-lg);
+    .action-btn:hover {
+        background: #0d47a1;
+        border-color: #0d47a1;
+        color: white;
+        transform: translateY(-2px);
     }
 
-    .kpi-card.success .kpi-icon {
-        background: linear-gradient(135deg, rgba(5, 150, 105, 0.2), rgba(16, 185, 129, 0.1));
-        color: var(--accent-success);
+    .btn-hrms {
+        background: white;
+        color: var(--primary-color);
+        border-color: var(--primary-color);
     }
 
-    .kpi-card.warning .kpi-icon {
-        background: linear-gradient(135deg, rgba(217, 119, 6, 0.2), rgba(245, 158, 11, 0.1));
-        color: var(--accent-warning);
+    .btn-hrms:hover {
+        background: var(--primary-color);
+        color: white;
+        transform: translateY(-2px);
     }
 
-    .kpi-trend {
+    .section-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 2rem;
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        font-size: 0.9rem;
-        font-weight: 600;
-        color: var(--accent-success);
-        background: rgba(5, 150, 105, 0.1);
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
+        gap: 0.75rem;
     }
 
-    .kpi-label {
-        font-size: 0.9rem;
-        color: var(--text-muted);
-        font-weight: 600;
-        margin-bottom: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
+    .section-icon {
+        width: 45px;
+        height: 45px;
+        background: var(--primary-color);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.25rem;
     }
 
-    .kpi-value {
-        font-size: 2.8rem;
-        font-weight: 900;
-        color: var(--text-primary);
-        line-height: 1;
-        margin-bottom: 1rem;
-        font-variant-numeric: tabular-nums;
-    }
-
-    .kpi-description {
-        font-size: 1rem;
-        color: var(--text-secondary);
-        line-height: 1.5;
-        opacity: 0.8;
-    }
-
-    /* Metrics Grid for other roles */
-    .metrics-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-        gap: 2rem;
-        margin-bottom: 3rem;
-    }
-
-    .metric-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border-light);
-        border-radius: 20px;
+    .kpi-card, .metric-card {
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 15px;
         padding: 2rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        height: 100%;
         position: relative;
         overflow: hidden;
-        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        cursor: pointer;
-        box-shadow: var(--shadow-md);
     }
 
-    .metric-card:hover {
-        transform: translateY(-8px);
-        box-shadow: var(--shadow-xl);
-        border-color: var(--accent-primary);
-    }
-
-    .metric-card::before {
+    .kpi-card::before, .metric-card::before {
         content: '';
         position: absolute;
         top: 0;
         left: 0;
         right: 0;
         height: 4px;
-        background: var(--gradient-primary);
-        border-radius: 20px 20px 0 0;
+        background: var(--primary-color);
+        border-radius: 15px 15px 0 0;
     }
 
-    .metric-header {
+    .kpi-card.success::before {
+        background: var(--success-color);
+    }
+
+    .kpi-card.warning::before {
+        background: var(--warning-color);
+    }
+
+    .kpi-card.danger::before {
+        background: var(--danger-color);
+    }
+
+    .kpi-card:hover, .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        border-color: var(--primary-color);
+    }
+
+    .kpi-header, .metric-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
         margin-bottom: 1.5rem;
     }
 
-    .metric-icon {
-        width: 56px;
-        height: 56px;
-        border-radius: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.8rem;
-        background: linear-gradient(135deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.05));
-        color: var(--text-primary);
-        box-shadow: var(--shadow-sm);
-    }
-
-    .metric-value {
-        font-size: 2.5rem;
-        font-weight: 800;
-        color: var(--text-primary);
-        margin-bottom: 0.5rem;
-        font-variant-numeric: tabular-nums;
-    }
-
-    .metric-label {
-        font-size: 1rem;
-        color: var(--text-secondary);
-        font-weight: 500;
-    }
-
-    .metric-badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.4rem 1rem;
-        background: rgba(5, 150, 105, 0.1);
-        color: var(--accent-success);
-        border-radius: 16px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        border: 1px solid rgba(5, 150, 105, 0.2);
-    }
-
-    /* Stats List for simpler layouts */
-    .stats-list {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 1.5rem;
-    }
-
-    .stat-item {
-        background: var(--bg-card);
-        border: 1px solid var(--border-light);
-        border-radius: 16px;
-        padding: 2rem;
-        display: flex;
-        align-items: center;
-        gap: 1.5rem;
-        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        box-shadow: var(--shadow-md);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .stat-item:hover {
-        transform: translateX(8px) translateY(-4px);
-        border-color: var(--accent-primary);
-        box-shadow: var(--shadow-lg);
-    }
-
-    .stat-item::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 4px;
-        background: var(--gradient-primary);
-        transition: width 0.3s ease;
-    }
-
-    .stat-item:hover::before {
-        width: 8px;
-    }
-
-    .stat-icon {
-        width: 48px;
-        height: 48px;
+    .kpi-icon, .metric-icon {
+        width: 60px;
+        height: 60px;
         border-radius: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 1.5rem;
-        background: linear-gradient(135deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.05));
-        color: var(--text-primary);
-        flex-shrink: 0;
-        box-shadow: var(--shadow-sm);
+        background: var(--highlight-color);
+        color: var(--primary-color);
     }
 
-    .stat-content {
-        flex: 1;
+    .kpi-card.success .kpi-icon {
+        background: rgba(40, 167, 69, 0.1);
+        color: var(--success-color);
+    }
+
+    .kpi-card.warning .kpi-icon {
+        background: rgba(255, 193, 7, 0.1);
+        color: var(--warning-color);
+    }
+
+    .kpi-card.danger .kpi-icon {
+        background: rgba(220, 53, 69, 0.1);
+        color: var(--danger-color);
+    }
+
+    .kpi-trend, .metric-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.5rem 1rem;
+        background: var(--highlight-color);
+        color: var(--primary-color);
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .kpi-label {
+        font-size: 0.9rem;
+        color: var(--secondary-text);
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .kpi-value, .metric-value {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #333;
+        line-height: 1;
+        margin-bottom: 1rem;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .kpi-description {
+        font-size: 0.95rem;
+        color: var(--secondary-text);
+        line-height: 1.4;
+    }
+
+    .metric-label {
+        font-size: 1rem;
+        color: var(--secondary-text);
+        font-weight: 500;
+    }
+
+    .stat-item {
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        border-left: 4px solid var(--primary-color);
+    }
+
+    .stat-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        border-left-color: var(--primary-color);
+    }
+
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        background: var(--highlight-color);
+        color: var(--primary-color);
+        flex-shrink: 0;
     }
 
     .stat-value {
-        font-size: 2rem;
+        font-size: 1.75rem;
         font-weight: 800;
-        color: var(--text-primary);
+        color: #333;
         margin-bottom: 0.25rem;
         font-variant-numeric: tabular-nums;
     }
 
     .stat-label {
-        font-size: 0.95rem;
-        color: var(--text-secondary);
+        font-size: 0.9rem;
+        color: var(--secondary-text);
         font-weight: 500;
     }
 
-    /* Performance Chart Area */
-    .chart-section {
-        background: var(--bg-card);
-        border: 1px solid var(--border-light);
-        border-radius: 24px;
-        padding: 2.5rem;
-        margin: 2rem 0;
-        position: relative;
-        overflow: hidden;
-        box-shadow: var(--shadow-lg);
-        backdrop-filter: blur(10px);
+    .quick-action {
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        text-decoration: none;
+        color: #333;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        display: block;
     }
 
-    .chart-section::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 5px;
-        background: var(--gradient-dark);
-        border-radius: 24px 24px 0 0;
+    .quick-action:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        border-color: var(--primary-color);
+        color: #333;
+    }
+
+    .quick-action-icon {
+        font-size: 2rem;
+        margin-bottom: 0.75rem;
+        color: var(--primary-color);
+    }
+
+    .quick-action-title {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #333;
+    }
+
+    .quick-action-desc {
+        font-size: 0.85rem;
+        color: var(--secondary-text);
+    }
+
+    .activity-list {
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    .activity-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem 0;
+        border-bottom: 1px solid #f8f9fa;
+        transition: all 0.3s ease;
+    }
+
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+
+    .activity-item:hover {
+        background: #f8f9fa;
+        margin: 0 -1rem;
+        padding: 1rem;
+        border-radius: 8px;
+    }
+
+    .activity-icon {
+        width: 40px;
+        height: 40px;
+        background: var(--highlight-color);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        color: var(--primary-color);
+        flex-shrink: 0;
+    }
+
+    .activity-title {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 0.25rem;
+    }
+
+    .activity-meta {
+        font-size: 0.85rem;
+        color: var(--secondary-text);
+    }
+
+    .chart-section {
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        margin-top: 2rem;
     }
 
     .chart-header {
@@ -569,63 +523,57 @@
     }
 
     .chart-title {
-        font-size: 1.6rem;
+        font-size: 1.5rem;
         font-weight: 700;
-        color: var(--text-primary);
+        color: #333;
     }
 
     .chart-placeholder {
-        height: 320px;
-        background: linear-gradient(135deg, 
-            rgba(211, 255, 97, 0.1) 0%,
-            rgba(255, 255, 255, 0.1) 50%,
-            rgba(0, 0, 0, 0.05) 100%);
-        border-radius: 16px;
+        height: 300px;
+        background: linear-gradient(135deg, var(--highlight-color), #f8f9fa);
+        border-radius: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
-        border: 2px dashed var(--border-accent);
-        color: var(--text-muted);
+        border: 2px dashed var(--border-color);
+        color: var(--secondary-text);
         flex-direction: column;
         gap: 1rem;
         transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
     }
 
     .chart-placeholder:hover {
-        border-color: var(--accent-primary);
-        background: linear-gradient(135deg, 
-            rgba(211, 255, 97, 0.2) 0%,
-            rgba(255, 255, 255, 0.2) 50%,
-            rgba(0, 0, 0, 0.1) 100%);
-        transform: scale(1.01);
+        border-color: var(--primary-color);
+        background: linear-gradient(135deg, var(--highlight-color), rgba(28, 100, 255, 0.05));
     }
 
     .placeholder-icon {
-        font-size: 4rem;
-        opacity: 0.6;
-        color: var(--text-primary);
+        font-size: 3rem;
+        color: var(--primary-color);
+        opacity: 0.7;
     }
 
     .placeholder-text {
-        font-size: 1.3rem;
+        font-size: 1.25rem;
         font-weight: 600;
-        color: var(--text-primary);
+        color: #333;
     }
 
     .placeholder-subtext {
-        font-size: 1rem;
-        opacity: 0.7;
-        color: var(--text-secondary);
+        font-size: 0.9rem;
+        color: var(--secondary-text);
         text-align: center;
+        max-width: 400px;
     }
 
-    /* Animations */
-    @keyframes fadeInUp {
+    .fade-in {
+        animation: fadeIn 0.6s ease-out;
+    }
+
+    @keyframes fadeIn {
         from {
             opacity: 0;
-            transform: translateY(40px);
+            transform: translateY(20px);
         }
         to {
             opacity: 1;
@@ -633,185 +581,46 @@
         }
     }
 
-    @keyframes shimmer {
-        0% { transform: translateX(-100%); }
-        100% { transform: translateX(100%); }
+    .stagger-animation {
+        animation: staggerIn 0.6s ease-out both;
     }
 
-    @keyframes slideShimmer {
-        0% { left: -100%; }
-        100% { left: 100%; }
-    }
-
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.7; }
-    }
-
-    @keyframes float {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-10px); }
-    }
-
-    .loading {
-        animation: pulse 2s infinite;
-    }
-
-    .floating {
-        animation: float 6s ease-in-out infinite;
-    }
-
-    /* Recent Activities */
-    .activity-list {
-        background: var(--bg-card);
-        border: 1px solid var(--border-light);
-        border-radius: 20px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-        box-shadow: var(--shadow-md);
-    }
-
-    .activity-item {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        padding: 1rem 0;
-        border-bottom: 1px solid var(--border-light);
-    }
-
-    .activity-item:last-child {
-        border-bottom: none;
-    }
-
-    .activity-icon {
-        width: 40px;
-        height: 40px;
-        background: var(--gradient-primary);
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.2rem;
-        color: var(--text-primary);
-    }
-
-    .activity-content {
-        flex: 1;
-    }
-
-    .activity-title {
-        font-weight: 600;
-        color: var(--text-primary);
-        margin-bottom: 0.25rem;
-    }
-
-    .activity-meta {
-        font-size: 0.9rem;
-        color: var(--text-muted);
-    }
-
-    /* Quick Actions */
-    .quick-actions {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 1rem;
-        margin-bottom: 2rem;
-    }
-
-    .quick-action {
-        background: var(--bg-card);
-        border: 1px solid var(--border-light);
-        border-radius: 16px;
-        padding: 1.5rem;
-        text-align: center;
-        text-decoration: none;
-        color: var(--text-primary);
-        transition: all 0.3s ease;
-        box-shadow: var(--shadow-sm);
-    }
-
-    .quick-action:hover {
-        transform: translateY(-4px);
-        box-shadow: var(--shadow-lg);
-        border-color: var(--accent-primary);
-    }
-
-    .quick-action-icon {
-        font-size: 2rem;
-        margin-bottom: 0.5rem;
-        color: var(--accent-primary);
-    }
-
-    .quick-action-title {
-        font-weight: 600;
-        margin-bottom: 0.25rem;
-    }
-
-    .quick-action-desc {
-        font-size: 0.9rem;
-        color: var(--text-muted);
-    }
-
-    /* Responsive Design */
-    @media (max-width: 1400px) {
-        .kpi-grid {
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    @keyframes staggerIn {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
         }
-    }
-
-    @media (max-width: 1024px) {
-        .dashboard-container {
-            padding: 1.5rem;
-        }
-        
-        .kpi-grid,
-        .metrics-grid {
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-        }
-        
-        .stats-list {
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        to {
+            opacity: 1;
+            transform: translateY(0);
         }
     }
 
     @media (max-width: 768px) {
-        .dashboard-container {
-            padding: 1rem;
+        .top-navigation {
+            justify-content: center;
+            margin-bottom: 1rem;
         }
-        
-        .dashboard-title {
-            font-size: 2.5rem;
-        }
-        
-        .welcome-text {
-            font-size: 1.1rem;
-        }
-        
-        .kpi-grid,
-        .metrics-grid,
-        .stats-list {
-            grid-template-columns: 1fr;
+
+        .welcome-section {
+            flex-direction: column;
+            align-items: flex-start;
             gap: 1rem;
         }
         
-        .kpi-card,
-        .metric-card,
-        .stat-item {
-            padding: 1.5rem;
+        .datetime-display {
+            text-align: left;
         }
         
-        .kpi-value,
-        .metric-value,
-        .stat-value {
+        .dashboard-title {
             font-size: 2rem;
         }
         
-        .chart-placeholder {
-            height: 250px;
+        .kpi-value, .metric-value {
+            font-size: 2rem;
         }
         
-        .section-title {
+        .stat-value {
             font-size: 1.5rem;
         }
         
@@ -825,328 +634,389 @@
             max-width: 300px;
             justify-content: center;
         }
-    }
-
-    @media (max-width: 480px) {
-        .dashboard-container {
-            padding: 0.75rem;
-        }
-        
-        .dashboard-title {
-            font-size: 2rem;
-        }
-        
-        .role-indicator {
-            padding: 0.75rem 1.5rem;
-            font-size: 0.9rem;
-        }
-        
-        .kpi-card,
-        .metric-card,
-        .stat-item {
-            padding: 1.25rem;
-        }
-        
-        .chart-section {
-            padding: 1.5rem;
-        }
-    }
-
-    /* Print Styles */
-    @media print {
-        .dashboard-container {
-            background: white;
-            color: black;
-        }
-        
-        .action-btn {
-            display: none;
-        }
         
         .chart-placeholder {
-            border: 1px solid #ccc;
+            height: 250px;
+        }
+
+        .command-center-badge {
+            padding: 0.5rem 1rem;
+        }
+
+        .command-center-title {
+            font-size: 0.9rem;
+        }
+
+        .command-center-subtitle {
+            font-size: 0.75rem;
         }
     }
 
-    /* Dark mode compatibility */
-    @media (prefers-color-scheme: dark) {
-        :root {
-            --text-primary: #1A1A1A;
-            --text-secondary: #404040;
+    @media (max-width: 576px) {
+        .section-title {
+            font-size: 1.5rem;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
         }
-    }
-
-    /* Accessibility improvements */
-    @media (prefers-reduced-motion: reduce) {
-        * {
-            animation-duration: 0.01ms !important;
-            animation-iteration-count: 1 !important;
-            transition-duration: 0.01ms !important;
+        
+        .kpi-card, .metric-card {
+            padding: 1.5rem;
         }
-    }
+        
+        .stat-item {
+            flex-direction: column;
+            text-align: center;
+            gap: 0.75rem;
+        }
 
-    /* Focus states for accessibility */
-    .action-btn:focus,
-    .kpi-card:focus,
-    .metric-card:focus,
-    .stat-item:focus {
-        outline: 3px solid var(--accent-primary);
-        outline-offset: 2px;
+        .top-navigation {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
-    
+<div class="container-fluid">
     <!-- Header Section -->
     <div class="dashboard-header">
-        <h1 class="dashboard-title">Command Center</h1>
-        <p class="welcome-text">Welcome back, {{ request.user.get_full_name|default:request.user.username }}</p>
-        <div class="role-indicator role-{{ request.user.role }}">
-            {% if request.user.role == 'top_management' %}
-                <span class="role-icon">👑</span>
-                <span>{{ request.user.get_role_display }}</span>
-            {% elif request.user.role == 'business_head' or request.user.role == 'business_head_ops' %}
-                <span class="role-icon">🎯</span>
-                <span>{{ request.user.get_role_display }}</span>
-            {% elif request.user.role == 'rm_head' %}
-                <span class="role-icon">⚡</span>
-                <span>{{ request.user.get_role_display }}</span>
-            {% else %}
-                <span class="role-icon">🤝</span>
-                <span>{{ request.user.get_role_display }}</span>
-            {% endif %}
-        </div>
-        <div class="header-actions">
-            <a href="{% url 'hrm_dashboard' %}" class="action-btn btn-hrms">
-                <span>📋</span> HRMS Portal
-            </a>
-            {% if request.user.role == 'rm_head' %}
-                <a href="{% url 'dashboard_rm_head' %}" class="action-btn">
-                    <span>🏛️</span> RM Head Dashboard
+        <div class="container">
+            <!-- Top Navigation -->
+            <div class="top-navigation">
+                <!-- <div class="notification-bell">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge">2</span>
+                </div> -->
+                
+                <div class="command-center-badge">
+                    <div class="command-center-text">
+                        <div class="command-center-title">Command Center</div>
+                        <div class="command-center-subtitle">
+                            {% if request.user.role == 'top_management' %}
+                            <span>Top Management</span>
+                            {% elif request.user.role == 'business_head' or request.user.role == 'business_head_ops' %}
+                            <span>Business Head</span>
+                            {% elif request.user.role == 'rm_head' %}
+                            <span>RM Head</span>
+                            {% else %}
+                            <span>Relationship Manager</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="metric-icon"><i class="fas fa-user"></i></div>
+                    <!-- <img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-KtSbhfiDrCxiT246nVhmvFJRpJL827.png" alt="User Avatar" class="user-avatar"> -->
+                </div>
+            </div>
+
+            <div class="welcome-section">
+                <p class="welcome-text">
+                    Welcome back, <span class="user-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+                </p>
+                <p></p>
+                <div class="datetime-display">
+                    <p class="date-text">{{ "now"|date:"d M Y" }}</p>
+                    <p class="time-text">{{ "now"|date:"H:i:s" }}</p>
+                </div>
+            </div>
+            
+            <!-- <h1 class="dashboard-title">Command Center</h1>
+            
+            <div class="text-center">
+                <div class="role-indicator">
+                    {% if request.user.role == 'top_management' %}
+                        <i class="fas fa-crown"></i>
+                        <span>Top Management</span>
+                    {% elif request.user.role == 'business_head' or request.user.role == 'business_head_ops' %}
+                        <i class="fas fa-bullseye"></i>
+                        <span>Business Head</span>
+                    {% elif request.user.role == 'rm_head' %}
+                        <i class="fas fa-bolt"></i>
+                        <span>RM Head</span>
+                    {% else %}
+                        <i class="fas fa-handshake"></i>
+                        <span>Relationship Manager</span>
+                    {% endif %}
+                </div>
+            </div> -->
+            
+            <!-- <div class="header-actions">
+                <a href="{% url 'hrm_dashboard' %}" class="action-btn btn-hrms">
+                    <i class="fas fa-clipboard-list"></i> HRMS Portal
                 </a>
-            {% endif %}
+                {% if request.user.role == 'rm_head' %}
+                    <a href="{% url 'dashboard_rm_head' %}" class="action-btn">
+                        <i class="fas fa-building"></i> RM Head Dashboard
+                    </a>
+                {% endif %}
+            </div> -->
         </div>
     </div>
 
-    <!-- Dashboard Content -->
-    <div class="dashboard-content">
-        
+    <div class="container">
+        <!-- Dashboard Content -->
         {% if request.user.role == 'top_management' or request.user.role == 'business_head' or request.user.role == 'business_head_ops' %}
             <!-- Top Management/Business Head KPIs -->
             <h2 class="section-title">
-                <div class="section-icon">📊</div>
+                <div class="section-icon"><i class="fas fa-chart-line"></i></div>
                 Executive KPI Dashboard
             </h2>
             
-            <div class="kpi-grid">
-                <div class="kpi-card floating">
-                    <div class="kpi-header">
-                        <div class="kpi-icon">💰</div>
-                        <div class="kpi-trend">
-                            <span>📈</span> Total
+            <div class="row mb-4">
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="kpi-card fade-in">
+                        <div class="kpi-header">
+                            <div class="kpi-icon"><i class="fas fa-dollar-sign"></i></div>
+                            <div class="kpi-trend">
+                                <i class="fas fa-chart-line"></i> Total
+                            </div>
                         </div>
+                        <div class="kpi-label">Total AUM</div>
+                        <div class="kpi-value">₹{{ total_aum|intcomma|default:"0" }}</div>
+                        <div class="kpi-description">Assets Under Management across all portfolios</div>
                     </div>
-                    <div class="kpi-label">Total AUM</div>
-                    <div class="kpi-value">₹{{ total_aum|intcomma|default:"0" }}</div>
-                    <div class="kpi-description">Assets Under Management across all portfolios</div>
                 </div>
 
-                <div class="kpi-card success floating">
-                    <div class="kpi-header">
-                        <div class="kpi-icon">🔄</div>
-                        <div class="kpi-trend">
-                            <span>⚡</span> Active
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="kpi-card success fade-in">
+                        <div class="kpi-header">
+                            <div class="kpi-icon"><i class="fas fa-sync-alt"></i></div>
+                            <div class="kpi-trend">
+                                <i class="fas fa-bolt"></i> Active
+                            </div>
                         </div>
+                        <div class="kpi-label">Total SIPs</div>
+                        <div class="kpi-value">₹{{ total_sip|intcomma|default:"0" }}</div>
+                        <div class="kpi-description">Systematic Investment Plans currently active</div>
                     </div>
-                    <div class="kpi-label">Total SIPs</div>
-                    <div class="kpi-value">₹{{ total_sip|intcomma|default:"0" }}</div>
-                    <div class="kpi-description">Systematic Investment Plans currently active</div>
                 </div>
 
-                <div class="kpi-card warning floating">
-                    <div class="kpi-header">
-                        <div class="kpi-icon">👥</div>
-                        <div class="kpi-trend">
-                            <span>🚀</span> {{ total_users|default:"0" }}
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="kpi-card warning fade-in">
+                        <div class="kpi-header">
+                            <div class="kpi-icon"><i class="fas fa-users"></i></div>
+                            <div class="kpi-trend">
+                                <i class="fas fa-rocket"></i> {{ total_users|default:"0" }}
+                            </div>
                         </div>
+                        <div class="kpi-label">Total Users</div>
+                        <div class="kpi-value">{{ total_users|default:"0" }}</div>
+                        <div class="kpi-description">Active users across all roles and teams</div>
                     </div>
-                    <div class="kpi-label">Total Users</div>
-                    <div class="kpi-value">{{ total_users|default:"0" }}</div>
-                    <div class="kpi-description">Active users across all roles and teams</div>
                 </div>
 
-                <div class="kpi-card danger floating">
-                    <div class="kpi-header">
-                        <div class="kpi-icon">📋</div>
-                        <div class="kpi-trend">
-                            <span>⚠️</span> {{ pending_tasks|default:"0" }}
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="kpi-card danger fade-in">
+                        <div class="kpi-header">
+                            <div class="kpi-icon"><i class="fas fa-tasks"></i></div>
+                            <div class="kpi-trend">
+                                <i class="fas fa-exclamation-triangle"></i> {{ pending_tasks|default:"0" }}
+                            </div>
                         </div>
+                        <div class="kpi-label">Pending Tasks</div>
+                        <div class="kpi-value">{{ pending_tasks|default:"0" }}</div>
+                        <div class="kpi-description">Tasks requiring immediate attention</div>
                     </div>
-                    <div class="kpi-label">Pending Tasks</div>
-                    <div class="kpi-value">{{ pending_tasks|default:"0" }}</div>
-                    <div class="kpi-description">Tasks requiring immediate attention</div>
                 </div>
             </div>
 
             <!-- Business Metrics -->
             <h2 class="section-title">
-                <div class="section-icon">📈</div>
+                <div class="section-icon"><i class="fas fa-chart-bar"></i></div>
                 Business Metrics
             </h2>
             
-            <div class="metrics-grid">
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">🎯</div>
-                        <div class="metric-badge">{{ total_leads|default:"0" }} Total</div>
+            <div class="row mb-4">
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="metric-card stagger-animation" style="animation-delay: 0.1s">
+                        <div class="metric-header">
+                            <div class="metric-icon"><i class="fas fa-bullseye"></i></div>
+                            <div class="metric-badge">{{ total_leads|default:"0" }} Total</div>
+                        </div>
+                        <div class="metric-value">{{ total_leads|default:"0" }}</div>
+                        <div class="metric-label">Total Leads</div>
                     </div>
-                    <div class="metric-value">{{ total_leads|default:"0" }}</div>
-                    <div class="metric-label">Total Leads</div>
                 </div>
 
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">👨‍💼</div>
-                        <div class="metric-badge">{{ total_clients|default:"0" }} Active</div>
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="metric-card stagger-animation" style="animation-delay: 0.2s">
+                        <div class="metric-header">
+                            <div class="metric-icon"><i class="fas fa-user-tie"></i></div>
+                            <div class="metric-badge">{{ total_clients|default:"0" }} Active</div>
+                        </div>
+                        <div class="metric-value">{{ total_clients|default:"0" }}</div>
+                        <div class="metric-label">Total Clients</div>
                     </div>
-                    <div class="metric-value">{{ total_clients|default:"0" }}</div>
-                    <div class="metric-label">Total Clients</div>
                 </div>
 
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">🏛️</div>
-                        <div class="metric-badge">{{ total_teams|default:"0" }} Teams</div>
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="metric-card stagger-animation" style="animation-delay: 0.3s">
+                        <div class="metric-header">
+                            <div class="metric-icon"><i class="fas fa-sitemap"></i></div>
+                            <div class="metric-badge">{{ total_teams|default:"0" }} Teams</div>
+                        </div>
+                        <div class="metric-value">{{ total_teams|default:"0" }}</div>
+                        <div class="metric-label">Active Teams</div>
                     </div>
-                    <div class="metric-value">{{ total_teams|default:"0" }}</div>
-                    <div class="metric-label">Active Teams</div>
                 </div>
 
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">🛠️</div>
-                        <div class="metric-badge">{{ service_requests_count|default:"0" }} Open</div>
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="metric-card stagger-animation" style="animation-delay: 0.4s">
+                        <div class="metric-header">
+                            <div class="metric-icon"><i class="fas fa-tools"></i></div>
+                            <div class="metric-badge">{{ service_requests_count|default:"0" }} Open</div>
+                        </div>
+                        <div class="metric-value">{{ service_requests_count|default:"0" }}</div>
+                        <div class="metric-label">Service Requests</div>
                     </div>
-                    <div class="metric-value">{{ service_requests_count|default:"0" }}</div>
-                    <div class="metric-label">Service Requests</div>
                 </div>
             </div>
 
         {% elif request.user.role == 'rm_head' %}
             <!-- RM Head Dashboard -->
             <h2 class="section-title">
-                <div class="section-icon">⚡</div>
+                <div class="section-icon"><i class="fas fa-bolt"></i></div>
                 Team Leadership Overview
             </h2>
             
-            <div class="metrics-grid">
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">👥</div>
-                        <div class="metric-badge">{{ team_members|length|default:"0" }} Members</div>
+            <div class="row mb-4">
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="metric-card stagger-animation" style="animation-delay: 0.1s">
+                        <div class="metric-header">
+                            <div class="metric-icon"><i class="fas fa-users"></i></div>
+                            <div class="metric-badge">{{ team_members|length|default:"0" }} Members</div>
+                        </div>
+                        <div class="metric-value">{{ team_members|length|default:"0" }}</div>
+                        <div class="metric-label">Team Members</div>
                     </div>
-                    <div class="metric-value">{{ team_members|length|default:"0" }}</div>
-                    <div class="metric-label">Team Members</div>
                 </div>
 
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">💰</div>
-                        <div class="metric-badge">₹{{ team_aum|intcomma|default:"0" }}</div>
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="metric-card stagger-animation" style="animation-delay: 0.2s">
+                        <div class="metric-header">
+                            <div class="metric-icon"><i class="fas fa-dollar-sign"></i></div>
+                            <div class="metric-badge">₹{{ team_aum|intcomma|default:"0" }}</div>
+                        </div>
+                        <div class="metric-value">₹{{ team_aum|intcomma|default:"0" }}</div>
+                        <div class="metric-label">Team AUM</div>
                     </div>
-                    <div class="metric-value">₹{{ team_aum|intcomma|default:"0" }}</div>
-                    <div class="metric-label">Team AUM</div>
                 </div>
 
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">🎯</div>
-                        <div class="metric-badge">{{ leads_count|default:"0" }} Active</div>
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="metric-card stagger-animation" style="animation-delay: 0.3s">
+                        <div class="metric-header">
+                            <div class="metric-icon"><i class="fas fa-bullseye"></i></div>
+                            <div class="metric-badge">{{ leads_count|default:"0" }} Active</div>
+                        </div>
+                        <div class="metric-value">{{ leads_count|default:"0" }}</div>
+                        <div class="metric-label">Team Leads</div>
                     </div>
-                    <div class="metric-value">{{ leads_count|default:"0" }}</div>
-                    <div class="metric-label">Team Leads</div>
                 </div>
 
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">📋</div>
-                        <div class="metric-badge">{{ pending_tasks|default:"0" }} Pending</div>
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="metric-card stagger-animation" style="animation-delay: 0.4s">
+                        <div class="metric-header">
+                            <div class="metric-icon"><i class="fas fa-tasks"></i></div>
+                            <div class="metric-badge">{{ pending_tasks|default:"0" }} Pending</div>
+                        </div>
+                        <div class="metric-value">{{ pending_tasks|default:"0" }}</div>
+                        <div class="metric-label">Team Tasks</div>
                     </div>
-                    <div class="metric-value">{{ pending_tasks|default:"0" }}</div>
-                    <div class="metric-label">Team Tasks</div>
                 </div>
             </div>
 
         {% else %}
             <!-- Regular RM Dashboard -->
             <h2 class="section-title">
-                <div class="section-icon">🤝</div>
+                <div class="section-icon"><i class="fas fa-handshake"></i></div>
                 Personal Dashboard
             </h2>
             
-            <div class="metrics-grid">
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">🎯</div>
-                        <div class="metric-badge">{{ leads_count|default:"0" }} Total</div>
+            <div class="row mb-4">
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="metric-card stagger-animation" style="animation-delay: 0.1s">
+                        <div class="metric-header">
+                            <div class="metric-icon"><i class="fas fa-bullseye"></i></div>
+                            <div class="metric-badge">{{ leads_count|default:"0" }} Total</div>
+                        </div>
+                        <div class="metric-value">{{ leads_count|default:"0" }}</div>
+                        <div class="metric-label">My Leads</div>
                     </div>
-                    <div class="metric-value">{{ leads_count|default:"0" }}</div>
-                    <div class="metric-label">My Leads</div>
                 </div>
 
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">👨‍💼</div>
-                        <div class="metric-badge">{{ clients_count|default:"0" }} Active</div>
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="metric-card stagger-animation" style="animation-delay: 0.2s">
+                        <div class="metric-header">
+                            <div class="metric-icon"><i class="fas fa-user-tie"></i></div>
+                            <div class="metric-badge">{{ clients_count|default:"0" }} Active</div>
+                        </div>
+                        <div class="metric-value">{{ clients_count|default:"0" }}</div>
+                        <div class="metric-label">My Clients</div>
                     </div>
-                    <div class="metric-value">{{ clients_count|default:"0" }}</div>
-                    <div class="metric-label">My Clients</div>
                 </div>
 
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">💰</div>
-                        <div class="metric-badge">₹{{ my_aum|intcomma|default:"0" }}</div>
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="metric-card stagger-animation" style="animation-delay: 0.3s">
+                        <div class="metric-header">
+                            <div class="metric-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                            <div class="metric-badge">{{ overdue_tasks|default:"0" }} Tasks</div>
+                        </div>
+                        <div class="metric-value">{{ overdue_tasks|default:"0" }}</div>
+                        <div class="metric-label">Overdue Tasks</div>
                     </div>
-                    <div class="metric-value">₹{{ my_aum|intcomma|default:"0" }}</div>
-                    <div class="metric-label">My AUM</div>
                 </div>
 
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <div class="metric-icon">📋</div>
-                        <div class="metric-badge">{{ pending_tasks|default:"0" }} Pending</div>
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="metric-card stagger-animation" style="animation-delay: 0.4s">
+                        <div class="metric-header">
+                            <div class="metric-icon"><i class="fas fa-tasks"></i></div>
+                            <div class="metric-badge">{{ pending_tasks|default:"0" }} Pending</div>
+                        </div>
+                        <div class="metric-value">{{ pending_tasks|default:"0" }}</div>
+                        <div class="metric-label">My Tasks</div>
                     </div>
-                    <div class="metric-value">{{ pending_tasks|default:"0" }}</div>
-                    <div class="metric-label">My Tasks</div>
                 </div>
             </div>
 
             <!-- Personal SIP Information -->
-            <div class="stats-list">
-                <div class="stat-item">
-                    <div class="stat-icon">🔄</div>
-                    <div class="stat-content">
-                        <div class="stat-value">₹{{ my_sip|intcomma|default:"0" }}</div>
-                        <div class="stat-label">Monthly SIP Amount</div>
+            <div class="row mb-4">
+                <div class="col-lg-4 col-md-6 mb-3">
+                    <div class="stat-item stagger-animation" style="animation-delay: 0.5s">
+                        <div class="stat-icon"><i class="fas fa-sync-alt"></i></div>
+                        <div class="stat-content">
+                            <div class="stat-value">₹{{ my_sip|intcomma|default:"0" }}</div>
+                            <div class="stat-label">Monthly SIP Amount</div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="stat-item">
-                    <div class="stat-icon">⚠️</div>
-                    <div class="stat-content">
-                        <div class="stat-value">{{ overdue_tasks|default:"0" }}</div>
-                        <div class="stat-label">Overdue Tasks</div>
+                <!-- <div class="col-lg-4 col-md-6 mb-3">
+                    <div class="stat-item stagger-animation" style="animation-delay: 0.6s">
+                        <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="stat-content">
+                            <div class="stat-value">{{ overdue_tasks|default:"0" }}</div>
+                            <div class="stat-label">Overdue Tasks</div>
+                        </div>
+                    </div>
+                </div> -->
+                 <div class="col-lg-4 col-md-6 mb-3">
+                    <div class="stat-item stagger-animation" style="animation-delay: 0.6s">
+                        <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
+                        <div class="stat-content">
+                            <div class="stat-value">₹{{ my_aum|intcomma|default:"0" }}</div>
+                            <div class="stat-label">My AUM</div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="stat-item">
-                    <div class="stat-icon">🛠️</div>
-                    <div class="stat-content">
-                        <div class="stat-value">{{ service_requests.count|default:"0" }}</div>
-                        <div class="stat-label">Service Requests</div>
+                <div class="col-lg-4 col-md-6 mb-3">
+                    <div class="stat-item stagger-animation" style="animation-delay: 0.7s">
+                        <div class="stat-icon"><i class="fas fa-tools"></i></div>
+                        <div class="stat-content">
+                            <div class="stat-value">{{ service_requests.count|default:"0" }}</div>
+                            <div class="stat-label">Service Requests</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1154,88 +1024,112 @@
 
         <!-- Quick Actions Section -->
         <h2 class="section-title">
-            <div class="section-icon">⚡</div>
+            <div class="section-icon"><i class="fas fa-bolt"></i></div>
             Quick Actions
         </h2>
         
-        <div class="quick-actions">
+        <div class="row mb-4">
             {% if request.user.role == 'top_management' or request.user.role == 'business_head' or request.user.role == 'business_head_ops' %}
-                <a href="{% url 'lead_list' %}" class="quick-action">
-                    <div class="quick-action-icon">🎯</div>
-                    <div class="quick-action-title">Manage Leads</div>
-                    <div class="quick-action-desc">View and manage all leads</div>
-                </a>
-                <a href="{% url 'client_list' %}" class="quick-action">
-                    <div class="quick-action-icon">👨‍💼</div>
-                    <div class="quick-action-title">Client Portfolio</div>
-                    <div class="quick-action-desc">Manage client portfolios</div>
-                </a>
-                <a href="{% url 'team_management' %}" class="quick-action">
-                    <div class="quick-action-icon">🏛️</div>
-                    <div class="quick-action-title">Team Management</div>
-                    <div class="quick-action-desc">Manage teams and assignments</div>
-                </a>
-                <a href="{% url 'task_list' %}" class="quick-action">
-                    <div class="quick-action-icon">📋</div>
-                    <div class="quick-action-title">Task Management</div>
-                    <div class="quick-action-desc">View and assign tasks</div>
-                </a>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <a href="{% url 'lead_list' %}" class="quick-action">
+                        <div class="quick-action-icon"><i class="fas fa-bullseye"></i></div>
+                        <div class="quick-action-title">Manage Leads</div>
+                        <div class="quick-action-desc">View and manage all leads</div>
+                    </a>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <a href="{% url 'client_list' %}" class="quick-action">
+                        <div class="quick-action-icon"><i class="fas fa-user-tie"></i></div>
+                        <div class="quick-action-title">Client Portfolio</div>
+                        <div class="quick-action-desc">Manage client portfolios</div>
+                    </a>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <a href="{% url 'team_management' %}" class="quick-action">
+                        <div class="quick-action-icon"><i class="fas fa-sitemap"></i></div>
+                        <div class="quick-action-title">Team Management</div>
+                        <div class="quick-action-desc">Manage teams and assignments</div>
+                    </a>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <a href="{% url 'task_list' %}" class="quick-action">
+                        <div class="quick-action-icon"><i class="fas fa-tasks"></i></div>
+                        <div class="quick-action-title">Task Management</div>
+                        <div class="quick-action-desc">View and assign tasks</div>
+                    </a>
+                </div>
             {% elif request.user.role == 'rm_head' %}
-                <a href="{% url 'lead_list' %}" class="quick-action">
-                    <div class="quick-action-icon">🎯</div>
-                    <div class="quick-action-title">Team Leads</div>
-                    <div class="quick-action-desc">Manage team leads</div>
-                </a>
-                <a href="{% url 'client_list' %}" class="quick-action">
-                    <div class="quick-action-icon">👨‍💼</div>
-                    <div class="quick-action-title">Team Clients</div>
-                    <div class="quick-action-desc">View team client portfolio</div>
-                </a>
-                <a href="{% url 'team_management' %}" class="quick-action">
-                    <div class="quick-action-icon">🏛️</div>
-                    <div class="quick-action-title">My Teams</div>
-                    <div class="quick-action-desc">Manage your teams</div>
-                </a>
-                <a href="{% url 'task_list' %}" class="quick-action">
-                    <div class="quick-action-icon">📋</div>
-                    <div class="quick-action-title">Team Tasks</div>
-                    <div class="quick-action-desc">Monitor team tasks</div>
-                </a>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <a href="{% url 'lead_list' %}" class="quick-action">
+                        <div class="quick-action-icon"><i class="fas fa-bullseye"></i></div>
+                        <div class="quick-action-title">Team Leads</div>
+                        <div class="quick-action-desc">Manage team leads</div>
+                    </a>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <a href="{% url 'client_list' %}" class="quick-action">
+                        <div class="quick-action-icon"><i class="fas fa-user-tie"></i></div>
+                        <div class="quick-action-title">Team Clients</div>
+                        <div class="quick-action-desc">View team client portfolio</div>
+                    </a>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <a href="{% url 'team_management' %}" class="quick-action">
+                        <div class="quick-action-icon"><i class="fas fa-sitemap"></i></div>
+                        <div class="quick-action-title">My Teams</div>
+                        <div class="quick-action-desc">Manage your teams</div>
+                    </a>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <a href="{% url 'task_list' %}" class="quick-action">
+                        <div class="quick-action-icon"><i class="fas fa-tasks"></i></div>
+                        <div class="quick-action-title">Team Tasks</div>
+                        <div class="quick-action-desc">Monitor team tasks</div>
+                    </a>
+                </div>
             {% else %}
-                <a href="{% url 'lead_list' %}" class="quick-action">
-                    <div class="quick-action-icon">🎯</div>
-                    <div class="quick-action-title">My Leads</div>
-                    <div class="quick-action-desc">Manage your leads</div>
-                </a>
-                <a href="{% url 'client_list' %}" class="quick-action">
-                    <div class="quick-action-icon">👨‍💼</div>
-                    <div class="quick-action-title">My Clients</div>
-                    <div class="quick-action-desc">View your client portfolio</div>
-                </a>
-                <a href="{% url 'task_list' %}" class="quick-action">
-                    <div class="quick-action-icon">📋</div>
-                    <div class="quick-action-title">My Tasks</div>
-                    <div class="quick-action-desc">View and update tasks</div>
-                </a>
-                <a href="{% url 'note_list' %}" class="quick-action">
-                    <div class="quick-action-icon">📝</div>
-                    <div class="quick-action-title">Notes</div>
-                    <div class="quick-action-desc">Manage your notes</div>
-                </a>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <a href="{% url 'lead_list' %}" class="quick-action">
+                        <div class="quick-action-icon"><i class="fas fa-bullseye"></i></div>
+                        <div class="quick-action-title">My Leads</div>
+                        <div class="quick-action-desc">Manage your leads</div>
+                    </a>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <a href="{% url 'client_list' %}" class="quick-action">
+                        <div class="quick-action-icon"><i class="fas fa-user-tie"></i></div>
+                        <div class="quick-action-title">My Clients</div>
+                        <div class="quick-action-desc">View your client portfolio</div>
+                    </a>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <a href="{% url 'task_list' %}" class="quick-action">
+                        <div class="quick-action-icon"><i class="fas fa-tasks"></i></div>
+                        <div class="quick-action-title">My Tasks</div>
+                        <div class="quick-action-desc">View and update tasks</div>
+                    </a>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <a href="{% url 'note_list' %}" class="quick-action">
+                        <div class="quick-action-icon"><i class="fas fa-sticky-note"></i></div>
+                        <div class="quick-action-title">Notes</div>
+                        <div class="quick-action-desc">Manage your notes</div>
+                    </a>
+                </div>
             {% endif %}
         </div>
 
         {% if request.user.role == 'rm' %}
             <!-- Recent Activities for RM -->
             <h2 class="section-title">
-                <div class="section-icon">📈</div>
+                <div class="section-icon"><i class="fas fa-chart-line"></i></div>
                 Recent Activities
             </h2>
             
             <div class="activity-list">
                 {% for client in recent_clients %}
                     <div class="activity-item">
-                        <div class="activity-icon">👨‍💼</div>
+                        <div class="activity-icon"><i class="fas fa-user-tie"></i></div>
                         <div class="activity-content">
                             <div class="activity-title">New Client: {{ client.name }}</div>
                             <div class="activity-meta">Added on {{ client.created_at|date:"M d, Y" }}</div>
@@ -1243,7 +1137,7 @@
                     </div>
                 {% empty %}
                     <div class="activity-item">
-                        <div class="activity-icon">📝</div>
+                        <div class="activity-icon"><i class="fas fa-info-circle"></i></div>
                         <div class="activity-content">
                             <div class="activity-title">No recent activities</div>
                             <div class="activity-meta">Start by adding clients or managing leads</div>
@@ -1253,7 +1147,7 @@
 
                 {% for note in recent_notes %}
                     <div class="activity-item">
-                        <div class="activity-icon">📝</div>
+                        <div class="activity-icon"><i class="fas fa-sticky-note"></i></div>
                         <div class="activity-content">
                             <div class="activity-title">{{ note.heading|default:"Note updated" }}</div>
                             <div class="activity-meta">Updated {{ note.updated_at|timesince }} ago</div>
@@ -1267,39 +1161,90 @@
         <div class="chart-section">
             <div class="chart-header">
                 <h3 class="chart-title">Performance Analytics</h3>
-                <div class="metric-badge">Coming Soon</div>
+                <span class="badge bg-primary">Coming Soon</span>
             </div>
             <div class="chart-placeholder">
-                <div class="placeholder-icon">📊</div>
+                <div class="placeholder-icon"><i class="fas fa-chart-bar"></i></div>
                 <div class="placeholder-text">Analytics Dashboard</div>
                 <div class="placeholder-subtext">
-                    Performance charts and detailed analytics will be available here.<br>
+                    Performance charts and detailed analytics will be available here.
                     Track your progress, team performance, and business metrics.
                 </div>
             </div>
         </div>
-
     </div>
 </div>
 
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Add loading states and animations
-    const cards = document.querySelectorAll('.kpi-card, .metric-card, .stat-item');
-    
-    cards.forEach((card, index) => {
-        // Add staggered animation
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
+    // Real-time clock update
+    function updateDateTime() {
+        const now = new Date();
+        const dateOptions = { day: 'numeric', month: 'short', year: 'numeric' };
+        const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
         
-        setTimeout(() => {
-            card.style.transition = 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-        }, index * 100);
+        const dateElement = document.querySelector('.date-text');
+        const timeElement = document.querySelector('.time-text');
+        
+        if (dateElement) {
+            dateElement.textContent = now.toLocaleDateString('en-GB', dateOptions);
+        }
+        if (timeElement) {
+            timeElement.textContent = now.toLocaleTimeString('en-GB', timeOptions);
+        }
+    }
+
+    // Update time immediately and then every second
+    updateDateTime();
+    setInterval(updateDateTime, 1000);
+
+    // Notification bell click handler
+    const notificationBell = document.querySelector('.notification-bell');
+    if (notificationBell) {
+        notificationBell.addEventListener('click', function() {
+            // Add notification dropdown or modal functionality here
+            console.log('Notifications clicked');
+            // You can add AJAX call to fetch notifications
+        });
+    }
+
+    // User avatar click handler
+    const userAvatar = document.querySelector('.user-avatar');
+    if (userAvatar) {
+        userAvatar.addEventListener('click', function() {
+            // Add user menu dropdown functionality here
+            console.log('User avatar clicked');
+        });
+    }
+
+    // Intersection Observer for scroll animations
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, observerOptions);
+
+    // Observe elements for scroll animations
+    const animateOnScroll = document.querySelectorAll('.kpi-card, .metric-card, .stat-item, .activity-list, .chart-section');
+    animateOnScroll.forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(30px)';
+        el.style.transition = 'all 0.6s ease';
+        observer.observe(el);
     });
 
     // Add hover effects for cards
+    const cards = document.querySelectorAll('.kpi-card, .metric-card');
     cards.forEach(card => {
         card.addEventListener('mouseenter', function() {
             this.style.zIndex = '10';
@@ -1325,7 +1270,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 position: absolute;
                 width: ${size}px;
                 height: ${size}px;
-                background: rgba(0, 0, 0, 0.1);
+                background: rgba(28, 100, 255, 0.2);
                 border-radius: 50%;
                 transform: translate(${x}px, ${y}px) scale(0);
                 animation: ripple 0.6s ease-out;
@@ -1333,18 +1278,55 @@ document.addEventListener('DOMContentLoaded', function() {
                 z-index: 1000;
             `;
             
+            this.style.position = 'relative';
+            this.style.overflow = 'hidden';
             this.appendChild(ripple);
             setTimeout(() => ripple.remove(), 600);
         });
     });
 
-    // Auto-refresh for real-time data (if needed)
+    // Counter animation for metric values
+    function animateCounter(element, target, duration = 2000) {
+        const start = 0;
+        const increment = target / (duration / 16);
+        let current = start;
+        
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= target) {
+                current = target;
+                clearInterval(timer);
+            }
+            
+            if (element.textContent.includes('₹')) {
+                element.textContent = '₹' + Math.floor(current).toLocaleString('en-IN');
+            } else {
+                element.textContent = Math.floor(current).toLocaleString('en-IN');
+            }
+        }, 16);
+    }
+
+    // Apply counter animation to values
+    setTimeout(() => {
+        const valueElements = document.querySelectorAll('.kpi-value, .metric-value, .stat-value');
+        valueElements.forEach(element => {
+            let targetValue = 0;
+            const textContent = element.textContent.replace(/[₹,]/g, '');
+            targetValue = parseInt(textContent) || 0;
+            
+            if (targetValue > 0) {
+                animateCounter(element, targetValue, 1500);
+            }
+        });
+    }, 500);
+
+    // Auto-refresh functionality
     let refreshInterval;
     
     function startAutoRefresh() {
         refreshInterval = setInterval(() => {
-            // Add logic to refresh specific metrics without full page reload
             console.log('Auto-refreshing dashboard metrics...');
+            // Add AJAX calls here to refresh specific metrics
         }, 30000); // Refresh every 30 seconds
     }
 
@@ -1376,12 +1358,8 @@ style.textContent = `
             opacity: 0;
         }
     }
-    
-    .quick-action {
-        position: relative;
-        overflow: hidden;
-    }
 `;
 document.head.appendChild(style);
 </script>
+{% endblock %}
 {% endblock %}

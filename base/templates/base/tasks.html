@@ -1,1581 +1,449 @@
 {% extends 'base/base.html' %}
 {% block title %}Tasks{% endblock %}
 {% block content %}
-<style>
-    :root {
-        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-        --danger-gradient: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
-        --complete-gradient: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
-        --dark-bg: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-        --glass-bg: rgba(255, 255, 255, 0.1);
-        --glass-border: rgba(255, 255, 255, 0.2);
-        --text-dark: #2d3748;
-        --text-light: #718096;
-        --surface-light: rgba(255, 255, 255, 0.95);
-    }
 
-    * {
-        box-sizing: border-box;
-    }
-
-    body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        background: var(--dark-bg);
-        min-height: 100vh;
-        margin: 0;
-        padding: 0;
-        overflow-x: hidden;
-    }
-
-    /* Animated background particles */
-    body::before {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
-        animation: float 20s ease-in-out infinite;
-        pointer-events: none;
-        z-index: -1;
-    }
-
-    @keyframes float {
-        0%, 100% { transform: translateY(0px) rotate(0deg); }
-        50% { transform: translateY(-20px) rotate(180deg); }
-    }
-
-    .tasks-container {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 2rem;
-        min-height: 100vh;
-        animation: fadeInUp 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        position: relative;
-    }
-
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .tasks-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 3rem;
-        flex-wrap: wrap;
-        gap: 1.5rem;
-        background: var(--glass-bg);
-        backdrop-filter: blur(20px);
-        padding: 2.5rem;
-        border-radius: 24px;
-        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2), 0 8px 16px rgba(0, 0, 0, 0.1);
-        border: 1px solid var(--glass-border);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .tasks-header::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: var(--primary-gradient);
-        opacity: 0.1;
-        z-index: -1;
-    }
-
-    .tasks-title {
-        font-size: 3.5rem;
-        font-weight: 900;
-        background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        margin: 0;
-        letter-spacing: -0.02em;
-        line-height: 1.1;
-        text-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        position: relative;
-    }
-
-    .tasks-title::after {
-        content: '';
-        position: absolute;
-        bottom: -10px;
-        left: 0;
-        width: 60px;
-        height: 4px;
-        background: var(--secondary-gradient);
-        border-radius: 2px;
-        animation: pulse 2s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-        0%, 100% { opacity: 1; transform: scaleX(1); }
-        50% { opacity: 0.7; transform: scaleX(1.1); }
-    }
-
-    .add-task-btn {
-        background: var(--secondary-gradient);
-        color: white;
-        border: none;
-        padding: 1.25rem 2.5rem;
-        border-radius: 50px;
-        font-weight: 700;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.75rem;
-        box-shadow: 0 15px 35px rgba(245, 87, 108, 0.4), 0 5px 15px rgba(0, 0, 0, 0.2);
-        position: relative;
-        overflow: hidden;
-        border: 2px solid rgba(255, 255, 255, 0.2);
-    }
-
-    .add-task-btn::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-        transition: left 0.6s;
-    }
-
-    .add-task-btn:hover::before {
-        left: 100%;
-    }
-
-    .add-task-btn:hover {
-        transform: translateY(-5px) scale(1.05);
-        box-shadow: 0 20px 40px rgba(245, 87, 108, 0.5), 0 10px 20px rgba(0, 0, 0, 0.3);
-        color: white;
-        text-decoration: none;
-    }
-
-    .add-task-btn:active {
-        transform: translateY(-2px) scale(1.02);
-    }
-
-    .add-task-btn i {
-        font-size: 1.2rem;
-        animation: bounce 2s ease-in-out infinite;
-    }
-
-    @keyframes bounce {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-3px); }
-    }
-
-    .tasks-table-container {
-        background: var(--glass-bg);
-        backdrop-filter: blur(20px);
-        border-radius: 24px;
-        overflow: hidden;
-        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2), 0 10px 20px rgba(0, 0, 0, 0.1);
-        border: 1px solid var(--glass-border);
-        position: relative;
-        animation: slideInUp 0.8s ease-out 0.2s both;
-    }
-
-    @keyframes slideInUp {
-        from {
-            opacity: 0;
-            transform: translateY(50px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .tasks-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-        background: transparent;
-    }
-
-    .tasks-table thead {
-        background: var(--primary-gradient);
-        position: relative;
-    }
-
-    .tasks-table thead::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: var(--secondary-gradient);
-        animation: shimmer 3s ease-in-out infinite;
-    }
-
-    @keyframes shimmer {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
-    }
-
-    .tasks-table th {
-        padding: 2rem;
-        text-align: left;
-        color: white;
-        font-weight: 800;
-        text-transform: uppercase;
-        font-size: 0.875rem;
-        letter-spacing: 0.15em;
-        position: relative;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    }
-
-    .tasks-table th::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: rgba(255, 255, 255, 0.2);
-    }
-
-    .tasks-table td {
-        padding: 2rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        color: rgba(255, 255, 255, 0.9);
-        font-weight: 500;
-        font-size: 0.95rem;
-        line-height: 1.6;
-        transition: all 0.3s ease;
-        position: relative;
-    }
-
-    .tasks-table tbody tr:last-child td {
-        border-bottom: none;
-    }
-
-    .tasks-table tbody tr {
-        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        position: relative;
-        cursor: pointer;
-    }
-
-    .tasks-table tbody tr::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 0;
-        background: var(--success-gradient);
-        transition: width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        z-index: -1;
-        opacity: 0.2;
-    }
-
-    .tasks-table tbody tr:hover::before {
-        width: 100%;
-    }
-
-    .tasks-table tbody tr:hover {
-        transform: translateX(10px) scale(1.02);
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-        backdrop-filter: blur(10px);
-    }
-
-    .status-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.75rem 1.25rem;
-        border-radius: 50px;
-        font-size: 0.8rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-        border: 2px solid;
-    }
-
-    .status-badge::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-        transition: left 0.5s;
-    }
-
-    .status-badge:hover::before {
-        left: 100%;
-    }
-
-    .status-pending {
-        background: rgba(255, 193, 7, 0.2);
-        color: #ffc107;
-        border-color: rgba(255, 193, 7, 0.5);
-        box-shadow: 0 4px 15px rgba(255, 193, 7, 0.2);
-    }
-
-    .status-in-progress {
-        background: rgba(0, 123, 255, 0.2);
-        color: #00f2fe;
-        border-color: rgba(0, 123, 255, 0.5);
-        box-shadow: 0 4px 15px rgba(0, 123, 255, 0.2);
-    }
-
-    .status-completed {
-        background: rgba(40, 167, 69, 0.2);
-        color: #00f2fe;
-        border-color: rgba(40, 167, 69, 0.5);
-        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.2);
-    }
-
-    .status-overdue {
-        background: rgba(220, 53, 69, 0.2);
-        color: #ff9a9e;
-        border-color: rgba(220, 53, 69, 0.5);
-        box-shadow: 0 4px 15px rgba(220, 53, 69, 0.2);
-    }
-
-    .action-buttons {
-        display: flex !important;
-        gap: 0.75rem !important;
-        align-items: center !important;
-        flex-wrap: wrap !important;
-        justify-content: flex-start !important;
-        min-width: 280px !important;
-    }
-
-    .action-btn {
-        padding: 0.875rem 1.5rem !important;
-        border-radius: 50px !important;
-        font-weight: 700 !important;
-        font-size: 0.85rem !important;
-        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
-        text-decoration: none !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        gap: 0.5rem !important;
-        border: 2px solid !important;
-        position: relative !important;
-        overflow: hidden !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.05em !important;
-        cursor: pointer !important;
-        background: transparent !important;
-        white-space: nowrap !important;
-    }
-
-    .action-btn::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-        transition: left 0.5s;
-    }
-
-    .action-btn:hover::before {
-        left: 100%;
-    }
-
-    .edit-btn {
-        background: rgba(79, 172, 254, 0.2);
-        color: #4facfe;
-        border-color: rgba(79, 172, 254, 0.5);
-        box-shadow: 0 4px 15px rgba(79, 172, 254, 0.2);
-    }
-
-    .edit-btn:hover {
-        background: var(--success-gradient);
-        color: white;
-        transform: translateY(-3px) scale(1.05);
-        box-shadow: 0 10px 25px rgba(79, 172, 254, 0.4);
-        text-decoration: none;
-    }
-
-    .delete-btn {
-        background: rgba(255, 154, 158, 0.2) !important;
-        color: #ff9a9e !important;
-        border-color: rgba(255, 154, 158, 0.5) !important;
-        box-shadow: 0 4px 15px rgba(255, 154, 158, 0.2) !important;
-        border: 2px solid rgba(255, 154, 158, 0.5) !important;
-        cursor: pointer !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        gap: 0.5rem !important;
-    }
-
-    .delete-btn:hover {
-        background: var(--danger-gradient) !important;
-        color: white !important;
-        transform: translateY(-3px) scale(1.05) !important;
-        box-shadow: 0 10px 25px rgba(255, 154, 158, 0.4) !important;
-        text-decoration: none !important;
-    }
-
-    /* New Mark as Done Button Styles */
-    .mark-done-btn {
-        background: rgba(86, 171, 47, 0.2) !important;
-        color: #56ab2f !important;
-        border-color: rgba(86, 171, 47, 0.5) !important;
-        box-shadow: 0 4px 15px rgba(86, 171, 47, 0.2) !important;
-        border: 2px solid rgba(86, 171, 47, 0.5) !important;
-        cursor: pointer !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        gap: 0.5rem !important;
-    }
-
-    .mark-done-btn:hover {
-        background: var(--complete-gradient) !important;
-        color: white !important;
-        transform: translateY(-3px) scale(1.05) !important;
-        box-shadow: 0 10px 25px rgba(86, 171, 47, 0.4) !important;
-        text-decoration: none !important;
-    }
-
-    .mark-done-btn:disabled {
-        opacity: 0.5 !important;
-        cursor: not-allowed !important;
-        transform: none !important;
-        box-shadow: 0 4px 15px rgba(86, 171, 47, 0.1) !important;
-    }
-
-    .mark-done-btn:disabled:hover {
-        transform: none !important;
-        background: rgba(86, 171, 47, 0.2) !important;
-        color: #56ab2f !important;
-        box-shadow: 0 4px 15px rgba(86, 171, 47, 0.1) !important;
-    }
-
-    /* Reopen Button Styles */
-    .reopen-btn {
-        background: rgba(255, 165, 0, 0.2) !important;
-        color: #ffa500 !important;
-        border-color: rgba(255, 165, 0, 0.5) !important;
-        box-shadow: 0 4px 15px rgba(255, 165, 0, 0.2) !important;
-        border: 2px solid rgba(255, 165, 0, 0.5) !important;
-        cursor: pointer !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        gap: 0.5rem !important;
-    }
-
-    .reopen-btn:hover {
-        background: linear-gradient(135deg, #ffa500 0%, #ff8c00 100%) !important;
-        color: white !important;
-        transform: translateY(-3px) scale(1.05) !important;
-        box-shadow: 0 10px 25px rgba(255, 165, 0, 0.4) !important;
-        text-decoration: none !important;
-    }
-
-    .empty-message {
-        text-align: center;
-        padding: 6rem 2rem;
-        color: rgba(255, 255, 255, 0.8);
-        font-size: 1.5rem;
-        font-weight: 600;
-        background: var(--glass-bg);
-        backdrop-filter: blur(20px);
-        border-radius: 24px;
-        margin-top: 2rem;
-        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
-        border: 1px solid var(--glass-border);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .empty-message::before {
-        content: '📋';
-        display: block;
-        font-size: 5rem;
-        margin-bottom: 2rem;
-        opacity: 0.7;
-        animation: float 3s ease-in-out infinite;
-    }
-
-    .empty-message::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: var(--primary-gradient);
-        opacity: 0.05;
-        z-index: -1;
-    }
-
-    .due-date {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        font-weight: 600;
-        color: rgba(255, 255, 255, 0.9);
-    }
-
-    .due-date-icon {
-        color: #fee140;
-        font-size: 1.2rem;
-        animation: pulse 2s ease-in-out infinite;
-    }
-
-    .description-text {
-        max-width: 300px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        line-height: 1.6;
-        color: rgba(255, 255, 255, 0.8);
-        position: relative;
-    }
-
-    .task-title {
-        font-weight: 700;
-        color: #ffffff;
-        font-size: 1.1rem;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        position: relative;
-    }
-
-    .assigned-user {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        font-weight: 600;
-        color: rgba(255, 255, 255, 0.9);
-        position: relative;
-    }
-
-    .assigned-user::before {
-        content: '👤';
-        font-size: 1.2rem;
-        opacity: 0.8;
-        animation: bounce 3s ease-in-out infinite;
-    }
-
-    /* Completed task row styling */
-    .task-completed {
-        opacity: 0.7;
-        background: rgba(86, 171, 47, 0.1);
-    }
-
-    .task-completed .task-title {
-        text-decoration: line-through;
-        color: #a8e6cf;
-    }
-
-    /* Enhanced mobile responsiveness */
-    @media (max-width: 1200px) {
-        .tasks-container {
-            padding: 1.5rem;
-        }
-        
-        .tasks-title {
-            font-size: 2.8rem;
-        }
-    }
-
-    @media (max-width: 768px) {
-        .tasks-container {
-            padding: 1rem;
-        }
-
-        .tasks-header {
-            flex-direction: column;
-            text-align: center;
-            gap: 2rem;
-            padding: 2rem;
-        }
-
-        .tasks-title {
-            font-size: 2.2rem;
-        }
-
-        .tasks-table-container {
-            overflow-x: auto;
-            border-radius: 16px;
-        }
-
-        .tasks-table th,
-        .tasks-table td {
-            padding: 1.5rem 1rem;
-            font-size: 0.875rem;
-        }
-
-        .action-buttons {
-            flex-direction: column;
-            gap: 0.75rem;
-            min-width: auto !important;
-        }
-
-        .action-btn {
-            padding: 0.75rem 1.25rem;
-            font-size: 0.8rem;
-            width: 100%;
-            justify-content: center;
-        }
-
-        .description-text {
-            max-width: 150px;
-        }
-
-        .status-badge {
-            padding: 0.5rem 1rem;
-            font-size: 0.75rem;
-        }
-    }
-
-    @media (max-width: 480px) {
-        .tasks-title {
-            font-size: 1.8rem;
-        }
-
-        .add-task-btn {
-            padding: 1rem 2rem;
-            font-size: 0.9rem;
-        }
-
-        .tasks-table th,
-        .tasks-table td {
-            padding: 1rem 0.75rem;
-        }
-
-        .empty-message {
-            padding: 4rem 1.5rem;
-            font-size: 1.2rem;
-        }
-    }
-
-    /* Custom scrollbar */
-    .tasks-table-container::-webkit-scrollbar {
-        height: 10px;
-    }
-
-    .tasks-table-container::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 5px;
-    }
-
-    .tasks-table-container::-webkit-scrollbar-thumb {
-        background: var(--secondary-gradient);
-        border-radius: 5px;
-        border: 2px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .tasks-table-container::-webkit-scrollbar-thumb:hover {
-        background: var(--primary-gradient);
-    }
-
-    /* Loading animation for better UX */
-    .loading {
-        animation: pulse 1.5s ease-in-out infinite;
-    }
-
-    .fade-in {
-        animation: fadeIn 0.6s ease-out;
-    }
-
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
-
-    /* Success animation for mark as done */
-    .mark-done-success {
-        animation: markDoneSuccess 0.6s ease-out;
-    }
-
-    @keyframes markDoneSuccess {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.1); background: var(--complete-gradient); }
-        100% { transform: scale(1); }
-    }
-</style>
-
-<div class="tasks-container">
-    <div class="tasks-header">
-        <h1 class="tasks-title">Tasks</h1>
-        <a href="{% url 'task_create' %}" class="add-task-btn">
-            <i class="fas fa-plus"></i> Add New Task
-        </a>
+<div class="container-fluid py-4">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="background-color: #FFFFFF; border-left: 4px solid #1C64FF !important;">
+                <div class="card-body py-4">
+                    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3">
+                        <div>
+                            <h1 class="display-5 fw-bold mb-2" style="color: #1C64FF;">Tasks</h1>
+                            <p class="text-muted mb-0" style="color: #696969;">Manage and track your tasks efficiently</p>
+                        </div>
+                        <a href="{% url 'task_create' %}" class="btn btn-primary btn-lg px-4 py-2 d-flex align-items-center gap-2" style="background-color: #1C64FF; border-color: #1C64FF;">
+                            <i class="fas fa-plus"></i>
+                            <span>Add New Task</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     {% if tasks %}
-    <div class="tasks-table-container">
-        <table class="tasks-table">
-            <thead>
-                <tr>
-                    <th>Title</th>
-                    <th>Description</th>
-                    <th>Due Date</th>
-                    <th>Assigned To</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for task in tasks %}
-                <tr class="fade-in {% if task.completed %}task-completed{% endif %}" style="animation-delay: {{ forloop.counter0|floatformat:1 }}00ms;">
-                    <td>
-                        <div class="task-title">{{ task.title }}</div>
-                    </td>
-                    <td>
-                        <div class="description-text" title="{{ task.description }}">
-                            {{ task.description|truncatechars:50 }}
-                        </div>
-                    </td>
-                    <td>
-                        <div class="due-date">
-                            <i class="fas fa-calendar-alt due-date-icon"></i>
-                            {{ task.due_date }}
-                        </div>
-                    </td>
-                    <td>
-                        <div class="assigned-user">{{ task.assigned_to.get_full_name }}</div>
-                    </td>
-                    <td>
-                        {% if task.completed %}
-                            <span class="status-badge status-completed">
-                                <i class="fas fa-check-circle"></i>
-                                Completed
-                            </span>
-                        {% elif task.due_date and task.due_date < now %}
-                            <span class="status-badge status-overdue">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                Overdue
-                            </span>
-                        {% else %}
-                            <span class="status-badge status-pending">
-                                <i class="fas fa-clock"></i>
-                                Pending
-                            </span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <div class="action-buttons">
-                            <a href="{% url 'task_update' task.pk %}" class="action-btn edit-btn">
-                                <i class="fas fa-edit"></i> Edit
-                            </a>
-                            
-                            {% if not task.completed %}
-                            <button type="button" class="action-btn mark-done-btn" 
-                                    data-task-id="{{ task.pk }}" 
-                                    data-task-title="{{ task.title }}"
-                                    onclick="markTaskAsDone(this)">
-                                <i class="fas fa-check"></i> Mark Done
-                            </button>
-                            {% else %}
-                            <button type="button" class="action-btn reopen-btn" 
-                                    data-task-id="{{ task.pk }}" 
-                                    data-task-title="{{ task.title }}"
-                                    onclick="reopenTask(this)">
-                                <i class="fas fa-undo"></i> Reopen
-                            </button>
-                            {% endif %}
-                            
-                            <button type="button" class="action-btn delete-btn" 
-                                    data-task-id="{{ task.pk }}" 
-                                    data-task-title="{{ task.title }}"
-                                    onclick="openDeleteModal(this)">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- Tasks Table Section -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="background-color: #FFFFFF;">
+                <div class="card-header bg-light border-0 py-3" style="background-color: #C3E4FF !important;">
+                    <h5 class="mb-0 fw-semibold" style="color: #1C64FF;">All Tasks</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead style="background-color: #1C64FF;">
+                                <tr>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">Title</th>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">Description</th>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">Due Date</th>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">Assigned To</th>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">Status</th>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for task in tasks %}
+                                <tr class="{% if task.completed %}table-light{% endif %}" style="border-bottom: 1px solid #D9D9D9;">
+                                    <td class="py-3 px-4 align-middle">
+                                        <div class="fw-semibold {% if task.completed %}text-decoration-line-through text-muted{% else %}text-dark{% endif %}">
+                                            {{ task.title }}
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4 align-middle">
+                                        <div class="text-truncate" style="max-width: 200px; color: #696969;" title="{{ task.description }}">
+                                            {{ task.description|truncatechars:50 }}
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4 align-middle">
+                                        <div class="d-flex align-items-center gap-2" style="color: #696969;">
+                                            <i class="fas fa-calendar-alt" style="color: #1C64FF;"></i>
+                                            <span>{{ task.due_date }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4 align-middle">
+                                        <div class="d-flex align-items-center gap-2" style="color: #696969;">
+                                            <i class="fas fa-user" style="color: #1C64FF;"></i>
+                                            <span>{{ task.assigned_to.get_full_name }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4 align-middle">
+                                        {% if task.completed %}
+                                            <span class="badge rounded-pill px-3 py-2" style="background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;">
+                                                <i class="fas fa-check-circle me-1"></i>
+                                                Completed
+                                            </span>
+                                        {% elif task.due_date and task.due_date < now %}
+                                            <span class="badge rounded-pill px-3 py-2" style="background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                Overdue
+                                            </span>
+                                        {% else %}
+                                            <span class="badge rounded-pill px-3 py-2" style="background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7;">
+                                                <i class="fas fa-clock me-1"></i>
+                                                Pending
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-3 px-4 align-middle">
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <a href="{% url 'task_update' task.pk %}" class="btn btn-outline-primary btn-sm px-3 py-2" style="border-color: #1C64FF; color: #1C64FF;">
+                                                <i class="fas fa-edit me-1"></i>
+                                                Edit
+                                            </a>
+                                            
+                                            {% if not task.completed %}
+                                            <button type="button" class="btn btn-outline-success btn-sm px-3 py-2 mark-done-btn" 
+                                                    data-task-id="{{ task.pk }}" 
+                                                    data-task-title="{{ task.title }}">
+                                                <i class="fas fa-check me-1"></i>
+                                                Mark Done
+                                            </button>
+                                            {% else %}
+                                            <button type="button" class="btn btn-outline-warning btn-sm px-3 py-2 reopen-btn" 
+                                                    data-task-id="{{ task.pk }}" 
+                                                    data-task-title="{{ task.title }}">
+                                                <i class="fas fa-undo me-1"></i>
+                                                Reopen
+                                            </button>
+                                            {% endif %}
+                                            
+                                            <button type="button" class="btn btn-outline-danger btn-sm px-3 py-2 delete-btn" 
+                                                    data-task-id="{{ task.pk }}" 
+                                                    data-task-title="{{ task.title }}"
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#deleteModal">
+                                                <i class="fas fa-trash me-1"></i>
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     {% else %}
-    <div class="empty-message">
-        <p>No tasks found. Ready to get started?</p>
-        <a href="{% url 'task_create' %}" class="add-task-btn" style="margin-top: 2rem;">
-            <i class="fas fa-plus"></i> Create Your First Task
-        </a>
+    <!-- Empty State -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm text-center py-5" style="background-color: #FFFFFF;">
+                <div class="card-body">
+                    <div class="mb-4">
+                        <i class="fas fa-tasks display-1" style="color: #D9D9D9;"></i>
+                    </div>
+                    <h3 class="fw-bold mb-3" style="color: #1C64FF;">No Tasks Found</h3>
+                    <p class="text-muted mb-4" style="color: #696969;">Ready to get started? Create your first task to begin organizing your work.</p>
+                    <a href="{% url 'task_create' %}" class="btn btn-primary btn-lg px-4 py-2" style="background-color: #1C64FF; border-color: #1C64FF;">
+                        <i class="fas fa-plus me-2"></i>
+                        Create Your First Task
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
     {% endif %}
 </div>
 
-<!-- Modern Delete Confirmation Modal -->
-<div class="delete-modal-overlay" id="deleteModalOverlay">
-    <div class="delete-modal">
-        <div class="delete-modal-header">
-            <div class="delete-icon-container">
-                <i class="fas fa-exclamation-triangle"></i>
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow" style="background-color: #FFFFFF;">
+            <div class="modal-header border-0 pb-0" style="background-color: #C3E4FF;">
+                <div class="w-100 text-center">
+                    <div class="mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle" 
+                             style="width: 80px; height: 80px; background-color: rgba(220, 53, 69, 0.1);">
+                            <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
+                        </div>
+                    </div>
+                    <h4 class="modal-title fw-bold" id="deleteModalLabel" style="color: #1C64FF;">Delete Task</h4>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <h3 class="delete-modal-title">Delete Task</h3>
-        </div>
-        
-        <div class="delete-modal-body">
-            <p class="delete-confirmation-text">
-                Are you sure you want to delete the task 
-                <strong id="taskTitleToDelete"></strong>?
-            </p>
-            <p class="delete-warning-text">
-                <i class="fas fa-info-circle"></i>
-                This action cannot be undone and will permanently remove the task.
-            </p>
-        </div>
-        
-        <div class="delete-modal-footer">
-            <button type="button" class="modal-btn cancel-btn" onclick="closeDeleteModal()">
-                <i class="fas fa-times"></i> Cancel
-            </button>
-            <form id="deleteTaskForm" method="post" style="display: inline;">
-                {% csrf_token %}
-                <input type="hidden" name="_method" value="DELETE">
-                <button type="submit" class="modal-btn confirm-delete-btn">
-                    <i class="fas fa-trash"></i> Delete Task
+            <div class="modal-body px-4 py-4">
+                <div class="text-center">
+                    <p class="mb-3" style="color: #696969;">
+                        Are you sure you want to delete the task 
+                        <strong id="taskTitleToDelete" style="color: #1C64FF;"></strong>?
+                    </p>
+                    <div class="alert alert-warning border-0 d-flex align-items-center gap-2" style="background-color: #fff3cd;">
+                        <i class="fas fa-info-circle text-warning"></i>
+                        <small class="mb-0">This action cannot be undone and will permanently remove the task.</small>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0 justify-content-center gap-2">
+                <button type="button" class="btn btn-outline-secondary px-4 py-2" data-bs-dismiss="modal" style="border-color: #D9D9D9; color: #696969;">
+                    <i class="fas fa-times me-1"></i>
+                    Cancel
                 </button>
-            </form>
+                <form id="deleteTaskForm" method="post" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="_method" value="DELETE">
+                    <button type="submit" class="btn btn-danger px-4 py-2">
+                        <i class="fas fa-trash me-1"></i>
+                        Delete Task
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 </div>
 
-<style>
-    .delete-modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.7);
-        backdrop-filter: blur(10px);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-        opacity: 0;
-        visibility: hidden;
-        transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    }
-
-    .delete-modal-overlay.active {
-        opacity: 1;
-        visibility: visible;
-    }
-
-    .delete-modal {
-        background: var(--glass-bg);
-        backdrop-filter: blur(20px);
-        border: 1px solid var(--glass-border);
-        border-radius: 24px;
-        max-width: 500px;
-        width: 90%;
-        box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
-        transform: scale(0.8) translateY(20px);
-        transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        overflow: hidden;
-        position: relative;
-    }
-
-    .delete-modal-overlay.active .delete-modal {
-        transform: scale(1) translateY(0);
-    }
-
-    .delete-modal-header {
-        background: var(--danger-gradient);
-        padding: 2rem;
-        text-align: center;
-        position: relative;
-    }
-
-    .delete-modal-header::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
-    }
-
-    .delete-icon-container {
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.2);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 1rem;
-        position: relative;
-        z-index: 1;
-    }
-
-    .delete-icon-container i {
-        font-size: 2.5rem;
-        color: white;
-        animation: pulse 2s ease-in-out infinite;
-    }
-
-    .delete-modal-title {
-        color: white;
-        font-size: 1.8rem;
-        font-weight: 800;
-        margin: 0;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        position: relative;
-        z-index: 1;
-    }
-
-    .delete-modal-body {
-        padding: 2rem;
-        text-align: center;
-    }
-
-    .delete-confirmation-text {
-        color: rgba(255, 255, 255, 0.9);
-        font-size: 1.1rem;
-        font-weight: 500;
-        margin-bottom: 1.5rem;
-        line-height: 1.6;
-    }
-
-    .delete-confirmation-text strong {
-        color: #ff9a9e;
-        font-weight: 700;
-    }
-
-    .delete-warning-text {
-        background: rgba(255, 193, 7, 0.2);
-        border: 1px solid rgba(255, 193, 7, 0.4);
-        border-radius: 12px;
-        padding: 1rem;
-        color: rgba(255, 255, 255, 0.8);
-        font-size: 0.9rem;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        margin: 0;
-    }
-
-    .delete-warning-text i {
-        color: #ffc107;
-        font-size: 1.2rem;
-    }
-
-    .delete-modal-footer {
-        padding: 2rem;
-        display: flex;
-        gap: 1rem;
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-
-    .modal-btn {
-        padding: 1rem 2rem;
-        border-radius: 50px;
-        font-weight: 700;
-        font-size: 0.9rem;
-        border: 2px solid;
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        position: relative;
-        overflow: hidden;
-        min-width: 140px;
-        justify-content: center;
-    }
-
-    .modal-btn::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-        transition: left 0.5s;
-    }
-
-    .modal-btn:hover::before {
-        left: 100%;
-    }
-
-    .cancel-btn {
-        background: rgba(255, 255, 255, 0.1);
-        color: rgba(255, 255, 255, 0.9);
-        border-color: rgba(255, 255, 255, 0.3);
-    }
-
-    .cancel-btn:hover {
-        background: rgba(255, 255, 255, 0.2);
-        color: white;
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(255, 255, 255, 0.1);
-    }
-
-    .confirm-delete-btn {
-        background: var(--danger-gradient);
-        color: white;
-        border-color: rgba(255, 154, 158, 0.5);
-        box-shadow: 0 4px 15px rgba(255, 154, 158, 0.3);
-    }
-
-    .confirm-delete-btn:hover {
-        transform: translateY(-2px) scale(1.05);
-        box-shadow: 0 10px 25px rgba(255, 154, 158, 0.4);
-    }
-
-    .confirm-delete-btn:active {
-        transform: translateY(0) scale(1.02);
-    }
-
-    /* Loading state for delete button */
-    .confirm-delete-btn.loading {
-        opacity: 0.8;
-        pointer-events: none;
-    }
-
-    .confirm-delete-btn.loading i::before {
-        content: '\f110';
-        animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-    }
-
-    /* Responsive adjustments for modal */
-    @media (max-width: 768px) {
-        .delete-modal {
-            width: 95%;
-            margin: 1rem;
-        }
-
-        .delete-modal-header,
-        .delete-modal-body,
-        .delete-modal-footer {
-            padding: 1.5rem;
-        }
-
-        .delete-modal-footer {
-            flex-direction: column;
-        }
-
-        .modal-btn {
-            width: 100%;
-        }
-
-        .delete-icon-container {
-            width: 60px;
-            height: 60px;
-        }
-
-        .delete-icon-container i {
-            font-size: 2rem;
-        }
-
-        .delete-modal-title {
-            font-size: 1.5rem;
-        }
-    }
-</style>
+<!-- Toast Container for Notifications -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+    <div id="successToast" class="toast border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header border-0" style="background-color: #C3E4FF;">
+            <i class="fas fa-check-circle text-success me-2"></i>
+            <strong class="me-auto" style="color: #1C64FF;">Success</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" style="background-color: #FFFFFF; color: #696969;">
+            <span id="successMessage"></span>
+        </div>
+    </div>
+    
+    <div id="errorToast" class="toast border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header border-0" style="background-color: #f8d7da;">
+            <i class="fas fa-exclamation-circle text-danger me-2"></i>
+            <strong class="me-auto text-danger">Error</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" style="background-color: #FFFFFF; color: #696969;">
+            <span id="errorMessage"></span>
+        </div>
+    </div>
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Add smooth loading animations
-    const tableRows = document.querySelectorAll('.tasks-table tbody tr');
-    tableRows.forEach((row, index) => {
-        row.style.opacity = '0';
-        row.style.transform = 'translateY(20px)';
-        
-        setTimeout(() => {
-            row.style.transition = 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-            row.style.opacity = '1';
-            row.style.transform = 'translateY(0)';
-        }, index * 100);
+    // Initialize Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
     });
-
-    // Enhanced hover effects for action buttons
-    const actionButtons = document.querySelectorAll('.action-btn');
-    actionButtons.forEach(button => {
-        button.addEventListener('mouseenter', function() {
-            if (!this.disabled) {
-                this.style.transform = 'translateY(-3px) scale(1.05)';
-            }
-        });
-        
-        button.addEventListener('mouseleave', function() {
-            if (!this.disabled) {
-                this.style.transform = 'translateY(0) scale(1)';
-            }
-        });
-    });
-
-    // Add click feedback to buttons
-    const buttons = document.querySelectorAll('.add-task-btn, .action-btn');
-    buttons.forEach(button => {
-        button.addEventListener('click', function(e) {
-            if (this.disabled) return;
-            
-            // Create ripple effect
-            const ripple = document.createElement('span');
-            const rect = this.getBoundingClientRect();
-            const size = Math.max(rect.width, rect.height);
-            const x = e.clientX - rect.left - size / 2;
-            const y = e.clientY - rect.top - size / 2;
-            
-            ripple.style.cssText = `
-                position: absolute;
-                width: ${size}px;
-                height: ${size}px;
-                left: ${x}px;
-                top: ${y}px;
-                background: rgba(255, 255, 255, 0.3);
-                border-radius: 50%;
-                transform: scale(0);
-                animation: ripple 0.6s ease-out;
-                pointer-events: none;
-            `;
-            
-            this.style.position = 'relative';
-            this.appendChild(ripple);
-            
-            setTimeout(() => ripple.remove(), 600);
-        });
-    });
-
-    // Add CSS for ripple animation
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes ripple {
-            to {
-                transform: scale(2);
-                opacity: 0;
-            }
-        }
-    `;
-    document.head.appendChild(style);
-
-    // Enhanced table row interactions
-    const tableRows2 = document.querySelectorAll('.tasks-table tbody tr');
-    tableRows2.forEach(row => {
-        row.addEventListener('mouseenter', function() {
-            this.style.cursor = 'pointer';
-        });
-        
-        row.addEventListener('click', function(e) {
-            // Don't trigger if clicking on action buttons
-            if (!e.target.closest('.action-btn')) {
-                // Add a subtle pulse animation
-                this.style.animation = 'pulse 0.3s ease-in-out';
-                setTimeout(() => {
-                    this.style.animation = '';
-                }, 300);
-            }
-        });
-    });
-
-    // Add loading states
-    const addTaskBtn = document.querySelector('.add-task-btn');
-    if (addTaskBtn) {
-        addTaskBtn.addEventListener('click', function() {
-            const icon = this.querySelector('i');
-            const originalClass = icon.className;
-            icon.className = 'fas fa-spinner fa-spin';
-            
-            setTimeout(() => {
-                icon.className = originalClass;
-            }, 1000);
-        });
-    }
-
-    // Intersection Observer for scroll animations
-    const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('fade-in');
-                entry.target.style.opacity = '1';
-                entry.target.style.transform = 'translateY(0)';
-            }
-        });
-    }, observerOptions);
-
-    // Observe table container for scroll animations
-    const tableContainer = document.querySelector('.tasks-table-container');
-    if (tableContainer) {
-        tableContainer.style.opacity = '0';
-        tableContainer.style.transform = 'translateY(30px)';
-        tableContainer.style.transition = 'all 0.8s ease';
-        observer.observe(tableContainer);
-    }
 
     // Mark Task as Done Function
-    window.markTaskAsDone = function(button) {
-        const taskId = button.getAttribute('data-task-id');
-        const taskTitle = button.getAttribute('data-task-title');
-        const row = button.closest('tr');
-        const statusBadge = row.querySelector('.status-badge');
-        const taskTitleElement = row.querySelector('.task-title');
-        
-        // Add loading state
-        button.disabled = true;
-        button.classList.add('loading');
-        const icon = button.querySelector('i');
-        const originalIconClass = icon.className;
-        icon.className = 'fas fa-spinner fa-spin';
-        
-        // Create form data
-        const formData = new FormData();
-        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
-        
-        // Send AJAX request
-        fetch(`/tasks/${taskId}/mark-done/`, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Update UI
-                statusBadge.className = 'status-badge status-completed';
-                statusBadge.innerHTML = '<i class="fas fa-check-circle"></i> Completed';
-                
-                // Add completed styling to row
-                row.classList.add('task-completed');
-                taskTitleElement.style.textDecoration = 'line-through';
-                taskTitleElement.style.color = '#a8e6cf';
-                
-                // Replace mark done button with reopen button
-                button.outerHTML = `
-                    <button type="button" class="action-btn reopen-btn" 
-                            data-task-id="${taskId}" 
-                            data-task-title="${taskTitle}"
-                            onclick="reopenTask(this)">
-                        <i class="fas fa-undo"></i> Reopen
-                    </button>
-                `;
-                
-                // Add success animation
-                row.classList.add('mark-done-success');
-                setTimeout(() => {
-                    row.classList.remove('mark-done-success');
-                }, 600);
-                
-                // Show success notification
-                showNotification('Task marked as completed successfully!', 'success');
-            } else {
-                // Handle error
-                showNotification(data.error || 'Failed to mark task as done', 'error');
+    document.querySelectorAll('.mark-done-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const taskId = this.getAttribute('data-task-id');
+            const taskTitle = this.getAttribute('data-task-title');
+            const row = this.closest('tr');
+            const statusBadge = row.querySelector('.badge');
+            const taskTitleElement = row.querySelector('.fw-semibold');
+            
+            // Add loading state
+            this.disabled = true;
+            const icon = this.querySelector('i');
+            const originalIconClass = icon.className;
+            icon.className = 'fas fa-spinner fa-spin me-1';
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+            
+            // Send AJAX request
+            fetch(`/tasks/${taskId}/mark-done/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update UI
+                    statusBadge.className = 'badge rounded-pill px-3 py-2';
+                    statusBadge.style.cssText = 'background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;';
+                    statusBadge.innerHTML = '<i class="fas fa-check-circle me-1"></i> Completed';
+                    
+                    // Add completed styling to row
+                    row.classList.add('table-light');
+                    taskTitleElement.classList.add('text-decoration-line-through', 'text-muted');
+                    taskTitleElement.classList.remove('text-dark');
+                    
+                    // Replace mark done button with reopen button
+                    this.outerHTML = `
+                        <button type="button" class="btn btn-outline-warning btn-sm px-3 py-2 reopen-btn" 
+                                data-task-id="${taskId}" 
+                                data-task-title="${taskTitle}">
+                            <i class="fas fa-undo me-1"></i>
+                            Reopen
+                        </button>
+                    `;
+                    
+                    // Show success notification
+                    showToast('Task marked as completed successfully!', 'success');
+                } else {
+                    // Handle error
+                    showToast(data.error || 'Failed to mark task as done', 'error');
+                    
+                    // Reset button state
+                    this.disabled = false;
+                    icon.className = originalIconClass;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('An error occurred while marking the task as done', 'error');
                 
                 // Reset button state
-                button.disabled = false;
-                button.classList.remove('loading');
+                this.disabled = false;
                 icon.className = originalIconClass;
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showNotification('An error occurred while marking the task as done', 'error');
-            
-            // Reset button state
-            button.disabled = false;
-            button.classList.remove('loading');
-            icon.className = originalIconClass;
+            });
         });
-    };
+    });
 
     // Reopen Task Function
-    window.reopenTask = function(button) {
-        const taskId = button.getAttribute('data-task-id');
-        const taskTitle = button.getAttribute('data-task-title');
-        const row = button.closest('tr');
-        const statusBadge = row.querySelector('.status-badge');
-        const taskTitleElement = row.querySelector('.task-title');
-        
-        // Add loading state
-        button.disabled = true;
-        button.classList.add('loading');
-        const icon = button.querySelector('i');
-        const originalIconClass = icon.className;
-        icon.className = 'fas fa-spinner fa-spin';
-        
-        // Create form data
-        const formData = new FormData();
-        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
-        
-        // Send AJAX request
-        fetch(`/tasks/${taskId}/reopen/`, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Update UI
-                statusBadge.className = 'status-badge status-pending';
-                statusBadge.innerHTML = '<i class="fas fa-clock"></i> Pending';
-                
-                // Remove completed styling from row
-                row.classList.remove('task-completed');
-                taskTitleElement.style.textDecoration = 'none';
-                taskTitleElement.style.color = '#ffffff';
-                
-                // Replace reopen button with mark done button
-                button.outerHTML = `
-                    <button type="button" class="action-btn mark-done-btn" 
-                            data-task-id="${taskId}" 
-                            data-task-title="${taskTitle}"
-                            onclick="markTaskAsDone(this)">
-                        <i class="fas fa-check"></i> Mark Done
-                    </button>
-                `;
-                
-                // Show success notification
-                showNotification('Task has been reopened successfully!', 'success');
-            } else {
-                // Handle error
-                showNotification(data.error || 'Failed to reopen task', 'error');
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.reopen-btn')) {
+            const button = e.target.closest('.reopen-btn');
+            const taskId = button.getAttribute('data-task-id');
+            const taskTitle = button.getAttribute('data-task-title');
+            const row = button.closest('tr');
+            const statusBadge = row.querySelector('.badge');
+            const taskTitleElement = row.querySelector('.fw-semibold');
+            
+            // Add loading state
+            button.disabled = true;
+            const icon = button.querySelector('i');
+            const originalIconClass = icon.className;
+            icon.className = 'fas fa-spinner fa-spin me-1';
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+            
+            // Send AJAX request
+            fetch(`/tasks/${taskId}/reopen/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update UI
+                    statusBadge.className = 'badge rounded-pill px-3 py-2';
+                    statusBadge.style.cssText = 'background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7;';
+                    statusBadge.innerHTML = '<i class="fas fa-clock me-1"></i> Pending';
+                    
+                    // Remove completed styling from row
+                    row.classList.remove('table-light');
+                    taskTitleElement.classList.remove('text-decoration-line-through', 'text-muted');
+                    taskTitleElement.classList.add('text-dark');
+                    
+                    // Replace reopen button with mark done button
+                    button.outerHTML = `
+                        <button type="button" class="btn btn-outline-success btn-sm px-3 py-2 mark-done-btn" 
+                                data-task-id="${taskId}" 
+                                data-task-title="${taskTitle}">
+                            <i class="fas fa-check me-1"></i>
+                            Mark Done
+                        </button>
+                    `;
+                    
+                    // Show success notification
+                    showToast('Task has been reopened successfully!', 'success');
+                } else {
+                    // Handle error
+                    showToast(data.error || 'Failed to reopen task', 'error');
+                    
+                    // Reset button state
+                    button.disabled = false;
+                    icon.className = originalIconClass;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('An error occurred while reopening the task', 'error');
                 
                 // Reset button state
                 button.disabled = false;
-                button.classList.remove('loading');
                 icon.className = originalIconClass;
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showNotification('An error occurred while reopening the task', 'error');
-            
-            // Reset button state
-            button.disabled = false;
-            button.classList.remove('loading');
-            icon.className = originalIconClass;
-        });
-    };
+            });
+        }
+    });
 
     // Delete Task Modal Functions
-    window.openDeleteModal = function(button) {
-        const taskId = button.getAttribute('data-task-id');
-        const taskTitle = button.getAttribute('data-task-title');
-        const modal = document.getElementById('deleteModalOverlay');
-        const form = document.getElementById('deleteTaskForm');
-        const titleElement = document.getElementById('taskTitleToDelete');
-        
-        // Set the task title in the modal
-        titleElement.textContent = taskTitle;
-        
-        // Set the form action URL
-        form.action = `/tasks/${taskId}/delete/`; // Adjust this URL pattern to match your Django URLs
-        
-        // Show the modal with animation
-        modal.classList.add('active');
-        
-        // Prevent body scroll
-        document.body.style.overflow = 'hidden';
-        
-        // Add escape key listener
-        document.addEventListener('keydown', handleEscapeKey);
-    };
-
-    window.closeDeleteModal = function() {
-        const modal = document.getElementById('deleteModalOverlay');
-        
-        // Hide the modal with animation
-        modal.classList.remove('active');
-        
-        // Restore body scroll
-        document.body.style.overflow = '';
-        
-        // Remove escape key listener
-        document.removeEventListener('keydown', handleEscapeKey);
-    };
-
-    function handleEscapeKey(event) {
-        if (event.key === 'Escape') {
-            closeDeleteModal();
-        }
-    }
-
-    // Close modal when clicking overlay
-    document.getElementById('deleteModalOverlay').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeDeleteModal();
-        }
+    document.querySelectorAll('.delete-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const taskId = this.getAttribute('data-task-id');
+            const taskTitle = this.getAttribute('data-task-title');
+            const form = document.getElementById('deleteTaskForm');
+            const titleElement = document.getElementById('taskTitleToDelete');
+            
+            // Set the task title in the modal
+            titleElement.textContent = taskTitle;
+            
+            // Set the form action URL
+            form.action = `/tasks/${taskId}/delete/`;
+        });
     });
 
     // Handle delete form submission
     document.getElementById('deleteTaskForm').addEventListener('submit', function(e) {
-        const deleteBtn = this.querySelector('.confirm-delete-btn');
+        const deleteBtn = this.querySelector('button[type="submit"]');
         const icon = deleteBtn.querySelector('i');
         
         // Add loading state
-        deleteBtn.classList.add('loading');
         deleteBtn.disabled = true;
-        icon.className = 'fas fa-spinner fa-spin';
-        
-        // Note: The form will submit normally to Django view
-        // You can add additional loading states or success feedback here
+        icon.className = 'fas fa-spinner fa-spin me-1';
+        deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Deleting...';
     });
 
-    // Enhanced delete button hover effects
-    const deleteButtons = document.querySelectorAll('.action-btn.delete-btn');
-    deleteButtons.forEach(button => {
+    // Toast notification function
+    function showToast(message, type) {
+        const toastId = type === 'success' ? 'successToast' : 'errorToast';
+        const messageId = type === 'success' ? 'successMessage' : 'errorMessage';
+        
+        document.getElementById(messageId).textContent = message;
+        
+        const toastElement = document.getElementById(toastId);
+        const toast = new bootstrap.Toast(toastElement, {
+            autohide: true,
+            delay: 5000
+        });
+        toast.show();
+    }
+
+    // Add smooth hover effects
+    document.querySelectorAll('.table tbody tr').forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = '#C3E4FF';
+            this.style.transition = 'background-color 0.2s ease';
+        });
+        
+        row.addEventListener('mouseleave', function() {
+            if (!this.classList.contains('table-light')) {
+                this.style.backgroundColor = '';
+            } else {
+                this.style.backgroundColor = '#f8f9fa';
+            }
+        });
+    });
+
+    // Add button hover effects
+    document.querySelectorAll('.btn').forEach(button => {
         button.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-3px) scale(1.05)';
-            this.style.boxShadow = '0 10px 25px rgba(255, 154, 158, 0.4)';
+            this.style.transform = 'translateY(-1px)';
+            this.style.transition = 'transform 0.2s ease';
         });
         
         button.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0) scale(1)';
-            this.style.boxShadow = '0 4px 15px rgba(255, 154, 158, 0.2)';
+            this.style.transform = 'translateY(0)';
         });
     });
-
-    // Notification system
-    function showNotification(message, type = 'info') {
-        const notification = document.createElement('div');
-        notification.className = `notification notification-${type}`;
-        notification.innerHTML = `
-            <div class="notification-content">
-                <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
-                <span>${message}</span>
-            </div>
-            <button class="notification-close" onclick="this.parentElement.remove()">
-                <i class="fas fa-times"></i>
-            </button>
-        `;
-        
-        // Add notification styles if not already added
-        if (!document.querySelector('#notification-styles')) {
-            const notificationStyles = document.createElement('style');
-            notificationStyles.id = 'notification-styles';
-            notificationStyles.textContent = `
-                .notification {
-                    position: fixed;
-                    top: 2rem;
-                    right: 2rem;
-                    min-width: 300px;
-                    max-width: 500px;
-                    padding: 1.5rem;
-                    border-radius: 12px;
-                    background: var(--glass-bg);
-                    backdrop-filter: blur(20px);
-                    border: 1px solid var(--glass-border);
-                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-                    z-index: 2000;
-                    display: flex;
-                    align-items: center;
-                    gap: 1rem;
-                    transform: translateX(100%);
-                    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-                    animation: slideInRight 0.3s ease-out forwards;
-                }
-                
-                .notification-success {
-                    border-left: 4px solid #56ab2f;
-                }
-                
-                .notification-error {
-                    border-left: 4px solid #ff9a9e;
-                }
-                
-                .notification-content {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.75rem;
-                    flex: 1;
-                    color: rgba(255, 255, 255, 0.9);
-                    font-weight: 500;
-                }
-                
-                .notification-content i {
-                    font-size: 1.2rem;
-                    color: #56ab2f;
-                }
-                
-                .notification-error .notification-content i {
-                    color: #ff9a9e;
-                }
-                
-                .notification-close {
-                    background: none;
-                    border: none;
-                    color: rgba(255, 255, 255, 0.7);
-                    cursor: pointer;
-                    padding: 0.5rem;
-                    border-radius: 50%;
-                    transition: all 0.2s ease;
-                }
-                
-                .notification-close:hover {
-                    background: rgba(255, 255, 255, 0.1);
-                    color: white;
-                }
-                
-                @keyframes slideInRight {
-                    from { transform: translateX(100%); }
-                    to { transform: translateX(0); }
-                }
-                
-                @media (max-width: 768px) {
-                    .notification {
-                        top: 1rem;
-                        right: 1rem;
-                        left: 1rem;
-                        min-width: auto;
-                    }
-                }
-            `;
-            document.head.appendChild(notificationStyles);
-        }
-        
-        document.body.appendChild(notification);
-        
-        // Auto remove after 5 seconds
-        setTimeout(() => {
-            if (notification.parentElement) {
-                notification.style.transform = 'translateX(100%)';
-                setTimeout(() => notification.remove(), 300);
-            }
-        }, 5000);
-    }
 });
 </script>
 

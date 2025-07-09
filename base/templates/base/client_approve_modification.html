@@ -6,81 +6,413 @@ Review Modification Request - {{ modification.client.client_full_name }}
 {% endblock %}
 
 {% block content %}
+<style>
+    :root {
+        --bs-primary: #1C64FF;
+        --bs-secondary: #696969;
+        --bs-light: #FFFFFF;
+        --bs-border-color: #D9D9D9;
+        --bs-info: #C3E4FF;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        border: 1px solid #D9D9D9;
+    }
+
+    .card {
+        border: 1px solid #D9D9D9;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        margin-bottom: 1.5rem;
+    }
+
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+
+    .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #D9D9D9;
+        font-weight: 600;
+        border-radius: 12px 12px 0 0 !important;
+        padding: 1.25rem 1.5rem;
+    }
+
+    .card-header.bg-info {
+        background: linear-gradient(135deg, #C3E4FF, #a8d4ff) !important;
+        color: #1C64FF !important;
+        border-bottom-color: #1C64FF;
+    }
+
+    .card-header.bg-warning {
+        background: linear-gradient(135deg, #fff3cd, #ffeaa7) !important;
+        color: #856404 !important;
+        border-bottom-color: #856404;
+    }
+
+    .card-header.bg-secondary {
+        background: linear-gradient(135deg, #696969, #5a5a5a) !important;
+        color: #FFFFFF !important;
+    }
+
+    .card-header.bg-light {
+        background: #f8f9fa !important;
+        color: #1C64FF !important;
+    }
+
+    .btn-primary {
+        background-color: #1C64FF;
+        border-color: #1C64FF;
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        background-color: #1557e6;
+        border-color: #1557e6;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(28, 100, 255, 0.3);
+    }
+
+    .btn-outline-primary {
+        color: #1C64FF;
+        border-color: #1C64FF;
+        font-weight: 600;
+    }
+
+    .btn-outline-primary:hover {
+        background-color: #1C64FF;
+        border-color: #1C64FF;
+    }
+
+    .btn-outline-secondary {
+        color: #696969;
+        border-color: #696969;
+        font-weight: 500;
+    }
+
+    .btn-outline-secondary:hover {
+        background-color: #696969;
+        border-color: #696969;
+    }
+
+    .btn-outline-info {
+        color: #0dcaf0;
+        border-color: #0dcaf0;
+        font-weight: 500;
+    }
+
+    .btn-outline-info:hover {
+        background-color: #0dcaf0;
+        border-color: #0dcaf0;
+    }
+
+    .btn-success {
+        background-color: #198754;
+        border-color: #198754;
+        font-weight: 600;
+    }
+
+    .btn-success:hover {
+        background-color: #157347;
+        border-color: #157347;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(25, 135, 84, 0.3);
+    }
+
+    .btn-danger {
+        background-color: #dc3545;
+        border-color: #dc3545;
+        font-weight: 600;
+    }
+
+    .btn-danger:hover {
+        background-color: #bb2d3b;
+        border-color: #bb2d3b;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    }
+
+    .table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .table thead th {
+        background-color: #f8f9fa;
+        color: #1C64FF;
+        font-weight: 600;
+        border-bottom: 2px solid #D9D9D9;
+        text-transform: uppercase;
+        font-size: 0.875rem;
+        letter-spacing: 0.5px;
+    }
+
+    .table tbody tr:hover {
+        background-color: rgba(195, 228, 255, 0.1);
+    }
+
+    .table-bordered {
+        border: 1px solid #D9D9D9;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .table-bordered th,
+    .table-bordered td {
+        border-color: #D9D9D9;
+    }
+
+    .badge {
+        font-weight: 500;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+    }
+
+    .bg-primary {
+        background-color: #1C64FF !important;
+    }
+
+    .text-primary {
+        color: #1C64FF !important;
+    }
+
+    .text-secondary {
+        color: #696969 !important;
+    }
+
+    .text-muted {
+        color: #696969 !important;
+    }
+
+    .bg-success {
+        background-color: #198754 !important;
+    }
+
+    .bg-warning {
+        background-color: #ffc107 !important;
+    }
+
+    .bg-danger {
+        background-color: #dc3545 !important;
+    }
+
+    .bg-info {
+        background-color: #0dcaf0 !important;
+    }
+
+    .alert {
+        border-radius: 8px;
+        border: none;
+        font-weight: 500;
+    }
+
+    .alert-info {
+        background-color: rgba(195, 228, 255, 0.2);
+        color: #1C64FF;
+        border-left: 4px solid #1C64FF;
+    }
+
+    .form-control {
+        border: 1px solid #D9D9D9;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        border-color: #1C64FF;
+        box-shadow: 0 0 0 0.2rem rgba(28, 100, 255, 0.25);
+    }
+
+    .critical-field {
+        position: relative;
+    }
+
+    .critical-field::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: #dc3545;
+        border-radius: 2px;
+    }
+
+    .proposed-value {
+        background: rgba(25, 135, 84, 0.1) !important;
+        border: 1px solid rgba(25, 135, 84, 0.3) !important;
+        border-radius: 6px;
+    }
+
+    .current-value {
+        background: #f8f9fa !important;
+        border: 1px solid #D9D9D9 !important;
+        border-radius: 6px;
+    }
+
+    .impact-metric {
+        text-align: center;
+        padding: 1.5rem;
+        border-radius: 8px;
+        background: #f8f9fa;
+        border: 1px solid #D9D9D9;
+        transition: all 0.3s ease;
+    }
+
+    .impact-metric:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .impact-metric .display-6 {
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+    }
+
+    .action-section {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 12px;
+        padding: 2rem;
+        border: 1px solid #D9D9D9;
+    }
+
+    @media (max-width: 768px) {
+        .page-header {
+            padding: 1.5rem;
+        }
+        
+        .btn-lg {
+            padding: 0.75rem 1.25rem;
+            font-size: 1rem;
+        }
+        
+        .impact-metric {
+            margin-bottom: 1rem;
+        }
+        
+        .d-flex.gap-2 {
+            flex-direction: column;
+        }
+        
+        .d-flex.gap-2 .btn {
+            margin-bottom: 0.5rem;
+        }
+    }
+
+    .fade-in {
+        animation: fadeIn 0.6s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
 <div class="container-fluid">
     <div class="row">
-        <div class="col-md-10 offset-md-1">
+        <div class="col-lg-10 offset-lg-1">
             <!-- Page Header -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h2 class="mb-1">
-                        <i class="fas fa-gavel me-2"></i>
-                        Review Modification Request
-                    </h2>
-                    <p class="text-muted mb-0">
-                        Request #{{ modification.pk }} for {{ modification.client.client_full_name }}
-                    </p>
-                </div>
-                <div>
-                    <a href="{% url 'modification_requests' %}" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left me-2"></i>Back to Requests
-                    </a>
+            <div class="page-header fade-in">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+                    <div class="mb-3 mb-md-0">
+                        <h2 class="mb-2 text-primary">
+                            <i class="fas fa-gavel me-2"></i>
+                            Review Modification Request
+                        </h2>
+                        <p class="text-muted mb-0">
+                            Request #{{ modification.pk }} for {{ modification.client.client_full_name }}
+                        </p>
+                    </div>
+                    <div>
+                        <a href="{% url 'modification_requests' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Requests
+                        </a>
+                    </div>
                 </div>
             </div>
 
             <!-- Request Overview Card -->
-            <div class="card shadow mb-4">
-                <div class="card-header bg-info text-white">
+            <div class="card fade-in">
+                <div class="card-header bg-info">
                     <h5 class="mb-0">
                         <i class="fas fa-info-circle me-2"></i>
                         Request Overview
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
+                    <div class="row g-4">
                         <div class="col-md-6">
-                            <h6 class="text-primary">Request Details</h6>
-                            <p class="mb-2">
-                                <strong>Requested By:</strong> {{ modification.requested_by.get_full_name }}
-                            </p>
-                            <p class="mb-2">
-                                <strong>Role:</strong> {{ modification.requested_by.get_role_display }}
-                            </p>
-                            <p class="mb-2">
-                                <strong>Request Date:</strong> {{ modification.requested_at|date:"M d, Y H:i" }}
-                            </p>
-                            <p class="mb-2">
-                                <strong>Priority:</strong>
-                                {% if modification.requires_top_management %}
-                                    <span class="badge bg-danger">High Priority (Top Management Required)</span>
-                                {% else %}
-                                    <span class="badge bg-info">Standard Priority</span>
-                                {% endif %}
-                            </p>
+                            <h6 class="text-primary mb-3">Request Details</h6>
+                            <div class="mb-3">
+                                <strong class="text-secondary">Requested By:</strong>
+                                <div>{{ modification.requested_by.get_full_name }}</div>
+                            </div>
+                            <div class="mb-3">
+                                <strong class="text-secondary">Role:</strong>
+                                <div>{{ modification.requested_by.get_role_display }}</div>
+                            </div>
+                            <div class="mb-3">
+                                <strong class="text-secondary">Request Date:</strong>
+                                <div>{{ modification.requested_at|date:"M d, Y H:i" }}</div>
+                            </div>
+                            <div class="mb-3">
+                                <strong class="text-secondary">Priority:</strong>
+                                <div class="mt-1">
+                                    {% if modification.requires_top_management %}
+                                        <span class="badge bg-danger">High Priority (Top Management Required)</span>
+                                    {% else %}
+                                        <span class="badge bg-info">Standard Priority</span>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <h6 class="text-primary">Client Information</h6>
-                            <p class="mb-2">
-                                <strong>Client Name:</strong> {{ modification.client.client_full_name }}
-                            </p>
-                            <p class="mb-2">
-                                <strong>Email:</strong> {{ modification.client.email|default:"Not provided" }}
-                            </p>
-                            <p class="mb-2">
-                                <strong>Mobile:</strong> {{ modification.client.mobile_number|default:"Not provided" }}
-                            </p>
-                            <p class="mb-2">
-                                <strong>Current Status:</strong>
-                                <span class="badge bg-{% if modification.client.status == 'active' %}success{% else %}warning{% endif %}">
-                                    {{ modification.client.status|title }}
-                                </span>
-                            </p>
+                            <h6 class="text-primary mb-3">Client Information</h6>
+                            <div class="mb-3">
+                                <strong class="text-secondary">Client Name:</strong>
+                                <div>{{ modification.client.client_full_name }}</div>
+                            </div>
+                            <div class="mb-3">
+                                <strong class="text-secondary">Email:</strong>
+                                <div>{{ modification.client.email|default:"Not provided" }}</div>
+                            </div>
+                            <div class="mb-3">
+                                <strong class="text-secondary">Mobile:</strong>
+                                <div>{{ modification.client.mobile_number|default:"Not provided" }}</div>
+                            </div>
+                            <div class="mb-3">
+                                <strong class="text-secondary">Current Status:</strong>
+                                <div class="mt-1">
+                                    <span class="badge bg-{% if modification.client.status == 'active' %}success{% else %}warning{% endif %}">
+                                        {{ modification.client.status|title }}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
                     {% if modification.reason %}
-                    <div class="mt-3">
-                        <h6 class="text-primary">Reason for Modification</h6>
-                        <div class="bg-light p-3 rounded">
+                    <div class="mt-4">
+                        <h6 class="text-primary mb-3">Reason for Modification</h6>
+                        <div class="current-value p-3">
                             <i class="fas fa-quote-left text-muted me-2"></i>
                             {{ modification.reason }}
                         </div>
@@ -90,17 +422,17 @@ Review Modification Request - {{ modification.client.client_full_name }}
             </div>
 
             <!-- Proposed Changes Card -->
-            <div class="card shadow mb-4">
-                <div class="card-header bg-warning text-dark">
+            <div class="card fade-in">
+                <div class="card-header bg-warning">
                     <h5 class="mb-0">
                         <i class="fas fa-edit me-2"></i>
                         Proposed Changes
                     </h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <thead class="table-light">
+                        <table class="table table-bordered mb-0">
+                            <thead>
                                 <tr>
                                     <th width="30%">Field</th>
                                     <th width="35%">Current Value</th>
@@ -110,8 +442,8 @@ Review Modification Request - {{ modification.client.client_full_name }}
                             <tbody>
                                 {% for field, new_value in modification.modification_data.items %}
                                 <tr>
-                                    <td>
-                                        <strong>{{ field|title|replace:"_"," " }}</strong>
+                                    <td class="{% if field in 'pan_number,client_full_name,date_of_birth' %}critical-field{% endif %}">
+                                        <strong>{{ field|title }}</strong>
                                         {% if field in 'pan_number,client_full_name,date_of_birth' %}
                                             <br><small class="text-danger">
                                                 <i class="fas fa-exclamation-triangle me-1"></i>Critical Field
@@ -119,7 +451,7 @@ Review Modification Request - {{ modification.client.client_full_name }}
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <div class="bg-light p-2 rounded">
+                                        <div class="current-value p-2">
                                             {% if field == 'client_full_name' %}
                                                 {{ modification.client.client_full_name|default:"Not set" }}
                                             {% elif field == 'pan_number' %}
@@ -138,7 +470,7 @@ Review Modification Request - {{ modification.client.client_full_name }}
                                         </div>
                                     </td>
                                     <td>
-                                        <div class="bg-success bg-opacity-10 p-2 rounded border border-success">
+                                        <div class="proposed-value p-2">
                                             <strong class="text-success">{{ new_value|default:"Not provided" }}</strong>
                                         </div>
                                     </td>
@@ -151,17 +483,17 @@ Review Modification Request - {{ modification.client.client_full_name }}
             </div>
 
             <!-- Impact Assessment Card -->
-            <div class="card shadow mb-4">
-                <div class="card-header bg-secondary text-white">
+            <div class="card fade-in">
+                <div class="card-header bg-secondary">
                     <h5 class="mb-0">
                         <i class="fas fa-chart-line me-2"></i>
                         Impact Assessment
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
+                    <div class="row g-4 mb-4">
                         <div class="col-md-4">
-                            <div class="text-center">
+                            <div class="impact-metric">
                                 <div class="display-6 text-info">
                                     {{ modification.client.accounts.count }}
                                 </div>
@@ -169,7 +501,7 @@ Review Modification Request - {{ modification.client.client_full_name }}
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="text-center">
+                            <div class="impact-metric">
                                 <div class="display-6 text-warning">
                                     {{ modification.client.modifications.count }}
                                 </div>
@@ -177,7 +509,7 @@ Review Modification Request - {{ modification.client.client_full_name }}
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="text-center">
+                            <div class="impact-metric">
                                 <div class="display-6 text-primary">
                                     {{ modification.client.created_at|timesince }}
                                 </div>
@@ -186,29 +518,27 @@ Review Modification Request - {{ modification.client.client_full_name }}
                         </div>
                     </div>
                     
-                    <div class="mt-3">
-                        <div class="alert alert-info">
-                            <h6><i class="fas fa-info-circle me-2"></i>Review Checklist</h6>
-                            <ul class="mb-0">
-                                <li>Verify the accuracy of proposed changes</li>
-                                <li>Ensure compliance with KYC requirements</li>
-                                <li>Check for potential duplicate entries</li>
-                                <li>Validate critical field modifications</li>
-                                {% if modification.requires_top_management %}
-                                <li class="text-danger"><strong>Top Management approval required for critical fields</strong></li>
-                                {% endif %}
-                            </ul>
-                        </div>
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle me-2"></i>Review Checklist</h6>
+                        <ul class="mb-0">
+                            <li>Verify the accuracy of proposed changes</li>
+                            <li>Ensure compliance with KYC requirements</li>
+                            <li>Check for potential duplicate entries</li>
+                            <li>Validate critical field modifications</li>
+                            {% if modification.requires_top_management %}
+                            <li class="text-danger"><strong>Top Management approval required for critical fields</strong></li>
+                            {% endif %}
+                        </ul>
                     </div>
                 </div>
             </div>
 
             <!-- Action Buttons Card -->
-            <div class="card shadow">
-                <div class="card-body">
-                    <div class="row">
+            <div class="card fade-in">
+                <div class="card-body action-section">
+                    <div class="row g-3">
                         <div class="col-md-6">
-                            <form method="post" class="d-inline">
+                            <form method="post" class="d-inline w-100">
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="approve">
                                 <button type="submit" class="btn btn-success btn-lg w-100" id="approveBtn">
@@ -218,7 +548,7 @@ Review Modification Request - {{ modification.client.client_full_name }}
                             </form>
                         </div>
                         <div class="col-md-6">
-                            <form method="post" class="d-inline">
+                            <form method="post" class="d-inline w-100">
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="reject">
                                 <button type="submit" class="btn btn-danger btn-lg w-100" id="rejectBtn">
@@ -239,7 +569,7 @@ Review Modification Request - {{ modification.client.client_full_name }}
             </div>
 
             <!-- Quick Links -->
-            <div class="card mt-4">
+            <div class="card fade-in">
                 <div class="card-header bg-light">
                     <h6 class="mb-0">
                         <i class="fas fa-external-link-alt me-2"></i>
@@ -274,29 +604,48 @@ document.addEventListener('DOMContentLoaded', function() {
     const clientName = "{{ modification.client.client_full_name|escapejs }}";
     
     // Confirmation for approve action
-    approveBtn.parentForm.addEventListener('submit', function(e) {
+    approveBtn.closest('form').addEventListener('submit', function(e) {
         if (!confirm(`Are you sure you want to APPROVE this modification request for ${clientName}?\n\nThis will apply all the proposed changes to the client profile.`)) {
             e.preventDefault();
         }
     });
     
     // Confirmation for reject action
-    rejectBtn.parentForm.addEventListener('submit', function(e) {
+    rejectBtn.closest('form').addEventListener('submit', function(e) {
         if (!confirm(`Are you sure you want to REJECT this modification request for ${clientName}?\n\nThe requested changes will NOT be applied and the requester will be notified.`)) {
             e.preventDefault();
         }
     });
-});
 
-// Custom filter for Django template (would normally be in templatetags)
-// This is a placeholder - in real Django, you'd use custom template tags
-document.addEventListener('DOMContentLoaded', function() {
+    // Add loading states to buttons
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        form.addEventListener('submit', function() {
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+            submitBtn.disabled = true;
+            
+            // Re-enable after 5 seconds as fallback
+            setTimeout(() => {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }, 5000);
+        });
+    });
+
     // Replace underscores with spaces in field names
-    const fieldNames = document.querySelectorAll('strong');
+    const fieldNames = document.querySelectorAll('td strong');
     fieldNames.forEach(function(element) {
         if (element.textContent.includes('_')) {
             element.textContent = element.textContent.replace(/_/g, ' ');
         }
+    });
+
+    // Add animation delays to cards
+    const cards = document.querySelectorAll('.fade-in');
+    cards.forEach((card, index) => {
+        card.style.animationDelay = `${index * 0.1}s`;
     });
 });
 </script>

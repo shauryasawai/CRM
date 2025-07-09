@@ -5,603 +5,444 @@
 {% endblock %}
 
 {% block content %}
-<style>
-    :root {
-        --primary-bg: #D3FF61;
-        --card-bg: rgba(255, 255, 255, 0.95);
-        --text-primary: #000000;
-        --text-secondary: #333333;
-        --text-muted: #666666;
-        --border-color: rgba(0, 0, 0, 0.1);
-        --shadow-light: 0 2px 10px rgba(0, 0, 0, 0.08);
-        --shadow-medium: 0 4px 20px rgba(0, 0, 0, 0.12);
-        --shadow-heavy: 0 8px 40px rgba(0, 0, 0, 0.16);
-        --gradient-accent: linear-gradient(135deg, #D3FF61 0%, #B8E639 100%);
-        --gradient-dark: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-        --success-color: #059669;
-        --warning-color: #d97706;
-        --danger-color: #dc2626;
-    }
-
-    * {
-        box-sizing: border-box;
-    }
-
-    body {
-        background: var(--primary-bg);
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        line-height: 1.6;
-        margin: 0;
-        padding: 0;
-        min-height: 100vh;
-    }
-
-    .form-container {
-        max-width: 900px;
-        margin: 0 auto;
-        padding: 2rem;
-        animation: slideInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    @keyframes slideInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .form-header {
-        text-align: center;
-        margin-bottom: 3rem;
-    }
-
-    .form-title {
-        font-size: clamp(2rem, 4vw, 3rem);
-        font-weight: 800;
-        color: var(--text-primary);
-        margin: 0 0 1rem 0;
-        letter-spacing: -0.02em;
-        position: relative;
-    }
-
-    .form-title::after {
-        content: '';
-        position: absolute;
-        bottom: -8px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 60px;
-        height: 4px;
-        background: var(--gradient-dark);
-        border-radius: 2px;
-    }
-
-    .form-subtitle {
-        color: var(--text-muted);
-        font-size: 1.1rem;
-        font-weight: 500;
-    }
-
-    .form-card {
-        background: var(--card-bg);
-        border-radius: 20px;
-        box-shadow: var(--shadow-medium);
-        overflow: hidden;
-        backdrop-filter: blur(10px);
-        border: 1px solid var(--border-color);
-    }
-
-    .card-header {
-        background: var(--gradient-dark);
-        padding: 2rem;
-        text-align: center;
-        color: white;
-        position: relative;
-    }
-
-    .card-header::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(211, 255, 97, 0.5), transparent);
-    }
-
-    .card-icon {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-        display: inline-block;
-        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-    }
-
-    .card-title {
-        font-size: 1.75rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-    }
-
-    .card-subtitle {
-        opacity: 0.9;
-        font-weight: 400;
-        font-size: 1rem;
-    }
-
-    .card-body {
-        padding: 2.5rem;
-    }
-
-    .status-indicator {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.75rem 1.5rem;
-        border-radius: 50px;
-        font-size: 0.9rem;
-        font-weight: 700;
-        margin-bottom: 2rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    .status-draft {
-        background: rgba(107, 114, 128, 0.1);
-        color: #6b7280;
-        border: 1px solid rgba(107, 114, 128, 0.2);
-    }
-
-    .status-submitted {
-        background: rgba(37, 99, 235, 0.1);
-        color: #2563eb;
-        border: 1px solid rgba(37, 99, 235, 0.2);
-    }
-
-    .status-in-progress {
-        background: rgba(124, 58, 237, 0.1);
-        color: #7c3aed;
-        border: 1px solid rgba(124, 58, 237, 0.2);
-    }
-
-    .status-resolved {
-        background: rgba(5, 150, 105, 0.1);
-        color: var(--success-color);
-        border: 1px solid rgba(5, 150, 105, 0.2);
-    }
-
-    .priority-badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        margin-left: 1rem;
-        text-transform: uppercase;
-    }
-
-    .priority-low {
-        background: rgba(5, 150, 105, 0.1);
-        color: var(--success-color);
-    }
-
-    .priority-medium {
-        background: rgba(245, 158, 11, 0.1);
-        color: var(--warning-color);
-    }
-
-    .priority-high {
-        background: rgba(220, 38, 38, 0.1);
-        color: var(--danger-color);
-    }
-
-    .priority-urgent {
-        background: rgba(124, 45, 18, 0.1);
-        color: #7c2d12;
-        animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.7; }
-    }
-
-    .form-grid {
-        display: grid;
-        gap: 2rem;
-    }
-
-    .form-group {
-        margin-bottom: 0;
-    }
-
-    .form-label {
-        display: block;
-        font-weight: 700;
-        color: var(--text-primary);
-        margin-bottom: 0.75rem;
-        font-size: 0.95rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    .form-control, .form-select {
-        width: 100%;
-        padding: 1rem 1.25rem;
-        border: 2px solid var(--border-color);
-        border-radius: 12px;
-        font-size: 1rem;
-        font-weight: 500;
-        background: white;
-        color: var(--text-secondary);
-        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .form-control:focus, .form-select:focus {
-        outline: none;
-        border-color: var(--text-primary);
-        box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.1);
-        transform: translateY(-1px);
-    }
-
-    .form-control::placeholder {
-        color: var(--text-muted);
-        font-weight: 400;
-    }
-
-    textarea.form-control {
-        min-height: 120px;
-        resize: vertical;
-        font-family: inherit;
-    }
-
-    .form-help {
-        margin-top: 0.5rem;
-        font-size: 0.85rem;
-        color: var(--text-muted);
-        font-weight: 500;
-    }
-
-    .error-messages {
-        margin-top: 0.75rem;
-    }
-
-    .error-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-
-    .error-list li {
-        background: rgba(220, 38, 38, 0.1);
-        color: var(--danger-color);
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        font-size: 0.875rem;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-        border-left: 4px solid var(--danger-color);
-    }
-
-    .alert {
-        padding: 1rem 1.5rem;
-        border-radius: 12px;
-        margin-bottom: 2rem;
-        font-weight: 600;
-        border: none;
-    }
-
-    .alert-danger {
-        background: rgba(220, 38, 38, 0.1);
-        color: var(--danger-color);
-        border-left: 4px solid var(--danger-color);
-    }
-
-    .form-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 1rem;
-        margin-top: 3rem;
-        padding-top: 2rem;
-        border-top: 2px solid var(--border-color);
-    }
-
-    .btn {
-        padding: 1rem 2rem;
-        border-radius: 50px;
-        font-weight: 700;
-        font-size: 0.95rem;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        border: none;
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .btn-primary {
-        background: var(--gradient-dark);
-        color: white;
-        box-shadow: var(--shadow-medium);
-    }
-
-    .btn-primary:active {
-        transform: translateY(1px);
-        box-shadow: var(--shadow-light);
-    }
-
-    .btn-secondary {
-        background: var(--card-bg);
-        color: var(--text-secondary);
-        border: 2px solid var(--border-color);
-        box-shadow: var(--shadow-light);
-    }
-
-    .btn-secondary:active {
-        transform: translateY(1px);
-        background: rgba(0, 0, 0, 0.05);
-    }
-
-    .btn:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-        transform: none !important;
-    }
-
-    .spinner-border-sm {
-        width: 1rem;
-        height: 1rem;
-        border: 0.125em solid;
-        border-right-color: transparent;
-        border-radius: 50%;
-        animation: spinner-border 0.75s linear infinite;
-    }
-
-    @keyframes spinner-border {
-        to { transform: rotate(360deg); }
-    }
-
-    /* Two column layout for larger screens */
-    @media (min-width: 768px) {
-        .form-grid {
-            grid-template-columns: 1fr 1fr;
-        }
-
-        .form-group.full-width {
-            grid-column: 1 / -1;
-        }
-    }
-
-    /* Responsive design */
-    @media (max-width: 768px) {
-        .form-container {
-            padding: 1rem;
-        }
-
-        .card-header {
-            padding: 1.5rem;
-        }
-
-        .card-body {
-            padding: 1.5rem;
-        }
-
-        .form-actions {
-            flex-direction: column;
-        }
-
-        .btn {
-            justify-content: center;
-            width: 100%;
-        }
-
-        .status-indicator {
-            flex-direction: column;
-            text-align: center;
-            gap: 0.5rem;
-        }
-
-        .priority-badge {
-            margin-left: 0;
-        }
-    }
-
-    @media (max-width: 480px) {
-        .card-icon {
-            font-size: 2rem;
-        }
-
-        .card-title {
-            font-size: 1.5rem;
-        }
-
-        .form-control, .form-select {
-            padding: 0.875rem 1rem;
-        }
-    }
-</style>
-
-<div class="form-container">
-    <!-- Header -->
-    <div class="form-header">
-        <h1 class="form-title">
-            {% if service_request %}Edit Service Request{% else %}New Service Request{% endif %}
-        </h1>
-        <p class="form-subtitle">
-            {% if service_request %}
-                Update service request {{ service_request.request_id|default:service_request.id }}
-            {% else %}
-                Create a new service request to track client needs
-            {% endif %}
-        </p>
-    </div>
-
-    <!-- Form Card -->
-    <div class="form-card">
-        <div class="card-header">
-            <div class="card-icon">🛠️</div>
-            <h2 class="card-title">
-                {% if service_request %}Service Request Details{% else %}Request Information{% endif %}
-            </h2>
-            <p class="card-subtitle">
-                {% if service_request %}
-                    Request ID: {{ service_request.request_id|default:service_request.id }}
-                {% else %}
-                    Fill in the details below to create your request
-                {% endif %}
-            </p>
-        </div>
-        
-        <div class="card-body">
-            <!-- Status Indicator -->
-            {% if service_request and service_request.status %}
-                <div class="status-indicator status-{{ service_request.status|lower|slugify }}">
-                    <i class="fas fa-info-circle"></i>
-                    Status: {{ service_request.get_status_display|default:service_request.status }}
-                    {% if service_request.priority %}
-                        <span class="priority-badge priority-{{ service_request.priority|lower }}">
-                            {{ service_request.get_priority_display|default:service_request.priority }}
-                        </span>
-                    {% endif %}
-                </div>
-            {% endif %}
-            
-            <!-- Form -->
-            <form method="post" novalidate>
-                {% csrf_token %}
-                
-                <!-- Non-field errors -->
-                {% if form.non_field_errors %}
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        {% for error in form.non_field_errors %}
-                            {{ error }}
-                        {% endfor %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10 col-xl-8">
+            <!-- Header Card -->
+            <div class="card border-0 shadow-sm mb-4" style="background-color: #FFFFFF;">
+                <div class="card-header text-center py-4 border-0" style="background: linear-gradient(135deg, #1C64FF 0%, #C3E4FF 100%);">
+                    <div class="mb-3">
+                        <i class="fas fa-headset fa-3x text-white"></i>
                     </div>
-                {% endif %}
-                
-                <div class="form-grid">
-                    <!-- Client Field -->
-                    <div class="form-group">
-                        <label for="{{ form.client.id_for_label }}" class="form-label">
-                            <i class="fas fa-user"></i> Client
-                        </label>
-                        {{ form.client }}
-                        {% if form.client.help_text %}
-                            <div class="form-help">{{ form.client.help_text }}</div>
-                        {% endif %}
-                        {% if form.client.errors %}
-                            <div class="error-messages">
-                                <ul class="error-list">
-                                    {% for error in form.client.errors %}
-                                        <li>{{ error }}</li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Request Type Field -->
-                    <div class="form-group">
-                        <label for="{{ form.request_type.id_for_label }}" class="form-label">
-                            <i class="fas fa-tags"></i> Request Type
-                        </label>
-                        {{ form.request_type }}
-                        {% if form.request_type.errors %}
-                            <div class="error-messages">
-                                <ul class="error-list">
-                                    {% for error in form.request_type.errors %}
-                                        <li>{{ error }}</li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Priority Field -->
-                    <div class="form-group">
-                        <label for="{{ form.priority.id_for_label }}" class="form-label">
-                            <i class="fas fa-flag"></i> Priority
-                        </label>
-                        {{ form.priority }}
-                        {% if form.priority.errors %}
-                            <div class="error-messages">
-                                <ul class="error-list">
-                                    {% for error in form.priority.errors %}
-                                        <li>{{ error }}</li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Assigned To Field -->
-                    <div class="form-group">
-                        <label for="{{ form.assigned_to.id_for_label }}" class="form-label">
-                            <i class="fas fa-user-tie"></i> Assigned To
-                        </label>
-                        {{ form.assigned_to }}
-                        {% if form.assigned_to.help_text %}
-                            <div class="form-help">{{ form.assigned_to.help_text }}</div>
-                        {% endif %}
-                        {% if form.assigned_to.errors %}
-                            <div class="error-messages">
-                                <ul class="error-list">
-                                    {% for error in form.assigned_to.errors %}
-                                        <li>{{ error }}</li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Description Field (Full Width) -->
-                    <div class="form-group full-width">
-                        <label for="{{ form.description.id_for_label }}" class="form-label">
-                            <i class="fas fa-align-left"></i> Description
-                        </label>
-                        {{ form.description }}
-                        {% if form.description.help_text %}
-                            <div class="form-help">{{ form.description.help_text }}</div>
-                        {% endif %}
-                        {% if form.description.errors %}
-                            <div class="error-messages">
-                                <ul class="error-list">
-                                    {% for error in form.description.errors %}
-                                        <li>{{ error }}</li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-                
-                <!-- Form Actions -->
-                <div class="form-actions">
-                    <a href="{% url 'service_request_list' %}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Cancel
-                    </a>
-                    <button type="submit" class="btn btn-primary" id="submitBtn">
-                        <i class="fas fa-save"></i>
+                    <h1 class="h2 fw-bold text-white mb-2">
+                        {% if service_request %}Edit Service Request{% else %}New Service Request{% endif %}
+                    </h1>
+                    <p class="text-white-50 mb-0">
                         {% if service_request %}
-                            Update Request
+                            Update service request <strong>{{ service_request.request_id|default:service_request.id }}</strong>
                         {% else %}
-                            Create Request
+                            Create a new service request to track client needs and support tickets
                         {% endif %}
-                    </button>
+                    </p>
                 </div>
-            </form>
+            </div>
+
+            <!-- Status Indicator (for existing requests) -->
+            {% if service_request and service_request.status %}
+            <div class="card border-0 shadow-sm mb-4" style="background-color: #FFFFFF; border: 1px solid #D9D9D9;">
+                <div class="card-body p-4">
+                    <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-info-circle me-3" style="color: #1C64FF; font-size: 1.5rem;"></i>
+                            <div>
+                                <h6 class="mb-1 fw-semibold" style="color: #1C64FF;">Current Status</h6>
+                                <div class="d-flex align-items-center gap-2">
+                                    {% if service_request.status == 'draft' %}
+                                        <span class="badge rounded-pill px-3 py-2" style="background-color: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6;">
+                                            <i class="fas fa-edit me-1"></i>{{ service_request.get_status_display|default:service_request.status }}
+                                        </span>
+                                    {% elif service_request.status == 'submitted' %}
+                                        <span class="badge rounded-pill px-3 py-2" style="background-color: #e3f2fd; color: #1976d2; border: 1px solid #bbdefb;">
+                                            <i class="fas fa-paper-plane me-1"></i>{{ service_request.get_status_display|default:service_request.status }}
+                                        </span>
+                                    {% elif service_request.status == 'in-progress' %}
+                                        <span class="badge rounded-pill px-3 py-2" style="background-color: #f3e5f5; color: #7b1fa2; border: 1px solid #ce93d8;">
+                                            <i class="fas fa-spinner me-1"></i>{{ service_request.get_status_display|default:service_request.status }}
+                                        </span>
+                                    {% elif service_request.status == 'resolved' %}
+                                        <span class="badge rounded-pill px-3 py-2" style="background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9;">
+                                            <i class="fas fa-check-circle me-1"></i>{{ service_request.get_status_display|default:service_request.status }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge rounded-pill px-3 py-2" style="background-color: #f5f5f5; color: #424242; border: 1px solid #e0e0e0;">
+                                            {{ service_request.get_status_display|default:service_request.status }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% if service_request.priority %}
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-flag me-2" style="color: #696969;"></i>
+                            <div>
+                                <small class="text-muted d-block">Priority</small>
+                                {% if service_request.priority == 'low' %}
+                                    <span class="badge rounded-pill px-3 py-2" style="background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9;">
+                                        <i class="fas fa-arrow-down me-1"></i>{{ service_request.get_priority_display|default:service_request.priority }}
+                                    </span>
+                                {% elif service_request.priority == 'medium' %}
+                                    <span class="badge rounded-pill px-3 py-2" style="background-color: #fff3e0; color: #f57c00; border: 1px solid #ffcc02;">
+                                        <i class="fas fa-minus me-1"></i>{{ service_request.get_priority_display|default:service_request.priority }}
+                                    </span>
+                                {% elif service_request.priority == 'high' %}
+                                    <span class="badge rounded-pill px-3 py-2" style="background-color: #ffebee; color: #d32f2f; border: 1px solid #ffcdd2;">
+                                        <i class="fas fa-arrow-up me-1"></i>{{ service_request.get_priority_display|default:service_request.priority }}
+                                    </span>
+                                {% elif service_request.priority == 'urgent' %}
+                                    <span class="badge rounded-pill px-3 py-2 urgent-pulse" style="background-color: #ffebee; color: #b71c1c; border: 1px solid #ffcdd2;">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>{{ service_request.get_priority_display|default:service_request.priority }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge rounded-pill px-3 py-2" style="background-color: #f5f5f5; color: #424242; border: 1px solid #e0e0e0;">
+                                        {{ service_request.get_priority_display|default:service_request.priority }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Form Card -->
+            <div class="card border-0 shadow-sm" style="background-color: #FFFFFF; border: 1px solid #D9D9D9;">
+                <div class="card-header py-3 border-0" style="background-color: #C3E4FF;">
+                    <h5 class="mb-0 fw-semibold d-flex align-items-center" style="color: #1C64FF;">
+                        <i class="fas fa-edit me-2"></i>Request Details
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Non-field errors -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger border-0 mb-4" role="alert">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <div>
+                                        {% for error in form.non_field_errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="row g-4">
+                            <!-- Client Field -->
+                            <div class="col-12 col-md-6">
+                                <label for="{{ form.client.id_for_label }}" class="form-label fw-semibold" style="color: #1C64FF;">
+                                    <i class="fas fa-user me-2"></i>Client
+                                </label>
+                                <select class="form-select form-select-lg {% if form.client.errors %}is-invalid{% endif %}" 
+                                        id="{{ form.client.id_for_label }}" 
+                                        name="{{ form.client.name }}"
+                                        style="border-color: #D9D9D9;">
+                                    <option value="">Select a client</option>
+                                    {% for choice in form.client.field.queryset %}
+                                        <option value="{{ choice.pk }}" 
+                                                {% if form.client.value == choice.pk %}selected{% endif %}>
+                                            {{ choice.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                {% if form.client.help_text %}
+                                    <div class="form-text" style="color: #696969;">
+                                        <i class="fas fa-info-circle me-1"></i>{{ form.client.help_text }}
+                                    </div>
+                                {% endif %}
+                                {% if form.client.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.client.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Request Type Field -->
+                            <div class="col-12 col-md-6">
+                                <label for="{{ form.request_type.id_for_label }}" class="form-label fw-semibold" style="color: #1C64FF;">
+                                    <i class="fas fa-tags me-2"></i>Request Type
+                                </label>
+                                <select class="form-select form-select-lg {% if form.request_type.errors %}is-invalid{% endif %}" 
+                                        id="{{ form.request_type.id_for_label }}" 
+                                        name="{{ form.request_type.name }}"
+                                        style="border-color: #D9D9D9;">
+                                    <option value="">Select request type</option>
+                                    {% for choice in form.request_type.field.queryset %}
+                                        <option value="{{ choice.pk }}" 
+                                                {% if form.request_type.value == choice.pk %}selected{% endif %}>
+                                            {{ choice.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                {% if form.request_type.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.request_type.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Priority Field -->
+                            <div class="col-12 col-md-6">
+                                <label for="{{ form.priority.id_for_label }}" class="form-label fw-semibold" style="color: #1C64FF;">
+                                    <i class="fas fa-flag me-2"></i>Priority Level
+                                </label>
+                                <select class="form-select form-select-lg {% if form.priority.errors %}is-invalid{% endif %}" 
+                                        id="{{ form.priority.id_for_label }}" 
+                                        name="{{ form.priority.name }}"
+                                        style="border-color: #D9D9D9;">
+                                    <option value="">Select priority level</option>
+                                    {% for choice in form.priority.field.choices %}
+                                        <option value="{{ choice.0 }}" 
+                                                {% if form.priority.value == choice.0 %}selected{% endif %}>
+                                            {{ choice.1 }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text" style="color: #696969;">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Higher priority requests are processed first
+                                </div>
+                                {% if form.priority.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.priority.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Assigned To Field -->
+                            <div class="col-12 col-md-6">
+                                <label for="{{ form.assigned_to.id_for_label }}" class="form-label fw-semibold" style="color: #1C64FF;">
+                                    <i class="fas fa-user-tie me-2"></i>Assign To
+                                </label>
+                                <select class="form-select form-select-lg {% if form.assigned_to.errors %}is-invalid{% endif %}" 
+                                        id="{{ form.assigned_to.id_for_label }}" 
+                                        name="{{ form.assigned_to.name }}"
+                                        style="border-color: #D9D9D9;">
+                                    <option value="">Select team member</option>
+                                    {% for choice in form.assigned_to.field.queryset %}
+                                        <option value="{{ choice.pk }}" 
+                                                {% if form.assigned_to.value == choice.pk %}selected{% endif %}>
+                                            {{ choice.get_full_name|default:choice.username }} ({{ choice.get_role_display }})
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                {% if form.assigned_to.help_text %}
+                                    <div class="form-text" style="color: #696969;">
+                                        <i class="fas fa-info-circle me-1"></i>{{ form.assigned_to.help_text }}
+                                    </div>
+                                {% endif %}
+                                {% if form.assigned_to.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.assigned_to.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Description Field (Full Width) -->
+                            <div class="col-12">
+                                <label for="{{ form.description.id_for_label }}" class="form-label fw-semibold" style="color: #1C64FF;">
+                                    <i class="fas fa-align-left me-2"></i>Description
+                                </label>
+                                <textarea class="form-control form-control-lg {% if form.description.errors %}is-invalid{% endif %}" 
+                                          id="{{ form.description.id_for_label }}" 
+                                          name="{{ form.description.name }}"
+                                          rows="5"
+                                          placeholder="Provide detailed information about the service request..."
+                                          style="border-color: #D9D9D9; resize: vertical;">{{ form.description.value|default:'' }}</textarea>
+                                {% if form.description.help_text %}
+                                    <div class="form-text" style="color: #696969;">
+                                        <i class="fas fa-info-circle me-1"></i>{{ form.description.help_text }}
+                                    </div>
+                                {% else %}
+                                    <div class="form-text" style="color: #696969;">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Include all relevant details, requirements, and any specific instructions
+                                    </div>
+                                {% endif %}
+                                {% if form.description.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.description.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Additional Information -->
+                        {% if service_request %}
+                        <div class="alert alert-light border-0 mt-4" style="background-color: #C3E4FF; border-left: 4px solid #1C64FF !important;">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-info-circle me-3" style="color: #1C64FF;"></i>
+                                <div>
+                                    <h6 class="mb-1 fw-semibold" style="color: #1C64FF;">Request Information</h6>
+                                    <p class="mb-0 small" style="color: #696969;">
+                                        <strong>Created:</strong> {{ service_request.created_at|date:"M d, Y H:i" }} | 
+                                        <strong>Raised by:</strong> {{ service_request.raised_by.get_full_name|default:service_request.raised_by.username }} |
+                                        <strong>Last updated:</strong> {{ service_request.updated_at|date:"M d, Y H:i"|default:"Never" }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Form Actions -->
+                        <div class="d-flex flex-column flex-sm-row justify-content-end gap-3 pt-4 mt-4" style="border-top: 1px solid #D9D9D9;">
+                            <a href="{% url 'service_request_list' %}" 
+                               class="btn btn-outline-secondary btn-lg px-4" 
+                               style="border-color: #D9D9D9; color: #696969;">
+                                <i class="fas fa-arrow-left me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg px-4" id="submitBtn" style="background-color: #1C64FF; border-color: #1C64FF;">
+                                <i class="fas fa-save me-2"></i>
+                                {% if service_request %}Update Request{% else %}Create Request{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- Toast Container for Notifications -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+    <div id="successToast" class="toast border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header border-0" style="background-color: #C3E4FF;">
+            <i class="fas fa-check-circle text-success me-2"></i>
+            <strong class="me-auto" style="color: #1C64FF;">Success</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" style="background-color: #FFFFFF; color: #696969;">
+            <span id="successMessage"></span>
+        </div>
+    </div>
+    
+    <div id="errorToast" class="toast border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header border-0" style="background-color: #f8d7da;">
+            <i class="fas fa-exclamation-circle text-danger me-2"></i>
+            <strong class="me-auto text-danger">Error</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" style="background-color: #FFFFFF; color: #696969;">
+            <span id="errorMessage"></span>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Enhanced button styles */
+.btn-primary {
+    background-color: #1C64FF !important;
+    border-color: #1C64FF !important;
+}
+
+.btn-primary:hover {
+    background-color: #1557e6 !important;
+    border-color: #1557e6 !important;
+}
+
+.btn-outline-secondary {
+    border-color: #D9D9D9 !important;
+    color: #696969 !important;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #D9D9D9 !important;
+    border-color: #D9D9D9 !important;
+    color: #495057 !important;
+}
+
+/* Enhanced focus styles */
+.form-control:focus,
+.form-select:focus {
+    border-color: #1C64FF !important;
+    box-shadow: 0 0 0 0.25rem rgba(28, 100, 255, 0.25) !important;
+}
+
+/* Smooth transitions */
+.btn,
+.form-control,
+.form-select,
+.card {
+    transition: all 0.2s ease !important;
+}
+
+/* Priority visual feedback */
+.priority-low {
+    border-color: #28a745 !important;
+    background-color: rgba(40, 167, 69, 0.1) !important;
+}
+
+.priority-medium {
+    border-color: #ffc107 !important;
+    background-color: rgba(255, 193, 7, 0.1) !important;
+}
+
+.priority-high {
+    border-color: #dc3545 !important;
+    background-color: rgba(220, 53, 69, 0.1) !important;
+}
+
+.priority-urgent {
+    border-color: #dc3545 !important;
+    background-color: rgba(220, 53, 69, 0.1) !important;
+    animation: urgentPulse 2s infinite;
+}
+
+/* Urgent priority pulse animation */
+@keyframes urgentPulse {
+    0%, 100% { 
+        opacity: 1; 
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 0.8; 
+        transform: scale(1.02);
+    }
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.spinner-border-sm {
+    animation: spin 1s linear infinite;
+}
+
+/* Enhanced accessibility */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .card {
+        border: 2px solid #000 !important;
+    }
+    
+    .btn {
+        border-width: 2px !important;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .btn-lg {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+    }
+}
+</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -627,8 +468,25 @@ document.addEventListener('DOMContentLoaded', function() {
     if (requestTypeSelect) {
         requestTypeSelect.addEventListener('change', function() {
             if (this.value) {
-                this.style.borderColor = 'var(--success-color)';
-                this.style.borderWidth = '2px';
+                this.style.borderColor = '#28a745';
+                this.style.backgroundColor = 'rgba(40, 167, 69, 0.05)';
+            } else {
+                this.style.borderColor = '#D9D9D9';
+                this.style.backgroundColor = '';
+            }
+        });
+    }
+    
+    // Client selection feedback
+    const clientSelect = document.querySelector('select[name="client"]');
+    if (clientSelect) {
+        clientSelect.addEventListener('change', function() {
+            if (this.value) {
+                this.style.borderColor = '#28a745';
+                this.style.backgroundColor = 'rgba(40, 167, 69, 0.05)';
+            } else {
+                this.style.borderColor = '#D9D9D9';
+                this.style.backgroundColor = '';
             }
         });
     }
@@ -639,23 +497,50 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (form && submitBtn) {
         form.addEventListener('submit', function(e) {
+            // Basic validation
+            const client = document.querySelector('select[name="client"]').value;
+            const requestType = document.querySelector('select[name="request_type"]').value;
+            const description = document.querySelector('textarea[name="description"]').value.trim();
+            
+            if (!client) {
+                e.preventDefault();
+                showToast('Please select a client', 'error');
+                document.querySelector('select[name="client"]').focus();
+                return;
+            }
+            
+            if (!requestType) {
+                e.preventDefault();
+                showToast('Please select a request type', 'error');
+                document.querySelector('select[name="request_type"]').focus();
+                return;
+            }
+            
+            if (!description) {
+                e.preventDefault();
+                showToast('Please provide a description', 'error');
+                document.querySelector('textarea[name="description"]').focus();
+                return;
+            }
+            
             // Disable submit button and show loading state
             submitBtn.disabled = true;
+            const originalContent = submitBtn.innerHTML;
             submitBtn.innerHTML = `
-                <span class="spinner-border-sm" role="status" aria-hidden="true"></span>
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                 Processing...
             `;
             
-            // Re-enable after 5 seconds (fallback)
+            // Show success message
+            showToast('Service request is being processed...', 'success');
+            
+            // Re-enable after 10 seconds (fallback)
             setTimeout(function() {
                 if (submitBtn.disabled) {
                     submitBtn.disabled = false;
-                    submitBtn.innerHTML = `
-                        <i class="fas fa-save"></i>
-                        {% if service_request %}Update Request{% else %}Create Request{% endif %}
-                    `;
+                    submitBtn.innerHTML = originalContent;
                 }
-            }, 5000);
+            }, 10000);
         });
     }
     
@@ -664,39 +549,166 @@ document.addEventListener('DOMContentLoaded', function() {
     if (textarea) {
         function autoResize() {
             textarea.style.height = 'auto';
-            textarea.style.height = textarea.scrollHeight + 'px';
+            textarea.style.height = Math.max(textarea.scrollHeight, 120) + 'px';
         }
         
         textarea.addEventListener('input', autoResize);
         autoResize(); // Initialize
+        
+        // Character count feedback
+        const maxLength = 1000; // Adjust based on your model
+        const charCount = document.createElement('div');
+        charCount.className = 'form-text text-end mt-1';
+        charCount.style.color = '#696969';
+        
+        function updateCharCount() {
+            const remaining = maxLength - textarea.value.length;
+            charCount.innerHTML = `<small>${textarea.value.length}/${maxLength} characters</small>`;
+            
+            if (remaining < 100) {
+                charCount.style.color = '#dc3545';
+            } else if (remaining < 200) {
+                charCount.style.color = '#ffc107';
+            } else {
+                charCount.style.color = '#696969';
+            }
+        }
+        
+        textarea.parentNode.appendChild(charCount);
+        textarea.addEventListener('input', updateCharCount);
+        updateCharCount();
     }
     
     // Form validation feedback
     const formInputs = document.querySelectorAll('.form-control, .form-select');
     formInputs.forEach(function(input) {
         input.addEventListener('blur', function() {
+            if (this.classList.contains('is-invalid')) {
+                return; // Don't override server-side validation
+            }
+            
             if (this.value.trim()) {
-                this.style.borderColor = 'var(--success-color)';
+                this.style.borderColor = '#28a745';
+                this.style.backgroundColor = 'rgba(40, 167, 69, 0.05)';
             } else if (this.hasAttribute('required')) {
-                this.style.borderColor = 'var(--danger-color)';
+                this.style.borderColor = '#dc3545';
+                this.style.backgroundColor = 'rgba(220, 53, 69, 0.05)';
             }
         });
         
         input.addEventListener('focus', function() {
-            this.style.borderColor = 'var(--text-primary)';
+            if (!this.classList.contains('is-invalid')) {
+                this.style.borderColor = '#1C64FF';
+                this.style.backgroundColor = '';
+            }
+        });
+        
+        // Clear validation styling when user starts typing
+        input.addEventListener('input', function() {
+            if (this.classList.contains('is-invalid') && this.value.trim()) {
+                this.classList.remove('is-invalid');
+                this.style.borderColor = '#1C64FF';
+                this.style.backgroundColor = '';
+                
+                // Hide error message
+                const feedback = this.nextElementSibling;
+                if (feedback && feedback.classList.contains('invalid-feedback')) {
+                    feedback.style.display = 'none';
+                }
+            }
         });
     });
     
-    // Auto-hide alerts after 5 seconds
-    const alerts = document.querySelectorAll('.alert');
-    alerts.forEach(function(alert) {
-        setTimeout(function() {
-            alert.style.opacity = '0';
-            setTimeout(function() {
-                alert.remove();
-            }, 300);
-        }, 5000);
+    // Enhanced button hover effects
+    const buttons = document.querySelectorAll('.btn');
+    buttons.forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            if (!this.disabled) {
+                this.style.transform = 'translateY(-2px)';
+                this.style.transition = 'transform 0.2s ease';
+                
+                if (this.classList.contains('btn-primary')) {
+                    this.style.boxShadow = '0 8px 25px rgba(28, 100, 255, 0.3)';
+                } else {
+                    this.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+                }
+            }
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '';
+        });
     });
+    
+    // Add entrance animations
+    const card = document.querySelector('.card');
+    if (card) {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.transition = 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+        
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, 100);
+    }
+    
+    // Toast notification function
+    function showToast(message, type) {
+        const toastId = type === 'success' ? 'successToast' : 'errorToast';
+        const messageId = type === 'success' ? 'successMessage' : 'errorMessage';
+        
+        document.getElementById(messageId).textContent = message;
+        
+        const toastElement = document.getElementById(toastId);
+        const toast = new bootstrap.Toast(toastElement, {
+            autohide: true,
+            delay: 5000
+        });
+        toast.show();
+    }
+    
+    // Auto-save draft functionality (optional)
+    let saveTimeout;
+    const formInputs = document.querySelectorAll('input, select, textarea');
+    formInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                // Save form data to localStorage as draft
+                const formData = new FormData(form);
+                const draftData = {};
+                for (let [key, value] of formData.entries()) {
+                    draftData[key] = value;
+                }
+                localStorage.setItem('serviceRequestDraft', JSON.stringify(draftData));
+            }, 1000);
+        });
+    });
+    
+    // Clear draft on successful submission
+    form.addEventListener('submit', function() {
+        localStorage.removeItem('serviceRequestDraft');
+    });
+    
+    // Load draft on page load (optional)
+    const savedDraft = localStorage.getItem('serviceRequestDraft');
+    if (savedDraft && !document.querySelector('input[name="id"]')) { // Only for new requests
+        try {
+            const draftData = JSON.parse(savedDraft);
+            Object.keys(draftData).forEach(key => {
+                const input = document.querySelector(`[name="${key}"]`);
+                if (input && !input.value) {
+                    input.value = draftData[key];
+                }
+            });
+            
+            showToast('Draft restored from previous session', 'success');
+        } catch (e) {
+            console.log('Could not restore draft');
+        }
+    }
 });
 </script>
 {% endblock %}

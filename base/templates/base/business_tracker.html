@@ -2,6 +2,14 @@
 {% block title %}Business Tracker{% endblock %}
 {% block content %}
 <style>
+    :root {
+        --bs-primary: #1C64FF;
+        --bs-secondary: #696969;
+        --bs-light: #FFFFFF;
+        --bs-border-color: #D9D9D9;
+        --bs-info: #C3E4FF;
+    }
+
     * {
         margin: 0;
         padding: 0;
@@ -10,7 +18,7 @@
 
     .business-tracker-container {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        background: linear-gradient(135deg, #D3FF61 0%, #B8E835 100%);
+        background-color: #f8f9fa;
         min-height: 100vh;
         padding: 2rem;
         line-height: 1.6;
@@ -19,30 +27,25 @@
     .tracker-wrapper {
         max-width: 1200px;
         margin: 0 auto;
-        background: rgba(255, 255, 255, 0.95);
-        border-radius: 24px;
-        backdrop-filter: blur(20px);
-        box-shadow: 
-            0 25px 50px rgba(0, 0, 0, 0.15),
-            0 10px 25px rgba(0, 0, 0, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 0.6);
+        background: #FFFFFF;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        border: 1px solid #D9D9D9;
         overflow: hidden;
         transform: translateY(0);
         transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
     }
 
     .tracker-wrapper:hover {
-        transform: translateY(-8px);
-        box-shadow: 
-            0 35px 70px rgba(0, 0, 0, 0.2),
-            0 15px 35px rgba(0, 0, 0, 0.15),
-            inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        transform: translateY(-4px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+        border-color: #1C64FF;
     }
 
     .tracker-header {
-        background: linear-gradient(135deg, #000000 0%, #333333 100%);
+        background: linear-gradient(135deg, #1C64FF 0%, #1557e6 100%);
         padding: 3rem 2.5rem;
-        color: white;
+        color: #FFFFFF;
         position: relative;
         overflow: hidden;
     }
@@ -54,7 +57,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="%23D3FF61" stroke-width="0.5" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="%23C3E4FF" stroke-width="0.5" opacity="0.2"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
         opacity: 0.3;
     }
 
@@ -62,7 +65,7 @@
         font-size: 3rem;
         font-weight: 800;
         margin-bottom: 0.5rem;
-        background: linear-gradient(135deg, #D3FF61, #ffffff);
+        background: linear-gradient(135deg, #C3E4FF, #FFFFFF);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
@@ -71,15 +74,15 @@
         z-index: 2;
     }
 
-    .tracker-header::after {
-        content: 'Real-time financial metrics and performance analytics';
+    .tracker-header .subtitle {
         position: absolute;
         bottom: 2rem;
         left: 2.5rem;
         font-size: 1.2rem;
-        opacity: 0.8;
-        font-weight: 300;
+        opacity: 0.9;
+        font-weight: 400;
         z-index: 2;
+        color: #FFFFFF;
     }
 
     .table-container {
@@ -91,18 +94,16 @@
         width: 100%;
         border-collapse: separate;
         border-spacing: 0;
-        background: white;
-        border-radius: 16px;
+        background: #FFFFFF;
+        border-radius: 12px;
         overflow: hidden;
-        box-shadow: 
-            0 10px 30px rgba(0, 0, 0, 0.1),
-            0 4px 12px rgba(0, 0, 0, 0.05);
-        border: none;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border: 1px solid #D9D9D9;
     }
 
     .business-tracker-table thead th {
-        background: linear-gradient(135deg, #000000 0%, #333333 100%);
-        color: white;
+        background: linear-gradient(135deg, #1C64FF 0%, #1557e6 100%);
+        color: #FFFFFF;
         padding: 1.5rem 1.2rem;
         text-align: left;
         font-weight: 600;
@@ -114,22 +115,32 @@
     }
 
     .business-tracker-table thead th:first-child {
-        border-top-left-radius: 16px;
+        border-top-left-radius: 12px;
     }
 
     .business-tracker-table thead th:last-child {
-        border-top-right-radius: 16px;
+        border-top-right-radius: 12px;
+    }
+
+    .business-tracker-table thead th::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #C3E4FF, transparent);
     }
 
     .business-tracker-table tbody tr {
         transition: all 0.3s ease;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        border-bottom: 1px solid #D9D9D9;
     }
 
     .business-tracker-table tbody tr:hover {
-        background: linear-gradient(135deg, rgba(211, 255, 97, 0.1), rgba(255, 255, 255, 0.8));
+        background: linear-gradient(135deg, rgba(195, 228, 255, 0.1), rgba(255, 255, 255, 0.9));
         transform: scale(1.01);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 12px rgba(28, 100, 255, 0.15);
     }
 
     .business-tracker-table tbody tr:last-child {
@@ -137,36 +148,38 @@
     }
 
     .business-tracker-table tbody tr:last-child td:first-child {
-        border-bottom-left-radius: 16px;
+        border-bottom-left-radius: 12px;
     }
 
     .business-tracker-table tbody tr:last-child td:last-child {
-        border-bottom-right-radius: 16px;
+        border-bottom-right-radius: 12px;
     }
 
     .business-tracker-table tbody td {
         padding: 1.2rem;
-        color: #333;
+        color: #333333;
         font-size: 0.95rem;
         font-weight: 500;
         border: none;
+        vertical-align: middle;
     }
 
     .business-tracker-table tbody td:first-child {
         font-weight: 600;
-        color: #000;
+        color: #1C64FF;
     }
 
     .no-data-message {
         text-align: center;
         padding: 4rem 2rem;
-        color: #666;
+        color: #696969;
         font-size: 1.2rem;
-        font-style: italic;
-        background: linear-gradient(135deg, rgba(211, 255, 97, 0.05), rgba(255, 255, 255, 0.8));
-        border-radius: 16px;
+        font-weight: 500;
+        background: linear-gradient(135deg, rgba(195, 228, 255, 0.05), rgba(255, 255, 255, 0.9));
+        border-radius: 12px;
         margin: 2rem;
-        border: 2px dashed rgba(211, 255, 97, 0.3);
+        border: 2px dashed #D9D9D9;
+        position: relative;
     }
 
     .no-data-message::before {
@@ -174,6 +187,48 @@
         display: block;
         font-size: 3rem;
         margin-bottom: 1rem;
+        opacity: 0.6;
+    }
+
+    .metric-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: #C3E4FF;
+        color: #1C64FF;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-left: 0.5rem;
+    }
+
+    .metric-value {
+        font-weight: 700;
+        color: #1C64FF;
+    }
+
+    .metric-currency {
+        color: #696969;
+        font-size: 0.9em;
+    }
+
+    .status-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 8px;
+    }
+
+    .status-positive {
+        background-color: #198754;
+    }
+
+    .status-neutral {
+        background-color: #ffc107;
+    }
+
+    .status-negative {
+        background-color: #dc3545;
     }
 
     @media (max-width: 768px) {
@@ -189,7 +244,7 @@
             font-size: 2.2rem;
         }
 
-        .tracker-header::after {
+        .tracker-header .subtitle {
             bottom: 1rem;
             left: 1.5rem;
             font-size: 1rem;
@@ -214,6 +269,22 @@
         }
     }
 
+    @media (max-width: 576px) {
+        .tracker-header h2 {
+            font-size: 1.8rem;
+        }
+
+        .business-tracker-table thead th,
+        .business-tracker-table tbody td {
+            padding: 0.75rem 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .table-container {
+            padding: 1rem;
+        }
+    }
+
     @keyframes fadeInUp {
         from {
             opacity: 0;
@@ -225,27 +296,36 @@
         }
     }
 
+    @keyframes slideInRight {
+        from {
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
     .animate-fade-in {
         animation: fadeInUp 0.6s ease-out;
     }
 
-    /* Enhanced hover effects for table rows */
     .business-tracker-table tbody tr {
         cursor: pointer;
     }
 
     .business-tracker-table tbody tr:hover td:first-child {
-        color: #D3FF61;
+        color: #1557e6;
         font-weight: 700;
     }
 
-    /* Subtle animations */
     .tracker-wrapper {
         animation: fadeInUp 0.8s ease-out;
     }
 
     .business-tracker-table tbody tr {
-        animation: fadeInUp 0.6s ease-out;
+        animation: slideInRight 0.6s ease-out;
         animation-fill-mode: both;
     }
 
@@ -254,62 +334,140 @@
     .business-tracker-table tbody tr:nth-child(3) { animation-delay: 0.3s; }
     .business-tracker-table tbody tr:nth-child(4) { animation-delay: 0.4s; }
     .business-tracker-table tbody tr:nth-child(5) { animation-delay: 0.5s; }
+    .business-tracker-table tbody tr:nth-child(6) { animation-delay: 0.6s; }
+    .business-tracker-table tbody tr:nth-child(7) { animation-delay: 0.7s; }
+    .business-tracker-table tbody tr:nth-child(8) { animation-delay: 0.8s; }
+
+    .loading-row {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+    }
+
+    @keyframes loading {
+        0% {
+            background-position: 200% 0;
+        }
+        100% {
+            background-position: -200% 0;
+        }
+    }
 </style>
 
 <div class="business-tracker-container">
     <div class="tracker-wrapper">
         <header class="tracker-header">
             <h2>Business Tracker</h2>
+            <div class="subtitle">Real-time financial metrics and performance analytics</div>
         </header>
 
         <section class="table-container">
-            <table class="business-tracker-table">
-                <thead>
-                    <tr>
-                        <th>Month</th>
-                        <th>SIP</th>
-                        <th>Demat</th>
-                        <th>AUM</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for entry in business_metrics %}
-                    <tr>
-                        <td>{{ entry.month }}</td>
-                        <td>{{ entry.sip }}</td>
-                        <td>{{ entry.demat }}</td>
-                        <td>{{ entry.aum }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="4" class="no-data-message">
-                            No business metrics data available yet.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="business-tracker-table">
+                    <thead>
+                        <tr>
+                            <th>
+                                <i class="fas fa-calendar-alt me-2"></i>
+                                Month
+                            </th>
+                            <th>
+                                <i class="fas fa-chart-line me-2"></i>
+                                SIP
+                            </th>
+                            <th>
+                                <i class="fas fa-user-tie me-2"></i>
+                                Demat
+                            </th>
+                            <th>
+                                <i class="fas fa-coins me-2"></i>
+                                AUM
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in business_metrics %}
+                        <tr>
+                            <td>
+                                <strong>{{ entry.month }}</strong>
+                            </td>
+                            <td>
+                                <span class="metric-value">{{ entry.sip }}</span>
+                                {% if entry.sip_trend %}
+                                    <span class="metric-badge">
+                                        <i class="fas fa-arrow-{% if entry.sip_trend > 0 %}up{% else %}down{% endif %} me-1"></i>
+                                        {{ entry.sip_trend }}%
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="metric-value">{{ entry.demat }}</span>
+                                {% if entry.demat_trend %}
+                                    <span class="metric-badge">
+                                        <i class="fas fa-arrow-{% if entry.demat_trend > 0 %}up{% else %}down{% endif %} me-1"></i>
+                                        {{ entry.demat_trend }}%
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="metric-currency">₹</span>
+                                <span class="metric-value">{{ entry.aum }}</span>
+                                {% if entry.aum_trend %}
+                                    <span class="metric-badge">
+                                        <i class="fas fa-arrow-{% if entry.aum_trend > 0 %}up{% else %}down{% endif %} me-1"></i>
+                                        {{ entry.aum_trend }}%
+                                    </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="no-data-message">
+                                <div>
+                                    <strong>No business metrics data available yet.</strong>
+                                    <br>
+                                    <small class="text-muted">Data will appear here once business metrics are recorded.</small>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </section>
     </div>
 </div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Add interactive hover effects for table rows
         const rows = document.querySelectorAll('.business-tracker-table tbody tr');
         
-        rows.forEach(row => {
+        rows.forEach((row, index) => {
+            if (row.querySelector('.no-data-message')) return;
+            
             row.addEventListener('mouseenter', function() {
                 this.style.transform = 'scale(1.02)';
+                this.style.zIndex = '10';
             });
             
             row.addEventListener('mouseleave', function() {
                 this.style.transform = 'scale(1)';
+                this.style.zIndex = '1';
             });
+
+            row.addEventListener('click', function() {
+                console.log('Row clicked:', index);
+            });
+        });
+
+        const noDataMessage = document.querySelector('.no-data-message');
+        if (noDataMessage) {
+            noDataMessage.style.animation = 'fadeInUp 0.8s ease-out';
+        }
+
+        const headers = document.querySelectorAll('.business-tracker-table thead th');
+        headers.forEach((header, index) => {
+            header.style.animation = `slideInRight 0.6s ease-out ${index * 0.1}s both`;
         });
     });
 </script>
 {% endblock %}
-    </script>
-{% endblock %}
-

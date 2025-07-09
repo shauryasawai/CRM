@@ -5,154 +5,603 @@
 Delete Client Profile - {{ client_profile.client_full_name }}
 {% endblock %}
 
+{% block extra_css %}
+<style>
+:root {
+    --bs-primary: #1C64FF;
+    --bs-secondary: #696969;
+    --bs-light: #FFFFFF;
+    --bs-border-color: #D9D9D9;
+    --bs-info: #C3E4FF;
+    --bs-danger: #dc3545;
+    --bs-warning: #ffc107;
+}
+
+.delete-container {
+    background: #f8f9fa;
+    min-height: 100vh;
+    padding: 2rem 0;
+}
+
+.delete-card {
+    background: #FFFFFF;
+    border: 2px solid #dc3545;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(220, 53, 69, 0.15);
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.delete-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 48px rgba(220, 53, 69, 0.2);
+}
+
+.danger-header {
+    background: linear-gradient(135deg, #dc3545, #bb2d3b);
+    color: #FFFFFF;
+    padding: 2rem;
+    border-bottom: none;
+    text-align: center;
+}
+
+.danger-header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+.danger-header .header-icon {
+    font-size: 2.5rem;
+    opacity: 0.9;
+}
+
+.warning-alert {
+    background: rgba(220, 53, 69, 0.1);
+    border: 2px solid rgba(220, 53, 69, 0.3);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.warning-alert::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #dc3545, #bb2d3b);
+}
+
+.warning-alert h5 {
+    color: #dc3545;
+    font-weight: 700;
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.warning-alert p {
+    color: #721c24;
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 0;
+}
+
+.info-card {
+    background: #FFFFFF;
+    border: 1px solid #D9D9D9;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-bottom: 2rem;
+    transition: all 0.3s ease;
+}
+
+.info-card:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+.info-card-header {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    color: #1C64FF;
+    padding: 1.5rem;
+    border-bottom: 1px solid #D9D9D9;
+    font-weight: 600;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.info-card-body {
+    padding: 2rem;
+}
+
+.client-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.client-info-label {
+    font-weight: 600;
+    color: #696969;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.client-info-value {
+    font-size: 1rem;
+    color: #333333;
+    font-weight: 500;
+}
+
+.client-info-value.primary {
+    color: #1C64FF;
+    font-weight: 600;
+}
+
+.status-badge {
+    padding: 0.5rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status-active {
+    background: linear-gradient(135deg, #198754, #157347);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(25, 135, 84, 0.3);
+}
+
+.status-inactive {
+    background: linear-gradient(135deg, #ffc107, #ffb300);
+    color: #000000;
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+}
+
+.data-warning-card {
+    background: #FFFFFF;
+    border: 2px solid #ffc107;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(255, 193, 7, 0.15);
+    margin-bottom: 2rem;
+    overflow: hidden;
+}
+
+.data-warning-header {
+    background: linear-gradient(135deg, #ffc107, #ffb300);
+    color: #000000;
+    padding: 1.5rem;
+    border-bottom: none;
+    font-weight: 600;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.data-stats {
+    padding: 2rem;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 1rem;
+    background: rgba(220, 53, 69, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(220, 53, 69, 0.1);
+    transition: all 0.3s ease;
+}
+
+.stat-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.15);
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #dc3545;
+    margin-bottom: 0.5rem;
+    line-height: 1;
+}
+
+.stat-label {
+    color: #696969;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.confirmation-section {
+    background: rgba(220, 53, 69, 0.05);
+    border: 1px solid rgba(220, 53, 69, 0.2);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.form-check {
+    margin-bottom: 2rem;
+}
+
+.form-check-input:checked {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+.form-check-label {
+    color: #dc3545;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.form-group {
+    margin-bottom: 2rem;
+}
+
+.form-label {
+    color: #dc3545;
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+    display: block;
+}
+
+.form-control {
+    border: 2px solid #D9D9D9;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.form-control.is-valid {
+    border-color: #198754;
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+}
+
+.form-control.is-invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.form-text {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+    font-weight: 500;
+}
+
+.action-buttons {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.btn-secondary {
+    background-color: #696969;
+    border-color: #696969;
+    color: #FFFFFF;
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-secondary:hover {
+    background-color: #5a5a5a;
+    border-color: #5a5a5a;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(105, 105, 105, 0.3);
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: #FFFFFF;
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background-color: #bb2d3b;
+    border-color: #bb2d3b;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+.btn-danger:disabled {
+    background-color: #D9D9D9;
+    border-color: #D9D9D9;
+    color: #696969;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.footer-info {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    color: #696969;
+    padding: 1.5rem 2rem;
+    border-top: 1px solid #D9D9D9;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.fade-in {
+    animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-in {
+    animation: slideIn 0.6s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .delete-container {
+        padding: 1rem 0;
+    }
+    
+    .danger-header {
+        padding: 1.5rem;
+    }
+    
+    .danger-header h1 {
+        font-size: 1.5rem;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .info-card-body {
+        padding: 1.5rem;
+    }
+    
+    .data-stats {
+        padding: 1.5rem;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+    }
+    
+    .confirmation-section {
+        padding: 1.5rem;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .btn-secondary,
+    .btn-danger {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .footer-info {
+        padding: 1rem 1.5rem;
+        text-align: center;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card shadow border-danger">
-                <div class="card-header bg-danger text-white">
-                    <h4 class="mb-0">
-                        <i class="fas fa-trash-alt me-2"></i>
-                        Delete Client Profile
-                    </h4>
-                </div>
-                
-                <div class="card-body">
-                    <!-- Warning Alert -->
-                    <div class="alert alert-danger">
-                        <h5><i class="fas fa-exclamation-triangle me-2"></i>Dangerous Action</h5>
-                        <p class="mb-0">
-                            <strong>This action cannot be undone!</strong> Deleting this client profile will permanently 
-                            remove all associated data including accounts, transactions, and modification history.
-                        </p>
+<div class="delete-container">
+    <div class="container-fluid">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 col-md-10">
+                <div class="card delete-card fade-in">
+                    <div class="danger-header">
+                        <h1>
+                            <i class="fas fa-trash-alt header-icon"></i>
+                            Delete Client Profile
+                        </h1>
+                        <p class="mb-0 opacity-90">{{ client_profile.client_full_name }}</p>
                     </div>
-
-                    <!-- Client Information -->
-                    <div class="card mb-4">
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0">Client Information</h5>
+                    
+                    <div class="card-body" style="padding: 2rem;">
+                        <!-- Warning Alert -->
+                        <div class="warning-alert slide-in">
+                            <h5>
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Dangerous Action
+                            </h5>
+                            <p>
+                                <strong>This action cannot be undone!</strong> Deleting this client profile will permanently 
+                                remove all associated data including accounts, transactions, and modification history.
+                            </p>
                         </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <p class="mb-2">
-                                        <strong>Full Name:</strong> 
-                                        <span class="text-primary">{{ client_profile.client_full_name }}</span>
-                                    </p>
-                                    <p class="mb-2">
-                                        <strong>Email:</strong> {{ client_profile.email|default:"Not provided" }}
-                                    </p>
-                                    <p class="mb-2">
-                                        <strong>Mobile:</strong> {{ client_profile.mobile_number|default:"Not provided" }}
-                                    </p>
-                                    <p class="mb-2">
-                                        <strong>PAN Number:</strong> {{ client_profile.pan_number|default:"Not provided" }}
-                                    </p>
-                                </div>
-                                <div class="col-md-6">
-                                    <p class="mb-2">
-                                        <strong>Status:</strong> 
-                                        <span class="badge bg-{% if client_profile.status == 'active' %}success{% else %}warning{% endif %}">
-                                            {{ client_profile.status|title }}
-                                        </span>
-                                    </p>
-                                    <p class="mb-2">
-                                        <strong>Mapped RM:</strong> {{ client_profile.mapped_rm.get_full_name|default:"Not assigned" }}
-                                    </p>
-                                    <p class="mb-2">
-                                        <strong>Ops Executive:</strong> {{ client_profile.mapped_ops_exec.get_full_name|default:"Not assigned" }}
-                                    </p>
-                                    <p class="mb-2">
-                                        <strong>Created:</strong> {{ client_profile.created_at|date:"M d, Y" }}
-                                    </p>
+
+                        <!-- Client Information -->
+                        <div class="info-card slide-in" style="animation-delay: 0.1s">
+                            <div class="info-card-header">
+                                <i class="fas fa-user"></i>
+                                Client Information
+                            </div>
+                            <div class="info-card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="client-info-item">
+                                            <div class="client-info-label">Full Name</div>
+                                            <div class="client-info-value primary">{{ client_profile.client_full_name }}</div>
+                                        </div>
+                                        <div class="client-info-item">
+                                            <div class="client-info-label">Email</div>
+                                            <div class="client-info-value">{{ client_profile.email|default:"Not provided" }}</div>
+                                        </div>
+                                        <div class="client-info-item">
+                                            <div class="client-info-label">Mobile</div>
+                                            <div class="client-info-value">{{ client_profile.mobile_number|default:"Not provided" }}</div>
+                                        </div>
+                                        <div class="client-info-item">
+                                            <div class="client-info-label">PAN Number</div>
+                                            <div class="client-info-value">{{ client_profile.pan_number|default:"Not provided" }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="client-info-item">
+                                            <div class="client-info-label">Status</div>
+                                            <div class="client-info-value">
+                                                <span class="status-badge {% if client_profile.status == 'active' %}status-active{% else %}status-inactive{% endif %}">
+                                                    <i class="fas fa-circle"></i>
+                                                    {{ client_profile.status|title }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="client-info-item">
+                                            <div class="client-info-label">Mapped RM</div>
+                                            <div class="client-info-value">{{ client_profile.mapped_rm.get_full_name|default:"Not assigned" }}</div>
+                                        </div>
+                                        <div class="client-info-item">
+                                            <div class="client-info-label">Ops Executive</div>
+                                            <div class="client-info-value">{{ client_profile.mapped_ops_exec.get_full_name|default:"Not assigned" }}</div>
+                                        </div>
+                                        <div class="client-info-item">
+                                            <div class="client-info-label">Created</div>
+                                            <div class="client-info-value">{{ client_profile.created_at|date:"M d, Y" }}</div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Related Data Warning -->
-                    <div class="card mb-4">
-                        <div class="card-header bg-warning text-dark">
-                            <h6 class="mb-0">
-                                <i class="fas fa-database me-2"></i>
+                        <!-- Related Data Warning -->
+                        <div class="data-warning-card slide-in" style="animation-delay: 0.2s">
+                            <div class="data-warning-header">
+                                <i class="fas fa-database"></i>
                                 Related Data That Will Be Deleted
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <div class="text-center">
-                                        <div class="display-6 text-danger">
-                                            {{ client_profile.accounts.count }}
+                            </div>
+                            <div class="data-stats">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <div class="stat-item">
+                                            <div class="stat-number">{{ client_profile.accounts.count }}</div>
+                                            <div class="stat-label">Account(s)</div>
                                         </div>
-                                        <small class="text-muted">Account(s)</small>
                                     </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="text-center">
-                                        <div class="display-6 text-danger">
-                                            {{ client_profile.modifications.count }}
+                                    <div class="col-md-4">
+                                        <div class="stat-item">
+                                            <div class="stat-number">{{ client_profile.modifications.count }}</div>
+                                            <div class="stat-label">Modification Record(s)</div>
                                         </div>
-                                        <small class="text-muted">Modification Record(s)</small>
                                     </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="text-center">
-                                        <div class="display-6 text-danger">
-                                            {{ client_profile.created_at|timesince }}
+                                    <div class="col-md-4">
+                                        <div class="stat-item">
+                                            <div class="stat-number">{{ client_profile.created_at|timesince }}</div>
+                                            <div class="stat-label">Age of Profile</div>
                                         </div>
-                                        <small class="text-muted">Age of Profile</small>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Confirmation Checkbox -->
-                    <div class="form-check mb-4">
-                        <input class="form-check-input" type="checkbox" id="confirmDelete" required>
-                        <label class="form-check-label text-danger" for="confirmDelete">
-                            <strong>I understand that this action is permanent and cannot be undone</strong>
-                        </label>
-                    </div>
+                        <!-- Confirmation Section -->
+                        <div class="confirmation-section slide-in" style="animation-delay: 0.3s">
+                            <!-- Confirmation Checkbox -->
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="confirmDelete" required>
+                                <label class="form-check-label" for="confirmDelete">
+                                    I understand that this action is permanent and cannot be undone
+                                </label>
+                            </div>
 
-                    <!-- Type client name confirmation -->
-                    <div class="mb-4">
-                        <label for="confirmName" class="form-label">
-                            <strong>Type the client's full name to confirm deletion:</strong>
-                        </label>
-                        <input 
-                            type="text" 
-                            class="form-control" 
-                            id="confirmName" 
-                            placeholder="Enter: {{ client_profile.client_full_name }}"
-                            data-expected="{{ client_profile.client_full_name }}"
-                        >
-                        <div class="form-text text-danger">
-                            Expected: <strong>{{ client_profile.client_full_name }}</strong>
+                            <!-- Type client name confirmation -->
+                            <div class="form-group">
+                                <label for="confirmName" class="form-label">
+                                    Type the client's full name to confirm deletion:
+                                </label>
+                                <input 
+                                    type="text" 
+                                    class="form-control" 
+                                    id="confirmName" 
+                                    placeholder="Enter: {{ client_profile.client_full_name }}"
+                                    data-expected="{{ client_profile.client_full_name }}"
+                                >
+                                <div class="form-text">
+                                    Expected: <strong>{{ client_profile.client_full_name }}</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="action-buttons slide-in" style="animation-delay: 0.4s">
+                            <a href="{% url 'client_profile_detail' client_profile.pk %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i>Cancel
+                            </a>
+                            
+                            <form method="post" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger" id="deleteButton" disabled>
+                                    <i class="fas fa-trash-alt"></i>Delete Profile Permanently
+                                </button>
+                            </form>
                         </div>
                     </div>
-
-                    <!-- Action Buttons -->
-                    <div class="d-flex justify-content-between">
-                        <a href="{% url 'client_profile_detail' client_profile.pk %}" class="btn btn-secondary btn-lg">
-                            <i class="fas fa-arrow-left me-2"></i>Cancel
-                        </a>
-                        
-                        <form method="post" style="display: inline;">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-danger btn-lg" id="deleteButton" disabled>
-                                <i class="fas fa-trash-alt me-2"></i>Delete Profile Permanently
-                            </button>
-                        </form>
-                    </div>
-                </div>
-                
-                <div class="card-footer bg-light">
-                    <small class="text-muted">
-                        <i class="fas fa-info-circle me-1"></i>
+                    
+                    <div class="footer-info">
+                        <i class="fas fa-info-circle"></i>
                         Only Top Management personnel can delete client profiles. This action is logged for audit purposes.
-                    </small>
+                    </div>
                 </div>
             </div>
         </div>
@@ -194,6 +643,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!confirm(`FINAL CONFIRMATION: Are you absolutely sure you want to permanently delete the profile for ${clientName}? This action CANNOT be undone!`)) {
             e.preventDefault();
         }
+    });
+    
+    // Add animation delays to elements
+    const slideElements = document.querySelectorAll('.slide-in');
+    slideElements.forEach((element, index) => {
+        element.style.animationDelay = `${index * 0.1}s`;
     });
 });
 </script>

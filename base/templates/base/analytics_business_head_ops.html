@@ -1,82 +1,254 @@
-<!-- templates/base/analytics_business_head_ops.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Operations Analytics Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.0/index.min.js"></script>
+    
     <style>
+        :root {
+            --bs-primary: #1C64FF;
+            --bs-secondary: #696969;
+            --bs-light: #FFFFFF;
+            --bs-border-color: #D9D9D9;
+            --bs-info: #C3E4FF;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #f8f9fa;
+            color: #333333;
+            line-height: 1.6;
+        }
+
         .analytics-container {
             background: #f8f9fa;
             min-height: 100vh;
             padding: 20px 0;
         }
+
+        .navbar-brand {
+            font-weight: 800;
+            font-size: 1.5rem;
+            color: #1C64FF !important;
+        }
+
+        .navbar-nav .nav-link {
+            font-weight: 500;
+            color: #696969 !important;
+            padding: 0.75rem 1rem !important;
+            border-radius: 8px;
+            margin: 0 0.25rem;
+            transition: all 0.3s ease;
+        }
+
+        .navbar-nav .nav-link:hover {
+            background-color: #C3E4FF;
+            color: #1C64FF !important;
+            transform: translateY(-1px);
+        }
+
         .metric-card {
             transition: all 0.3s ease;
-            border: none;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border: 1px solid #D9D9D9;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            background: #FFFFFF;
         }
+
         .metric-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            border-color: #1C64FF;
         }
+
         .metric-value {
             font-size: 2.5rem;
-            font-weight: bold;
+            font-weight: 800;
             line-height: 1;
         }
+
         .metric-label {
             font-size: 0.9rem;
-            color: #6c757d;
+            color: #696969;
             margin-bottom: 0;
+            font-weight: 500;
         }
+
         .metric-trend {
             font-size: 0.8rem;
             font-weight: 600;
         }
+
         .chart-container {
             position: relative;
             height: 400px;
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background: #FFFFFF;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 1px solid #D9D9D9;
+            transition: all 0.3s ease;
         }
+
+        .chart-container:hover {
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+
         .chart-small {
             height: 300px;
         }
-        .performance-badge {
-            font-size: 0.75rem;
-            padding: 0.25rem 0.5rem;
-        }
-        .team-member-card {
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        .team-member-card:hover {
-            transform: scale(1.02);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        .progress-ring {
-            width: 60px;
-            height: 60px;
-        }
+
         .filters-section {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background: #FFFFFF;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 1px solid #D9D9D9;
         }
+
+        .btn-primary {
+            background-color: #1C64FF;
+            border-color: #1C64FF;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: #1557e6;
+            border-color: #1557e6;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(28, 100, 255, 0.3);
+        }
+
+        .btn-outline-primary {
+            color: #1C64FF;
+            border-color: #1C64FF;
+            font-weight: 600;
+        }
+
+        .btn-outline-primary:hover {
+            background-color: #1C64FF;
+            border-color: #1C64FF;
+        }
+
+        .btn-outline-success {
+            color: #198754;
+            border-color: #198754;
+            font-weight: 500;
+        }
+
+        .btn-outline-success:hover {
+            background-color: #198754;
+            border-color: #198754;
+        }
+
+        .btn-outline-danger {
+            color: #dc3545;
+            border-color: #dc3545;
+            font-weight: 500;
+        }
+
+        .btn-outline-danger:hover {
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+
+        .btn-outline-info {
+            color: #0dcaf0;
+            border-color: #0dcaf0;
+            font-weight: 500;
+        }
+
+        .btn-outline-info:hover {
+            background-color: #0dcaf0;
+            border-color: #0dcaf0;
+        }
+
+        .card {
+            border: 1px solid #D9D9D9;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            background: #FFFFFF;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+
+        .card-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #D9D9D9;
+            font-weight: 600;
+            color: #1C64FF;
+            border-radius: 12px 12px 0 0 !important;
+        }
+
+        .table {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .table thead th {
+            background-color: #f8f9fa;
+            color: #1C64FF;
+            font-weight: 600;
+            border-bottom: 2px solid #D9D9D9;
+            text-transform: uppercase;
+            font-size: 0.875rem;
+            letter-spacing: 0.5px;
+            padding: 1rem;
+        }
+
+        .table tbody tr:hover {
+            background-color: #C3E4FF;
+        }
+
+        .table tbody td {
+            padding: 1rem;
+            vertical-align: middle;
+        }
+
+        .form-control {
+            border: 1px solid #D9D9D9;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: #1C64FF;
+            box-shadow: 0 0 0 0.2rem rgba(28, 100, 255, 0.25);
+        }
+
+        .form-label {
+            font-weight: 500;
+            color: #333333;
+            margin-bottom: 0.5rem;
+        }
+
         .export-buttons {
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
         }
+
         .kpi-indicator {
             display: inline-block;
             width: 8px;
@@ -84,28 +256,99 @@
             border-radius: 50%;
             margin-right: 8px;
         }
-        .kpi-excellent { background-color: #28a745; }
+
+        .kpi-excellent { background-color: #198754; }
         .kpi-good { background-color: #ffc107; }
         .kpi-poor { background-color: #dc3545; }
-        
+
         .workload-bar {
             height: 20px;
             background: #e9ecef;
             border-radius: 10px;
             overflow: hidden;
         }
+
         .workload-fill {
             height: 100%;
             transition: width 0.3s ease;
         }
-        
+
+        .team-member-row {
+            transition: all 0.3s ease;
+        }
+
+        .team-member-row:hover {
+            background-color: #C3E4FF !important;
+        }
+
+        .progress {
+            height: 8px;
+            border-radius: 4px;
+        }
+
+        .progress-bar {
+            border-radius: 4px;
+        }
+
+        .badge {
+            font-weight: 500;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+        }
+
+        .insight-item, .recommendation-item {
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .insight-item:hover, .recommendation-item:hover {
+            transform: translateX(4px);
+        }
+
+        .text-primary {
+            color: #1C64FF !important;
+        }
+
+        .text-secondary {
+            color: #696969 !important;
+        }
+
+        .bg-primary {
+            background-color: #1C64FF !important;
+        }
+
+        .border-primary {
+            border-color: #1C64FF !important;
+        }
+
         @media (max-width: 768px) {
             .metric-value {
                 font-size: 2rem;
             }
+            
             .chart-container {
                 height: 300px;
-                padding: 15px;
+                padding: 16px;
+            }
+            
+            .filters-section {
+                padding: 16px;
+            }
+            
+            .export-buttons {
+                justify-content: center;
+                margin-top: 1rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .table-responsive {
+                font-size: 0.875rem;
+            }
+            
+            .btn-group-sm .btn {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.75rem;
             }
         }
     </style>
@@ -115,18 +358,26 @@
         <!-- Header -->
         <div class="row">
             <div class="col-12">
-                <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+                <nav class="navbar navbar-expand-lg navbar-light bg-white mb-4 shadow-sm">
                     <div class="container-fluid">
-                        <a class="navbar-brand" href="{% url 'dashboard' %}">
-                            <i class="fas fa-chart-bar"></i> Operations Analytics
+                        <a class="navbar-brand d-flex align-items-center" href="{% url 'dashboard' %}">
+                            <i class="fas fa-chart-bar me-2"></i>
+                            Operations Analytics
                         </a>
-                        <div class="navbar-nav ms-auto">
-                            <a class="nav-link" href="{% url 'bh_ops_overview' %}">
-                                <i class="fas fa-tachometer-alt"></i> Overview
-                            </a>
-                            <a class="nav-link" href="{% url 'dashboard' %}">
-                                <i class="fas fa-home"></i> Dashboard
-                            </a>
+                        
+                        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                            <span class="navbar-toggler-icon"></span>
+                        </button>
+                        
+                        <div class="collapse navbar-collapse" id="navbarNav">
+                            <div class="navbar-nav ms-auto">
+                                <a class="nav-link" href="{% url 'bh_ops_overview' %}">
+                                    <i class="fas fa-tachometer-alt me-1"></i> Overview
+                                </a>
+                                <a class="nav-link" href="{% url 'dashboard' %}">
+                                    <i class="fas fa-home me-1"></i> Dashboard
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </nav>
@@ -135,8 +386,8 @@
 
         <!-- Filters Section -->
         <div class="filters-section">
-            <div class="row align-items-center">
-                <div class="col-md-8">
+            <div class="row align-items-end">
+                <div class="col-lg-8">
                     <form method="get" id="analyticsFilter" class="row g-3">
                         <div class="col-md-3">
                             <label for="dateFrom" class="form-label">From Date</label>
@@ -160,25 +411,22 @@
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">&nbsp;</label>
-                            <div>
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-filter"></i> Apply Filters
-                                </button>
-                            </div>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-filter me-1"></i> Apply Filters
+                            </button>
                         </div>
                     </form>
                 </div>
-                <div class="col-md-4">
+                <div class="col-lg-4">
                     <div class="export-buttons justify-content-end">
                         <button class="btn btn-outline-success btn-sm" onclick="exportToExcel()">
-                            <i class="fas fa-file-excel"></i> Export Excel
+                            <i class="fas fa-file-excel me-1"></i> Excel
                         </button>
                         <button class="btn btn-outline-danger btn-sm" onclick="exportToPDF()">
-                            <i class="fas fa-file-pdf"></i> Export PDF
+                            <i class="fas fa-file-pdf me-1"></i> PDF
                         </button>
                         <button class="btn btn-outline-info btn-sm" onclick="printReport()">
-                            <i class="fas fa-print"></i> Print
+                            <i class="fas fa-print me-1"></i> Print
                         </button>
                     </div>
                 </div>
@@ -186,9 +434,9 @@
         </div>
 
         <!-- Key Performance Indicators -->
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card metric-card">
+        <div class="row mb-4 g-4">
+            <div class="col-lg-3 col-md-6">
+                <div class="card metric-card h-100">
                     <div class="card-body text-center">
                         <div class="metric-value text-primary">{{ total_operations_team|default:0 }}</div>
                         <p class="metric-label">Operations Team Size</p>
@@ -198,8 +446,8 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card metric-card">
+            <div class="col-lg-3 col-md-6">
+                <div class="card metric-card h-100">
                     <div class="card-body text-center">
                         <div class="metric-value text-success">{{ overall_efficiency|default:0 }}%</div>
                         <p class="metric-label">Overall Efficiency</p>
@@ -210,8 +458,8 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card metric-card">
+            <div class="col-lg-3 col-md-6">
+                <div class="card metric-card h-100">
                     <div class="card-body text-center">
                         <div class="metric-value text-warning">{{ avg_response_time|default:0 }}h</div>
                         <p class="metric-label">Avg Response Time</p>
@@ -222,8 +470,8 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card metric-card">
+            <div class="col-lg-3 col-md-6">
+                <div class="card metric-card h-100">
                     <div class="card-body text-center">
                         <div class="metric-value text-info">{{ client_satisfaction|default:0 }}%</div>
                         <p class="metric-label">Client Satisfaction</p>
@@ -237,23 +485,25 @@
         </div>
 
         <!-- Charts Row 1 -->
-        <div class="row mb-4">
+        <div class="row mb-4 g-4">
             <!-- Task Completion Trends -->
-            <div class="col-md-8">
+            <div class="col-lg-8">
                 <div class="chart-container">
-                    <h5 class="mb-3">
-                        <i class="fas fa-tasks text-primary"></i> Task Completion Trends
-                        <small class="text-muted">(Last 30 Days)</small>
+                    <h5 class="mb-3 d-flex align-items-center">
+                        <i class="fas fa-tasks text-primary me-2"></i> 
+                        Task Completion Trends
+                        <small class="text-muted ms-2">(Last 30 Days)</small>
                     </h5>
                     <canvas id="taskCompletionChart"></canvas>
                 </div>
             </div>
             
             <!-- Team Performance Distribution -->
-            <div class="col-md-4">
+            <div class="col-lg-4">
                 <div class="chart-container chart-small">
-                    <h5 class="mb-3">
-                        <i class="fas fa-users text-success"></i> Team Performance
+                    <h5 class="mb-3 d-flex align-items-center">
+                        <i class="fas fa-users text-success me-2"></i> 
+                        Team Performance
                     </h5>
                     <canvas id="teamPerformanceChart"></canvas>
                 </div>
@@ -261,22 +511,24 @@
         </div>
 
         <!-- Charts Row 2 -->
-        <div class="row mb-4">
+        <div class="row mb-4 g-4">
             <!-- Service Request Analytics -->
-            <div class="col-md-6">
+            <div class="col-lg-6">
                 <div class="chart-container">
-                    <h5 class="mb-3">
-                        <i class="fas fa-headset text-info"></i> Service Request Analytics
+                    <h5 class="mb-3 d-flex align-items-center">
+                        <i class="fas fa-headset text-info me-2"></i> 
+                        Service Request Analytics
                     </h5>
                     <canvas id="serviceRequestChart"></canvas>
                 </div>
             </div>
             
             <!-- Client Profile Creation Trends -->
-            <div class="col-md-6">
+            <div class="col-lg-6">
                 <div class="chart-container">
-                    <h5 class="mb-3">
-                        <i class="fas fa-user-plus text-warning"></i> Client Profile Creation
+                    <h5 class="mb-3 d-flex align-items-center">
+                        <i class="fas fa-user-plus text-warning me-2"></i> 
+                        Client Profile Creation
                     </h5>
                     <canvas id="clientProfileChart"></canvas>
                 </div>
@@ -288,14 +540,15 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0">
-                            <i class="fas fa-trophy text-warning"></i> Individual Team Performance
+                        <h5 class="mb-0 d-flex align-items-center">
+                            <i class="fas fa-trophy text-warning me-2"></i> 
+                            Individual Team Performance
                         </h5>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead class="table-dark">
+                            <table class="table table-hover mb-0">
+                                <thead>
                                     <tr>
                                         <th>Team Member</th>
                                         <th>Role</th>
@@ -332,7 +585,7 @@
                                         <td>
                                             <div>
                                                 <strong>{{ member.completed_tasks|default:0 }}</strong> / {{ member.total_tasks|default:0 }}
-                                                <div class="progress mt-1" style="height: 5px;">
+                                                <div class="progress mt-2">
                                                     <div class="progress-bar bg-success" 
                                                          style="width: {{ member.completion_rate|default:0 }}%"></div>
                                                 </div>
@@ -343,9 +596,11 @@
                                                 {{ member.avg_response_time|default:0|floatformat:1 }}h
                                             </span>
                                         </td>
-                                        <td>{{ member.client_profiles|default:0 }}</td>
                                         <td>
-                                            <div class="workload-bar">
+                                            <span class="badge bg-light text-dark">{{ member.client_profiles|default:0 }}</span>
+                                        </td>
+                                        <td>
+                                            <div class="workload-bar mb-1">
                                                 <div class="workload-fill bg-{% if member.workload_percentage <= 70 %}success{% elif member.workload_percentage <= 90 %}warning{% else %}danger{% endif %}" 
                                                      style="width: {{ member.workload_percentage|default:0 }}%"></div>
                                             </div>
@@ -359,10 +614,10 @@
                                         </td>
                                         <td>
                                             <div class="btn-group btn-group-sm">
-                                                <button class="btn btn-outline-primary" onclick="viewMemberDetails({{ member.user.id }})">
+                                                <button class="btn btn-outline-primary" onclick="viewMemberDetails({{ member.user.id }})" title="View Details">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
-                                                <button class="btn btn-outline-success" onclick="assignTask({{ member.user.id }})">
+                                                <button class="btn btn-outline-success" onclick="assignTask({{ member.user.id }})" title="Assign Task">
                                                     <i class="fas fa-plus"></i>
                                                 </button>
                                             </div>
@@ -370,7 +625,10 @@
                                     </tr>
                                     {% empty %}
                                     <tr>
-                                        <td colspan="8" class="text-center text-muted">No team members found</td>
+                                        <td colspan="8" class="text-center text-muted py-4">
+                                            <i class="fas fa-users fa-2x mb-2 d-block"></i>
+                                            No team members found
+                                        </td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -382,12 +640,12 @@
         </div>
 
         <!-- Key Insights and Recommendations -->
-        <div class="row mb-4">
-            <div class="col-md-6">
-                <div class="card">
+        <div class="row mb-4 g-4">
+            <div class="col-lg-6">
+                <div class="card h-100">
                     <div class="card-header bg-info text-white">
-                        <h6 class="mb-0">
-                            <i class="fas fa-lightbulb"></i> Key Insights
+                        <h6 class="mb-0 d-flex align-items-center">
+                            <i class="fas fa-lightbulb me-2"></i> Key Insights
                         </h6>
                     </div>
                     <div class="card-body">
@@ -417,11 +675,11 @@
                 </div>
             </div>
             
-            <div class="col-md-6">
-                <div class="card">
+            <div class="col-lg-6">
+                <div class="card h-100">
                     <div class="card-header bg-success text-white">
-                        <h6 class="mb-0">
-                            <i class="fas fa-chart-line"></i> Recommendations
+                        <h6 class="mb-0 d-flex align-items-center">
+                            <i class="fas fa-chart-line me-2"></i> Recommendations
                         </h6>
                     </div>
                     <div class="card-body">
@@ -453,12 +711,12 @@
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Chart.js default configuration
-        Chart.defaults.font.family = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
-        Chart.defaults.color = '#495057';
+        Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
+        Chart.defaults.color = '#696969';
         
         // Sample data - replace with actual Django context data
         const taskCompletionData = {
@@ -470,15 +728,15 @@
             datasets: [{
                 label: 'Tasks Completed',
                 data: {{ task_completion_values|default:"[12, 19, 15, 25, 22, 18, 20]"|safe }},
-                borderColor: '#007bff',
-                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                borderColor: '#1C64FF',
+                backgroundColor: 'rgba(28, 100, 255, 0.1)',
                 tension: 0.4,
                 fill: true
             }, {
                 label: 'Tasks Created',
                 data: {{ task_creation_values|default:"[8, 14, 18, 20, 16, 22, 25]"|safe }},
-                borderColor: '#6c757d',
-                backgroundColor: 'rgba(108, 117, 125, 0.1)',
+                borderColor: '#696969',
+                backgroundColor: 'rgba(105, 105, 105, 0.1)',
                 tension: 0.4,
                 fill: true
             }]
@@ -488,7 +746,7 @@
             labels: ['Excellent', 'Good', 'Average', 'Below Average'],
             datasets: [{
                 data: {{ team_performance_distribution|default:"[35, 45, 15, 5]"|safe }},
-                backgroundColor: ['#28a745', '#ffc107', '#17a2b8', '#dc3545']
+                backgroundColor: ['#198754', '#ffc107', '#0dcaf0', '#dc3545']
             }]
         };
 
@@ -497,7 +755,7 @@
             datasets: [{
                 label: 'Service Requests',
                 data: {{ service_request_data|default:"[25, 35, 85, 120]"|safe }},
-                backgroundColor: ['#dc3545', '#ffc107', '#28a745', '#6c757d']
+                backgroundColor: ['#dc3545', '#ffc107', '#198754', '#696969']
             }]
         };
 
@@ -510,8 +768,8 @@
             datasets: [{
                 label: 'Profiles Created',
                 data: {{ profile_creation_values|default:"[15, 22, 18, 25, 30, 28, 35]"|safe }},
-                backgroundColor: '#ffc107',
-                borderColor: '#ffc107',
+                backgroundColor: '#1C64FF',
+                borderColor: '#1C64FF',
                 tension: 0.4
             }]
         };
@@ -532,7 +790,7 @@
                     y: {
                         beginAtZero: true,
                         grid: {
-                            color: 'rgba(0,0,0,0.1)'
+                            color: 'rgba(217, 217, 217, 0.3)'
                         }
                     },
                     x: {
@@ -598,22 +856,18 @@
 
         // Interactive Functions
         function viewMemberDetails(memberId) {
-            // Implement member detail view
             window.location.href = `/teams/users/${memberId}/`;
         }
 
         function assignTask(memberId) {
-            // Implement quick task assignment
             window.location.href = `/ops/task-assignment/?assign_to=${memberId}`;
         }
 
         function exportToExcel() {
-            // Implement Excel export
             window.location.href = `/api/export/operations-analytics/?format=excel&date_from=${document.getElementById('dateFrom').value}&date_to=${document.getElementById('dateTo').value}`;
         }
 
         function exportToPDF() {
-            // Implement PDF export
             window.location.href = `/api/export/operations-analytics/?format=pdf&date_from=${document.getElementById('dateFrom').value}&date_to=${document.getElementById('dateTo').value}`;
         }
 

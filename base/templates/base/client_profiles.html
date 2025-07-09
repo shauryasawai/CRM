@@ -3,579 +3,794 @@
 
 {% block title %}Client Profiles{% endblock %}
 
-{% block content %}
+{% block extra_css %}
 <style>
-    :root {
-        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-        --info-gradient: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-        --danger-gradient: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
-        --dark-bg: #1a1d29;
-        --card-bg: #242738;
-        --text-light: #e2e8f0;
-        --border-color: #334155;
-        --glass-bg: rgba(255, 255, 255, 0.1);
-        --glass-border: rgba(255, 255, 255, 0.2);
+:root {
+    --bs-primary: #1C64FF;
+    --bs-secondary: #696969;
+    --bs-light: #FFFFFF;
+    --bs-border-color: #D9D9D9;
+    --bs-info: #C3E4FF;
+}
+
+.profiles-container {
+    background: #f8f9fa;
+    min-height: 100vh;
+    padding: 2rem 0;
+}
+
+.profiles-header {
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+    color: #FFFFFF;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(28, 100, 255, 0.3);
+}
+
+.profiles-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+    50% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+}
+
+.profiles-title {
+    font-size: 2.25rem;
+    font-weight: 700;
+    margin: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.btn-add-client {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #FFFFFF;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    position: relative;
+    z-index: 1;
+}
+
+.btn-add-client:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    color: #FFFFFF;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: #FFFFFF;
+    border: 1px solid #D9D9D9;
+    border-radius: 16px;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    border-radius: 16px 16px 0 0;
+}
+
+.stat-card.total::before {
+    background: linear-gradient(90deg, #1C64FF, #1557e6);
+}
+
+.stat-card.active::before {
+    background: linear-gradient(90deg, #198754, #157347);
+}
+
+.stat-card.muted::before {
+    background: linear-gradient(90deg, #ffc107, #ffb300);
+}
+
+.stat-card.full::before {
+    background: linear-gradient(90deg, #6f42c1, #5a2d91);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: #FFFFFF;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.stat-card.total .stat-icon {
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+}
+
+.stat-card.active .stat-icon {
+    background: linear-gradient(135deg, #198754, #157347);
+}
+
+.stat-card.muted .stat-icon {
+    background: linear-gradient(135deg, #ffc107, #ffb300);
+}
+
+.stat-card.full .stat-icon {
+    background: linear-gradient(135deg, #6f42c1, #5a2d91);
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #333333;
+    margin: 0;
+    line-height: 1;
+}
+
+.stat-label {
+    color: #696969;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0.5rem 0 0 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.search-section {
+    background: #FFFFFF;
+    border: 1px solid #D9D9D9;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+}
+
+.search-section:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+.form-label {
+    font-weight: 600;
+    color: #333333;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.form-control, .form-select {
+    background-color: #FFFFFF;
+    border: 2px solid #D9D9D9;
+    color: #333333;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #1C64FF;
+    box-shadow: 0 0 0 0.2rem rgba(28, 100, 255, 0.25);
+    background-color: #FFFFFF;
+    color: #333333;
+    outline: none;
+}
+
+.form-control:hover, .form-select:hover {
+    border-color: #1C64FF;
+}
+
+.form-control::placeholder {
+    color: #696969;
+}
+
+.btn-search {
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+    border: none;
+    color: #FFFFFF;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 12px rgba(28, 100, 255, 0.3);
+}
+
+.btn-search:hover {
+    background: linear-gradient(135deg, #1557e6, #1348d1);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(28, 100, 255, 0.4);
+    color: #FFFFFF;
+}
+
+.btn-clear {
+    background: #FFFFFF;
+    border: 2px solid #696969;
+    color: #696969;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+}
+
+.btn-clear:hover {
+    background: #696969;
+    border-color: #696969;
+    color: #FFFFFF;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(105, 105, 105, 0.3);
+}
+
+.table-container {
+    background: #FFFFFF;
+    border: 1px solid #D9D9D9;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+}
+
+.table-container:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+.modern-table {
+    width: 100%;
+    margin: 0;
+    background: transparent;
+}
+
+.modern-table thead {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+}
+
+.modern-table th {
+    padding: 1.5rem 1rem;
+    color: #333333;
+    font-weight: 700;
+    border: none;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #D9D9D9;
+}
+
+.modern-table td {
+    padding: 1.5rem 1rem;
+    color: #333333;
+    border: none;
+    border-bottom: 1px solid #D9D9D9;
+    vertical-align: middle;
+}
+
+.modern-table tbody tr {
+    transition: all 0.3s ease;
+}
+
+.modern-table tbody tr:hover {
+    background: rgba(28, 100, 255, 0.05);
+    transform: scale(1.01);
+}
+
+.client-name {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #1C64FF;
+    margin-bottom: 0.25rem;
+}
+
+.client-id {
+    color: #696969;
+    font-size: 0.85rem;
+}
+
+.contact-info {
+    font-size: 0.9rem;
+}
+
+.contact-info div {
+    margin-bottom: 0.25rem;
+}
+
+.status-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.status-badge:hover {
+    transform: scale(1.05);
+}
+
+.badge-success {
+    background: linear-gradient(135deg, #198754, #157347);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(25, 135, 84, 0.3);
+}
+
+.badge-warning {
+    background: linear-gradient(135deg, #ffc107, #ffb300);
+    color: #000000;
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+}
+
+.badge-info {
+    background: linear-gradient(135deg, #0dcaf0, #0bb5d6);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(13, 202, 240, 0.3);
+}
+
+.badge-secondary {
+    background: linear-gradient(135deg, #696969, #5a5a5a);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(105, 105, 105, 0.3);
+}
+
+.badge-primary {
+    background: linear-gradient(135deg, #6f42c1, #5a2d91);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(111, 66, 193, 0.3);
+}
+
+.interaction-summary {
+    background: rgba(28, 100, 255, 0.05);
+    border: 1px solid rgba(28, 100, 255, 0.2);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.interaction-summary:hover {
+    background: rgba(28, 100, 255, 0.1);
+    border-color: rgba(28, 100, 255, 0.3);
+    transform: translateY(-1px);
+}
+
+.interaction-summary.good {
+    border-left: 4px solid #198754;
+}
+
+.interaction-summary.warning {
+    border-left: 4px solid #ffc107;
+}
+
+.interaction-summary.danger {
+    border-left: 4px solid #dc3545;
+}
+
+.interaction-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+    font-size: 0.85rem;
+}
+
+.interaction-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: #333333;
+}
+
+.interaction-stat i {
+    color: #1C64FF;
+}
+
+.contact-indicator {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.contact-recent {
+    background: rgba(25, 135, 84, 0.1);
+    color: #198754;
+    border: 1px solid rgba(25, 135, 84, 0.3);
+}
+
+.contact-moderate {
+    background: rgba(255, 193, 7, 0.1);
+    color: #856404;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.contact-old {
+    background: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+    border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+.contact-never {
+    background: rgba(105, 105, 105, 0.1);
+    color: #696969;
+    border: 1px solid rgba(105, 105, 105, 0.3);
+}
+
+.followup-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.followup-badge:hover {
+    transform: scale(1.05);
+}
+
+.badge-danger {
+    background: linear-gradient(135deg, #dc3545, #bb2d3b);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.action-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.action-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px) scale(1.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.action-btn i {
+    color: #FFFFFF;
+    font-size: 0.9rem;
+}
+
+.btn-view {
+    background: linear-gradient(135deg, #0dcaf0, #0bb5d6);
+}
+
+.btn-edit {
+    background: linear-gradient(135deg, #ffc107, #ffb300);
+}
+
+.btn-interactions {
+    background: linear-gradient(135deg, #dc3545, #bb2d3b);
+}
+
+.btn-add-interaction {
+    background: linear-gradient(135deg, #198754, #157347);
+}
+
+.btn-convert {
+    background: linear-gradient(135deg, #6f42c1, #5a2d91);
+    color: #FFFFFF;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    width: auto;
+    height: auto;
+    text-decoration: none;
+}
+
+.btn-convert:hover {
+    background: linear-gradient(135deg, #5a2d91, #4a2577);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(111, 66, 193, 0.3);
+    color: #FFFFFF;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #696969;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    color: #D9D9D9;
+    margin-bottom: 1rem;
+}
+
+.empty-state h4 {
+    color: #333333;
+    margin: 1rem 0;
+}
+
+.pagination {
+    margin-top: 2rem;
+    justify-content: center;
+}
+
+.page-link {
+    background: #FFFFFF;
+    border: 2px solid #D9D9D9;
+    color: #333333;
+    padding: 0.75rem 1rem;
+    margin: 0 0.25rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.page-link:hover {
+    background: #1C64FF;
+    border-color: #1C64FF;
+    color: #FFFFFF;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(28, 100, 255, 0.3);
+}
+
+.page-item.active .page-link {
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+    border-color: #1C64FF;
+    color: #FFFFFF;
+    box-shadow: 0 4px 12px rgba(28, 100, 255, 0.3);
+}
+
+.modal-content {
+    background: #FFFFFF;
+    border: 1px solid #D9D9D9;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+    color: #FFFFFF;
+    border-radius: 16px 16px 0 0;
+    padding: 1.5rem 2rem;
+    border-bottom: none;
+}
+
+.modal-title {
+    font-weight: 700;
+    margin: 0;
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+.modal-footer {
+    padding: 1.5rem 2rem;
+    border-top: 1px solid #D9D9D9;
+}
+
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.feature-item {
+    background: rgba(28, 100, 255, 0.05);
+    padding: 1.5rem;
+    border-radius: 12px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.feature-item:hover {
+    background: rgba(28, 100, 255, 0.1);
+    transform: translateY(-2px);
+}
+
+.feature-item i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.feature-item p {
+    margin: 0;
+    font-weight: 600;
+    color: #333333;
+}
+
+.alert-warning {
+    background: rgba(255, 193, 7, 0.1);
+    border: 2px solid rgba(255, 193, 7, 0.3);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-top: 2rem;
+    position: relative;
+}
+
+.alert-warning::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #ffc107, #ffb300);
+    border-radius: 12px 12px 0 0;
+}
+
+.fade-in {
+    animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
     }
-
-    .modern-container {
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        min-height: 100vh;
-        padding: 2rem 0;
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
+}
 
-    .glass-card {
-        background: var(--glass-bg);
-        backdrop-filter: blur(20px);
-        border: 1px solid var(--glass-border);
-        border-radius: 24px;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-        transition: all 0.3s ease;
+.slide-up {
+    animation: slideUp 0.8s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(40px);
     }
-
-    .glass-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
+}
 
-    .modern-header {
-        background: var(--primary-gradient);
-        border-radius: 20px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-        position: relative;
-        overflow: hidden;
+@media (max-width: 768px) {
+    .profiles-container {
+        padding: 1rem 0;
     }
-
-    .modern-header::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
-        opacity: 0.3;
-    }
-
-    .modern-header h3 {
-        color: white;
-        font-size: 2.5rem;
-        font-weight: 700;
-        margin: 0;
-        position: relative;
-        z-index: 1;
-    }
-
-    .modern-btn {
-        background: rgba(255, 255, 255, 0.2);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        color: white;
-        padding: 0.75rem 1.5rem;
-        border-radius: 50px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        position: relative;
-        z-index: 1;
-        backdrop-filter: blur(10px);
-    }
-
-    .modern-btn:hover {
-        background: rgba(255, 255, 255, 0.3);
-        transform: translateY(-2px);
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-        color: white;
-    }
-
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 3rem;
-    }
-
-    .stat-card {
-        background: var(--glass-bg);
-        backdrop-filter: blur(20px);
-        border: 1px solid var(--glass-border);
-        border-radius: 20px;
-        padding: 2rem;
-        position: relative;
-        overflow: hidden;
-        transition: all 0.3s ease;
-    }
-
-    .stat-card:hover {
-        transform: translateY(-5px) scale(1.02);
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-    }
-
-    .stat-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: var(--gradient);
-    }
-
-    .stat-card.total::before { background: var(--info-gradient); }
-    .stat-card.active::before { background: var(--success-gradient); }
-    .stat-card.muted::before { background: var(--warning-gradient); }
-    .stat-card.full::before { background: var(--primary-gradient); }
-
-    .stat-icon {
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        color: white;
-        margin-bottom: 1rem;
-        background: var(--gradient);
-    }
-
-    .stat-card.total .stat-icon { background: var(--info-gradient); }
-    .stat-card.active .stat-icon { background: var(--success-gradient); }
-    .stat-card.muted .stat-icon { background: var(--warning-gradient); }
-    .stat-card.full .stat-icon { background: var(--primary-gradient); }
-
-    .stat-number {
-        font-size: 2.5rem;
-        font-weight: 800;
-        color: white;
-        margin: 0;
-        line-height: 1;
-    }
-
-    .stat-label {
-        color: rgba(255, 255, 255, 0.8);
-        font-size: 0.9rem;
-        font-weight: 500;
-        margin: 0.5rem 0 0 0;
-    }
-
-    .search-section {
-        background: var(--glass-bg);
-        backdrop-filter: blur(20px);
-        border: 1px solid var(--glass-border);
-        border-radius: 20px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-    }
-
-    .modern-form-group {
-        position: relative;
+    
+    .profiles-header {
+        padding: 1.5rem;
         margin-bottom: 1.5rem;
     }
-
-    .modern-input, .modern-select {
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 12px;
-        padding: 1rem 1.25rem;
-        color: white;
-        font-size: 0.95rem;
-        width: 100%;
-        transition: all 0.3s ease;
-        backdrop-filter: blur(10px);
+    
+    .profiles-title {
+        font-size: 1.75rem;
     }
-
-    .modern-input:focus, .modern-select:focus {
-        outline: none;
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
-        background: rgba(255, 255, 255, 0.15);
-    }
-
-    .modern-input::placeholder {
-        color: rgba(255, 255, 255, 0.6);
-    }
-
-    .modern-label {
-        color: rgba(255, 255, 255, 0.9);
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-        display: block;
-        font-size: 0.9rem;
-    }
-
-    .action-buttons {
-        display: flex;
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
         gap: 1rem;
-        align-items: end;
     }
-
-    .btn-search {
-        background: var(--primary-gradient);
-        border: none;
-        color: white;
-        padding: 1rem 2rem;
-        border-radius: 50px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    
+    .search-section {
+        padding: 1.5rem;
     }
-
-    .btn-search:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
-        color: white;
+    
+    .table-container {
+        overflow-x: auto;
     }
-
-    .btn-clear {
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        color: white;
-        padding: 1rem 2rem;
-        border-radius: 50px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        backdrop-filter: blur(10px);
-    }
-
-    .btn-clear:hover {
-        background: rgba(255, 255, 255, 0.2);
-        transform: translateY(-2px);
-        color: white;
-    }
-
-    .modern-table-container {
-        background: var(--glass-bg);
-        backdrop-filter: blur(20px);
-        border: 1px solid var(--glass-border);
-        border-radius: 20px;
-        overflow: hidden;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-    }
-
-    .modern-table {
-        width: 100%;
-        margin: 0;
-        background: transparent;
-    }
-
-    .modern-table thead {
-        background: rgba(102, 126, 234, 0.2);
-        backdrop-filter: blur(10px);
-    }
-
-    .modern-table th {
-        padding: 1.5rem 1rem;
-        color: white;
-        font-weight: 700;
-        border: none;
-        text-transform: uppercase;
-        font-size: 0.8rem;
-        letter-spacing: 1px;
-        position: relative;
-    }
-
-    .modern-table td {
-        padding: 1.5rem 1rem;
-        color: rgba(255, 255, 255, 0.9);
-        border: none;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        vertical-align: middle;
-    }
-
-    .modern-table tbody tr {
-        transition: all 0.3s ease;
-    }
-
-    .modern-table tbody tr:hover {
-        background: rgba(255, 255, 255, 0.05);
-        transform: scale(1.01);
-    }
-
-    .modern-badge {
-        padding: 0.5rem 1rem;
-        border-radius: 50px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .badge-success {
-        background: var(--success-gradient);
-        color: white;
-    }
-
-    .badge-warning {
-        background: var(--warning-gradient);
-        color: white;
-    }
-
-    .badge-info {
-        background: var(--info-gradient);
-        color: white;
-    }
-
-    .badge-secondary {
-        background: rgba(255, 255, 255, 0.2);
-        color: white;
-    }
-
-    .badge-danger {
-        background: var(--danger-gradient);
-        color: white;
-    }
-
+    
     .action-group {
-        display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-    }
-
-    .action-btn {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        border: none;
-        display: flex;
-        align-items: center;
         justify-content: center;
-        transition: all 0.3s ease;
-        backdrop-filter: blur(10px);
-        position: relative;
-        overflow: hidden;
     }
-
-    .action-btn::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: var(--gradient);
-        opacity: 0;
-        transition: opacity 0.3s ease;
-    }
-
-    .action-btn:hover::before {
-        opacity: 1;
-    }
-
-    .action-btn i {
-        position: relative;
-        z-index: 1;
-        color: white;
-    }
-
-    .btn-view {
-        background: var(--info-gradient);
-        --gradient: var(--info-gradient);
-    }
-
-    .btn-edit {
-        background: var(--warning-gradient);
-        --gradient: var(--warning-gradient);
-    }
-
-    .btn-interactions {
-        background: var(--danger-gradient);
-        --gradient: var(--danger-gradient);
-    }
-
-    .btn-add-interaction {
-        background: var(--success-gradient);
-        --gradient: var(--success-gradient);
-    }
-
-    .btn-convert {
-        background: var(--success-gradient);
-        padding: 0.75rem 1.5rem;
-        border-radius: 50px;
-        color: white;
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 0.85rem;
-        transition: all 0.3s ease;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin-top: 0.5rem;
-        width: auto;
-        height: auto;
-    }
-
-    .btn-convert:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(79, 172, 254, 0.4);
-        color: white;
-        text-decoration: none;
-    }
-
-    .client-interaction-summary {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
-        padding: 1rem;
-        margin-top: 0.5rem;
-        border-left: 4px solid;
-    }
-
-    .interaction-summary-good {
-        border-left-color: #10b981;
-    }
-
-    .interaction-summary-warning {
-        border-left-color: #f59e0b;
-    }
-
-    .interaction-summary-danger {
-        border-left-color: #ef4444;
-    }
-
+    
     .interaction-stats {
-        display: flex;
-        gap: 1rem;
-        align-items: center;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .modern-table th,
+    .modern-table td {
+        padding: 1rem 0.5rem;
         font-size: 0.85rem;
     }
-
-    .interaction-stat {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
+    
+    .btn-search,
+    .btn-clear {
+        width: 100%;
+        justify-content: center;
+        margin-bottom: 0.5rem;
     }
-
-    .last-contact-indicator {
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-    }
-
-    .contact-recent {
-        background: rgba(16, 185, 129, 0.2);
-        color: #10b981;
-        border: 1px solid rgba(16, 185, 129, 0.3);
-    }
-
-    .contact-moderate {
-        background: rgba(245, 158, 11, 0.2);
-        color: #f59e0b;
-        border: 1px solid rgba(245, 158, 11, 0.3);
-    }
-
-    .contact-old {
-        background: rgba(239, 68, 68, 0.2);
-        color: #ef4444;
-        border: 1px solid rgba(239, 68, 68, 0.3);
-    }
-
-    .contact-never {
-        background: rgba(107, 114, 128, 0.2);
-        color: #6b7280;
-        border: 1px solid rgba(107, 114, 128, 0.3);
-    }
-
-    .follow-up-alert {
-        position: relative;
-        animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-        100% { transform: scale(1); }
-    }
-
-    .empty-state {
-        text-align: center;
-        padding: 4rem 2rem;
-        color: rgba(255, 255, 255, 0.8);
-    }
-
-    .empty-state i {
-        font-size: 4rem;
-        color: rgba(255, 255, 255, 0.3);
-        margin-bottom: 1rem;
-    }
-
-    /* Responsive Design */
-    @media (max-width: 768px) {
-        .stats-grid {
-            grid-template-columns: 1fr;
-        }
-        
-        .action-buttons {
-            flex-direction: column;
-            align-items: stretch;
-        }
-        
-        .modern-table-container {
-            overflow-x: auto;
-        }
-        
-        .action-group {
-            justify-content: center;
-        }
-
-        .interaction-stats {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 0.5rem;
-        }
-    }
-
-    /* Animation classes */
-    .fade-in {
-        animation: fadeIn 0.6s ease-out;
-    }
-
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .slide-up {
-        animation: slideUp 0.8s ease-out;
-    }
-
-    @keyframes slideUp {
-        from {
-            opacity: 0;
-            transform: translateY(40px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
+}
 </style>
+{% endblock %}
 
-<div class="modern-container">
+{% block content %}
+<div class="profiles-container">
     <div class="container-fluid">
         <!-- Header Section -->
-        <div class="modern-header fade-in">
+        <div class="profiles-header fade-in">
             <div class="d-flex justify-content-between align-items-center">
-                <h3>Client Profiles & Interactions</h3>
+                <h1 class="profiles-title">Client Profiles & Interactions</h1>
                 {% if can_create %}
-                    <a href="{% url 'client_profile_create' %}" class="modern-btn">
-                        <i class="fas fa-plus me-2"></i> Add New Client
+                    <a href="{% url 'client_profile_create' %}" class="btn-add-client">
+                        <i class="fas fa-plus"></i> Add New Client
                     </a>
                 {% endif %}
             </div>
         </div>
 
-        <!-- Enhanced Statistics Cards - Removed Interactions and Follow-ups -->
+        <!-- Statistics Cards -->
         <div class="stats-grid slide-up">
             <div class="stat-card total">
                 <div class="stat-icon">
@@ -607,22 +822,22 @@
             </div>
         </div>
 
-        <!-- Enhanced Search and Filter Section -->
+        <!-- Search and Filter Section -->
         <div class="search-section slide-up">
             <form method="GET">
                 <div class="row">
                     <div class="col-md-3">
-                        <div class="modern-form-group">
-                            <label class="modern-label">Search</label>
-                            <input type="text" class="modern-input" name="search" 
+                        <div class="mb-3">
+                            <label class="form-label">Search</label>
+                            <input type="text" class="form-control" name="search" 
                                    value="{{ search_query|default:'' }}" 
                                    placeholder="Search by name, email, mobile, or PAN">
                         </div>
                     </div>
                     <div class="col-md-2">
-                        <div class="modern-form-group">
-                            <label class="modern-label">Status</label>
-                            <select class="modern-select" name="status">
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" name="status">
                                 <option value="">All Status</option>
                                 <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
                                 <option value="muted" {% if status_filter == 'muted' %}selected{% endif %}>Muted</option>
@@ -630,9 +845,9 @@
                         </div>
                     </div>
                     <div class="col-md-2">
-                        <div class="modern-form-group">
-                            <label class="modern-label">Interaction Activity</label>
-                            <select class="modern-select" name="interaction_filter">
+                        <div class="mb-3">
+                            <label class="form-label">Interaction Activity</label>
+                            <select class="form-select" name="interaction_filter">
                                 <option value="">All Clients</option>
                                 <option value="no_interactions" {% if interaction_filter == 'no_interactions' %}selected{% endif %}>No Interactions</option>
                                 <option value="recent_interactions" {% if interaction_filter == 'recent_interactions' %}selected{% endif %}>Recent Activity</option>
@@ -643,9 +858,9 @@
                     </div>
                     {% if rm_list %}
                     <div class="col-md-3">
-                        <div class="modern-form-group">
-                            <label class="modern-label">Relationship Manager</label>
-                            <select class="modern-select" name="rm">
+                        <div class="mb-3">
+                            <label class="form-label">Relationship Manager</label>
+                            <select class="form-select" name="rm">
                                 <option value="">All RMs</option>
                                 {% for rm in rm_list %}
                                     <option value="{{ rm.id }}" {% if rm_filter == rm.id|stringformat:"s" %}selected{% endif %}>
@@ -657,14 +872,14 @@
                     </div>
                     {% endif %}
                     <div class="col-md-2">
-                        <div class="modern-form-group">
-                            <label class="modern-label">&nbsp;</label>
-                            <div class="action-buttons">
+                        <div class="mb-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-flex gap-2">
                                 <button type="submit" class="btn-search">
-                                    <i class="fas fa-search me-2"></i> Search
+                                    <i class="fas fa-search"></i> Search
                                 </button>
                                 <a href="{% url 'client_profile_list' %}" class="btn-clear">
-                                    <i class="fas fa-times me-2"></i> Clear
+                                    <i class="fas fa-times"></i> Clear
                                 </a>
                             </div>
                         </div>
@@ -673,8 +888,8 @@
             </form>
         </div>
 
-        <!-- Enhanced Client Profiles Table with Interaction Data -->
-        <div class="modern-table-container slide-up">
+        <!-- Client Profiles Table -->
+        <div class="table-container slide-up">
             <table class="modern-table">
                 <thead>
                     <tr>
@@ -693,36 +908,36 @@
                     <tr>
                         <td>
                             <div>
-                                <strong style="color: white; font-size: 1.1rem;">{{ profile.client_full_name }}</strong>
-                                <br><small style="color: rgba(255, 255, 255, 0.6);">ID: {{ profile.client_id }}</small>
+                                <div class="client-name">{{ profile.client_full_name }}</div>
+                                <div class="client-id">ID: {{ profile.client_id }}</div>
                                 {% if profile.family_head_name %}
-                                    <br><small style="color: rgba(255, 255, 255, 0.6);">Family Head: {{ profile.family_head_name }}</small>
+                                    <div class="client-id">Family Head: {{ profile.family_head_name }}</div>
                                 {% endif %}
                             </div>
                         </td>
                         <td>
-                            <div>
-                                <div style="color: rgba(255, 255, 255, 0.9);">{{ profile.email|default:'-' }}</div>
-                                <div style="color: rgba(255, 255, 255, 0.7);">{{ profile.mobile_number|default:'-' }}</div>
-                                <small style="color: rgba(255, 255, 255, 0.6);">PAN: {{ profile.pan_number|default:'-' }}</small>
+                            <div class="contact-info">
+                                <div><strong>Email:</strong> {{ profile.email|default:'-' }}</div>
+                                <div><strong>Mobile:</strong> {{ profile.mobile_number|default:'-' }}</div>
+                                <div><strong>PAN:</strong> {{ profile.pan_number|default:'-' }}</div>
                             </div>
                         </td>
                         <td>
                             <div>
-                                <div style="color: rgba(255, 255, 255, 0.9);">
+                                <div>
                                     <strong>RM:</strong> 
                                     {% if profile.mapped_rm %}
                                         {{ profile.mapped_rm.get_full_name }}
                                     {% else %}
-                                        <span style="color: rgba(255, 255, 255, 0.5);">Not Assigned</span>
+                                        <span style="color: #696969;">Not Assigned</span>
                                     {% endif %}
                                 </div>
-                                <div style="color: rgba(255, 255, 255, 0.7);">
+                                <div>
                                     <strong>Ops:</strong>
                                     {% if profile.mapped_ops_exec %}
                                         {{ profile.mapped_ops_exec.get_full_name }}
                                     {% else %}
-                                        <span style="color: rgba(255, 255, 255, 0.5);">Not Assigned</span>
+                                        <span style="color: #696969;">Not Assigned</span>
                                     {% endif %}
                                 </div>
                             </div>
@@ -730,24 +945,24 @@
                         <td>
                             <div>
                                 {% if profile.status == 'active' %}
-                                    <span class="modern-badge badge-success">
+                                    <span class="status-badge badge-success">
                                         <i class="fas fa-check"></i> Active
                                     </span>
                                 {% elif profile.status == 'muted' %}
-                                    <span class="modern-badge badge-warning">
+                                    <span class="status-badge badge-warning">
                                         <i class="fas fa-volume-mute"></i> Muted
                                     </span>
                                 {% else %}
-                                    <span class="modern-badge badge-secondary">{{ profile.status|title }}</span>
+                                    <span class="status-badge badge-secondary">{{ profile.status|title }}</span>
                                 {% endif %}
                                 
-                                <div style="margin-top: 0.5rem;">
+                                <div>
                                     {% if profile.legacy_client %}
-                                        <span class="modern-badge badge-success">
+                                        <span class="status-badge badge-primary">
                                             <i class="fas fa-check-circle"></i> Full Client
                                         </span>
                                     {% else %}
-                                        <span class="modern-badge badge-info">
+                                        <span class="status-badge badge-info">
                                             <i class="fas fa-user-plus"></i> Profile Only
                                         </span>
                                     {% endif %}
@@ -756,29 +971,29 @@
                         </td>
                         <td>
                             {% if profile.interaction_count %}
-                                <div class="client-interaction-summary {% if profile.interaction_count > 10 %}interaction-summary-good{% elif profile.interaction_count > 3 %}interaction-summary-warning{% else %}interaction-summary-danger{% endif %}">
+                                <div class="interaction-summary {% if profile.interaction_count > 10 %}good{% elif profile.interaction_count > 3 %}warning{% else %}danger{% endif %}">
                                     <div class="interaction-stats">
                                         <div class="interaction-stat">
-                                            <i class="fas fa-comments" style="color: #667eea;"></i>
+                                            <i class="fas fa-comments"></i>
                                             <span>{{ profile.interaction_count }} total</span>
                                         </div>
                                         {% if profile.recent_interactions_count %}
                                             <div class="interaction-stat">
-                                                <i class="fas fa-calendar-week" style="color: #10b981;"></i>
+                                                <i class="fas fa-calendar-week"></i>
                                                 <span>{{ profile.recent_interactions_count }} this month</span>
                                             </div>
                                         {% endif %}
                                         {% if profile.high_priority_count %}
                                             <div class="interaction-stat">
-                                                <i class="fas fa-exclamation-triangle" style="color: #f59e0b;"></i>
+                                                <i class="fas fa-exclamation-triangle"></i>
                                                 <span>{{ profile.high_priority_count }} high priority</span>
                                             </div>
                                         {% endif %}
                                     </div>
                                 </div>
                             {% else %}
-                                <div class="client-interaction-summary interaction-summary-danger">
-                                    <div style="text-align: center; color: rgba(255, 255, 255, 0.6);">
+                                <div class="interaction-summary danger">
+                                    <div style="text-align: center; color: #696969;">
                                         <i class="fas fa-comment-slash" style="margin-bottom: 0.5rem; display: block;"></i>
                                         No interactions recorded
                                     </div>
@@ -789,42 +1004,40 @@
                             {% if profile.last_interaction_date %}
                                 {% with days_since=profile.days_since_last_interaction %}
                                     {% if days_since == 0 %}
-                                        <span class="last-contact-indicator contact-recent">Today</span>
+                                        <span class="contact-indicator contact-recent">Today</span>
                                     {% elif days_since <= 7 %}
-                                        <span class="last-contact-indicator contact-recent">{{ days_since }} day{{ days_since|pluralize }} ago</span>
+                                        <span class="contact-indicator contact-recent">{{ days_since }} day{{ days_since|pluralize }} ago</span>
                                     {% elif days_since <= 30 %}
-                                        <span class="last-contact-indicator contact-moderate">{{ days_since }} day{{ days_since|pluralize }} ago</span>
+                                        <span class="contact-indicator contact-moderate">{{ days_since }} day{{ days_since|pluralize }} ago</span>
                                     {% else %}
-                                        <span class="last-contact-indicator contact-old">{{ days_since }} day{{ days_since|pluralize }} ago</span>
+                                        <span class="contact-indicator contact-old">{{ days_since }} day{{ days_since|pluralize }} ago</span>
                                     {% endif %}
                                 {% endwith %}
-                                <div style="font-size: 0.75rem; color: rgba(255, 255, 255, 0.6); margin-top: 0.25rem;">
+                                <div style="font-size: 0.75rem; color: #696969; margin-top: 0.25rem;">
                                     {{ profile.last_interaction_type|default:"Contact" }} - {{ profile.last_interaction_date|date:"M d, Y" }}
                                 </div>
                             {% else %}
-                                <span class="last-contact-indicator contact-never">Never contacted</span>
+                                <span class="contact-indicator contact-never">Never contacted</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if profile.overdue_followups %}
-                                <div class="follow-up-alert">
-                                    <span class="modern-badge badge-danger">
-                                        <i class="fas fa-exclamation-triangle"></i> 
-                                        {{ profile.overdue_followups }} overdue
-                                    </span>
-                                </div>
+                                <span class="followup-badge badge-danger">
+                                    <i class="fas fa-exclamation-triangle"></i> 
+                                    {{ profile.overdue_followups }} overdue
+                                </span>
                             {% elif profile.due_today_followups %}
-                                <span class="modern-badge badge-warning">
+                                <span class="followup-badge badge-warning">
                                     <i class="fas fa-clock"></i> 
                                     {{ profile.due_today_followups }} due today
                                 </span>
                             {% elif profile.upcoming_followups %}
-                                <span class="modern-badge badge-info">
+                                <span class="followup-badge badge-info">
                                     <i class="fas fa-calendar-check"></i> 
                                     {{ profile.upcoming_followups }} upcoming
                                 </span>
                             {% else %}
-                                <span class="modern-badge badge-success">
+                                <span class="followup-badge badge-success">
                                     <i class="fas fa-check"></i> Up to date
                                 </span>
                             {% endif %}
@@ -870,11 +1083,11 @@
                         <td colspan="8">
                             <div class="empty-state">
                                 <i class="fas fa-users"></i>
-                                <h4 style="color: white; margin: 1rem 0;">No client profiles found</h4>
-                                <p style="color: rgba(255, 255, 255, 0.6);">Get started by creating your first client profile</p>
+                                <h4>No client profiles found</h4>
+                                <p>Get started by creating your first client profile</p>
                                 {% if can_create %}
-                                    <a href="{% url 'client_profile_create' %}" class="modern-btn" style="margin-top: 1rem;">
-                                        <i class="fas fa-plus me-2"></i> Create First Client Profile
+                                    <a href="{% url 'client_profile_create' %}" class="btn-add-client" style="margin-top: 1rem;">
+                                        <i class="fas fa-plus"></i> Create First Client Profile
                                     </a>
                                 {% endif %}
                             </div>
@@ -885,88 +1098,85 @@
             </table>
         </div>
 
-
         <!-- Pagination -->
         {% if client_profiles.has_other_pages %}
-        <div style="margin-top: 2rem; text-align: center;">
-            <nav aria-label="Client profiles pagination">
-                <ul class="pagination justify-content-center" style="background: transparent;">
-                    {% if client_profiles.has_previous %}
+        <nav aria-label="Client profiles pagination">
+            <ul class="pagination">
+                {% if client_profiles.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ client_profiles.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if rm_filter %}&rm={{ rm_filter }}{% endif %}{% if interaction_filter %}&interaction_filter={{ interaction_filter }}{% endif %}">
+                            <i class="fas fa-chevron-left me-1"></i>Previous
+                        </a>
+                    </li>
+                {% endif %}
+
+                {% for num in client_profiles.paginator.page_range %}
+                    {% if client_profiles.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > client_profiles.number|add:'-3' and num < client_profiles.number|add:'3' %}
                         <li class="page-item">
-                            <a class="page-link modern-btn" href="?page={{ client_profiles.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if rm_filter %}&rm={{ rm_filter }}{% endif %}{% if interaction_filter %}&interaction_filter={{ interaction_filter }}{% endif %}">
-                                Previous
+                            <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if rm_filter %}&rm={{ rm_filter }}{% endif %}{% if interaction_filter %}&interaction_filter={{ interaction_filter }}{% endif %}">
+                                {{ num }}
                             </a>
                         </li>
                     {% endif %}
+                {% endfor %}
 
-                    {% for num in client_profiles.paginator.page_range %}
-                        {% if client_profiles.number == num %}
-                            <li class="page-item active">
-                                <span class="page-link modern-btn" style="background: var(--primary-gradient);">{{ num }}</span>
-                            </li>
-                        {% elif num > client_profiles.number|add:'-3' and num < client_profiles.number|add:'3' %}
-                            <li class="page-item">
-                                <a class="page-link modern-btn" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if rm_filter %}&rm={{ rm_filter }}{% endif %}{% if interaction_filter %}&interaction_filter={{ interaction_filter }}{% endif %}">
-                                    {{ num }}
-                                </a>
-                            </li>
-                        {% endif %}
-                    {% endfor %}
-
-                    {% if client_profiles.has_next %}
-                        <li class="page-item">
-                            <a class="page-link modern-btn" href="?page={{ client_profiles.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if rm_filter %}&rm={{ rm_filter }}{% endif %}{% if interaction_filter %}&interaction_filter={{ interaction_filter }}{% endif %}">
-                                Next
-                            </a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
-        </div>
+                {% if client_profiles.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ client_profiles.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if rm_filter %}&rm={{ rm_filter }}{% endif %}{% if interaction_filter %}&interaction_filter={{ interaction_filter }}{% endif %}">
+                            Next<i class="fas fa-chevron-right ms-1"></i>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
         {% endif %}
     </div>
 </div>
 
-<!-- Enhanced Convert to Client Modal -->
-<div class="modal fade modern-modal" id="convertModal" tabindex="-1" role="dialog" aria-labelledby="convertModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
+<!-- Convert to Client Modal -->
+<div class="modal fade" id="convertModal" tabindex="-1" aria-labelledby="convertModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="convertModalLabel">
                     <i class="fas fa-user-check me-2"></i>Convert to Full Client
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div style="margin-bottom: 1.5rem;">
-                    <p style="color: rgba(255, 255, 255, 0.9); font-size: 1.1rem;">
+                    <p style="color: #333333; font-size: 1.1rem;">
                         This will convert the client profile to a full client and allow you to add additional information such as:
                     </p>
                 </div>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 2rem 0;">
-                    <div style="background: rgba(255, 255, 255, 0.1); padding: 1rem; border-radius: 12px; text-align: center;">
-                        <i class="fas fa-chart-line" style="font-size: 2rem; color: #4facfe; margin-bottom: 0.5rem;"></i>
-                        <p style="margin: 0; color: white; font-weight: 600;">AUM Management</p>
+                <div class="feature-grid">
+                    <div class="feature-item">
+                        <i class="fas fa-chart-line" style="color: #1C64FF;"></i>
+                        <p>AUM Management</p>
                     </div>
-                    <div style="background: rgba(255, 255, 255, 0.1); padding: 1rem; border-radius: 12px; text-align: center;">
-                        <i class="fas fa-coins" style="font-size: 2rem; color: #fee140; margin-bottom: 0.5rem;"></i>
-                        <p style="margin: 0; color: white; font-weight: 600;">SIP Amount</p>
+                    <div class="feature-item">
+                        <i class="fas fa-coins" style="color: #ffc107;"></i>
+                        <p>SIP Amount</p>
                     </div>
-                    <div style="background: rgba(255, 255, 255, 0.1); padding: 1rem; border-radius: 12px; text-align: center;">
-                        <i class="fas fa-wallet" style="font-size: 2rem; color: #fa709a; margin-bottom: 0.5rem;"></i>
-                        <p style="margin: 0; color: white; font-weight: 600;">Demat Accounts</p>
+                    <div class="feature-item">
+                        <i class="fas fa-wallet" style="color: #dc3545;"></i>
+                        <p>Demat Accounts</p>
                     </div>
-                    <div style="background: rgba(255, 255, 255, 0.1); padding: 1rem; border-radius: 12px; text-align: center;">
-                        <i class="fas fa-comments" style="font-size: 2rem; color: #a8edea; margin-bottom: 0.5rem;"></i>
-                        <p style="margin: 0; color: white; font-weight: 600;">Interaction History</p>
+                    <div class="feature-item">
+                        <i class="fas fa-comments" style="color: #198754;"></i>
+                        <p>Interaction History</p>
                     </div>
                 </div>
-                <div style="background: rgba(255, 193, 7, 0.2); border: 1px solid rgba(255, 193, 7, 0.4); border-radius: 12px; padding: 1.5rem; margin-top: 2rem;">
+                <div class="alert-warning">
                     <div style="display: flex; align-items: center; gap: 0.75rem;">
-                        <i class="fas fa-exclamation-triangle" style="color: #ffc107; font-size: 1.5rem;"></i>
+                        <i class="fas fa-exclamation-triangle" style="color: #856404; font-size: 1.5rem;"></i>
                         <div>
-                            <strong style="color: #ffc107;">Important Note:</strong>
-                            <p style="margin: 0.5rem 0 0 0; color: rgba(255, 255, 255, 0.9);">
+                            <strong style="color: #856404;">Important Note:</strong>
+                            <p style="margin: 0.5rem 0 0 0; color: #333333;">
                                 This action will create a new client record linked to this profile and cannot be undone. All existing interactions will be preserved.
                             </p>
                         </div>
@@ -974,17 +1184,19 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                    <i class="fas fa-times me-2"></i>Cancel
+                <button type="button" class="btn-clear" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i>Cancel
                 </button>
-                <a href="#" id="confirmConvert" class="btn btn-success">
-                    <i class="fas fa-user-check me-2"></i>Convert to Client
+                <a href="#" id="confirmConvert" class="btn-search">
+                    <i class="fas fa-user-check"></i>Convert to Client
                 </a>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Add fade-in animation to table rows
@@ -994,9 +1206,9 @@ document.addEventListener('DOMContentLoaded', function() {
         row.classList.add('fade-in');
     });
 
-    // Enhanced convert to client button functionality
+    // Convert to client modal functionality
     const convertButtons = document.querySelectorAll('[title="Convert to Full Client"]');
-    const convertModal = document.getElementById('convertModal');
+    const convertModal = new bootstrap.Modal(document.getElementById('convertModal'));
     const confirmButton = document.getElementById('confirmConvert');
     
     convertButtons.forEach(button => {
@@ -1004,52 +1216,16 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             const convertUrl = this.getAttribute('href');
             confirmButton.setAttribute('href', convertUrl);
-            
-            // Show modal with animation
-            convertModal.style.display = 'block';
-            convertModal.classList.add('show');
-            convertModal.style.opacity = '0';
-            convertModal.style.transform = 'scale(0.8)';
-            
-            setTimeout(() => {
-                convertModal.style.transition = 'all 0.3s ease';
-                convertModal.style.opacity = '1';
-                convertModal.style.transform = 'scale(1)';
-            }, 10);
+            convertModal.show();
         });
-    });
-
-    // Close modal functionality
-    const closeButtons = convertModal?.querySelectorAll('[data-dismiss="modal"]');
-    closeButtons?.forEach(button => {
-        button.addEventListener('click', function() {
-            convertModal.style.opacity = '0';
-            convertModal.style.transform = 'scale(0.8)';
-            setTimeout(() => {
-                convertModal.style.display = 'none';
-                convertModal.classList.remove('show');
-            }, 300);
-        });
-    });
-
-    // Close modal when clicking outside
-    convertModal?.addEventListener('click', function(e) {
-        if (e.target === convertModal) {
-            convertModal.style.opacity = '0';
-            convertModal.style.transform = 'scale(0.8)';
-            setTimeout(() => {
-                convertModal.style.display = 'none';
-                convertModal.classList.remove('show');
-            }, 300);
-        }
     });
 
     // Enhanced hover effects for action buttons
     const actionButtons = document.querySelectorAll('.action-btn');
     actionButtons.forEach(button => {
         button.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-3px) scale(1.1)';
-            this.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.3)';
+            this.style.transform = 'translateY(-2px) scale(1.1)';
+            this.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
         });
         
         button.addEventListener('mouseleave', function() {
@@ -1064,7 +1240,7 @@ document.addEventListener('DOMContentLoaded', function() {
         searchButton.addEventListener('click', function() {
             const icon = this.querySelector('i');
             const originalIcon = icon.className;
-            icon.className = 'fas fa-spinner fa-spin me-2';
+            icon.className = 'fas fa-spinner fa-spin';
             
             setTimeout(() => {
                 icon.className = originalIcon;
@@ -1073,31 +1249,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Enhanced interaction summary hover effects
-    const interactionSummaries = document.querySelectorAll('.client-interaction-summary');
+    const interactionSummaries = document.querySelectorAll('.interaction-summary');
     interactionSummaries.forEach(summary => {
         summary.addEventListener('mouseenter', function() {
-            this.style.transform = 'scale(1.02)';
+            this.style.transform = 'translateY(-1px)';
             this.style.transition = 'all 0.3s ease';
         });
         
         summary.addEventListener('mouseleave', function() {
-            this.style.transform = 'scale(1)';
+            this.style.transform = 'translateY(0)';
         });
     });
 
-    // Auto-refresh for follow-up alerts (every 5 minutes)
-    setInterval(() => {
-        const followUpAlerts = document.querySelectorAll('.follow-up-alert');
-        followUpAlerts.forEach(alert => {
-            // Add a subtle flash effect to draw attention
-            alert.style.opacity = '0.7';
-            setTimeout(() => {
-                alert.style.opacity = '1';
-            }, 500);
-        });
-    }, 300000); // 5 minutes
-
-    // Quick filter shortcuts
+    // Keyboard shortcuts
     document.addEventListener('keydown', function(e) {
         if (e.ctrlKey || e.metaKey) {
             switch(e.key) {
@@ -1114,30 +1278,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Add intersection observer for enhanced animations
-    const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.style.opacity = '1';
-                entry.target.style.transform = 'translateY(0)';
-                
-                // Add special animation for stat cards
-                if (entry.target.classList.contains('stat-card')) {
-                    const number = entry.target.querySelector('.stat-number');
-                    if (number) {
-                        animateNumber(number);
-                    }
-                }
-            }
-        });
-    }, observerOptions);
-
-    // Animate numbers in stat cards
+    // Animate stat numbers
     function animateNumber(element) {
         const finalNumber = parseInt(element.textContent);
         const duration = 1000;
@@ -1157,24 +1298,40 @@ document.addEventListener('DOMContentLoaded', function() {
         requestAnimationFrame(animate);
     }
 
+    // Intersection observer for animations
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+                
+                // Animate stat card numbers
+                if (entry.target.classList.contains('stat-card')) {
+                    const number = entry.target.querySelector('.stat-number');
+                    if (number) {
+                        animateNumber(number);
+                    }
+                }
+            }
+        });
+    }, observerOptions);
+
     // Observe elements for scroll animations
-    document.querySelectorAll('.stat-card, .search-section, .modern-table-container').forEach(el => {
+    document.querySelectorAll('.stat-card, .search-section, .table-container').forEach(el => {
         el.style.opacity = '0';
         el.style.transform = 'translateY(30px)';
         el.style.transition = 'all 0.6s ease';
         observer.observe(el);
     });
 
-    // Real-time updates for interaction counts (if WebSocket available)
-    if (typeof WebSocket !== 'undefined') {
-        // This would connect to a WebSocket for real-time updates
-        // Implementation depends on your WebSocket setup
-        console.log('WebSocket available for real-time updates');
-    }
-
-    // Keyboard navigation for table rows
+    // Table row keyboard navigation
     let selectedRow = -1;
-    const tableRows = document.querySelectorAll('.modern-table tbody tr');
+    const rows = document.querySelectorAll('.modern-table tbody tr');
     
     document.addEventListener('keydown', function(e) {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
@@ -1182,7 +1339,7 @@ document.addEventListener('DOMContentLoaded', function() {
         switch(e.key) {
             case 'ArrowDown':
                 e.preventDefault();
-                selectedRow = Math.min(selectedRow + 1, tableRows.length - 1);
+                selectedRow = Math.min(selectedRow + 1, rows.length - 1);
                 highlightRow();
                 break;
             case 'ArrowUp':
@@ -1193,7 +1350,7 @@ document.addEventListener('DOMContentLoaded', function() {
             case 'Enter':
                 e.preventDefault();
                 if (selectedRow >= 0) {
-                    const viewButton = tableRows[selectedRow].querySelector('.btn-view');
+                    const viewButton = rows[selectedRow].querySelector('.btn-view');
                     if (viewButton) viewButton.click();
                 }
                 break;
@@ -1201,9 +1358,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function highlightRow() {
-        tableRows.forEach((row, index) => {
+        rows.forEach((row, index) => {
             if (index === selectedRow) {
-                row.style.background = 'rgba(102, 126, 234, 0.3)';
+                row.style.background = 'rgba(28, 100, 255, 0.1)';
                 row.scrollIntoView({ behavior: 'smooth', block: 'center' });
             } else {
                 row.style.background = '';
@@ -1212,5 +1369,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-
 {% endblock %}

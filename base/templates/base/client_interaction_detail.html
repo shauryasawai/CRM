@@ -6,117 +6,464 @@
 
 {% block extra_css %}
 <style>
-.detail-card {
-    border: none;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-.detail-section {
-    background: #f8f9fa;
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-}
-.badge-priority-high { background-color: #f44336; }
-.badge-priority-urgent { background-color: #ff5722; }
-.badge-priority-medium { background-color: #ff9800; }
-.badge-priority-low { background-color: #4caf50; }
-.notes-section {
-    background: white;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 1.5rem;
-    min-height: 200px;
-}
+    :root {
+        --bs-primary: #1C64FF;
+        --bs-secondary: #696969;
+        --bs-light: #FFFFFF;
+        --bs-border-color: #D9D9D9;
+        --bs-info: #C3E4FF;
+    }
+
+    .detail-card {
+        border: 1px solid #D9D9D9;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        margin-bottom: 1.5rem;
+    }
+
+    .detail-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+
+    .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #D9D9D9;
+        font-weight: 600;
+        border-radius: 12px 12px 0 0 !important;
+        padding: 1.25rem 1.5rem;
+    }
+
+    .card-header.bg-primary {
+        background: linear-gradient(135deg, #1C64FF, #1557e6) !important;
+        color: #FFFFFF !important;
+        border-bottom-color: #1C64FF;
+    }
+
+    .card-header.bg-light {
+        background: #f8f9fa !important;
+        color: #1C64FF !important;
+    }
+
+    .detail-section {
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        border: 1px solid #D9D9D9;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .detail-section:hover {
+        background: linear-gradient(135deg, rgba(195, 228, 255, 0.1) 0%, #ffffff 100%);
+        border-color: #1C64FF;
+        transform: translateY(-1px);
+    }
+
+    .notes-section {
+        background: #FFFFFF;
+        border: 1px solid #D9D9D9;
+        border-radius: 12px;
+        padding: 2rem;
+        min-height: 200px;
+        font-size: 1rem;
+        line-height: 1.6;
+        color: #333333;
+        transition: all 0.3s ease;
+    }
+
+    .notes-section:hover {
+        border-color: #1C64FF;
+        box-shadow: 0 0 0 0.2rem rgba(28, 100, 255, 0.1);
+    }
+
+    .badge {
+        font-weight: 500;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.875rem;
+    }
+
+    .badge-priority-high { 
+        background-color: #dc3545 !important;
+        color: #FFFFFF !important;
+    }
+
+    .badge-priority-urgent { 
+        background-color: #ff5722 !important;
+        color: #FFFFFF !important;
+    }
+
+    .badge-priority-medium { 
+        background-color: #ffc107 !important;
+        color: #000000 !important;
+    }
+
+    .badge-priority-low { 
+        background-color: #198754 !important;
+        color: #FFFFFF !important;
+    }
+
+    .bg-primary {
+        background-color: #1C64FF !important;
+    }
+
+    .bg-warning {
+        background-color: #ffc107 !important;
+    }
+
+    .text-primary {
+        color: #1C64FF !important;
+    }
+
+    .text-secondary {
+        color: #696969 !important;
+    }
+
+    .text-muted {
+        color: #696969 !important;
+    }
+
+    .btn-primary {
+        background-color: #1C64FF;
+        border-color: #1C64FF;
+        font-weight: 600;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        background-color: #1557e6;
+        border-color: #1557e6;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(28, 100, 255, 0.3);
+    }
+
+    .btn-light {
+        background-color: #FFFFFF;
+        border-color: #D9D9D9;
+        color: #1C64FF;
+        font-weight: 600;
+    }
+
+    .btn-light:hover {
+        background-color: #C3E4FF;
+        border-color: #1C64FF;
+        color: #1C64FF;
+    }
+
+    .btn-danger {
+        background-color: #dc3545;
+        border-color: #dc3545;
+        font-weight: 600;
+    }
+
+    .btn-danger:hover {
+        background-color: #bb2d3b;
+        border-color: #bb2d3b;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    }
+
+    .btn-outline-primary {
+        color: #1C64FF;
+        border-color: #1C64FF;
+        font-weight: 600;
+    }
+
+    .btn-outline-primary:hover {
+        background-color: #1C64FF;
+        border-color: #1C64FF;
+    }
+
+    .btn-outline-secondary {
+        color: #696969;
+        border-color: #696969;
+        font-weight: 500;
+    }
+
+    .btn-outline-secondary:hover {
+        background-color: #696969;
+        border-color: #696969;
+    }
+
+    .btn-outline-success {
+        color: #198754;
+        border-color: #198754;
+        font-weight: 500;
+    }
+
+    .btn-outline-success:hover {
+        background-color: #198754;
+        border-color: #198754;
+    }
+
+    .alert {
+        border-radius: 8px;
+        border: none;
+        font-weight: 500;
+        padding: 1.25rem;
+    }
+
+    .alert-info {
+        background-color: rgba(195, 228, 255, 0.2);
+        color: #1C64FF;
+        border-left: 4px solid #1C64FF;
+    }
+
+    .alert-warning {
+        background-color: rgba(255, 193, 7, 0.1);
+        color: #856404;
+        border-left: 4px solid #ffc107;
+    }
+
+    .interaction-header {
+        background: linear-gradient(135deg, #1C64FF 0%, #1557e6 100%);
+        color: #FFFFFF;
+        padding: 1.5rem;
+        border-radius: 12px 12px 0 0;
+        margin: -1.25rem -1.5rem 1.5rem -1.5rem;
+    }
+
+    .interaction-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .meta-item {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .client-info-card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: 1px solid #D9D9D9;
+        border-radius: 12px;
+    }
+
+    .client-avatar {
+        width: 60px;
+        height: 60px;
+        background: #C3E4FF;
+        color: #1C64FF;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+
+    .quick-actions .btn {
+        margin-bottom: 0.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .quick-actions .btn:hover {
+        transform: translateX(4px);
+    }
+
+    .timestamp-info {
+        background: rgba(195, 228, 255, 0.1);
+        border: 1px solid #C3E4FF;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+
+    .interaction-type-icon {
+        width: 40px;
+        height: 40px;
+        background: #C3E4FF;
+        color: #1C64FF;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        font-size: 1.2rem;
+    }
+
+    .fade-in {
+        animation: fadeIn 0.6s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .detail-section {
+            padding: 1.5rem;
+        }
+        
+        .notes-section {
+            padding: 1.5rem;
+        }
+        
+        .interaction-header {
+            margin: -1.25rem -1rem 1.5rem -1rem;
+            padding: 1.25rem;
+        }
+        
+        .interaction-meta {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .d-flex.justify-content-between {
+            flex-direction: column;
+            gap: 1rem;
+        }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid">
     <div class="row">
-        <div class="col-md-8">
-            <div class="card detail-card">
-                <div class="card-header bg-primary text-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="fas fa-comments"></i> Interaction Details
-                        </h5>
-                        <div>
-                            {% if can_edit %}
-                                <a href="{% url 'client_interaction_update' client_profile.id interaction.id %}" 
-                                   class="btn btn-light btn-sm">
-                                    <i class="fas fa-edit"></i> Edit
-                                </a>
-                                <a href="{% url 'client_interaction_delete' client_profile.id interaction.id %}" 
-                                   class="btn btn-danger btn-sm">
-                                    <i class="fas fa-trash"></i> Delete
-                                </a>
-                            {% endif %}
+        <div class="col-lg-8">
+            <div class="card detail-card fade-in">
+                <div class="card-body">
+                    <!-- Interaction Header -->
+                    <div class="interaction-header">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="d-flex align-items-center">
+                                <div class="interaction-type-icon">
+                                    <i class="fas fa-comments"></i>
+                                </div>
+                                <div>
+                                    <h4 class="mb-1">Interaction Details</h4>
+                                    <p class="mb-0 opacity-75">{{ client_profile.client_full_name }}</p>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                {% if can_edit %}
+                                    <a href="{% url 'client_interaction_update' client_profile.id interaction.id %}" 
+                                       class="btn btn-light btn-sm">
+                                        <i class="fas fa-edit me-1"></i>Edit
+                                    </a>
+                                    <a href="{% url 'client_interaction_delete' client_profile.id interaction.id %}" 
+                                       class="btn btn-danger btn-sm">
+                                        <i class="fas fa-trash me-1"></i>Delete
+                                    </a>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="card-body">
+
                     <!-- Interaction Summary -->
                     <div class="detail-section">
                         <div class="row">
                             <div class="col-md-6">
-                                <h6 class="text-primary mb-3">Interaction Summary</h6>
-                                <div class="mb-2">
-                                    <span class="badge bg-primary me-2">{{ interaction.get_interaction_type_display }}</span>
+                                <h6 class="text-primary mb-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Interaction Summary
+                                </h6>
+                                <div class="interaction-meta mb-3">
+                                    <span class="badge bg-primary">{{ interaction.get_interaction_type_display }}</span>
                                     <span class="badge badge-priority-{{ interaction.priority }}">{{ interaction.get_priority_display }}</span>
                                     {% if interaction.follow_up_required %}
                                         <span class="badge bg-warning text-dark">Follow-up Required</span>
                                     {% endif %}
                                 </div>
-                                <p class="mb-1">
-                                    <strong>Date & Time:</strong> {{ interaction.interaction_date|date:"M d, Y H:i" }}
-                                </p>
-                                {% if interaction.duration_minutes %}
-                                    <p class="mb-1">
-                                        <strong>Duration:</strong> {{ interaction.duration_minutes }} minutes
-                                    </p>
-                                {% endif %}
-                                {% if interaction.follow_up_date %}
-                                    <p class="mb-1">
-                                        <strong>Follow-up Date:</strong> {{ interaction.follow_up_date|date:"M d, Y" }}
-                                    </p>
-                                {% endif %}
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-calendar-alt text-primary me-2"></i>
+                                        <strong>Date & Time:</strong>
+                                        <span class="ms-2">{{ interaction.interaction_date|date:"M d, Y H:i" }}</span>
+                                    </div>
+                                    {% if interaction.duration_minutes %}
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="fas fa-clock text-primary me-2"></i>
+                                            <strong>Duration:</strong>
+                                            <span class="ms-2">{{ interaction.duration_minutes }} minutes</span>
+                                        </div>
+                                    {% endif %}
+                                    {% if interaction.follow_up_date %}
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="fas fa-calendar-check text-primary me-2"></i>
+                                            <strong>Follow-up Date:</strong>
+                                            <span class="ms-2">{{ interaction.follow_up_date|date:"M d, Y" }}</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
                             </div>
                             <div class="col-md-6">
-                                <h6 class="text-primary mb-3">Created By</h6>
-                                <p class="mb-1">
-                                    <strong>{{ interaction.created_by.get_full_name|default:interaction.created_by.username }}</strong>
-                                </p>
-                                <p class="mb-1 text-muted">
-                                    {{ interaction.get_time_since_creation }} ago
-                                </p>
-                                <p class="mb-0 text-muted small">
-                                    Created: {{ interaction.created_at|date:"M d, Y H:i" }}
-                                    {% if interaction.updated_at != interaction.created_at %}
-                                        <br>Updated: {{ interaction.updated_at|date:"M d, Y H:i" }}
-                                    {% endif %}
-                                </p>
+                                <h6 class="text-primary mb-3">
+                                    <i class="fas fa-user me-2"></i>
+                                    Created By
+                                </h6>
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="client-avatar" style="width: 50px; height: 50px; font-size: 1.2rem;">
+                                        {{ interaction.created_by.get_full_name|first|default:interaction.created_by.username|first }}
+                                    </div>
+                                    <div class="ms-3">
+                                        <div class="fw-bold">{{ interaction.created_by.get_full_name|default:interaction.created_by.username }}</div>
+                                        <div class="text-muted small">{{ interaction.get_time_since_creation }} ago</div>
+                                    </div>
+                                </div>
+                                <div class="timestamp-info">
+                                    <div class="small">
+                                        <div class="mb-1">
+                                            <i class="fas fa-plus-circle me-1"></i>
+                                            <strong>Created:</strong> {{ interaction.created_at|date:"M d, Y H:i" }}
+                                        </div>
+                                        {% if interaction.updated_at != interaction.created_at %}
+                                            <div>
+                                                <i class="fas fa-edit me-1"></i>
+                                                <strong>Updated:</strong> {{ interaction.updated_at|date:"M d, Y H:i" }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Notes Section -->
                     <div class="mb-4">
-                        <h6 class="text-primary mb-3">Interaction Notes</h6>
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-sticky-note me-2"></i>
+                            Interaction Notes
+                        </h6>
                         <div class="notes-section">
-                            {{ interaction.notes|linebreaks }}
+                            {% if interaction.notes %}
+                                {{ interaction.notes|linebreaks }}
+                            {% else %}
+                                <div class="text-center text-muted py-4">
+                                    <i class="fas fa-file-alt fa-2x mb-2 opacity-25"></i>
+                                    <p class="mb-0">No notes provided for this interaction</p>
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
 
                     <!-- Edit Status -->
                     {% if can_edit %}
                         <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i>
-                            This interaction can be edited or deleted within 24 hours of creation.
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Editable:</strong> This interaction can be edited or deleted within 24 hours of creation.
                         </div>
                     {% else %}
                         <div class="alert alert-warning">
-                            <i class="fas fa-lock"></i>
-                            This interaction is read-only. Interactions can only be edited within 24 hours of creation and only by the creator.
+                            <i class="fas fa-lock me-2"></i>
+                            <strong>Read-only:</strong> This interaction is read-only. Interactions can only be edited within 24 hours of creation and only by the creator.
                         </div>
                     {% endif %}
                 </div>
@@ -124,59 +471,135 @@
         </div>
 
         <!-- Sidebar -->
-        <div class="col-md-4">
+        <div class="col-lg-4">
             <!-- Client Info -->
-            <div class="card detail-card mb-4">
-                <div class="card-header">
-                    <h6 class="mb-0">Client Information</h6>
+            <div class="card detail-card client-info-card fade-in">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="fas fa-user-circle me-2"></i>
+                        Client Information
+                    </h6>
                 </div>
                 <div class="card-body">
-                    <p class="mb-1">
-                        <strong>{{ client_profile.client_full_name }}</strong>
-                    </p>
-                    <p class="mb-1 text-muted">{{ client_profile.client_id }}</p>
-                    <p class="mb-1">
-                        <strong>PAN:</strong> {{ client_profile.pan_number }}
-                    </p>
-                    <p class="mb-1">
-                        <strong>Email:</strong> {{ client_profile.email }}
-                    </p>
-                    <p class="mb-1">
-                        <strong>Mobile:</strong> {{ client_profile.mobile_number }}
-                    </p>
-                    <p class="mb-0">
-                        <strong>RM:</strong> {{ client_profile.mapped_rm|default:"Not assigned" }}
-                    </p>
+                    <div class="text-center mb-3">
+                        <div class="client-avatar mx-auto">
+                            {{ client_profile.client_full_name|first }}
+                        </div>
+                        <h6 class="text-primary mb-1">{{ client_profile.client_full_name }}</h6>
+                        <small class="text-muted">{{ client_profile.client_id }}</small>
+                    </div>
+                    
+                    <div class="client-details">
+                        <div class="mb-2">
+                            <i class="fas fa-id-card text-primary me-2"></i>
+                            <strong>PAN:</strong> {{ client_profile.pan_number|default:"Not provided" }}
+                        </div>
+                        <div class="mb-2">
+                            <i class="fas fa-envelope text-primary me-2"></i>
+                            <strong>Email:</strong> {{ client_profile.email|default:"Not provided" }}
+                        </div>
+                        <div class="mb-2">
+                            <i class="fas fa-phone text-primary me-2"></i>
+                            <strong>Mobile:</strong> {{ client_profile.mobile_number|default:"Not provided" }}
+                        </div>
+                        <div class="mb-0">
+                            <i class="fas fa-user-tie text-primary me-2"></i>
+                            <strong>RM:</strong> {{ client_profile.mapped_rm|default:"Not assigned" }}
+                        </div>
+                    </div>
                 </div>
-                <div class="card-footer">
-                    <a href="{% url 'client_profile_detail' client_profile.id %}" class="btn btn-outline-primary btn-sm">
-                        <i class="fas fa-user"></i> View Profile
+                <div class="card-footer bg-light">
+                    <a href="{% url 'client_profile_detail' client_profile.id %}" 
+                       class="btn btn-outline-primary btn-sm w-100">
+                        <i class="fas fa-user me-2"></i>View Full Profile
                     </a>
                 </div>
             </div>
 
             <!-- Quick Actions -->
-            <div class="card detail-card">
-                <div class="card-header">
-                    <h6 class="mb-0">Quick Actions</h6>
+            <div class="card detail-card fade-in">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>
+                        Quick Actions
+                    </h6>
                 </div>
-                <div class="card-body">
+                <div class="card-body quick-actions">
                     <div class="d-grid gap-2">
-                        <a href="{% url 'client_interaction_list' client_profile.id %}" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-list"></i> All Interactions
+                        <a href="{% url 'client_interaction_list' client_profile.id %}" 
+                           class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-list me-2"></i>All Interactions
                         </a>
                         {% if request.user.role == 'rm' and client_profile.mapped_rm == request.user %}
-                            <a href="{% url 'client_interaction_create' client_profile.id %}" class="btn btn-outline-primary btn-sm">
-                                <i class="fas fa-plus"></i> New Interaction
+                            <a href="{% url 'client_interaction_create' client_profile.id %}" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-plus me-2"></i>New Interaction
                             </a>
                         {% endif %}
-                        <a href="{% url 'client_profile_detail' client_profile.id %}" class="btn btn-outline-success btn-sm">
-                            <i class="fas fa-arrow-left"></i> Back to Profile
+                        <a href="{% url 'client_profile_detail' client_profile.id %}" 
+                           class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Profile
                         </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interaction Stats -->
+            <div class="card detail-card fade-in">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Interaction Stats
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="border-end">
+                                <div class="h4 text-primary mb-1">{{ client_profile.interactions.count }}</div>
+                                <small class="text-muted">Total</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="h4 text-success mb-1">{{ client_profile.interactions.filter(follow_up_required=True).count }}</div>
+                            <small class="text-muted">Follow-ups</small>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add animation delays to cards
+    const cards = document.querySelectorAll('.fade-in');
+    cards.forEach((card, index) => {
+        card.style.animationDelay = `${index * 0.1}s`;
+    });
+
+    // Add hover effects to action buttons
+    const actionButtons = document.querySelectorAll('.quick-actions .btn');
+    actionButtons.forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateX(4px)';
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateX(0)';
+        });
+    });
+
+    // Add confirmation for delete action
+    const deleteButton = document.querySelector('a[href*="delete"]');
+    if (deleteButton) {
+        deleteButton.addEventListener('click', function(e) {
+            if (!confirm('Are you sure you want to delete this interaction? This action cannot be undone.')) {
+                e.preventDefault();
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

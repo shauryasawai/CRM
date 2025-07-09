@@ -1,642 +1,653 @@
 {% extends 'base/base.html' %}
+{% load static %}
+
 {% block title %}Clients{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --bs-primary: #1C64FF;
+    --bs-secondary: #696969;
+    --bs-light: #FFFFFF;
+    --bs-border-color: #D9D9D9;
+    --bs-info: #C3E4FF;
+}
+
+.clients-container {
+    background: #f8f9fa;
+    min-height: 100vh;
+    padding: 2rem 0;
+}
+
+.clients-header {
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+    color: #FFFFFF;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(28, 100, 255, 0.3);
+}
+
+.clients-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+    50% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+}
+
+.clients-title {
+    font-size: 2.25rem;
+    font-weight: 700;
+    margin: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 1;
+}
+
+.filter-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.filter-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #FFFFFF;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    backdrop-filter: blur(10px);
+}
+
+.filter-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+}
+
+.filter-dropdown-content {
+    display: none;
+    position: absolute;
+    background: #FFFFFF;
+    min-width: 200px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    border-radius: 12px;
+    z-index: 1000;
+    border: 1px solid #D9D9D9;
+    overflow: hidden;
+    top: 100%;
+    right: 0;
+    margin-top: 0.5rem;
+}
+
+.filter-dropdown.active .filter-dropdown-content {
+    display: block;
+    animation: fadeInUp 0.3s ease;
+}
+
+.filter-option {
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 1px solid #D9D9D9;
+    font-weight: 500;
+    color: #333333;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filter-option:last-child {
+    border-bottom: none;
+}
+
+.filter-option:hover {
+    background: rgba(28, 100, 255, 0.05);
+    color: #1C64FF;
+}
+
+.filter-option.active {
+    background: rgba(28, 100, 255, 0.1);
+    color: #1C64FF;
+    font-weight: 600;
+}
+
+.add-client-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #FFFFFF;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
+}
+
+.add-client-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.add-client-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    color: #FFFFFF;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+}
+
+.add-client-btn:hover::before {
+    left: 100%;
+}
+
+.client-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: #FFFFFF;
+    border: 1px solid #D9D9D9;
+    border-radius: 16px;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #1C64FF, #1557e6);
+    border-radius: 16px 16px 0 0;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #1C64FF;
+    margin-bottom: 0.5rem;
+    line-height: 1.1;
+}
+
+.stat-label {
+    color: #696969;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.table-container {
+    background: #FFFFFF;
+    border: 1px solid #D9D9D9;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+}
+
+.table-container:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+.clients-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: transparent;
+}
+
+.clients-table thead {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+}
+
+.clients-table th {
+    padding: 1.5rem 1rem;
+    text-align: left;
+    color: #333333;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #D9D9D9;
+    position: relative;
+}
+
+.clients-table td {
+    padding: 1.5rem 1rem;
+    border-bottom: 1px solid #D9D9D9;
+    color: #333333;
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    vertical-align: middle;
+}
+
+.clients-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.clients-table tbody tr {
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.clients-table tbody tr::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 0;
+    height: 100%;
+    background: linear-gradient(90deg, #1C64FF, rgba(28, 100, 255, 0.1));
+    transition: width 0.3s ease;
+    z-index: 1;
+}
+
+.clients-table tbody tr:hover {
+    background: rgba(28, 100, 255, 0.05);
+    transform: translateX(4px);
+}
+
+.clients-table tbody tr:hover::before {
+    width: 4px;
+}
+
+.client-name {
+    font-weight: 700;
+    color: #1C64FF;
+    font-size: 1.05rem;
+}
+
+.contact-info {
+    color: #333333;
+    font-size: 0.9rem;
+}
+
+.assigned-user {
+    color: #333333;
+    font-weight: 600;
+}
+
+.unassigned {
+    color: #696969;
+    font-style: italic;
+}
+
+.lead-badge {
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+    color: #FFFFFF;
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-block;
+    box-shadow: 0 2px 8px rgba(28, 100, 255, 0.3);
+}
+
+.direct-badge {
+    background: linear-gradient(135deg, #696969, #5a5a5a);
+    color: #FFFFFF;
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-block;
+    box-shadow: 0 2px 8px rgba(105, 105, 105, 0.3);
+}
+
+.currency-amount {
+    font-weight: 700;
+    color: #198754;
+    font-size: 1rem;
+}
+
+.zero-amount {
+    color: #696969;
+    font-style: italic;
+}
+
+.demat-count {
+    font-weight: 700;
+    color: #1C64FF;
+    font-size: 1.1rem;
+}
+
+.created-date {
+    color: #696969;
+    font-size: 0.9rem;
+}
+
+.action-links {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.action-link {
+    color: #FFFFFF;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.action-link::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.4s ease;
+}
+
+.action-link:hover::before {
+    left: 100%;
+}
+
+.action-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.action-link.edit {
+    background: linear-gradient(135deg, #ffc107, #ffb300);
+    color: #000000;
+}
+
+.action-link.edit:hover {
+    background: linear-gradient(135deg, #ffb300, #ffa000);
+    color: #000000;
+}
+
+.action-link.delete {
+    background: linear-gradient(135deg, #dc3545, #bb2d3b);
+}
+
+.action-link.delete:hover {
+    background: linear-gradient(135deg, #bb2d3b, #a02834);
+}
+
+.no-access {
+    color: #696969;
+    font-style: italic;
+    font-size: 0.85rem;
+}
+
+.empty-message {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #696969;
+}
+
+.empty-message i {
+    font-size: 4rem;
+    color: #D9D9D9;
+    margin-bottom: 1.5rem;
+    display: block;
+}
+
+.empty-message h3 {
+    color: #333333;
+    margin: 0 0 1rem 0;
+    font-weight: 600;
+}
+
+.empty-message a {
+    color: #1C64FF;
+    font-weight: 600;
+    text-decoration: none;
+    border-bottom: 2px solid #C3E4FF;
+    padding-bottom: 2px;
+    transition: all 0.3s ease;
+}
+
+.empty-message a:hover {
+    color: #1557e6;
+    border-bottom-color: #1C64FF;
+}
+
+.fade-in {
+    animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-up {
+    animation: slideUp 0.8s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .clients-container {
+        padding: 1rem 0;
+    }
+
+    .clients-header {
+        flex-direction: column;
+        text-align: center;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .header-controls {
+        width: 100%;
+        justify-content: center;
+        margin-top: 1rem;
+    }
+
+    .clients-title {
+        font-size: 1.75rem;
+    }
+
+    .table-container {
+        overflow-x: auto;
+        border-radius: 12px;
+    }
+
+    .clients-table th,
+    .clients-table td {
+        padding: 1rem 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .action-links {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .client-stats {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .stat-card {
+        padding: 1.5rem;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+    }
+
+    .filter-dropdown-content {
+        right: auto;
+        left: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .clients-table {
+        font-size: 0.8rem;
+    }
+
+    .clients-table th,
+    .clients-table td {
+        padding: 0.75rem 0.5rem;
+    }
+
+    .action-link {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clients</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        :root {
-            --primary-green: #D3FF61;
-            --primary-black: #000000;
-            --primary-white: #FFFFFF;
-            --gray-50: #FAFAFA;
-            --gray-100: #F5F5F5;
-            --gray-200: #E5E5E5;
-            --gray-300: #D4D4D4;
-            --gray-400: #A3A3A3;
-            --gray-500: #737373;
-            --gray-600: #525252;
-            --gray-700: #404040;
-            --gray-800: #262626;
-            --gray-900: #171717;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-            --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, var(--primary-green) 0%, #B8E642 100%);
-            min-height: 100vh;
-            margin: 0;
-            padding: 0;
-            color: var(--primary-black);
-        }
-
-        .clients-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
-            min-height: 100vh;
-            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .clients-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 3rem;
-            flex-wrap: wrap;
-            gap: 1.5rem;
-            background: var(--primary-white);
-            padding: 2rem;
-            border-radius: 20px;
-            box-shadow: var(--shadow-xl);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .clients-title {
-            font-size: 3rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--primary-black) 0%, var(--gray-700) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin: 0;
-            letter-spacing: -0.025em;
-            line-height: 1.1;
-        }
-
-        .header-controls {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .filter-dropdown {
-            position: relative;
-            display: inline-block;
-        }
-
-        .filter-btn {
-            background: linear-gradient(135deg, var(--gray-100) 0%, var(--gray-200) 100%);
-            color: var(--primary-black);
-            border: 1px solid var(--gray-300);
-            padding: 1rem 1.5rem;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            display: inline-flex;
-            align-items: center;
-            gap: 0.75rem;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .filter-btn:hover {
-            background: linear-gradient(135deg, var(--gray-200) 0%, var(--gray-300) 100%);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .filter-dropdown-content {
-            display: none;
-            position: absolute;
-            background: var(--primary-white);
-            min-width: 200px;
-            box-shadow: var(--shadow-xl);
-            border-radius: 12px;
-            z-index: 1000;
-            border: 1px solid var(--gray-200);
-            overflow: hidden;
-            top: 100%;
-            right: 0;
-            margin-top: 0.5rem;
-        }
-
-        .filter-dropdown.active .filter-dropdown-content {
-            display: block;
-            animation: fadeInUp 0.3s ease;
-        }
-
-        .filter-option {
-            padding: 1rem 1.5rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            border-bottom: 1px solid var(--gray-100);
-            font-weight: 500;
-        }
-
-        .filter-option:last-child {
-            border-bottom: none;
-        }
-
-        .filter-option:hover {
-            background: var(--gray-50);
-        }
-
-        .filter-option.active {
-            background: var(--primary-green);
-            color: var(--primary-black);
-            font-weight: 600;
-        }
-
-        .add-client-btn {
-            background: linear-gradient(135deg, var(--primary-black) 0%, var(--gray-800) 100%);
-            color: var(--primary-white);
-            border: none;
-            padding: 1rem 2rem;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.75rem;
-            box-shadow: var(--shadow-lg);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .add-client-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s ease;
-        }
-
-        .add-client-btn:hover {
-            transform: translateY(-3px) scale(1.02);
-            box-shadow: var(--shadow-2xl);
-            background: linear-gradient(135deg, var(--gray-700) 0%, var(--primary-black) 100%);
-        }
-
-        .add-client-btn:hover::before {
-            left: 100%;
-        }
-
-        .add-client-btn:active {
-            transform: translateY(-1px) scale(1.01);
-        }
-
-        .add-client-btn.loading {
-            opacity: 0.7;
-            pointer-events: none;
-        }
-
-        .client-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 3rem;
-        }
-
-        .stat-card {
-            background: var(--primary-white);
-            padding: 2rem;
-            border-radius: 16px;
-            box-shadow: var(--shadow-lg);
-            text-align: center;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary-green), #B8E642);
-        }
-
-        .stat-card:hover {
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: var(--shadow-2xl);
-        }
-
-        .stat-value {
-            font-size: 2.5rem;
-            font-weight: 800;
-            color: var(--primary-black);
-            margin-bottom: 0.5rem;
-            line-height: 1.1;
-        }
-
-        .stat-label {
-            color: var(--gray-600);
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            font-weight: 600;
-        }
-
-        .table-container {
-            background: var(--primary-white);
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: var(--shadow-xl);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .clients-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            background: transparent;
-        }
-
-        .clients-table thead {
-            background: linear-gradient(135deg, var(--primary-black) 0%, var(--gray-800) 100%);
-        }
-
-        .clients-table th {
-            padding: 1.5rem 2rem;
-            text-align: left;
-            color: var(--primary-white);
-            font-weight: 700;
-            text-transform: uppercase;
-            font-size: 0.8rem;
-            letter-spacing: 0.1em;
-            position: relative;
-        }
-
-        .clients-table th::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: linear-gradient(90deg, var(--primary-green), #B8E642);
-        }
-
-        .clients-table td {
-            padding: 1.5rem 2rem;
-            border-bottom: 1px solid var(--gray-200);
-            color: var(--gray-700);
-            font-weight: 500;
-            font-size: 0.95rem;
-            transition: all 0.2s ease;
-        }
-
-        .clients-table tbody tr:last-child td {
-            border-bottom: none;
-        }
-
-        .clients-table tbody tr {
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            position: relative;
-        }
-
-        .clients-table tbody tr::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 0;
-            height: 100%;
-            background: linear-gradient(90deg, var(--primary-green), rgba(211, 255, 97, 0.1));
-            transition: width 0.3s ease;
-            z-index: 1;
-        }
-
-        .clients-table tbody tr:hover {
-            background: rgba(211, 255, 97, 0.05);
-            transform: translateX(4px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .clients-table tbody tr:hover::before {
-            width: 4px;
-        }
-
-        .clients-table tbody tr:hover td {
-            color: var(--primary-black);
-        }
-
-        .action-links {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-        }
-
-        .action-link {
-            color: var(--gray-600);
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 0.9rem;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            border: 1px solid transparent;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .action-link::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-            transition: left 0.4s ease;
-        }
-
-        .action-link:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
-            border-color: currentColor;
-        }
-
-        .action-link:hover::before {
-            left: 100%;
-        }
-
-        .action-link.delete {
-            color: #DC2626;
-            border-color: rgba(220, 38, 38, 0.2);
-        }
-
-        .action-link.delete:hover {
-            background: rgba(220, 38, 38, 0.1);
-            color: #B91C1C;
-        }
-
-        .action-link.view {
-            color: #059669;
-            border-color: rgba(5, 150, 105, 0.2);
-        }
-
-        .action-link.view:hover {
-            background: rgba(5, 150, 105, 0.1);
-            color: #047857;
-        }
-
-        .empty-message {
-            text-align: center;
-            padding: 4rem 2rem;
-            color: var(--gray-500);
-            font-size: 1.1rem;
-        }
-
-        .empty-message i {
-            font-size: 4rem;
-            margin-bottom: 1.5rem;
-            opacity: 0.3;
-            display: block;
-        }
-
-        .empty-message a {
-            color: var(--primary-black);
-            font-weight: 600;
-            text-decoration: none;
-            border-bottom: 2px solid var(--primary-green);
-            padding-bottom: 2px;
-            transition: all 0.3s ease;
-        }
-
-        .empty-message a:hover {
-            color: var(--gray-700);
-            border-bottom-color: #B8E642;
-        }
-
-        .currency-amount {
-            font-weight: 700;
-            color: #059669;
-            font-size: 1rem;
-        }
-
-        .lead-badge {
-            background: linear-gradient(135deg, var(--primary-black), var(--gray-700));
-            color: var(--primary-white);
-            padding: 0.4rem 1rem;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            display: inline-block;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .creator-badge {
-            background: linear-gradient(135deg, #059669, #047857);
-            color: var(--primary-white);
-            padding: 0.3rem 0.8rem;
-            border-radius: 12px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            display: inline-block;
-            box-shadow: var(--shadow-sm);
-            margin-left: 0.5rem;
-        }
-
-        .fade-in-row {
-            animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .clients-container {
-                padding: 1rem;
-            }
-
-            .clients-header {
-                flex-direction: column;
-                text-align: center;
-                padding: 1.5rem;
-            }
-
-            .header-controls {
-                width: 100%;
-                justify-content: center;
-            }
-
-            .clients-title {
-                font-size: 2rem;
-            }
-
-            .table-container {
-                overflow-x: auto;
-                border-radius: 12px;
-            }
-
-            .clients-table th,
-            .clients-table td {
-                padding: 1rem;
-                font-size: 0.85rem;
-            }
-
-            .action-links {
-                flex-direction: column;
-                gap: 0.5rem;
-            }
-
-            .client-stats {
-                grid-template-columns: 1fr;
-                gap: 1rem;
-            }
-
-            .stat-card {
-                padding: 1.5rem;
-            }
-
-            .stat-value {
-                font-size: 2rem;
-            }
-
-            .filter-dropdown-content {
-                right: auto;
-                left: 0;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .clients-table {
-                font-size: 0.8rem;
-            }
-
-            .clients-table th,
-            .clients-table td {
-                padding: 0.75rem;
-            }
-
-            .action-link {
-                padding: 0.4rem 0.8rem;
-                font-size: 0.8rem;
-            }
-        }
-
-        /* Animations */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(40px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes pulse {
-            0%, 100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.8;
-            }
-        }
-
-        /* Loading states */
-        .loading {
-            animation: pulse 2s infinite;
-        }
-
-        /* Focus states for accessibility */
-        .add-client-btn:focus,
-        .action-link:focus,
-        .filter-btn:focus {
-            outline: 3px solid var(--primary-green);
-            outline-offset: 2px;
-        }
-
-        /* Enhanced hover effects for better UX */
-        .stat-card:hover .stat-value {
-            color: var(--gray-800);
-            transform: scale(1.05);
-            transition: all 0.3s ease;
-        }
-
-        /* Gradient text effects */
-        .gradient-text {
-            background: linear-gradient(135deg, var(--primary-black), var(--gray-600));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-    </style>
-</head>
-<body>
-    <div class="clients-container">
-        <div class="clients-header">
-            <h1 class="clients-title">Clients</h1>
-            <div class="header-controls">
-                {% if user.role == 'rm_head' %}
-                <div class="filter-dropdown">
-                    <button class="filter-btn" onclick="toggleFilter()">
-                        <i class="fas fa-filter"></i>
-                        <span id="filterText">All Clients</span>
-                        <i class="fas fa-chevron-down"></i>
-                    </button>
-                    <div class="filter-dropdown-content">
-                        <div class="filter-option active" onclick="filterClients('all')">
-                            <i class="fas fa-users"></i> All Clients
-                        </div>
-                        <div class="filter-option" onclick="filterClients('my_clients')">
-                            <i class="fas fa-user"></i> My Clients
-                        </div>
-                        <div class="filter-option" onclick="filterClients('team_clients')">
-                            <i class="fas fa-user-friends"></i> Team Clients
+<div class="clients-container">
+    <div class="container-fluid">
+        <div class="clients-header fade-in">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                <h1 class="clients-title">Clients</h1>
+                <div class="header-controls">
+                    {% if user.role == 'rm_head' %}
+                    <div class="filter-dropdown">
+                        <button class="filter-btn" onclick="toggleFilter()">
+                            <i class="fas fa-filter"></i>
+                            <span id="filterText">All Clients</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div class="filter-dropdown-content">
+                            <div class="filter-option active" onclick="filterClients('all')">
+                                <i class="fas fa-users"></i> All Clients
+                            </div>
+                            <div class="filter-option" onclick="filterClients('my_clients')">
+                                <i class="fas fa-user"></i> My Clients
+                            </div>
+                            <div class="filter-option" onclick="filterClients('team_clients')">
+                                <i class="fas fa-user-friends"></i> Team Clients
+                            </div>
                         </div>
                     </div>
+                    {% endif %}
+                    
+                    {% if user.role == 'rm' or user.role == 'rm_head' %}
+                    <a href="{% url 'client_create' %}" class="add-client-btn">
+                        <i class="fas fa-plus"></i> Add New Client
+                    </a>
+                    {% endif %}
                 </div>
-                {% endif %}
-                
-                {% if user.role == 'rm' or user.role == 'rm_head' %}
-                <a href="{% url 'client_create' %}" class="add-client-btn">
-                    <i class="fas fa-plus"></i> Add New Client
-                </a>
-                {% endif %}
             </div>
         </div>
 
-       <!-- Client Statistics -->
-<div class="client-stats" id="clientStats">
-    <div class="stat-card">
-        <div class="stat-value" id="totalClients">{{ clients_count }}</div>
-        <div class="stat-label">Total Clients</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value" id="totalAUM">₹{{ total_aum|floatformat:2 }}</div>
-        <div class="stat-label">Total AUM</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value" id="totalSIP">₹{{ total_sip|floatformat:2 }}</div>
-        <div class="stat-label">Total SIP</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value" id="totalDemat">{{ total_demat }}</div>
-        <div class="stat-label">Total Demat Accounts</div>
-    </div>
-</div>
+        <!-- Client Statistics -->
+        <div class="client-stats slide-up" id="clientStats">
+            <div class="stat-card">
+                <div class="stat-value" id="totalClients">{{ clients_count }}</div>
+                <div class="stat-label">Total Clients</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalAUM">₹{{ total_aum|floatformat:2 }}</div>
+                <div class="stat-label">Total AUM</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalSIP">₹{{ total_sip|floatformat:2 }}</div>
+                <div class="stat-label">Total SIP</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalDemat">{{ total_demat }}</div>
+                <div class="stat-label">Total Demat Accounts</div>
+            </div>
+        </div>
 
-        <div class="table-container">
+        <div class="table-container slide-up">
             <table class="clients-table">
                 <thead>
                     <tr>
@@ -653,52 +664,58 @@
                 </thead>
                 <tbody id="clientsTableBody">
                     {% for client in clients %}
-                    <tr>
+                    <tr class="fade-in" style="animation-delay: {{ forloop.counter0|floatformat:1 }}s">
                         <td>
-                            <strong>{{ client.name }}</strong>
+                            <div class="client-name">{{ client.name }}</div>
                         </td>
-                        <td>{{ client.contact_info|default:"N/A" }}</td>
+                        <td>
+                            <div class="contact-info">{{ client.contact_info|default:"N/A" }}</div>
+                        </td>
                         <td>
                             {% if client.user %}
-                                {{ client.user.get_full_name|default:client.user.username }}
+                                <div class="assigned-user">{{ client.user.get_full_name|default:client.user.username }}</div>
                             {% else %}
-                                <span style="color: var(--gray-400);">Unassigned</span>
+                                <div class="unassigned">Unassigned</div>
                             {% endif %}
                         </td>
                         <td>
                             {% if client.lead %}
                                 <span class="lead-badge">{{ client.lead.name }}</span>
                             {% else %}
-                                <span style="color: var(--gray-400);">Direct</span>
+                                <span class="direct-badge">Direct</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if client.aum %}
-                                <span class="currency-amount">₹{{ client.aum }}</span>
+                                <div class="currency-amount">₹{{ client.aum|floatformat:2 }}</div>
                             {% else %}
-                                <span style="color: var(--gray-400);">₹0.00</span>
+                                <div class="zero-amount">₹0.00</div>
                             {% endif %}
                         </td>
                         <td>
                             {% if client.sip_amount %}
-                                <span class="currency-amount">₹{{ client.sip_amount }}</span>
+                                <div class="currency-amount">₹{{ client.sip_amount|floatformat:2 }}</div>
                             {% else %}
-                                <span style="color: var(--gray-400);">₹0.00</span>
+                                <div class="zero-amount">₹0.00</div>
                             {% endif %}
                         </td>
-                        <td><strong>{{ client.demat_count|default:0 }}</strong></td>
-                        <td>{{ client.created_at|date:"M d, Y" }}</td>
+                        <td>
+                            <div class="demat-count">{{ client.demat_count|default:0 }}</div>
+                        </td>
+                        <td>
+                            <div class="created-date">{{ client.created_at|date:"M d, Y" }}</div>
+                        </td>
                         <td>
                             <div class="action-links">
                                 {% if request.user.can_access_user_data.client.user %}
-                                <a href="{% url 'client_update' client.pk %}" class="action-link">
+                                <a href="{% url 'client_update' client.pk %}" class="action-link edit">
                                     <i class="fas fa-edit"></i> Edit
                                 </a>
                                 <a href="{% url 'client_delete' client.pk %}" class="action-link delete">
                                     <i class="fas fa-trash"></i> Delete
                                 </a>
                                 {% else %}
-                                <span style="color: var(--gray-400);">No access</span>
+                                <div class="no-access">No access</div>
                                 {% endif %}
                             </div>
                         </td>
@@ -707,12 +724,10 @@
                     <tr>
                         <td colspan="9" class="empty-message">
                             <i class="fas fa-users"></i>
-                            <div>
-                                <h3 style="margin: 0 0 1rem 0; color: var(--gray-600);">No clients found</h3>
-                                {% if user.role == 'rm' or user.role == 'rm_head' %}
-                                <p style="margin: 0;">Get started by <a href="{% url 'client_create' %}">adding your first client</a></p>
-                                {% endif %}
-                            </div>
+                            <h3>No clients found</h3>
+                            {% if user.role == 'rm' or user.role == 'rm_head' %}
+                            <p>Get started by <a href="{% url 'client_create' %}">adding your first client</a></p>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -720,132 +735,179 @@
             </table>
         </div>
     </div>
+</div>
+{% endblock %}
 
-    <script>
-        // Current user information
-        const currentUser = {
-            id: {{ user.pk }},
-            role: "{{ user.role|escapejs }}",
-            username: "{{ user.username|escapejs }}"
-        };
+{% block extra_js %}
+<script>
+// Current user information
+const currentUser = {
+    id: {{ user.pk }},
+    role: "{{ user.role|escapejs }}",
+    username: "{{ user.username|escapejs }}"
+};
 
-        function toggleFilter() {
-            const dropdown = document.querySelector('.filter-dropdown');
-            dropdown.classList.toggle('active');
-            
-            // Close dropdown when clicking outside
-            document.addEventListener('click', function(event) {
-                if (!dropdown.contains(event.target)) {
-                    dropdown.classList.remove('active');
-                }
-            });
+function toggleFilter() {
+    const dropdown = document.querySelector('.filter-dropdown');
+    dropdown.classList.toggle('active');
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(event) {
+        if (!dropdown.contains(event.target)) {
+            dropdown.classList.remove('active');
         }
+    });
+}
 
-        function filterClients(filterType) {
-            const filterText = document.getElementById('filterText');
-            const filterOptions = document.querySelectorAll('.filter-option');
-            
-            // Update active filter option
-            filterOptions.forEach(option => option.classList.remove('active'));
-            
-            let url = "{% url 'client_list' %}";
-            
-            switch(filterType) {
-                case 'all':
-                    filterText.textContent = 'All Clients';
-                    filterOptions[0].classList.add('active');
-                    break;
-                case 'my_clients':
-                    url += '?filter=my_clients';
-                    filterText.textContent = 'My Clients';
-                    filterOptions[1].classList.add('active');
-                    break;
-                case 'team_clients':
-                    url += '?filter=team_clients';
-                    filterText.textContent = 'Team Clients';
-                    filterOptions[2].classList.add('active');
-                    break;
-            }
-            
-            window.location.href = url;
-            document.querySelector('.filter-dropdown').classList.remove('active');
-        }
+function filterClients(filterType) {
+    const filterText = document.getElementById('filterText');
+    const filterOptions = document.querySelectorAll('.filter-option');
+    
+    // Update active filter option
+    filterOptions.forEach(option => option.classList.remove('active'));
+    
+    let url = "{% url 'client_list' %}";
+    
+    switch(filterType) {
+        case 'all':
+            filterText.textContent = 'All Clients';
+            filterOptions[0].classList.add('active');
+            break;
+        case 'my_clients':
+            url += '?filter=my_clients';
+            filterText.textContent = 'My Clients';
+            filterOptions[1].classList.add('active');
+            break;
+        case 'team_clients':
+            url += '?filter=team_clients';
+            filterText.textContent = 'Team Clients';
+            filterOptions[2].classList.add('active');
+            break;
+    }
+    
+    window.location.href = url;
+    document.querySelector('.filter-dropdown').classList.remove('active');
+}
 
-        // Add intersection observer for animations
-        document.addEventListener('DOMContentLoaded', function() {
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.style.opacity = '1';
-                        entry.target.style.transform = 'translateY(0)';
-                    }
-                });
-            });
-            
-            document.querySelectorAll('.stat-card').forEach(card => {
-                card.style.opacity = '0';
-                card.style.transform = 'translateY(20px)';
-                card.style.transition = 'all 0.6s ease';
-                observer.observe(card);
-            });
-
-            // Animate stats on load
-            animateValue('totalClients', {{ clients.count }});
-            animateValue('totalDemat', {{ total_demat|default:0 }});
-
-            function animateValue(elementId, endValue, isCurrency = false) {
-                const element = document.getElementById(elementId);
-                const startValue = 0;
-                const duration = 1000;
-                const startTime = performance.now();
-
-                function updateValue(currentTime) {
-                    const elapsed = currentTime - startTime;
-                    const progress = Math.min(elapsed / duration, 1);
-                    
-                    const currentValue = Math.floor(startValue + (endValue - startValue) * progress);
-                    element.textContent = currentValue;
-
-                    if (progress < 1) {
-                        requestAnimationFrame(updateValue);
-                    }
-                }
-
-                requestAnimationFrame(updateValue);
+// Add intersection observer for animations
+document.addEventListener('DOMContentLoaded', function() {
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
             }
         });
-        // Animate stats on load
-animateValue('totalClients', {{ clients_count|default:0 }});
-animateValue('totalAUM', {{ total_aum|default:0 }}, true);
-animateValue('totalSIP', {{ total_sip|default:0 }}, true);
-animateValue('totalDemat', {{ total_demat|default:0 }});
+    });
+    
+    document.querySelectorAll('.stat-card').forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.transition = 'all 0.6s ease';
+        card.style.animationDelay = `${index * 0.1}s`;
+        observer.observe(card);
+    });
 
-function animateValue(elementId, endValue, isCurrency = false) {
-    const element = document.getElementById(elementId);
-    const startValue = 0;
-    const duration = 1000;
-    const startTime = performance.now();
+    // Animate stats on load
+    animateValue('totalClients', {{ clients_count|default:0 }});
+    animateValue('totalAUM', {{ total_aum|default:0 }}, true);
+    animateValue('totalSIP', {{ total_sip|default:0 }}, true);
+    animateValue('totalDemat', {{ total_demat|default:0 }});
 
-    function updateValue(currentTime) {
-        const elapsed = currentTime - startTime;
-        const progress = Math.min(elapsed / duration, 1);
+    function animateValue(elementId, endValue, isCurrency = false) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
         
-        let currentValue = Math.floor(startValue + (endValue - startValue) * progress);
-        if (isCurrency) {
-            element.textContent = '₹' + currentValue.toLocaleString('en-IN', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
-        } else {
-            element.textContent = currentValue;
+        const startValue = 0;
+        const duration = 1000;
+        const startTime = performance.now();
+
+        function updateValue(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            let currentValue = Math.floor(startValue + (endValue - startValue) * progress);
+            if (isCurrency) {
+                element.textContent = '₹' + currentValue.toLocaleString('en-IN', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            } else {
+                element.textContent = currentValue;
+            }
+
+            if (progress < 1) {
+                requestAnimationFrame(updateValue);
+            }
         }
 
-        if (progress < 1) {
-            requestAnimationFrame(updateValue);
-        }
+        requestAnimationFrame(updateValue);
     }
 
-    requestAnimationFrame(updateValue);
-}
-    </script>
+    // Add hover effects to table rows
+    const tableRows = document.querySelectorAll('.clients-table tbody tr');
+    tableRows.forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateX(4px)';
+        });
+        
+        row.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateX(0)';
+        });
+    });
+
+    // Add loading state to action buttons
+    const actionLinks = document.querySelectorAll('.action-link');
+    actionLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            if (this.classList.contains('delete')) {
+                if (!confirm('Are you sure you want to delete this client? This action cannot be undone.')) {
+                    e.preventDefault();
+                    return;
+                }
+            }
+            
+            const icon = this.querySelector('i');
+            const originalIcon = icon.className;
+            icon.className = 'fas fa-spinner fa-spin';
+            
+            setTimeout(() => {
+                icon.className = originalIcon;
+            }, 1000);
+        });
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey || e.metaKey) {
+            switch(e.key) {
+                case 'n':
+                    e.preventDefault();
+                    const addButton = document.querySelector('.add-client-btn');
+                    if (addButton) addButton.click();
+                    break;
+                case 'f':
+                    e.preventDefault();
+                    const filterButton = document.querySelector('.filter-btn');
+                    if (filterButton) filterButton.click();
+                    break;
+            }
+        }
+    });
+
+    // Add smooth scrolling for better UX
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

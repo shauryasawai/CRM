@@ -1,902 +1,720 @@
 {% extends 'base/base.html' %}
 {% block title %}Service Requests{% endblock %}
+
 {% block content %}
-<style>
-    :root {
-        --primary-bg: #D3FF61;
-        --card-bg: rgba(255, 255, 255, 0.95);
-        --text-primary: #000000;
-        --text-secondary: #333333;
-        --text-muted: #666666;
-        --border-color: rgba(0, 0, 0, 0.1);
-        --shadow-light: 0 2px 10px rgba(0, 0, 0, 0.08);
-        --shadow-medium: 0 4px 20px rgba(0, 0, 0, 0.12);
-        --shadow-heavy: 0 8px 40px rgba(0, 0, 0, 0.16);
-        --gradient-accent: linear-gradient(135deg, #D3FF61 0%, #B8E639 100%);
-        --gradient-dark: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-    }
-
-    * {
-        box-sizing: border-box;
-    }
-
-    body {
-        background: var(--primary-bg);
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        line-height: 1.6;
-        margin: 0;
-        padding: 0;
-        min-height: 100vh;
-    }
-
-    .requests-container {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 2rem;
-        animation: slideInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    @keyframes slideInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .requests-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
-        flex-wrap: wrap;
-        gap: 1.5rem;
-    }
-
-    .requests-title {
-        font-size: clamp(2rem, 4vw, 3.5rem);
-        font-weight: 800;
-        color: var(--text-primary);
-        margin: 0;
-        letter-spacing: -0.02em;
-        position: relative;
-    }
-
-    .requests-title::after {
-        content: '';
-        position: absolute;
-        bottom: -8px;
-        left: 0;
-        width: 60px;
-        height: 4px;
-        background: var(--gradient-dark);
-        border-radius: 2px;
-    }
-
-    .header-actions {
-        display: flex;
-        gap: 1rem;
-        align-items: center;
-        flex-wrap: wrap;
-    }
-
-    .add-request-btn {
-        background: var(--gradient-dark);
-        color: white;
-        border: none;
-        padding: 1rem 2rem;
-        border-radius: 50px;
-        font-weight: 600;
-        font-size: 0.95rem;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        box-shadow: var(--shadow-medium);
-        position: relative;
-        overflow: hidden;
-    }
-
-    /* Statistics Cards */
-    .stats-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 2rem;
-    }
-
-    .stat-card {
-        background: var(--card-bg);
-        padding: 1.5rem;
-        border-radius: 16px;
-        box-shadow: var(--shadow-light);
-        backdrop-filter: blur(10px);
-        border: 1px solid var(--border-color);
-        text-align: center;
-    }
-
-    .stat-number {
-        font-size: 2rem;
-        font-weight: 800;
-        color: var(--text-primary);
-        margin-bottom: 0.5rem;
-    }
-
-    .stat-label {
-        color: var(--text-muted);
-        font-weight: 600;
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    /* Filters */
-    .filters-container {
-        background: var(--card-bg);
-        padding: 1.5rem;
-        border-radius: 16px;
-        box-shadow: var(--shadow-light);
-        margin-bottom: 2rem;
-        backdrop-filter: blur(10px);
-        border: 1px solid var(--border-color);
-    }
-
-    .filters-row {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1rem;
-        align-items: end;
-    }
-
-    .filter-group {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .filter-label {
-        font-weight: 600;
-        color: var(--text-secondary);
-        font-size: 0.9rem;
-    }
-
-    .filter-input, .filter-select {
-        padding: 0.75rem 1rem;
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        font-size: 0.9rem;
-        background: white;
-        color: var(--text-secondary);
-    }
-
-    .filter-input:focus, .filter-select:focus {
-        outline: none;
-        border-color: #000;
-        box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
-    }
-
-    .filter-btn {
-        padding: 0.75rem 1.5rem;
-        background: var(--gradient-dark);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-weight: 600;
-        cursor: pointer;
-    }
-
-    .table-container {
-        background: var(--card-bg);
-        border-radius: 20px;
-        box-shadow: var(--shadow-medium);
-        overflow-x: auto;
-        backdrop-filter: blur(10px);
-        border: 1px solid var(--border-color);
-    }
-
-    .requests-table {
-        width: 100%;
-        min-width: 1200px;
-        border-collapse: collapse;
-        background: transparent;
-        table-layout: fixed;
-    }
-
-    .requests-table thead {
-        background: var(--gradient-dark);
-        position: relative;
-    }
-
-    .requests-table thead::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(211, 255, 97, 0.5), transparent);
-    }
-
-    .requests-table th {
-        padding: 1.5rem 1rem;
-        text-align: left;
-        color: white;
-        font-weight: 700;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        letter-spacing: 0.1em;
-        position: relative;
-        white-space: nowrap;
-    }
-
-    .requests-table td {
-        padding: 1.5rem 1rem;
-        border-bottom: 1px solid var(--border-color);
-        color: var(--text-secondary);
-        font-weight: 500;
-        vertical-align: middle;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    /* Column widths */
-    .requests-table th:nth-child(1), /* Request ID */
-    .requests-table td:nth-child(1) {
-        width: 140px;
-    }
-
-    .requests-table th:nth-child(2), /* Client */
-    .requests-table td:nth-child(2) {
-        width: 150px;
-    }
-
-    .requests-table th:nth-child(3), /* Type */
-    .requests-table td:nth-child(3) {
-        width: 120px;
-    }
-
-    .requests-table th:nth-child(4), /* Description */
-    .requests-table td:nth-child(4) {
-        width: 250px;
-    }
-
-    .requests-table th:nth-child(5), /* Status */
-    .requests-table td:nth-child(5) {
-        width: 140px;
-    }
-
-    .requests-table th:nth-child(6), /* Priority */
-    .requests-table td:nth-child(6) {
-        width: 100px;
-    }
-
-    .requests-table th:nth-child(7), /* Raised By */
-    .requests-table td:nth-child(7) {
-        width: 130px;
-    }
-
-    .requests-table th:nth-child(8), /* Assigned To */
-    .requests-table td:nth-child(8) {
-        width: 130px;
-    }
-
-    .requests-table th:nth-child(9), /* Created */
-    .requests-table td:nth-child(9) {
-        width: 100px;
-    }
-
-    .requests-table th:nth-child(10), /* Actions */
-    .requests-table td:nth-child(10) {
-        width: 180px;
-    }
-
-    .requests-table tbody tr {
-        position: relative;
-    }
-
-    .requests-table tbody tr:last-child td {
-        border-bottom: none;
-    }
-
-    .status-badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.5rem 1rem;
-        border-radius: 50px;
-        font-size: 0.8rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .status-badge::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        opacity: 0.1;
-        border-radius: inherit;
-    }
-
-    /* Enhanced Status Colors */
-    .status-draft {
-        color: #6b7280;
-        background: rgba(107, 114, 128, 0.1);
-        border: 1px solid rgba(107, 114, 128, 0.2);
-    }
-
-    .status-submitted {
-        color: #2563eb;
-        background: rgba(37, 99, 235, 0.1);
-        border: 1px solid rgba(37, 99, 235, 0.2);
-    }
-
-    .status-documents-requested {
-        color: #d97706;
-        background: rgba(245, 158, 11, 0.1);
-        border: 1px solid rgba(245, 158, 11, 0.2);
-    }
-
-    .status-documents-received {
-        color: #0891b2;
-        background: rgba(8, 145, 178, 0.1);
-        border: 1px solid rgba(8, 145, 178, 0.2);
-    }
-
-    .status-in-progress {
-        color: #7c3aed;
-        background: rgba(124, 58, 237, 0.1);
-        border: 1px solid rgba(124, 58, 237, 0.2);
-    }
-
-    .status-resolved {
-        color: #059669;
-        background: rgba(5, 150, 105, 0.1);
-        border: 1px solid rgba(5, 150, 105, 0.2);
-    }
-
-    .status-client-verification {
-        color: #dc2626;
-        background: rgba(220, 38, 38, 0.1);
-        border: 1px solid rgba(220, 38, 38, 0.2);
-    }
-
-    .status-closed {
-        color: #374151;
-        background: rgba(55, 65, 81, 0.1);
-        border: 1px solid rgba(55, 65, 81, 0.2);
-    }
-
-    .status-on-hold {
-        color: #ea580c;
-        background: rgba(234, 88, 12, 0.1);
-        border: 1px solid rgba(234, 88, 12, 0.2);
-    }
-
-    .priority-badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    .priority-low {
-        color: #059669;
-        background: rgba(5, 150, 105, 0.1);
-    }
-
-    .priority-medium {
-        color: #d97706;
-        background: rgba(245, 158, 11, 0.1);
-    }
-
-    .priority-high {
-        color: #dc2626;
-        background: rgba(220, 38, 38, 0.1);
-    }
-
-    .priority-urgent {
-        color: #7c2d12;
-        background: rgba(124, 45, 18, 0.1);
-        animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.7; }
-    }
-
-    .action-buttons {
-        display: flex;
-        gap: 0.75rem;
-        align-items: center;
-    }
-
-    .action-btn {
-        padding: 0.6rem 1.2rem;
-        border-radius: 12px;
-        font-weight: 600;
-        font-size: 0.85rem;
-        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .view-btn {
-        background: rgba(5, 150, 105, 0.1);
-        color: #059669;
-        border: 1px solid rgba(5, 150, 105, 0.2);
-    }
-
-    .view-btn:hover {
-        background: rgba(5, 150, 105, 0.15);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
-    }
-
-    .edit-btn {
-        background: rgba(37, 99, 235, 0.1);
-        color: #2563eb;
-        border: 1px solid rgba(37, 99, 235, 0.2);
-    }
-
-    .edit-btn:hover {
-        background: rgba(37, 99, 235, 0.15);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
-    }
-
-    .delete-btn {
-        background: rgba(239, 68, 68, 0.1);
-        color: #dc2626;
-        border: 1px solid rgba(239, 68, 68, 0.2);
-    }
-
-    .delete-btn:hover {
-        background: rgba(239, 68, 68, 0.15);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
-    }
-
-    .empty-message {
-        text-align: center;
-        padding: 4rem 2rem;
-        color: var(--text-muted);
-        font-size: 1.1rem;
-        background: var(--card-bg);
-        border-radius: 20px;
-        box-shadow: var(--shadow-light);
-        backdrop-filter: blur(10px);
-        border: 1px solid var(--border-color);
-    }
-
-    .empty-message::before {
-        content: '📋';
-        display: block;
-        font-size: 3rem;
-        margin-bottom: 1rem;
-        opacity: 0.5;
-    }
-
-    .description-text {
-        max-width: 300px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        font-weight: 500;
-    }
-
-    .client-info {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        font-weight: 600;
-        color: var(--text-primary);
-    }
-
-    .client-icon {
-        color: var(--text-primary);
-        font-size: 1.1rem;
-        opacity: 0.7;
-    }
-
-    .raised-by, .assigned-to {
-        font-weight: 600;
-        color: var(--text-secondary);
-    }
-
-    .request-id {
-        font-family: 'Courier New', monospace;
-        font-weight: 700;
-        color: var(--text-primary);
-        background: rgba(0, 0, 0, 0.05);
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
-        font-size: 0.85rem;
-    }
-
-    .date-info {
-        color: var(--text-muted);
-        font-size: 0.85rem;
-        font-weight: 500;
-    }
-
-    /* Pagination */
-    .pagination-container {
-        display: flex;
-        justify-content: center;
-        margin-top: 2rem;
-    }
-
-    .pagination {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-    }
-
-    .pagination a, .pagination span {
-        padding: 0.75rem 1rem;
-        border-radius: 8px;
-        text-decoration: none;
-        font-weight: 600;
-    }
-
-    .pagination a {
-        background: var(--card-bg);
-        color: var(--text-secondary);
-        border: 1px solid var(--border-color);
-    }
-
-    .pagination .current {
-        background: var(--gradient-dark);
-        color: white;
-    }
-
-    /* Responsive Design */
-    @media (max-width: 1200px) {
-        .requests-container {
-            padding: 1.5rem;
-        }
-    }
-
-    @media (max-width: 768px) {
-        .requests-container {
-            padding: 1rem;
-        }
-
-        .requests-header {
-            flex-direction: column;
-            align-items: stretch;
-            text-align: center;
-            gap: 1rem;
-        }
-
-        .stats-container {
-            grid-template-columns: repeat(2, 1fr);
-        }
-
-        .filters-row {
-            grid-template-columns: 1fr;
-        }
-
-        .table-container {
-            overflow-x: auto;
-            border-radius: 16px;
-        }
-
-        .requests-table {
-            min-width: 1000px;
-        }
-
-        .requests-table th,
-        .requests-table td {
-            padding: 1rem 0.8rem;
-        }
-
-        .action-buttons {
-            flex-direction: column;
-            gap: 0.3rem;
-            min-width: 100px;
-        }
-
-        .description-text {
-            max-width: 180px;
-        }
-
-        .client-info {
-            max-width: 120px;
-        }
-
-        .add-request-btn {
-            justify-content: center;
-            padding: 1rem 1.5rem;
-        }
-    }
-
-    @media (max-width: 480px) {
-        .stats-container {
-            grid-template-columns: 1fr;
-        }
-
-        .requests-table th,
-        .requests-table td {
-            padding: 0.75rem 1rem;
-        }
-
-        .description-text {
-            max-width: 150px;
-        }
-
-        .client-info {
-            gap: 0.5rem;
-        }
-    }
-
-    /* Loading Animation */
-    .requests-table tbody tr {
-        animation: fadeInRow 0.5s ease-out backwards;
-    }
-
-    .requests-table tbody tr:nth-child(1) { animation-delay: 0.1s; }
-    .requests-table tbody tr:nth-child(2) { animation-delay: 0.2s; }
-    .requests-table tbody tr:nth-child(3) { animation-delay: 0.3s; }
-    .requests-table tbody tr:nth-child(4) { animation-delay: 0.4s; }
-    .requests-table tbody tr:nth-child(5) { animation-delay: 0.5s; }
-
-    @keyframes fadeInRow {
-        from {
-            opacity: 0;
-            transform: translateX(-20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateX(0);
-        }
-    }
-
-    /* Scrollbar Styling */
-    .table-container::-webkit-scrollbar {
-        height: 8px;
-    }
-
-    .table-container::-webkit-scrollbar-track {
-        background: rgba(0, 0, 0, 0.05);
-        border-radius: 4px;
-    }
-
-    .table-container::-webkit-scrollbar-thumb {
-        background: rgba(0, 0, 0, 0.2);
-        border-radius: 4px;
-    }
-
-    .table-container::-webkit-scrollbar-thumb:hover {
-        background: rgba(0, 0, 0, 0.3);
-    }
-</style>
-
-<div class="requests-container">
+<div class="container-fluid py-4">
     <!-- Header Section -->
-    <div class="requests-header">
-        <h1 class="requests-title">Service Requests</h1>
-        <div class="header-actions">
-            {% if user.role in 'rm,rm_head,business_head,top_management' %}
-            <a href="{% url 'service_request_create' %}" class="add-request-btn">
-                <i class="fas fa-plus"></i> Add New Request
-            </a>
-            {% endif %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="background-color: #FFFFFF; border-left: 4px solid #1C64FF !important;">
+                <div class="card-body py-4">
+                    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3">
+                        <div>
+                            <h1 class="display-5 fw-bold mb-2" style="color: #1C64FF;">
+                                <i class="fas fa-headset me-3"></i>Service Requests
+                            </h1>
+                            <p class="text-muted mb-0" style="color: #696969;">Manage and track all service requests across your organization</p>
+                        </div>
+                        {% if user.role in 'rm,rm_head,business_head,top_management' %}
+                        <a href="{% url 'service_request_create' %}" class="btn btn-primary btn-lg px-4 py-2 d-flex align-items-center gap-2" style="background-color: #1C64FF; border-color: #1C64FF;">
+                            <i class="fas fa-plus"></i>
+                            <span>New Request</span>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Statistics Cards -->
     {% if stats %}
-    <div class="stats-container">
-        <div class="stat-card">
-            <div class="stat-number">{{ stats.total_requests|default:0 }}</div>
-            <div class="stat-label">Total Requests</div>
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100" style="background-color: #FFFFFF; border: 1px solid #D9D9D9;">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-clipboard-list fa-2x" style="color: #1C64FF;"></i>
+                    </div>
+                    <h3 class="fw-bold mb-2" style="color: #1C64FF;">{{ stats.total_requests|default:0 }}</h3>
+                    <p class="text-muted mb-0 small fw-semibold text-uppercase" style="color: #696969; letter-spacing: 0.5px;">Total Requests</p>
+                </div>
+            </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-number">{{ stats.open_requests|default:0 }}</div>
-            <div class="stat-label">Open Requests</div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100" style="background-color: #FFFFFF; border: 1px solid #D9D9D9;">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-folder-open fa-2x" style="color: #28a745;"></i>
+                    </div>
+                    <h3 class="fw-bold mb-2" style="color: #28a745;">{{ stats.open_requests|default:0 }}</h3>
+                    <p class="text-muted mb-0 small fw-semibold text-uppercase" style="color: #696969; letter-spacing: 0.5px;">Open Requests</p>
+                </div>
+            </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-number">{{ stats.urgent_requests|default:0 }}</div>
-            <div class="stat-label">Urgent Requests</div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100" style="background-color: #FFFFFF; border: 1px solid #D9D9D9;">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-exclamation-triangle fa-2x" style="color: #dc3545;"></i>
+                    </div>
+                    <h3 class="fw-bold mb-2" style="color: #dc3545;">{{ stats.urgent_requests|default:0 }}</h3>
+                    <p class="text-muted mb-0 small fw-semibold text-uppercase" style="color: #696969; letter-spacing: 0.5px;">Urgent Requests</p>
+                </div>
+            </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-number">{{ stats.overdue_requests|default:0 }}</div>
-            <div class="stat-label">Overdue Requests</div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100" style="background-color: #FFFFFF; border: 1px solid #D9D9D9;">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="fas fa-clock fa-2x" style="color: #ffc107;"></i>
+                    </div>
+                    <h3 class="fw-bold mb-2" style="color: #ffc107;">{{ stats.overdue_requests|default:0 }}</h3>
+                    <p class="text-muted mb-0 small fw-semibold text-uppercase" style="color: #696969; letter-spacing: 0.5px;">Overdue Requests</p>
+                </div>
+            </div>
         </div>
     </div>
     {% endif %}
 
     <!-- Filters Section -->
-    <div class="filters-container">
-        <form method="GET" class="filters-row">
-            <div class="filter-group">
-                <label class="filter-label">Search</label>
-                <input type="text" name="search" value="{{ search_query }}" 
-                       placeholder="Search requests..." class="filter-input">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="background-color: #FFFFFF; border: 1px solid #D9D9D9;">
+                <div class="card-header py-3 border-0" style="background-color: #C3E4FF;">
+                    <h5 class="mb-0 fw-semibold d-flex align-items-center" style="color: #1C64FF;">
+                        <i class="fas fa-filter me-2"></i>Filter Requests
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <form method="GET">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-12 col-md-4">
+                                <label class="form-label fw-semibold" style="color: #1C64FF;">
+                                    <i class="fas fa-search me-2"></i>Search
+                                </label>
+                                <input type="text" 
+                                       name="search" 
+                                       value="{{ search_query }}" 
+                                       class="form-control form-control-lg" 
+                                       placeholder="Search requests..."
+                                       style="border-color: #D9D9D9;">
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label fw-semibold" style="color: #1C64FF;">
+                                    <i class="fas fa-info-circle me-2"></i>Status
+                                </label>
+                                <select name="status" class="form-select form-select-lg" style="border-color: #D9D9D9;">
+                                    <option value="">All Statuses</option>
+                                    {% for value, label in status_choices %}
+                                    <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label class="form-label fw-semibold" style="color: #1C64FF;">
+                                    <i class="fas fa-flag me-2"></i>Priority
+                                </label>
+                                <select name="priority" class="form-select form-select-lg" style="border-color: #D9D9D9;">
+                                    <option value="">All Priorities</option>
+                                    {% if priority_choices %}
+                                        {% for value, label in priority_choices %}
+                                        <option value="{{ value }}" {% if current_priority == value %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                        {% endfor %}
+                                    {% endif %}
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-2">
+                                <button type="submit" class="btn btn-primary btn-lg w-100" style="background-color: #1C64FF; border-color: #1C64FF;">
+                                    <i class="fas fa-search me-2"></i>Filter
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
             </div>
-            <div class="filter-group">
-                <label class="filter-label">Status</label>
-                <select name="status" class="filter-select">
-                    <option value="">All Statuses</option>
-                    {% for value, label in status_choices %}
-                    <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>
-                        {{ label }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="filter-group">
-                <label class="filter-label">Priority</label>
-                <select name="priority" class="filter-select">
-                    <option value="">All Priorities</option>
-                    {% if priority_choices %}
-                        {% for value, label in priority_choices %}
-                        <option value="{{ value }}" {% if current_priority == value %}selected{% endif %}>
-                            {{ label }}
-                        </option>
-                        {% endfor %}
-                    {% endif %}
-                </select>
-            </div>
-            <div class="filter-group">
-                <button type="submit" class="filter-btn">
-                    <i class="fas fa-search"></i> Filter
-                </button>
-            </div>
-        </form>
+        </div>
     </div>
 
     <!-- Service Requests Table -->
     {% if service_requests %}
-    <div class="table-container">
-        <table class="requests-table">
-            <thead>
-                <tr>
-                    <th>Request ID</th>
-                    <th>Client</th>
-                    <th>Type</th>
-                    <th>Description</th>
-                    <th>Status</th>
-                    <th>Priority</th>
-                    <th>Raised By</th>
-                    <th>Assigned To</th>
-                    <th>Created</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for req in service_requests %}
-                <tr>
-                    <td>
-                        <div class="request-id">{{ req.request_id|default:req.id }}</div>
-                    </td>
-                    <td>
-                        <div class="client-info">
-                            <i class="fas fa-user client-icon"></i>
-                            <span>{{ req.client.name }}</span>
-                        </div>
-                    </td>
-                    <td>
-                        <span>{{ req.request_type.name|default:"General" }}</span>
-                    </td>
-                    <td>
-                        <div class="description-text" title="{{ req.description }}">
-                            {{ req.description|truncatechars:50 }}
-                        </div>
-                    </td>
-                    <td>
-                        <span class="status-badge status-{{ req.status|lower|slugify }}">
-                            {{ req.get_status_display|default:req.status }}
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="background-color: #FFFFFF; border: 1px solid #D9D9D9;">
+                <div class="card-header py-3 border-0" style="background-color: #1C64FF;">
+                    <h5 class="mb-0 fw-semibold text-white d-flex align-items-center">
+                        <i class="fas fa-list me-2"></i>Service Requests
+                        <span class="badge rounded-pill ms-2" style="background-color: rgba(255, 255, 255, 0.2);">
+                            {{ service_requests|length }}
                         </span>
-                    </td>
-                    <td>
-                        <span class="priority-badge priority-{{ req.priority|lower }}">
-                            {{ req.get_priority_display|default:req.priority }}
-                        </span>
-                    </td>
-                    <td>
-                        <div class="raised-by">
-                            {{ req.raised_by.get_full_name|default:req.raised_by.username }}
-                        </div>
-                    </td>
-                    <td>
-                        <div class="assigned-to">
-                            {% if req.assigned_to %}
-                                {{ req.assigned_to.get_full_name|default:req.assigned_to.username }}
-                            {% else %}
-                                <span style="color: #6b7280;">Unassigned</span>
-                            {% endif %}
-                        </div>
-                    </td>
-                    <td>
-                        <div class="date-info">{{ req.created_at|date:"M d, Y" }}</div>
-                    </td>
-                    <td>
-                        <div class="action-buttons">
-                            <a href="{% url 'service_request_detail' req.pk %}" class="action-btn view-btn">
-                                <i class="fas fa-eye"></i> View
-                            </a>
-                            {% if permissions.can_edit %}
-                            <a href="{% url 'service_request_update' req.pk %}" class="action-btn edit-btn">
-                                <i class="fas fa-edit"></i> Edit
-                            </a>
-                            {% endif %}
-                            {% if permissions.can_delete %}
-                            <a href="{% url 'service_request_delete' req.pk %}" 
-                               class="action-btn delete-btn"
-                               onclick="return confirm('Are you sure you want to delete this request?')">
-                                <i class="fas fa-trash"></i> Delete
-                            </a>
-                            {% endif %}
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead style="background-color: #1C64FF;">
+                                <tr>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">
+                                        <i class="fas fa-hashtag me-2"></i>Request ID
+                                    </th>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">
+                                        <i class="fas fa-user me-2"></i>Client
+                                    </th>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">
+                                        <i class="fas fa-tag me-2"></i>Type
+                                    </th>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">
+                                        <i class="fas fa-file-alt me-2"></i>Description
+                                    </th>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">
+                                        <i class="fas fa-info-circle me-2"></i>Status
+                                    </th>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">
+                                        <i class="fas fa-flag me-2"></i>Priority
+                                    </th>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">
+                                        <i class="fas fa-user-plus me-2"></i>Raised By
+                                    </th>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">
+                                        <i class="fas fa-user-check me-2"></i>Assigned To
+                                    </th>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">
+                                        <i class="fas fa-calendar me-2"></i>Created
+                                    </th>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">
+                                        <i class="fas fa-cog me-2"></i>Actions
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for req in service_requests %}
+                                <tr style="border-bottom: 1px solid #D9D9D9;">
+                                    <td class="py-3 px-4 align-middle">
+                                        <span class="badge bg-light text-dark fw-bold px-3 py-2" style="font-family: 'Courier New', monospace; border: 1px solid #D9D9D9;">
+                                            {{ req.request_id|default:req.id }}
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-4 align-middle">
+                                        <div class="d-flex align-items-center">
+                                            <div class="me-3">
+                                                <div class="d-flex align-items-center justify-content-center rounded-circle" 
+                                                     style="width: 40px; height: 40px; background-color: #C3E4FF; color: #1C64FF;">
+                                                    <i class="fas fa-user"></i>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0 fw-semibold text-dark">{{ req.client.name }}</h6>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4 align-middle">
+                                        <span class="fw-semibold" style="color: #696969;">
+                                            {{ req.request_type.name|default:"General" }}
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-4 align-middle">
+                                        <div class="text-truncate" style="max-width: 250px; color: #696969;" title="{{ req.description }}">
+                                            {{ req.description|truncatechars:50 }}
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4 align-middle">
+                                        {% if req.status == 'draft' %}
+                                            <span class="badge rounded-pill px-3 py-2" style="background-color: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6;">
+                                                <i class="fas fa-edit me-1"></i>{{ req.get_status_display|default:req.status }}
+                                            </span>
+                                        {% elif req.status == 'submitted' %}
+                                            <span class="badge rounded-pill px-3 py-2" style="background-color: #e3f2fd; color: #1976d2; border: 1px solid #bbdefb;">
+                                                <i class="fas fa-paper-plane me-1"></i>{{ req.get_status_display|default:req.status }}
+                                            </span>
+                                        {% elif req.status == 'documents-requested' %}
+                                            <span class="badge rounded-pill px-3 py-2" style="background-color: #fff3e0; color: #f57c00; border: 1px solid #ffcc02;">
+                                                <i class="fas fa-file-import me-1"></i>{{ req.get_status_display|default:req.status }}
+                                            </span>
+                                        {% elif req.status == 'documents-received' %}
+                                            <span class="badge rounded-pill px-3 py-2" style="background-color: #e0f2f1; color: #00695c; border: 1px solid #b2dfdb;">
+                                                <i class="fas fa-file-check me-1"></i>{{ req.get_status_display|default:req.status }}
+                                            </span>
+                                        {% elif req.status == 'in-progress' %}
+                                            <span class="badge rounded-pill px-3 py-2" style="background-color: #f3e5f5; color: #7b1fa2; border: 1px solid #ce93d8;">
+                                                <i class="fas fa-spinner me-1"></i>{{ req.get_status_display|default:req.status }}
+                                            </span>
+                                        {% elif req.status == 'resolved' %}
+                                            <span class="badge rounded-pill px-3 py-2" style="background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9;">
+                                                <i class="fas fa-check-circle me-1"></i>{{ req.get_status_display|default:req.status }}
+                                            </span>
+                                        {% elif req.status == 'client-verification' %}
+                                            <span class="badge rounded-pill px-3 py-2" style="background-color: #ffebee; color: #d32f2f; border: 1px solid #ffcdd2;">
+                                                <i class="fas fa-user-check me-1"></i>{{ req.get_status_display|default:req.status }}
+                                            </span>
+                                        {% elif req.status == 'closed' %}
+                                            <span class="badge rounded-pill px-3 py-2" style="background-color: #f5f5f5; color: #424242; border: 1px solid #e0e0e0;">
+                                                <i class="fas fa-times-circle me-1"></i>{{ req.get_status_display|default:req.status }}
+                                            </span>
+                                        {% elif req.status == 'on-hold' %}
+                                            <span class="badge rounded-pill px-3 py-2" style="background-color: #fff8e1; color: #f57c00; border: 1px solid #ffcc02;">
+                                                <i class="fas fa-pause-circle me-1"></i>{{ req.get_status_display|default:req.status }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge rounded-pill px-3 py-2" style="background-color: #f5f5f5; color: #424242; border: 1px solid #e0e0e0;">
+                                                {{ req.get_status_display|default:req.status }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-3 px-4 align-middle">
+                                        {% if req.priority == 'low' %}
+                                            <span class="badge rounded-pill px-3 py-2" style="background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9;">
+                                                <i class="fas fa-arrow-down me-1"></i>{{ req.get_priority_display|default:req.priority }}
+                                            </span>
+                                        {% elif req.priority == 'medium' %}
+                                            <span class="badge rounded-pill px-3 py-2" style="background-color: #fff3e0; color: #f57c00; border: 1px solid #ffcc02;">
+                                                <i class="fas fa-minus me-1"></i>{{ req.get_priority_display|default:req.priority }}
+                                            </span>
+                                        {% elif req.priority == 'high' %}
+                                            <span class="badge rounded-pill px-3 py-2" style="background-color: #ffebee; color: #d32f2f; border: 1px solid #ffcdd2;">
+                                                <i class="fas fa-arrow-up me-1"></i>{{ req.get_priority_display|default:req.priority }}
+                                            </span>
+                                        {% elif req.priority == 'urgent' %}
+                                            <span class="badge rounded-pill px-3 py-2 urgent-pulse" style="background-color: #ffebee; color: #b71c1c; border: 1px solid #ffcdd2;">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>{{ req.get_priority_display|default:req.priority }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge rounded-pill px-3 py-2" style="background-color: #f5f5f5; color: #424242; border: 1px solid #e0e0e0;">
+                                                {{ req.get_priority_display|default:req.priority }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-3 px-4 align-middle">
+                                        <div class="fw-semibold" style="color: #696969;">
+                                            {{ req.raised_by.get_full_name|default:req.raised_by.username }}
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4 align-middle">
+                                        {% if req.assigned_to %}
+                                            <div class="fw-semibold" style="color: #696969;">
+                                                {{ req.assigned_to.get_full_name|default:req.assigned_to.username }}
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted fst-italic">
+                                                <i class="fas fa-user-slash me-1"></i>Unassigned
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-3 px-4 align-middle">
+                                        <div class="small" style="color: #696969;">
+                                            <i class="fas fa-calendar-alt me-1" style="color: #1C64FF;"></i>
+                                            {{ req.created_at|date:"M d, Y" }}
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4 align-middle">
+                                        <div class="d-flex gap-2">
+                                            <a href="{% url 'service_request_detail' req.pk %}" 
+                                               class="btn btn-outline-primary btn-sm px-3" 
+                                               style="border-color: #1C64FF; color: #1C64FF;">
+                                                <i class="fas fa-eye me-1"></i>View
+                                            </a>
+                                            {% if permissions.can_edit %}
+                                            <a href="{% url 'service_request_update' req.pk %}" 
+                                               class="btn btn-outline-secondary btn-sm px-3" 
+                                               style="border-color: #D9D9D9; color: #696969;">
+                                                <i class="fas fa-edit me-1"></i>Edit
+                                            </a>
+                                            {% endif %}
+                                            {% if permissions.can_delete %}
+                                            <a href="{% url 'service_request_delete' req.pk %}" 
+                                               class="btn btn-outline-danger btn-sm px-3"
+                                               onclick="return confirm('Are you sure you want to delete this request?')">
+                                                <i class="fas fa-trash me-1"></i>Delete
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Pagination -->
     {% if page_obj.has_other_pages %}
-    <div class="pagination-container">
-        <div class="pagination">
-            {% if page_obj.has_previous %}
-                <a href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">
-                    <i class="fas fa-angle-double-left"></i>
-                </a>
-                <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">
-                    <i class="fas fa-angle-left"></i>
-                </a>
-            {% endif %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <nav aria-label="Service requests pagination">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}" style="color: #1C64FF;">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}" style="color: #1C64FF;">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
 
-            <span class="current">
-                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-            </span>
+                    <li class="page-item active">
+                        <span class="page-link" style="background-color: #1C64FF; border-color: #1C64FF;">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
 
-            {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">
-                    <i class="fas fa-angle-right"></i>
-                </a>
-                <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">
-                    <i class="fas fa-angle-double-right"></i>
-                </a>
-            {% endif %}
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}" style="color: #1C64FF;">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}" style="color: #1C64FF;">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
         </div>
     </div>
     {% endif %}
 
     {% else %}
-    <div class="empty-message">
-        <p>No service requests found. 
-           {% if user.role in 'rm,rm_head,business_head,top_management' %}
-           <a href="{% url 'service_request_create' %}" style="color: var(--text-primary); text-decoration: underline;">
-               Create your first request
-           </a> to get started!
-           {% else %}
-           Contact your RM to create service requests.
-           {% endif %}
-        </p>
+    <!-- Empty State -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm text-center py-5" style="background-color: #FFFFFF;">
+                <div class="card-body">
+                    <div class="mb-4">
+                        <i class="fas fa-clipboard-list fa-4x" style="color: #D9D9D9;"></i>
+                    </div>
+                    <h3 class="fw-bold mb-3" style="color: #1C64FF;">No Service Requests Found</h3>
+                    <p class="text-muted mb-4" style="color: #696969;">
+                        {% if user.role in 'rm,rm_head,business_head,top_management' %}
+                            Get started by creating your first service request to track client needs and support tickets.
+                        {% else %}
+                            Contact your RM to create service requests for client support and assistance.
+                        {% endif %}
+                    </p>
+                    {% if user.role in 'rm,rm_head,business_head,top_management' %}
+                    <a href="{% url 'service_request_create' %}" class="btn btn-primary btn-lg px-4 py-2" style="background-color: #1C64FF; border-color: #1C64FF;">
+                        <i class="fas fa-plus me-2"></i>Create Your First Request
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
     {% endif %}
 </div>
 
+<!-- Toast Container for Notifications -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+    <div id="successToast" class="toast border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header border-0" style="background-color: #C3E4FF;">
+            <i class="fas fa-check-circle text-success me-2"></i>
+            <strong class="me-auto" style="color: #1C64FF;">Success</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" style="background-color: #FFFFFF; color: #696969;">
+            <span id="successMessage"></span>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Enhanced button styles */
+.btn-primary {
+    background-color: #1C64FF !important;
+    border-color: #1C64FF !important;
+}
+
+.btn-primary:hover {
+    background-color: #1557e6 !important;
+    border-color: #1557e6 !important;
+}
+
+.btn-outline-primary {
+    border-color: #1C64FF !important;
+    color: #1C64FF !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: #1C64FF !important;
+    border-color: #1C64FF !important;
+    color: white !important;
+}
+
+.btn-outline-secondary {
+    border-color: #D9D9D9 !important;
+    color: #696969 !important;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #D9D9D9 !important;
+    border-color: #D9D9D9 !important;
+    color: #495057 !important;
+}
+
+/* Enhanced focus styles */
+.form-control:focus,
+.form-select:focus {
+    border-color: #1C64FF !important;
+    box-shadow: 0 0 0 0.25rem rgba(28, 100, 255, 0.25) !important;
+}
+
+/* Smooth transitions */
+.btn,
+.card,
+.badge,
+.table tbody tr {
+    transition: all 0.2s ease !important;
+}
+
+/* Enhanced table styling */
+.table tbody tr:hover {
+    background-color: #C3E4FF !important;
+}
+
+/* Badge enhancements */
+.badge {
+    font-weight: 500 !important;
+    font-size: 0.75rem !important;
+}
+
+/* Card shadow enhancements */
+.shadow-sm {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+}
+
+/* Urgent priority pulse animation */
+@keyframes urgentPulse {
+    0%, 100% { 
+        opacity: 1; 
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 0.8; 
+        transform: scale(1.05);
+    }
+}
+
+.urgent-pulse {
+    animation: urgentPulse 2s infinite;
+}
+
+/* Enhanced accessibility */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .card {
+        border: 2px solid #000 !important;
+    }
+    
+    .btn {
+        border-width: 2px !important;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .display-5 {
+        font-size: 1.75rem !important;
+    }
+    
+    .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .d-flex.gap-2 {
+        flex-direction: column !important;
+    }
+    
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+}
+
+/* Print styles */
+@media print {
+    .btn,
+    .toast-container {
+        display: none !important;
+    }
+    
+    .card {
+        border: 1px solid #000 !important;
+        box-shadow: none !important;
+    }
+    
+    .table {
+        font-size: 0.8rem !important;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Enhanced button hover effects
+    const buttons = document.querySelectorAll('.btn');
+    buttons.forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+            this.style.transition = 'all 0.2s ease';
+            
+            if (this.classList.contains('btn-primary') || this.classList.contains('btn-outline-primary')) {
+                this.style.boxShadow = '0 8px 25px rgba(28, 100, 255, 0.3)';
+            } else {
+                this.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+            }
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '';
+        });
+    });
+
+    // Enhanced table row interactions
+    const tableRows = document.querySelectorAll('.table tbody tr');
+    tableRows.forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = '#C3E4FF';
+            this.style.transition = 'background-color 0.2s ease';
+        });
+        
+        row.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+        });
+    });
+
+    // Badge hover effects
+    const badges = document.querySelectorAll('.badge');
+    badges.forEach(badge => {
+        badge.addEventListener('mouseenter', function() {
+            this.style.transform = 'scale(1.05)';
+            this.style.transition = 'transform 0.2s ease';
+        });
+        
+        badge.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1)';
+        });
+    });
+
+    // Add entrance animations
+    const cards = document.querySelectorAll('.card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.transition = 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+        
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+
+    // Enhanced form interactions
+    const formControls = document.querySelectorAll('.form-control, .form-select');
+    formControls.forEach(control => {
+        control.addEventListener('focus', function() {
+            this.style.borderColor = '#1C64FF';
+            this.style.boxShadow = '0 0 0 0.25rem rgba(28, 100, 255, 0.15)';
+            this.style.transition = 'all 0.2s ease';
+        });
+        
+        control.addEventListener('blur', function() {
+            this.style.borderColor = '#D9D9D9';
+            this.style.boxShadow = 'none';
+        });
+    });
+
+    // Toast notification function
+    function showToast(message, type = 'success') {
+        document.getElementById('successMessage').textContent = message;
+        
+        const toastElement = document.getElementById('successToast');
+        const toast = new bootstrap.Toast(toastElement, {
+            autohide: true,
+            delay: 4000
+        });
+        toast.show();
+    }
+
+    // Auto-refresh functionality (optional)
+    let refreshInterval;
+    function startAutoRefresh() {
+        refreshInterval = setInterval(() => {
+            // Only refresh if user is active (not idle)
+            if (document.hasFocus()) {
+                location.reload();
+            }
+        }, 300000); // 5 minutes
+    }
+
+    // Start auto-refresh
+    startAutoRefresh();
+
+    // Clear interval on page unload
+    window.addEventListener('beforeunload', function() {
+        if (refreshInterval) {
+            clearInterval(refreshInterval);
+        }
+    });
+
+    // Enhanced accessibility
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Tab') {
+            // Add focus indicators
+            document.addEventListener('focusin', function(e) {
+                if (e.target.matches('.btn')) {
+                    e.target.style.outline = '2px solid #1C64FF';
+                    e.target.style.outlineOffset = '2px';
+                }
+            });
+            
+            document.addEventListener('focusout', function(e) {
+                if (e.target.matches('.btn')) {
+                    e.target.style.outline = '';
+                    e.target.style.outlineOffset = '';
+                }
+            });
+        }
+    });
+
+    // Add loading states for navigation
+    const navLinks = document.querySelectorAll('a[href]');
+    navLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            if (!this.href.includes('#')) {
+                const icon = this.querySelector('i');
+                if (icon && !icon.classList.contains('fa-spin')) {
+                    const originalClass = icon.className;
+                    icon.className = 'fas fa-spinner fa-spin me-2';
+                    
+                    setTimeout(() => {
+                        icon.className = originalClass;
+                    }, 1000);
+                }
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

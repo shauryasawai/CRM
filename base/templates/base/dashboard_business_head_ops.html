@@ -1,956 +1,1597 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Business Head Operations Dashboard</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-        
-        :root {
-            --bg-primary: #D3FF61;
-            --bg-secondary: #EFFFAB;
-            --bg-card: #FFFFFF;
-            --bg-accent: #F8FFF0;
-            --bg-overlay: rgba(255, 255, 255, 0.95);
-            --text-primary: #1A1A1A;
-            --text-secondary: #404040;
-            --text-muted: #6B7280;
-            --text-contrast: #FFFFFF;
-            --accent-primary: #000000;
-            --accent-success: #059669;
-            --accent-warning: #D97706;
-            --accent-danger: #DC2626;
-            --accent-purple: #7C3AED;
-            --accent-cyan: #0891B2;
-            --accent-pink: #DB2777;
-            --border-light: #E5E7EB;
-            --border-accent: #D1D5DB;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            --gradient-primary: linear-gradient(135deg, #D3FF61 0%, #EFFFAB 100%);
-            --gradient-dark: linear-gradient(135deg, #1A1A1A 0%, #404040 100%);
-            --gradient-success: linear-gradient(135deg, #059669 0%, #10B981 100%);
-            --gradient-warning: linear-gradient(135deg, #D97706 0%, #F59E0B 100%);
-            --gradient-danger: linear-gradient(135deg, #DC2626 0%, #EF4444 100%);
-            --gradient-purple: linear-gradient(135deg, #7C3AED 0%, #8B5CF6 100%);
-            --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-            --gradient-mesh: radial-gradient(circle at 20% 20%, rgba(211, 255, 97, 0.3) 0%, transparent 50%),
-                             radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.3) 0%, transparent 50%),
-                             radial-gradient(circle at 40% 40%, rgba(0, 0, 0, 0.1) 0%, transparent 50%);
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            background: var(--bg-primary);
-            background-image: var(--gradient-mesh);
-            color: var(--text-primary);
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            overflow-x: hidden;
-            min-height: 100vh;
-        }
-
-        .dashboard-container {
-            max-width: 1920px;
-            margin: 0 auto;
-            padding: 2rem;
-            position: relative;
-            animation: fadeInUp 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
-
-        .dashboard-container::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(45deg, transparent 0%, rgba(255, 255, 255, 0.02) 50%, transparent 100%);
-            animation: shimmer 3s ease-in-out infinite;
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        /* Header Styles */
-        .header-section {
-            background: var(--bg-card);
-            border-radius: 24px;
-            padding: 2rem;
-            margin-bottom: 3rem;
-            box-shadow: var(--shadow-lg);
-            position: relative;
-            overflow: hidden;
-            backdrop-filter: blur(10px);
-            z-index: 10;
-        }
-
-        .header-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 5px;
-            background: var(--gradient-purple);
-            border-radius: 24px 24px 0 0;
-        }
-
-        .navbar-brand {
-            font-size: 1.8rem;
-            font-weight: 800;
-            color: var(--text-primary);
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .brand-icon {
-            width: 50px;
-            height: 50px;
-            background: var(--gradient-purple);
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-contrast);
-            font-size: 1.5rem;
-            box-shadow: var(--shadow-md);
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 1.5rem;
-            align-items: center;
-        }
-
-        .nav-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 1rem 1.5rem;
-            background: var(--bg-accent);
-            color: var(--text-primary);
-            text-decoration: none;
-            border-radius: 16px;
-            font-weight: 600;
-            font-size: 0.95rem;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border: 2px solid var(--border-light);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .nav-link:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-            border-color: var(--accent-purple);
-            background: var(--accent-purple);
-            color: var(--text-contrast);
-        }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 2rem;
-        }
-
-        /* Dashboard Title */
-        .dashboard-title {
-            font-size: clamp(2rem, 4vw, 3rem);
-            font-weight: 900;
-            background: var(--gradient-purple);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 0.5rem;
-            letter-spacing: -0.02em;
-        }
-
-        .role-subtitle {
-            font-size: 1.2rem;
-            color: var(--text-secondary);
-            font-weight: 600;
-            margin-bottom: 2rem;
-        }
-
-        /* KPI Cards */
-        .kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
-
-        .kpi-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-light);
-            border-radius: 24px;
-            padding: 2.5rem;
-            position: relative;
-            overflow: hidden;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            cursor: pointer;
-            box-shadow: var(--shadow-md);
-            backdrop-filter: blur(10px);
-        }
-
-        .kpi-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 5px;
-            border-radius: 24px 24px 0 0;
-        }
-
-        .kpi-card:hover {
-            transform: translateY(-12px) scale(1.02);
-            box-shadow: var(--shadow-2xl);
-        }
-
-        .kpi-card.primary::before { 
-            background: var(--gradient-purple); 
-        }
-        
-        .kpi-card.success::before { 
-            background: var(--gradient-success); 
-        }
-        
-        .kpi-card.warning::before { 
-            background: var(--gradient-warning); 
-        }
-        
-        .kpi-card.danger::before { 
-            background: var(--gradient-danger); 
-        }
-
-        .kpi-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 2rem;
-        }
-
-        .kpi-icon {
-            width: 70px;
-            height: 70px;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.2rem;
-            background: linear-gradient(135deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.05));
-            color: var(--text-primary);
-            box-shadow: var(--shadow-md);
-            transition: all 0.3s ease;
-        }
-
-        .kpi-card:hover .kpi-icon {
-            transform: scale(1.1);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .kpi-card.primary .kpi-icon {
-            background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(139, 92, 246, 0.1));
-            color: var(--accent-purple);
-        }
-
-        .kpi-card.success .kpi-icon {
-            background: linear-gradient(135deg, rgba(5, 150, 105, 0.2), rgba(16, 185, 129, 0.1));
-            color: var(--accent-success);
-        }
-
-        .kpi-card.warning .kpi-icon {
-            background: linear-gradient(135deg, rgba(217, 119, 6, 0.2), rgba(245, 158, 11, 0.1));
-            color: var(--accent-warning);
-        }
-
-        .kpi-card.danger .kpi-icon {
-            background: linear-gradient(135deg, rgba(220, 38, 38, 0.2), rgba(239, 68, 68, 0.1));
-            color: var(--accent-danger);
-        }
-
-        .kpi-label {
-            font-size: 0.9rem;
-            color: var(--text-muted);
-            font-weight: 600;
-            margin-bottom: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-        }
-
-        .kpi-value {
-            font-size: 2.8rem;
-            font-weight: 900;
-            color: var(--text-primary);
-            line-height: 1;
-            margin-bottom: 0.5rem;
-            font-variant-numeric: tabular-nums;
-        }
-
-        .kpi-subtitle {
-            font-size: 1rem;
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-
-        /* Content Sections */
-        .section-title {
-            font-size: 2rem;
-            font-weight: 800;
-            color: var(--text-primary);
-            margin-bottom: 2.5rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .section-icon {
-            width: 50px;
-            height: 50px;
-            background: var(--gradient-purple);
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-contrast);
-            font-size: 1.5rem;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .content-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
-
-        .content-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-light);
-            border-radius: 24px;
-            overflow: hidden;
-            box-shadow: var(--shadow-lg);
-            backdrop-filter: blur(10px);
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .content-card:hover {
-            transform: translateY(-8px);
-            box-shadow: var(--shadow-2xl);
-        }
-
-        .card-header {
-            background: var(--bg-accent);
-            padding: 2rem 2rem 1.5rem;
-            border-bottom: 1px solid var(--border-light);
-            position: relative;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-
-        .card-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: var(--gradient-purple);
-        }
-
-        .card-title {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin: 0;
-        }
-
-        .card-body {
-            padding: 2rem;
-        }
-
-        .view-all-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.75rem 1.5rem;
-            background: var(--bg-card);
-            color: var(--text-primary);
-            text-decoration: none;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-            border: 2px solid var(--border-light);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .view-all-btn:hover {
-            background: var(--accent-purple);
-            color: var(--text-contrast);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
-        }
-
-        /* Team Performance Table */
-        .performance-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-
-        .performance-table th {
-            background: var(--bg-accent);
-            color: var(--text-primary);
-            font-weight: 700;
-            padding: 1.5rem 1rem;
-            border-bottom: 2px solid var(--border-light);
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .performance-table th:first-child {
-            border-radius: 12px 0 0 0;
-        }
-
-        .performance-table th:last-child {
-            border-radius: 0 12px 0 0;
-        }
-
-        .performance-table td {
-            padding: 1.5rem 1rem;
-            border-bottom: 1px solid var(--border-light);
-            font-size: 0.95rem;
-        }
-
-        .performance-table tr:hover {
-            background: var(--bg-accent);
-        }
-
-        .performance-table tr:last-child td:first-child {
-            border-radius: 0 0 0 12px;
-        }
-
-        .performance-table tr:last-child td:last-child {
-            border-radius: 0 0 12px 0;
-        }
-
-        .team-lead-info {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-
-        .team-lead-name {
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .team-lead-email {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-        }
-
-        /* Status Badges */
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .badge-warning {
-            background: rgba(217, 119, 6, 0.1);
-            color: var(--accent-warning);
-            border: 1px solid rgba(217, 119, 6, 0.2);
-        }
-
-        .badge-danger {
-            background: rgba(220, 38, 38, 0.1);
-            color: var(--accent-danger);
-            border: 1px solid rgba(220, 38, 38, 0.2);
-        }
-
-        .badge-success {
-            background: rgba(5, 150, 105, 0.1);
-            color: var(--accent-success);
-            border: 1px solid rgba(5, 150, 105, 0.2);
-        }
-
-        /* Notes Section */
-        .note-item {
-            padding: 1.5rem 0;
-            border-bottom: 1px solid var(--border-light);
-            transition: all 0.3s ease;
-        }
-
-        .note-item:hover {
-            background: var(--bg-accent);
-            margin: 0 -2rem;
-            padding: 1.5rem 2rem;
-            border-radius: 12px;
-            border-bottom: 1px solid transparent;
-        }
-
-        .note-item:last-child {
-            border-bottom: none;
-        }
-
-        .note-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 0.5rem;
-        }
-
-        .note-meta {
-            font-size: 0.9rem;
-            color: var(--text-muted);
-            margin-bottom: 0.5rem;
-        }
-
-        .note-content {
-            font-size: 0.95rem;
-            color: var(--text-secondary);
-            line-height: 1.4;
-        }
-
-        .add-note-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.75rem;
-            padding: 1rem 2rem;
-            background: var(--gradient-primary);
-            color: var(--text-primary);
-            text-decoration: none;
-            border-radius: 16px;
-            font-weight: 600;
-            font-size: 1rem;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border: 2px solid transparent;
-            box-shadow: var(--shadow-md);
-            width: 100%;
-            margin-top: 1rem;
-        }
-
-        .add-note-btn:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-xl);
-            background: var(--accent-purple);
-            color: var(--text-contrast);
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 3rem 2rem;
-            color: var(--text-muted);
-            font-style: italic;
-        }
-
-        /* Quick Actions */
-        .quick-actions {
-            background: var(--bg-card);
-            border: 1px solid var(--border-light);
-            border-radius: 24px;
-            padding: 2.5rem;
-            margin-top: 2rem;
-            box-shadow: var(--shadow-lg);
-            backdrop-filter: blur(10px);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .quick-actions::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 5px;
-            background: var(--gradient-purple);
-            border-radius: 24px 24px 0 0;
-        }
-
-        .actions-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-top: 2rem;
-        }
-
-        .action-btn {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1rem;
-            padding: 2rem;
-            background: var(--bg-accent);
-            color: var(--text-primary);
-            text-decoration: none;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 1rem;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border: 2px solid var(--border-light);
-            box-shadow: var(--shadow-md);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .action-btn:hover {
-            transform: translateY(-8px) scale(1.05);
-            box-shadow: var(--shadow-xl);
-            border-color: var(--accent-purple);
-            background: var(--accent-purple);
-            color: var(--text-contrast);
-        }
-
-        .action-icon {
-            font-size: 2.5rem;
-            opacity: 0.8;
-        }
-
-        /* Animations */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(40px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-        }
-
-        .floating {
-            animation: float 6s ease-in-out infinite;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 1200px) {
-            .content-grid {
-                grid-template-columns: 1fr;
-                gap: 1.5rem;
-            }
-        }
-
-        @media (max-width: 1024px) {
-            .dashboard-container {
-                padding: 1.5rem;
-            }
-            
-            .kpi-grid {
-                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-                gap: 1.5rem;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .dashboard-container {
-                padding: 1rem;
-            }
-            
-            .header-content {
-                flex-direction: column;
-                gap: 1rem;
-            }
-            
-            .nav-links {
-                flex-wrap: wrap;
-                justify-content: center;
-            }
-            
-            .dashboard-title {
-                font-size: 2rem;
-                text-align: center;
-            }
-            
-            .kpi-grid {
-                grid-template-columns: 1fr;
-                gap: 1rem;
-            }
-            
-            .kpi-card {
-                padding: 1.5rem;
-            }
-            
-            .card-header,
-            .card-body {
-                padding: 1.5rem;
-            }
-            
-            .actions-grid {
-                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            }
-
-            .performance-table {
-                font-size: 0.85rem;
-            }
-
-            .performance-table th,
-            .performance-table td {
-                padding: 1rem 0.5rem;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .dashboard-container {
-                padding: 0.75rem;
-            }
-            
-            .kpi-card,
-            .content-card,
-            .quick-actions {
-                padding: 1.25rem;
-            }
-            
-            .card-header,
-            .card-body {
-                padding: 1.25rem;
-            }
-
-            .performance-table {
-                font-size: 0.8rem;
-            }
-        }
-
-        /* Focus states for accessibility */
-        .nav-link:focus,
-        .view-all-btn:focus,
-        .action-btn:focus,
-        .add-note-btn:focus {
-            outline: 3px solid var(--accent-purple);
-            outline-offset: 2px;
-        }
-    </style>
-</head>
-<body>
-    <div class="dashboard-container">
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Business Head Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --bs-primary: #1C64FF;
+    --bs-secondary: #696969;
+    --bs-light: #FFFFFF;
+    --bs-border-color: #D9D9D9;
+    --bs-info: #C3E4FF;
+}
+
+.dashboard-container {
+    background: #f8f9fa;
+    min-height: 100vh;
+    padding: 2rem 0;
+}
+
+.dashboard-header {
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+    color: #FFFFFF;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(28, 100, 255, 0.3);
+}
+
+.dashboard-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+    50% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+}
+
+.dashboard-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    position: relative;
+    z-index: 1;
+}
+
+.dashboard-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin-bottom: 1.5rem;
+    position: relative;
+    z-index: 1;
+}
+
+.header-actions {
+    position: relative;
+    z-index: 1;
+}
+
+.btn-hrms {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #FFFFFF;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    backdrop-filter: blur(10px);
+}
+
+.btn-hrms:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    color: #FFFFFF;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: #FFFFFF;
+    border: 1px solid #D9D9D9;
+    border-radius: 16px;
+    padding: 2rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    border-radius: 16px 16px 0 0;
+}
+
+.stat-card.primary::before {
+    background: linear-gradient(90deg, #1C64FF, #1557e6);
+}
+
+.stat-card.success::before {
+    background: linear-gradient(90deg, #198754, #157347);
+}
+
+.stat-card.warning::before {
+    background: linear-gradient(90deg, #ffc107, #ffb300);
+}
+
+.stat-card.info::before {
+    background: linear-gradient(90deg, #0dcaf0, #0bb5d6);
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: #FFFFFF;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.stat-card.primary .stat-icon {
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+}
+
+.stat-card.success .stat-icon {
+    background: linear-gradient(135deg, #198754, #157347);
+}
+
+.stat-card.warning .stat-icon {
+    background: linear-gradient(135deg, #ffc107, #ffb300);
+}
+
+.stat-card.info .stat-icon {
+    background: linear-gradient(135deg, #0dcaf0, #0bb5d6);
+}
+
+.stat-title {
+    color: #696969;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #333333;
+    line-height: 1;
+    margin-bottom: 1rem;
+}
+
+.stat-trend {
+    font-size: 0.9rem;
+    color: #1C64FF;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #D9D9D9;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #1C64FF, #1557e6);
+    border-radius: 4px;
+    transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: shimmer-progress 2s infinite;
+}
+
+@keyframes shimmer-progress {
+    to { left: 100%; }
+}
+
+.metrics-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.metric-card {
+    background: #FFFFFF;
+    border: 1px solid #D9D9D9;
+    border-radius: 16px;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #1C64FF, #1557e6);
+    transform: scaleX(0);
+    transition: transform 0.5s ease;
+}
+
+.metric-card:hover {
+    border-color: #1C64FF;
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+.metric-card:hover::before {
+    transform: scaleX(1);
+}
+
+.metric-number {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #1C64FF;
+    margin-bottom: 0.5rem;
+}
+
+.metric-label {
+    color: #696969;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.chart-container {
+    background: #FFFFFF;
+    border: 1px solid #D9D9D9;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+}
+
+.chart-container:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+.chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.chart-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333333;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.metric-legend {
+    display: flex;
+    gap: 2rem;
+    font-size: 0.9rem;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #696969;
+}
+
+.legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.chart-placeholder {
+    height: 300px;
+    background: rgba(28, 100, 255, 0.05);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #696969;
+    border: 2px dashed #D9D9D9;
+    transition: all 0.3s ease;
+}
+
+.chart-placeholder:hover {
+    border-color: #1C64FF;
+    background: rgba(28, 100, 255, 0.08);
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #D9D9D9;
+    position: relative;
+}
+
+.section-header::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 60px;
+    height: 2px;
+    background: linear-gradient(90deg, #1C64FF, #1557e6);
+}
+
+.section-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #333333;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.section-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #FFFFFF;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.table-container {
+    background: #FFFFFF;
+    border: 1px solid #D9D9D9;
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+}
+
+.table-container:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+}
+
+.table thead {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+}
+
+.table th {
+    padding: 1.5rem 1rem;
+    text-align: left;
+    color: #333333;
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #D9D9D9;
+}
+
+.table td {
+    padding: 1.5rem 1rem;
+    color: #333333;
+    font-weight: 500;
+    border-bottom: 1px solid #D9D9D9;
+    transition: all 0.2s ease;
+    vertical-align: middle;
+}
+
+.table tbody tr {
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.table tbody tr::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 0;
+    height: 100%;
+    background: linear-gradient(90deg, #1C64FF, rgba(28, 100, 255, 0.1));
+    transition: width 0.3s ease;
+    z-index: 1;
+}
+
+.table tbody tr:hover {
+    background: rgba(28, 100, 255, 0.05);
+    transform: translateX(4px);
+}
+
+.table tbody tr:hover::before {
+    width: 4px;
+}
+
+.table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.employee-name {
+    font-weight: 700;
+    color: #1C64FF;
+    font-size: 1.1rem;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-right: 0.5rem;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+}
+
+.badge:hover {
+    transform: scale(1.05);
+}
+
+.badge.leads {
+    background: rgba(28, 100, 255, 0.1);
+    color: #1C64FF;
+    border-color: rgba(28, 100, 255, 0.3);
+}
+
+.badge.tasks {
+    background: rgba(111, 66, 193, 0.1);
+    color: #6f42c1;
+    border-color: rgba(111, 66, 193, 0.3);
+}
+
+.badge.rms {
+    background: rgba(25, 135, 84, 0.1);
+    color: #198754;
+    border-color: rgba(25, 135, 84, 0.3);
+}
+
+.performance-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.performance-bar {
+    width: 100px;
+    height: 8px;
+    background: #D9D9D9;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.performance-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #1C64FF, #1557e6);
+    border-radius: 4px;
+    transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.performance-text {
+    font-size: 0.9rem;
+    color: #1C64FF;
+    font-weight: 600;
+}
+
+.status-indicator {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-block;
+}
+
+.status-excellent {
+    background: rgba(25, 135, 84, 0.1);
+    color: #198754;
+    border: 1px solid rgba(25, 135, 84, 0.3);
+}
+
+.status-good {
+    background: rgba(28, 100, 255, 0.1);
+    color: #1C64FF;
+    border: 1px solid rgba(28, 100, 255, 0.3);
+}
+
+.status-average {
+    background: rgba(255, 193, 7, 0.1);
+    color: #856404;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.status-low {
+    background: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+    border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+.status-inactive {
+    background: rgba(105, 105, 105, 0.1);
+    color: #696969;
+    border: 1px solid rgba(105, 105, 105, 0.3);
+}
+
+.insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.insight-card {
+    padding: 2rem;
+    border-radius: 16px;
+    border: 1px solid;
+    position: relative;
+    overflow: hidden;
+}
+
+.insight-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    border-radius: 16px 16px 0 0;
+}
+
+.insight-card.primary {
+    background: rgba(28, 100, 255, 0.05);
+    border-color: rgba(28, 100, 255, 0.2);
+}
+
+.insight-card.primary::before {
+    background: linear-gradient(90deg, #1C64FF, #1557e6);
+}
+
+.insight-card.success {
+    background: rgba(25, 135, 84, 0.05);
+    border-color: rgba(25, 135, 84, 0.2);
+}
+
+.insight-card.success::before {
+    background: linear-gradient(90deg, #198754, #157347);
+}
+
+.insight-card.warning {
+    background: rgba(255, 193, 7, 0.05);
+    border-color: rgba(255, 193, 7, 0.2);
+}
+
+.insight-card.warning::before {
+    background: linear-gradient(90deg, #ffc107, #ffb300);
+}
+
+.insight-title {
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 700;
+}
+
+.insight-card.primary .insight-title {
+    color: #1C64FF;
+}
+
+.insight-card.success .insight-title {
+    color: #198754;
+}
+
+.insight-card.warning .insight-title {
+    color: #856404;
+}
+
+.insight-content {
+    color: #333333;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}
+
+.insight-progress {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.insight-progress-bar {
+    flex: 1;
+    height: 8px;
+    background: #D9D9D9;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.insight-progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 1s ease;
+}
+
+.insight-card.primary .insight-progress-fill {
+    background: #1C64FF;
+}
+
+.insight-card.success .insight-progress-fill {
+    background: #198754;
+}
+
+.insight-card.warning .insight-progress-fill {
+    background: #ffc107;
+}
+
+.insight-progress-text {
+    font-weight: 600;
+}
+
+.insight-card.primary .insight-progress-text {
+    color: #1C64FF;
+}
+
+.insight-card.success .insight-progress-text {
+    color: #198754;
+}
+
+.insight-card.warning .insight-progress-text {
+    color: #856404;
+}
+
+.notes-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.note-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 1px solid #D9D9D9;
+    transition: all 0.3s ease;
+}
+
+.note-item:hover {
+    background: rgba(28, 100, 255, 0.05);
+    border-color: #1C64FF;
+    transform: translateY(-2px);
+}
+
+.note-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #FFFFFF;
+    font-weight: bold;
+}
+
+.note-content {
+    flex: 1;
+}
+
+.note-title {
+    font-weight: 600;
+    color: #333333;
+    margin-bottom: 0.25rem;
+}
+
+.note-text {
+    font-size: 0.9rem;
+    color: #696969;
+}
+
+.note-time {
+    text-align: right;
+    color: #696969;
+    font-size: 0.85rem;
+}
+
+.action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.6s;
+}
+
+.btn:hover::before {
+    left: 100%;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+    color: #FFFFFF;
+    box-shadow: 0 4px 12px rgba(28, 100, 255, 0.3);
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #1557e6, #1348d1);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(28, 100, 255, 0.4);
+    color: #FFFFFF;
+}
+
+.btn-secondary {
+    background: #FFFFFF;
+    color: #696969;
+    border: 2px solid #696969;
+}
+
+.btn-secondary:hover {
+    background: #696969;
+    color: #FFFFFF;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(105, 105, 105, 0.3);
+}
+
+.btn-accent {
+    background: linear-gradient(135deg, #198754, #157347);
+    color: #FFFFFF;
+    box-shadow: 0 4px 12px rgba(25, 135, 84, 0.3);
+}
+
+.btn-accent:hover {
+    background: linear-gradient(135deg, #157347, #0f5132);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(25, 135, 84, 0.4);
+    color: #FFFFFF;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #696969;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+    opacity: 0.3;
+}
+
+.fade-in {
+    animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-up {
+    animation: slideUp 0.8s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 1rem 0;
+    }
+    
+    .dashboard-header {
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .dashboard-title {
+        font-size: 2rem;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .metrics-overview {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+    }
+    
+    .table {
+        min-width: 600px;
+    }
+
+    .chart-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .insights-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .metric-legend {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-title {
+        font-size: 1.75rem;
+    }
+
+    .stat-card {
+        padding: 1.5rem;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+    }
+
+    .table th,
+    .table td {
+        padding: 1rem 0.5rem;
+    }
+
+    .metric-card {
+        padding: 1.5rem;
+    }
+
+    .metric-number {
+        font-size: 2rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="container-fluid">
         <!-- Header Section -->
-        <div class="header-section">
-            <div class="header-content">
-                <div>
-                    <a href="{% url 'dashboard' %}" class="navbar-brand">
-                        <div class="brand-icon">⚙️</div>
-                        <div>
-                            <div class="dashboard-title">Business Operations</div>
-                            <div class="role-subtitle">CRM - Business Head Operations</div>
+        <div class="dashboard-header fade-in">
+            <h1 class="dashboard-title">Business Intelligence Hub</h1>
+            <p class="dashboard-subtitle">Welcome back, {{ user.get_full_name|default:user.username }}</p>
+            <div class="header-actions">
+                <a href="{% url 'hrm_dashboard' %}" class="btn-hrms">
+                    <i class="fas fa-clipboard-list"></i> HRMS Portal
+                </a>
+            </div>
+        </div>
+
+        <!-- Key Performance Statistics -->
+        <div class="stats-grid slide-up">
+            <div class="stat-card primary">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-title">RM Heads</div>
+                <div class="stat-value">{{ rm_heads.count|default:0 }}</div>
+                <div class="stat-trend">
+                    <i class="fas fa-crown"></i> Regional Managers
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {% if rm_heads.count > 0 %}{% widthratio rm_heads.count 10 100 %}{% else %}10{% endif %}%;"></div>
+                </div>
+            </div>
+
+            <div class="stat-card warning">
+                <div class="stat-icon">
+                    <i class="fas fa-bullseye"></i>
+                </div>
+                <div class="stat-title">Total Leads</div>
+                <div class="stat-value">{{ total_leads|default:0 }}</div>
+                <div class="stat-trend">
+                    <i class="fas fa-chart-line"></i> System-wide
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {% if total_leads > 0 %}{% if total_leads > 100 %}100{% else %}{% widthratio total_leads 100 100 %}{% endif %}{% else %}5{% endif %}%;"></div>
+                </div>
+            </div>
+
+            <div class="stat-card success">
+                <div class="stat-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-title">Converted Leads</div>
+                <div class="stat-value">{{ converted_leads|default:0 }}</div>
+                <div class="stat-trend">
+                    <i class="fas fa-bolt"></i> {{ lead_conversion_rate|floatformat:1|default:0 }}% Rate
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {% if lead_conversion_rate > 100 %}100{% else %}{{ lead_conversion_rate|floatformat:0|default:0 }}{% endif %}%;"></div>
+                </div>
+            </div>
+
+            <div class="stat-card info">
+                <div class="stat-icon">
+                    <i class="fas fa-tools"></i>
+                </div>
+                <div class="stat-title">Open Requests</div>
+                <div class="stat-value">{{ open_service_requests.count|default:0 }}</div>
+                <div class="stat-trend">
+                    <i class="fas fa-sync-alt"></i> Pending
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {% if open_service_requests.count > 0 %}{% if open_service_requests.count > 50 %}100{% else %}{% widthratio open_service_requests.count 50 100 %}{% endif %}{% else %}0{% endif %}%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Metrics Overview -->
+        <div class="metrics-overview slide-up">
+            <div class="metric-card">
+                <div class="metric-number">{{ lead_conversion_rate|floatformat:1|default:0 }}%</div>
+                <div class="metric-label">Lead Conversion Rate</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-number">{{ avg_response_time|floatformat:1|default:0 }}</div>
+                <div class="metric-label">Avg Response (Days)</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-number">{{ all_rms.count|default:0 }}</div>
+                <div class="metric-label">Total RMs</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-number">{{ lead_conversion_rate|floatformat:0|default:0 }}%</div>
+                <div class="metric-label">Success Rate</div>
+            </div>
+        </div>
+
+        <!-- Performance Overview Chart -->
+        <div class="chart-container slide-up">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="fas fa-chart-bar"></i> System Performance Overview
+                </h3>
+                <div class="metric-legend">
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #1C64FF;"></div>
+                        <span>Total Leads ({{ total_leads|default:0 }})</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #198754;"></div>
+                        <span>Converted ({{ converted_leads|default:0 }})</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #ffc107;"></div>
+                        <span>Conversion Rate ({{ lead_conversion_rate|floatformat:1|default:0 }}%)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #0dcaf0;"></div>
+                        <span>Avg Response ({{ avg_response_time|floatformat:1|default:0 }}d)</span>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-placeholder">
+                <div style="text-align: center;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;"><i class="fas fa-chart-line"></i></div>
+                    <div style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem;">System Analytics Dashboard</div>
+                    <div style="font-size: 0.9rem; opacity: 0.7;">Real-time performance metrics and trends</div>
+                    <div style="margin-top: 1rem; display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #1C64FF;">{{ total_leads|default:0 }}</div>
+                            <div style="font-size: 0.8rem; opacity: 0.8;">Total Leads</div>
                         </div>
-                    </a>
-                </div>
-                <div class="nav-links">
-                    <a href="{% url 'notes_dashboard' %}" class="nav-link">
-                        📝 Notes
-                    </a>
-                    <a href="{% url 'logout' %}" class="nav-link">
-                        🚪 Logout
-                    </a>
+                        <div style="text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #198754;">{{ converted_leads|default:0 }}</div>
+                            <div style="font-size: 0.8rem; opacity: 0.8;">Converted</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #ffc107;">{{ lead_conversion_rate|floatformat:1|default:0 }}%</div>
+                            <div style="font-size: 0.8rem; opacity: 0.8;">Success Rate</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- KPI Cards -->
-        <div class="kpi-grid">
-            <div class="kpi-card primary floating">
-                <div class="kpi-header">
-                    <div class="kpi-icon">👥</div>
-                </div>
-                <div class="kpi-label">Operations Team</div>
-                <div class="kpi-value">{{ ops_team_leads.count }}+{{ ops_execs.count }}</div>
-                <div class="kpi-subtitle">Team Leads + Executives</div>
-            </div>
-
-            <div class="kpi-card success floating">
-                <div class="kpi-header">
-                    <div class="kpi-icon">✅</div>
-                </div>
-                <div class="kpi-label">Active Profiles</div>
-                <div class="kpi-value">{{ active_profiles }}</div>
-                <div class="kpi-subtitle">Out of {{ total_client_profiles }} total</div>
-            </div>
-
-            <div class="kpi-card warning floating">
-                <div class="kpi-header">
-                    <div class="kpi-icon">📋</div>
-                </div>
-                <div class="kpi-label">Pending Tasks</div>
-                <div class="kpi-value">{{ pending_ops_tasks }}</div>
-                <div class="kpi-subtitle">{{ overdue_ops_tasks }} overdue</div>
-            </div>
-
-            <div class="kpi-card danger floating">
-                <div class="kpi-header">
-                    <div class="kpi-icon">🔔</div>
-                </div>
-                <div class="kpi-label">Open Requests</div>
-                <div class="kpi-value">{{ ops_service_requests.count }}</div>
-                <div class="kpi-subtitle">Service Requests</div>
+        <!-- RM Heads Performance Table -->
+        <div class="section-header">
+            <h2 class="section-title">
+                <div class="section-icon"><i class="fas fa-crown"></i></div>
+                Regional Manager Performance
+            </h2>
+            <div style="color: #696969; font-size: 1rem; font-weight: 500;">
+                {{ rm_heads.count|default:0 }} Active RM Head{{ rm_heads.count|pluralize }}
             </div>
         </div>
 
-        <!-- Team Performance Section -->
-        <h2 class="section-title">
-            <div class="section-icon">📈</div>
-            Team Performance Overview
-        </h2>
-
-        <div class="content-grid">
-            <!-- Team Performance Table -->
-            <div class="content-card">
-                <div class="card-header">
-                    <div class="card-title">
-                        📊 Team Performance
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div style="overflow-x: auto;">
-                        <table class="performance-table">
-                            <thead>
-                                <tr>
-                                    <th>Team Lead</th>
-                                    <th>Team Size</th>
-                                    <th>Pending Tasks</th>
-                                    <th>Service Requests</th>
-                                    <th>Open Requests</th>
-                                    <th>Performance</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for team in team_performance %}
-                                <tr>
-                                    <td>
-                                        <div class="team-lead-info">
-                                            <div class="team-lead-name">{{ team.lead.get_full_name }}</div>
-                                            <div class="team-lead-email">{{ team.lead.email }}</div>
-                                        </div>
-                                    </td>
-                                    <td>{{ team.team_size }}</td>
-                                    <td>
-                                        <span class="status-badge badge-warning">{{ team.pending_tasks }}</span>
-                                    </td>
-                                    <td>{{ team.total_service_requests }}</td>
-                                    <td>
-                                        <span class="status-badge badge-danger">{{ team.open_service_requests }}</span>
-                                    </td>
-                                    <td>
-                                        {% with performance=team.open_service_requests|add:team.pending_tasks %}
-                                            {% if performance <= 5 %}
-                                                <span class="status-badge badge-success">Excellent</span>
-                                            {% elif performance <= 10 %}
-                                                <span class="status-badge badge-warning">Good</span>
-                                            {% else %}
-                                                <span class="status-badge badge-danger">Needs Attention</span>
-                                            {% endif %}
-                                        {% endwith %}
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="6" class="empty-state">No teams found</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Recent Notes -->
-            <div class="content-card">
-                <div class="card-header">
-                    <div class="card-title">
-                        📝 Recent Notes
-                    </div>
-                    <a href="{% url 'notes_dashboard' %}" class="view-all-btn">View All →</a>
-                </div>
-                <div class="card-body">
-                    {% for note in recent_notes %}
-                    <div class="note-item">
-                        <div class="note-title">{{ note.heading|truncatechars:30 }}</div>
-                        <div class="note-meta">{{ note.updated_at|timesince }} ago</div>
-                        <div class="note-content">{{ note.content|truncatechars:50 }}</div>
-                    </div>
+        <div class="table-container slide-up">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th><i class="fas fa-user me-2"></i>RM Head</th>
+                        <th><i class="fas fa-envelope me-2"></i>Contact</th>
+                        <th><i class="fas fa-users me-2"></i>Team Size</th>
+                        <th><i class="fas fa-bullseye me-2"></i>Leads Managed</th>
+                        <th><i class="fas fa-chart-bar me-2"></i>Performance</th>
+                        <th><i class="fas fa-clock me-2"></i>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rm_head in rm_heads %}
+                    <tr>
+                        <td>
+                            <div class="employee-name">{{ rm_head.get_full_name|default:rm_head.username }}</div>
+                            <div style="font-size: 0.85rem; color: #696969; margin-top: 0.25rem;">
+                                ID: #{{ rm_head.id }}
+                            </div>
+                        </td>
+                        <td>
+                            <div>{{ rm_head.email|default:"No email" }}</div>
+                            {% if rm_head.phone %}
+                            <div style="font-size: 0.85rem; color: #696969; margin-top: 0.25rem;">
+                                <i class="fas fa-phone"></i> {{ rm_head.phone }}
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% with team_count=rm_head.supervised_users.count|default:0 %}
+                                {% if team_count > 0 %}
+                                    <span class="badge rms">{{ team_count }} RM{{ team_count|pluralize }}</span>
+                                {% else %}
+                                    {% with alt_count=rm_head.team_members.count|default:0 %}
+                                        {% if alt_count > 0 %}
+                                            <span class="badge rms">{{ alt_count }} RM{{ alt_count|pluralize }}</span>
+                                        {% else %}
+                                            <span class="badge rms">0 RMs</span>
+                                        {% endif %}
+                                    {% endwith %}
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td>
+                            {% with leads_count=rm_head.lead_set.count|default:0 %}
+                                <span class="badge leads">{{ leads_count }} Lead{{ leads_count|pluralize }}</span>
+                            {% endwith %}
+                        </td>
+                        <td>
+                            {% with leads_count=rm_head.lead_set.count|default:0 %}
+                            {% with performance_score=leads_count|add:5 %}
+                            <div class="performance-indicator">
+                                <div class="performance-bar">
+                                    <div class="performance-fill" style="width: {% if performance_score > 20 %}100{% else %}{% widthratio performance_score 20 100 %}{% endif %}%;"></div>
+                                </div>
+                                <span class="performance-text">
+                                    {% if performance_score > 20 %}100{% else %}{% widthratio performance_score 20 100 %}{% endif %}%
+                                </span>
+                            </div>
+                            {% endwith %}
+                            {% endwith %}
+                        </td>
+                        <td>
+                            {% with leads_count=rm_head.lead_set.count|default:0 %}
+                            {% if leads_count >= 15 %}
+                                <span class="status-indicator status-excellent">Excellent</span>
+                            {% elif leads_count >= 8 %}
+                                <span class="status-indicator status-good">Good</span>
+                            {% elif leads_count >= 3 %}
+                                <span class="status-indicator status-average">Average</span>
+                            {% else %}
+                                <span class="status-indicator status-low">Low</span>
+                            {% endif %}
+                            {% endwith %}
+                        </td>
+                    </tr>
                     {% empty %}
-                    <div class="empty-state">
-                        <p>No recent notes</p>
-                    </div>
+                    <tr>
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <div class="empty-icon"><i class="fas fa-users"></i></div>
+                                <div style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem;">No RM Heads Found</div>
+                                <div style="font-size: 1rem;">Start by assigning RM Head roles to see performance data here</div>
+                            </div>
+                        </td>
+                    </tr>
                     {% endfor %}
-                    <a href="{% url 'note_create' %}" class="add-note-btn">
-                        ➕ Add Note
-                    </a>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Regional Managers Overview -->
+        {% if all_rms %}
+        <div class="section-header">
+            <h2 class="section-title">
+                <div class="section-icon"><i class="fas fa-globe"></i></div>
+                All Regional Managers
+            </h2>
+            <div style="color: #696969; font-size: 1rem; font-weight: 500;">
+                {{ all_rms.count }} Active RM{{ all_rms.count|pluralize }}
+            </div>
+        </div>
+
+        <div class="table-container slide-up">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th><i class="fas fa-user me-2"></i>Regional Manager</th>
+                        <th><i class="fas fa-envelope me-2"></i>Contact</th>
+                        <th><i class="fas fa-crown me-2"></i>Reports To</th>
+                        <th><i class="fas fa-bullseye me-2"></i>Individual Leads</th>
+                        <th><i class="fas fa-tasks me-2"></i>Tasks</th>
+                        <th><i class="fas fa-chart-bar me-2"></i>Activity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rm in all_rms %}
+                    <tr>
+                        <td>
+                            <div class="employee-name">{{ rm.get_full_name|default:rm.username }}</div>
+                            <div style="font-size: 0.85rem; color: #696969; margin-top: 0.25rem;">
+                                RM ID: #{{ rm.id }}
+                            </div>
+                        </td>
+                        <td>
+                            <div>{{ rm.email|default:"No email" }}</div>
+                            {% if rm.phone %}
+                            <div style="font-size: 0.85rem; color: #696969; margin-top: 0.25rem;">
+                                <i class="fas fa-phone"></i> {{ rm.phone }}
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if rm.supervisor %}
+                                <div style="color: #1C64FF; font-weight: 600;">
+                                    {{ rm.supervisor.get_full_name|default:rm.supervisor.username }}
+                                </div>
+                            {% else %}
+                                <span style="color: #696969; font-style: italic;">Direct Report</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% with rm_leads=rm.lead_set.count|default:0 %}
+                                <span class="badge leads">{{ rm_leads }} Lead{{ rm_leads|pluralize }}</span>
+                            {% endwith %}
+                        </td>
+                        <td>
+                            {% with task_count=rm.task_set.count|default:0 %}
+                                {% if task_count > 0 %}
+                                    <span class="badge tasks">{{ task_count }} Task{{ task_count|pluralize }}</span>
+                                {% else %}
+                                    {% with alt_tasks=rm.assigned_tasks.count|default:0 %}
+                                        {% if alt_tasks > 0 %}
+                                            <span class="badge tasks">{{ alt_tasks }} Task{{ alt_tasks|pluralize }}</span>
+                                        {% else %}
+                                            {% with alt_tasks2=rm.tasks.count|default:0 %}
+                                                {% if alt_tasks2 > 0 %}
+                                                    <span class="badge tasks">{{ alt_tasks2 }} Task{{ alt_tasks2|pluralize }}</span>
+                                                {% else %}
+                                                    <span class="badge tasks">0 Tasks</span>
+                                                {% endif %}
+                                            {% endwith %}
+                                        {% endif %}
+                                    {% endwith %}
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td>
+                            {% with rm_leads=rm.lead_set.count|default:0 %}
+                            {% if rm_leads >= 10 %}
+                                <span class="status-indicator status-excellent">High</span>
+                            {% elif rm_leads >= 5 %}
+                                <span class="status-indicator status-good">Medium</span>
+                            {% elif rm_leads >= 1 %}
+                                <span class="status-indicator status-average">Low</span>
+                            {% else %}
+                                <span class="status-indicator status-inactive">Inactive</span>
+                            {% endif %}
+                            {% endwith %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- System Insights -->
+        <div class="chart-container slide-up">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="fas fa-lightbulb"></i> System Insights & Recommendations
+                </h3>
+            </div>
+            <div class="insights-grid">
+                <div class="insight-card primary">
+                    <h4 class="insight-title">
+                        <i class="fas fa-chart-bar"></i> Lead Conversion Analysis
+                    </h4>
+                    <p class="insight-content">
+                        Current conversion rate is {{ lead_conversion_rate|floatformat:1|default:0 }}%. 
+                        {% if lead_conversion_rate < 20 %}
+                            Consider implementing lead qualification improvements and follow-up strategies.
+                        {% elif lead_conversion_rate < 50 %}
+                            Good performance. Focus on nurturing qualified leads for better conversion.
+                        {% else %}
+                            Excellent conversion rate! Maintain current strategies and scale successful approaches.
+                        {% endif %}
+                    </p>
+                    <div class="insight-progress">
+                        <div class="insight-progress-bar">
+                            <div class="insight-progress-fill" style="width: {% if lead_conversion_rate > 100 %}100{% else %}{{ lead_conversion_rate|floatformat:0|default:0 }}{% endif %}%;"></div>
+                        </div>
+                        <span class="insight-progress-text">{{ lead_conversion_rate|floatformat:1|default:0 }}%</span>
+                    </div>
+                </div>
+
+                <div class="insight-card success">
+                    <h4 class="insight-title">
+                        <i class="fas fa-bolt"></i> Response Time Optimization
+                    </h4>
+                    <p class="insight-content">
+                        Average response time: {{ avg_response_time|floatformat:1|default:0 }} days.
+                        {% if avg_response_time > 5 %}
+                            Consider improving response workflows and task automation.
+                        {% elif avg_response_time > 2 %}
+                            Reasonable response time. Monitor for consistency across teams.
+                        {% else %}
+                            Excellent response time! Your team is highly efficient.
+                        {% endif %}
+                    </p>
+                    <div class="insight-progress">
+                        <div class="insight-progress-bar">
+                            <div class="insight-progress-fill" style="width: {% if avg_response_time <= 1 %}100{% elif avg_response_time <= 3 %}70{% elif avg_response_time <= 7 %}40{% else %}20{% endif %}%;"></div>
+                        </div>
+                        <span class="insight-progress-text">{{ avg_response_time|floatformat:1|default:0 }}d</span>
+                    </div>
+                </div>
+
+                <div class="insight-card warning">
+                    <h4 class="insight-title">
+                        <i class="fas fa-chart-line"></i> Growth Opportunities
+                    </h4>
+                    <p class="insight-content">
+                        {% if open_service_requests.count > 10 %}
+                            High volume of open requests detected. Consider resource allocation review.
+                        {% elif open_service_requests.count > 5 %}
+                            Moderate service request volume. Monitor for bottlenecks.
+                        {% else %}
+                            Service requests are well managed. Focus on proactive customer engagement.
+                        {% endif %}
+                    </p>
+                    <div class="insight-progress">
+                        <div class="insight-progress-bar">
+                            <div class="insight-progress-fill" style="width: {% if open_service_requests.count == 0 %}100{% elif open_service_requests.count > 20 %}100{% else %}{% widthratio open_service_requests.count 20 100 %}{% endif %}%;"></div>
+                        </div>
+                        <span class="insight-progress-text">{{ open_service_requests.count|default:0 }}</span>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- Recent Notes Section -->
+        {% if recent_notes %}
+        <div class="chart-container slide-up">
+            <div class="chart-header">
+                <h3 class="chart-title">
+                    <i class="fas fa-sticky-note"></i> Recent Notes
+                </h3>
+            </div>
+            <div class="notes-container">
+                {% for note in recent_notes %}
+                <div class="note-item">
+                    <div class="note-icon">
+                        <i class="fas fa-sticky-note"></i>
+                    </div>
+                    <div class="note-content">
+                        <div class="note-title">{{ note.heading|default:"Untitled Note" }}</div>
+                        <div class="note-text">
+                            {{ note.content|truncatewords:15|default:"No content" }}
+                        </div>
+                    </div>
+                    <div class="note-time">
+                        <div>{{ note.updated_at|date:"M j" }}</div>
+                        <div>{{ note.updated_at|time:"H:i" }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div style="text-align: center; margin-top: 1rem;">
+                <a href="{% url 'note_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-clipboard-list"></i> View All Notes
+                </a>
+            </div>
+        </div>
+        {% endif %}
 
         <!-- Quick Actions -->
-        <div class="quick-actions">
-            <h2 class="section-title">
-                <div class="section-icon">⚡</div>
-                Quick Actions
-            </h2>
-            
-            <div class="actions-grid">
-                <a href="{% url 'team_management' %}" class="action-btn">
-                    <div class="action-icon">👥</div>
-                    <div>Manage Teams</div>
-                </a>
-                <a href="{% url 'task_create' %}" class="action-btn">
-                    <div class="action-icon">➕</div>
-                    <div>Assign Task</div>
-                </a>
-                <a href="{% url 'client_profile_list' %}" class="action-btn">
-                    <div class="action-icon">👤</div>
-                    <div>Client Profiles</div>
-                </a>
-                <a href="{% url 'analytics_dashboard' %}" class="action-btn">
-                    <div class="action-icon">📊</div>
-                    <div>Analytics</div>
-                </a>
-                <a href="{% url 'notes_dashboard' %}" class="action-btn">
-                    <div class="action-icon">📝</div>
-                    <div>Notes</div>
-                </a>
-                <a href="{% url 'dashboard' %}" class="action-btn">
-                    <div class="action-icon">🏠</div>
-                    <div>Main Dashboard</div>
-                </a>
-            </div>
+        <div class="action-buttons">
+            <a href="{% url 'lead_list' %}" class="btn btn-primary">
+                <i class="fas fa-bullseye"></i> View All Leads ({{ total_leads|default:0 }})
+            </a>
+            <a href="{% url 'service_request_list' %}" class="btn btn-secondary">
+                <i class="fas fa-tools"></i> Service Requests ({{ open_service_requests.count|default:0 }})
+            </a>
+            <a href="{% url 'task_list' %}" class="btn btn-accent">
+                <i class="fas fa-tasks"></i> Task Management
+            </a>
+            <a href="{% url 'hrm_dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-users"></i> HRMS Portal
+            </a>
         </div>
     </div>
-</body>
-</html>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animate stat cards on load with staggered effect
+    const statCards = document.querySelectorAll('.stat-card');
+    statCards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(30px)';
+        card.style.transition = 'all 0.6s ease';
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+
+    // Animate progress bars
+    const progressBars = document.querySelectorAll('.progress-fill');
+    setTimeout(() => {
+        progressBars.forEach(bar => {
+            const width = bar.style.width;
+            bar.style.width = '0%';
+            setTimeout(() => {
+                bar.style.width = width;
+            }, 100);
+        });
+    }, 500);
+
+    // Add hover effects to metric cards
+    const metricCards = document.querySelectorAll('.metric-card');
+    metricCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-8px) scale(1.02)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+        });
+    });
+
+    // Animate performance indicators
+    const performanceFills = document.querySelectorAll('.performance-fill');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const fill = entry.target;
+                const width = fill.style.width;
+                fill.style.width = '0%';
+                setTimeout(() => {
+                    fill.style.width = width;
+                }, 200);
+            }
+        });
+    });
+
+    performanceFills.forEach(fill => {
+        observer.observe(fill);
+    });
+
+    // Add click animations to buttons
+    const buttons = document.querySelectorAll('.btn');
+    buttons.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            // Create ripple effect
+            const ripple = document.createElement('span');
+            const rect = this.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = e.clientX - rect.left - size / 2;
+            const y = e.clientY - rect.top - size / 2;
+            
+            ripple.style.cssText = `
+                position: absolute;
+                border-radius: 50%;
+                transform: scale(0);
+                animation: ripple 0.6s linear;
+                background-color: rgba(255, 255, 255, 0.3);
+                width: ${size}px;
+                height: ${size}px;
+                left: ${x}px;
+                top: ${y}px;
+                pointer-events: none;
+            `;
+            
+            this.style.position = 'relative';
+            this.style.overflow = 'hidden';
+            this.appendChild(ripple);
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
+        });
+    });
+
+    // Real-time data updates (simulate)
+    function updateMetrics() {
+        const metricNumbers = document.querySelectorAll('.metric-number');
+        metricNumbers.forEach(number => {
+            number.style.animation = 'pulse 0.5s ease-in-out';
+            setTimeout(() => {
+                number.style.animation = '';
+            }, 500);
+        });
+    }
+
+    // Update metrics every 30 seconds (for demo)
+    setInterval(updateMetrics, 30000);
+
+    // Add loading states to table rows
+    const tableRows = document.querySelectorAll('.table tbody tr');
+    tableRows.forEach((row, index) => {
+        row.style.opacity = '0';
+        row.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            row.style.transition = 'all 0.5s ease';
+            row.style.opacity = '1';
+            row.style.transform = 'translateY(0)';
+        }, 100 * index);
+    });
+
+    // Animate insight progress bars
+    const insightFills = document.querySelectorAll('.insight-progress-fill');
+    const insightObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const fill = entry.target;
+                const width = fill.style.width;
+                fill.style.width = '0%';
+                setTimeout(() => {
+                    fill.style.width = width;
+                }, 300);
+            }
+        });
+    });
+
+    insightFills.forEach(fill => {
+        insightObserver.observe(fill);
+    });
+});
+
+// Add ripple animation keyframes
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes ripple {
+        to {
+            transform: scale(4);
+            opacity: 0;
+        }
+    }
+    
+    @keyframes pulse {
+        0%, 100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.7;
+        }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

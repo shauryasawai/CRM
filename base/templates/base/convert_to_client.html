@@ -3,168 +3,603 @@
 
 {% block title %}{{ page_title }}{% endblock %}
 
+{% block extra_css %}
+<style>
+:root {
+    --bs-primary: #1C64FF;
+    --bs-secondary: #696969;
+    --bs-light: #FFFFFF;
+    --bs-border-color: #D9D9D9;
+    --bs-info: #C3E4FF;
+}
+
+.convert-container {
+    background: #f8f9fa;
+    min-height: 100vh;
+    padding: 2rem 0;
+}
+
+.convert-header {
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+    color: #FFFFFF;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(28, 100, 255, 0.3);
+}
+
+.convert-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+    50% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+}
+
+.convert-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.back-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #FFFFFF;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    backdrop-filter: blur(10px);
+    position: relative;
+    z-index: 1;
+}
+
+.back-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    color: #FFFFFF;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+}
+
+.profile-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.info-card {
+    background: #FFFFFF;
+    border: 1px solid #D9D9D9;
+    border-radius: 16px;
+    padding: 2rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.info-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    border-radius: 16px 16px 0 0;
+}
+
+.info-card.client-info::before {
+    background: linear-gradient(90deg, #1C64FF, #1557e6);
+}
+
+.info-card.rm-info::before {
+    background: linear-gradient(90deg, #198754, #157347);
+}
+
+.info-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+.info-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: #FFFFFF;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.info-card.client-info .info-icon {
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+}
+
+.info-card.rm-info .info-icon {
+    background: linear-gradient(135deg, #198754, #157347);
+}
+
+.info-title {
+    color: #696969;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.info-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #333333;
+    margin-bottom: 0.5rem;
+}
+
+.info-details {
+    color: #696969;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.info-details div {
+    margin-bottom: 0.25rem;
+}
+
+.conversion-info {
+    background: rgba(28, 100, 255, 0.05);
+    border: 2px solid rgba(28, 100, 255, 0.2);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    position: relative;
+}
+
+.conversion-info::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #1C64FF, #1557e6);
+    border-radius: 16px 16px 0 0;
+}
+
+.conversion-info h5 {
+    color: #1C64FF;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.conversion-info p {
+    color: #333333;
+    margin-bottom: 1rem;
+}
+
+.conversion-info ul {
+    color: #333333;
+    margin-bottom: 0;
+    padding-left: 1.5rem;
+}
+
+.conversion-info li {
+    margin-bottom: 0.5rem;
+    position: relative;
+}
+
+.conversion-info li::marker {
+    color: #1C64FF;
+}
+
+.form-container {
+    background: #FFFFFF;
+    border: 1px solid #D9D9D9;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+}
+
+.form-container:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+.form-label {
+    font-weight: 600;
+    color: #333333;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.form-label.required::after {
+    content: " *";
+    color: #dc3545;
+    font-weight: 700;
+}
+
+.form-control, .form-select {
+    background-color: #FFFFFF;
+    border: 2px solid #D9D9D9;
+    color: #333333;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #1C64FF;
+    box-shadow: 0 0 0 0.2rem rgba(28, 100, 255, 0.25);
+    background-color: #FFFFFF;
+    color: #333333;
+    outline: none;
+}
+
+.form-control:hover, .form-select:hover {
+    border-color: #1C64FF;
+}
+
+.form-control::placeholder {
+    color: #696969;
+}
+
+.form-text {
+    color: #696969;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+.invalid-feedback {
+    color: #dc3545;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-top: 0.25rem;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 2px solid #D9D9D9;
+}
+
+.btn-convert {
+    background: linear-gradient(135deg, #198754, #157347);
+    border: none;
+    color: #FFFFFF;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    box-shadow: 0 4px 12px rgba(25, 135, 84, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-convert::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.btn-convert:hover {
+    background: linear-gradient(135deg, #157347, #0f5132);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(25, 135, 84, 0.4);
+    color: #FFFFFF;
+}
+
+.btn-convert:hover::before {
+    left: 100%;
+}
+
+.btn-cancel {
+    background: #FFFFFF;
+    border: 2px solid #696969;
+    color: #696969;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.btn-cancel:hover {
+    background: #696969;
+    border-color: #696969;
+    color: #FFFFFF;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(105, 105, 105, 0.3);
+}
+
+.fade-in {
+    animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-up {
+    animation: slideUp 0.8s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .convert-container {
+        padding: 1rem 0;
+    }
+    
+    .convert-header {
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+    
+    .convert-title {
+        font-size: 1.5rem;
+        justify-content: center;
+    }
+    
+    .profile-summary {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .info-card {
+        padding: 1.5rem;
+    }
+    
+    .conversion-info {
+        padding: 1.5rem;
+    }
+    
+    .form-container {
+        padding: 1.5rem;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .btn-convert,
+    .btn-cancel {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">
-                        <i class="fas fa-user-check"></i> {{ page_title }}
-                    </h3>
-                    <div class="card-tools">
-                        <a href="{% url 'client_profile_list' %}" class="btn btn-secondary btn-sm">
-                            <i class="fas fa-arrow-left"></i> Back to Client Profiles
-                        </a>
-                    </div>
+<div class="convert-container">
+    <div class="container-fluid">
+        <div class="convert-header fade-in">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                <h1 class="convert-title">
+                    <i class="fas fa-user-check"></i> {{ page_title }}
+                </h1>
+                <a href="{% url 'client_profile_list' %}" class="back-btn">
+                    <i class="fas fa-arrow-left"></i> Back to Client Profiles
+                </a>
+            </div>
+        </div>
+
+        <!-- Client Profile Summary -->
+        <div class="profile-summary slide-up">
+            <div class="info-card client-info">
+                <div class="info-icon">
+                    <i class="fas fa-user"></i>
                 </div>
-
-                <div class="card-body">
-                    <!-- Client Profile Summary -->
-                    <div class="row mb-4">
-                        <div class="col-md-6">
-                            <div class="info-box">
-                                <span class="info-box-icon bg-info"><i class="fas fa-user"></i></span>
-                                <div class="info-box-content">
-                                    <span class="info-box-text">Client Profile</span>
-                                    <span class="info-box-number">{{ profile.client_full_name }}</span>
-                                    {% if profile.email %}
-                                        <div class="small text-muted">{{ profile.email }}</div>
-                                    {% endif %}
-                                    {% if profile.mobile_number %}
-                                        <div class="small text-muted">{{ profile.mobile_number }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="info-box">
-                                <span class="info-box-icon bg-success"><i class="fas fa-user-tie"></i></span>
-                                <div class="info-box-content">
-                                    <span class="info-box-text">Relationship Manager</span>
-                                    <span class="info-box-number">
-                                        {% if profile.mapped_rm %}
-                                            {{ profile.mapped_rm.get_full_name }}
-                                        {% else %}
-                                            Not Assigned
-                                        {% endif %}
-                                    </span>
-                                    {% if profile.pan_number %}
-                                        <div class="small text-muted">PAN: {{ profile.pan_number }}</div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Conversion Information -->
-                    <div class="alert alert-info">
-                        <h5><i class="fas fa-info-circle"></i> What happens when you convert?</h5>
-                        <p class="mb-2">Converting this client profile to a full client will:</p>
-                        <ul class="mb-0">
-                            <li>Create a complete client record with financial information</li>
-                            <li>Allow tracking of AUM, SIP amounts, and demat accounts</li>
-                            <li>Enable advanced client management features</li>
-                            <li>Link the existing profile data with the new client record</li>
-                        </ul>
-                    </div>
-
-                    <!-- Conversion Form -->
-                    <form method="post" class="needs-validation" novalidate>
-                        {% csrf_token %}
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.aum.id_for_label }}" class="required">
-                                        {{ form.aum.label }}
-                                    </label>
-                                    {{ form.aum }}
-                                    <small class="form-text text-muted">
-                                        Enter the total assets under management in rupees
-                                    </small>
-                                    {% if form.aum.errors %}
-                                        <div class="invalid-feedback d-block">
-                                            {{ form.aum.errors.0 }}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.sip_amount.id_for_label }}">
-                                        {{ form.sip_amount.label }}
-                                    </label>
-                                    {{ form.sip_amount }}
-                                    <small class="form-text text-muted">
-                                        Monthly SIP amount in rupees (optional)
-                                    </small>
-                                    {% if form.sip_amount.errors %}
-                                        <div class="invalid-feedback d-block">
-                                            {{ form.sip_amount.errors.0 }}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.demat_count.id_for_label }}">
-                                        {{ form.demat_count.label }}
-                                    </label>
-                                    {{ form.demat_count }}
-                                    <small class="form-text text-muted">
-                                        Number of demat accounts (default: 0)
-                                    </small>
-                                    {% if form.demat_count.errors %}
-                                        <div class="invalid-feedback d-block">
-                                            {{ form.demat_count.errors.0 }}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="{{ form.contact_info.id_for_label }}">
-                                        {{ form.contact_info.label }}
-                                    </label>
-                                    {{ form.contact_info }}
-                                    <small class="form-text text-muted">
-                                        Any additional contact information (optional)
-                                    </small>
-                                    {% if form.contact_info.errors %}
-                                        <div class="invalid-feedback d-block">
-                                            {{ form.contact_info.errors.0 }}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Form Actions -->
-                        <div class="row">
-                            <div class="col-12">
-                                <div class="form-group">
-                                    <button type="submit" class="btn btn-success btn-lg">
-                                        <i class="fas fa-user-check"></i> Convert to Full Client
-                                    </button>
-                                    <a href="{% url 'client_profile_list' %}" class="btn btn-secondary btn-lg ml-2">
-                                        <i class="fas fa-times"></i> Cancel
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
+                <div class="info-title">Client Profile</div>
+                <div class="info-name">{{ profile.client_full_name }}</div>
+                <div class="info-details">
+                    {% if profile.email %}
+                        <div><strong>Email:</strong> {{ profile.email }}</div>
+                    {% endif %}
+                    {% if profile.mobile_number %}
+                        <div><strong>Mobile:</strong> {{ profile.mobile_number }}</div>
+                    {% endif %}
+                    {% if profile.client_id %}
+                        <div><strong>ID:</strong> {{ profile.client_id }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="info-card rm-info">
+                <div class="info-icon">
+                    <i class="fas fa-user-tie"></i>
+                </div>
+                <div class="info-title">Relationship Manager</div>
+                <div class="info-name">
+                    {% if profile.mapped_rm %}
+                        {{ profile.mapped_rm.get_full_name }}
+                    {% else %}
+                        Not Assigned
+                    {% endif %}
+                </div>
+                <div class="info-details">
+                    {% if profile.pan_number %}
+                        <div><strong>PAN:</strong> {{ profile.pan_number }}</div>
+                    {% endif %}
+                    {% if profile.mapped_ops_exec %}
+                        <div><strong>Ops Executive:</strong> {{ profile.mapped_ops_exec.get_full_name }}</div>
+                    {% endif %}
                 </div>
             </div>
         </div>
+
+        <!-- Conversion Information -->
+        <div class="conversion-info slide-up">
+            <h5><i class="fas fa-info-circle"></i> What happens when you convert?</h5>
+            <p>Converting this client profile to a full client will:</p>
+            <ul>
+                <li>Create a complete client record with financial information</li>
+                <li>Allow tracking of AUM, SIP amounts, and demat accounts</li>
+                <li>Enable advanced client management features</li>
+                <li>Link the existing profile data with the new client record</li>
+                <li>Preserve all existing interactions and history</li>
+            </ul>
+        </div>
+
+        <!-- Conversion Form -->
+        <div class="form-container slide-up">
+            <form method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ form.aum.id_for_label }}" class="form-label required">
+                                {{ form.aum.label }}
+                            </label>
+                            {{ form.aum }}
+                            <div class="form-text">
+                                Enter the total assets under management in rupees
+                            </div>
+                            {% if form.aum.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.aum.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ form.sip_amount.id_for_label }}" class="form-label">
+                                {{ form.sip_amount.label }}
+                            </label>
+                            {{ form.sip_amount }}
+                            <div class="form-text">
+                                Monthly SIP amount in rupees (optional)
+                            </div>
+                            {% if form.sip_amount.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.sip_amount.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ form.demat_count.id_for_label }}" class="form-label">
+                                {{ form.demat_count.label }}
+                            </label>
+                            {{ form.demat_count }}
+                            <div class="form-text">
+                                Number of demat accounts (default: 0)
+                            </div>
+                            {% if form.demat_count.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.demat_count.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ form.contact_info.id_for_label }}" class="form-label">
+                                {{ form.contact_info.label }}
+                            </label>
+                            {{ form.contact_info }}
+                            <div class="form-text">
+                                Any additional contact information (optional)
+                            </div>
+                            {% if form.contact_info.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.contact_info.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="form-actions">
+                    <button type="submit" class="btn-convert">
+                        <i class="fas fa-user-check"></i> Convert to Full Client
+                    </button>
+                    <a href="{% url 'client_profile_list' %}" class="btn-cancel">
+                        <i class="fas fa-times"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
 // Form validation
 (function() {
@@ -183,76 +618,87 @@
     }, false);
 })();
 
-// Number format validation
+// Number format validation and enhancement
 document.addEventListener('DOMContentLoaded', function() {
     const aumInput = document.getElementById('id_aum');
     const sipInput = document.getElementById('id_sip_amount');
     
     [aumInput, sipInput].forEach(input => {
         if (input) {
+            // Add currency symbol and formatting
             input.addEventListener('input', function() {
                 // Remove any non-numeric characters except decimal point
-                this.value = this.value.replace(/[^0-9.]/g, '');
+                let value = this.value.replace(/[^0-9.]/g, '');
                 
                 // Ensure only one decimal point
-                const parts = this.value.split('.');
+                const parts = value.split('.');
                 if (parts.length > 2) {
-                    this.value = parts[0] + '.' + parts.slice(1).join('');
+                    value = parts[0] + '.' + parts.slice(1).join('');
+                }
+                
+                this.value = value;
+            });
+            
+            // Add focus effects
+            input.addEventListener('focus', function() {
+                this.parentElement.style.transform = 'translateY(-2px)';
+                this.parentElement.style.transition = 'all 0.3s ease';
+            });
+            
+            input.addEventListener('blur', function() {
+                this.parentElement.style.transform = 'translateY(0)';
+            });
+        }
+    });
+    
+    // Add loading state to submit button
+    const submitButton = document.querySelector('.btn-convert');
+    const form = document.querySelector('form');
+    
+    if (form && submitButton) {
+        form.addEventListener('submit', function(e) {
+            if (form.checkValidity()) {
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Converting...';
+                submitButton.disabled = true;
+            }
+        });
+    }
+    
+    // Add smooth animations
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    });
+    
+    document.querySelectorAll('.info-card, .conversion-info, .form-container').forEach((el, index) => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(30px)';
+        el.style.transition = 'all 0.6s ease';
+        el.style.animationDelay = `${index * 0.1}s`;
+        observer.observe(el);
+    });
+    
+    // Add hover effects to form fields
+    const formGroups = document.querySelectorAll('.mb-3');
+    formGroups.forEach(group => {
+        const input = group.querySelector('input, textarea');
+        if (input) {
+            group.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-1px)';
+                this.style.transition = 'all 0.3s ease';
+            });
+            
+            group.addEventListener('mouseleave', function() {
+                if (document.activeElement !== input) {
+                    this.style.transform = 'translateY(0)';
                 }
             });
         }
     });
 });
 </script>
-
-<style>
-.required:after {
-    content: " *";
-    color: red;
-}
-
-.info-box {
-    box-shadow: 0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2);
-    border-radius: .25rem;
-    background: #fff;
-    display: flex;
-    margin-bottom: 1rem;
-    min-height: 80px;
-    padding: .5rem;
-    position: relative;
-    width: 100%;
-}
-
-.info-box .info-box-icon {
-    border-radius: .25rem;
-    align-items: center;
-    display: flex;
-    font-size: 1.875rem;
-    justify-content: center;
-    text-align: center;
-    width: 70px;
-    color: #fff;
-}
-
-.info-box .info-box-content {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    line-height: 1.8;
-    margin-left: 10px;
-    padding: 0 10px;
-}
-
-.info-box .info-box-number {
-    font-size: 1.1rem;
-    font-weight: 700;
-}
-
-.info-box .info-box-text {
-    text-transform: uppercase;
-    font-weight: 600;
-    font-size: 0.8rem;
-}
-</style>
-
 {% endblock %}

@@ -310,31 +310,357 @@
             transition-duration: 0.01ms !important;
         }
     }
+
+    /* Custom ripple animation */
+    @keyframes ripple {
+        to {
+            transform: scale(2);
+            opacity: 0;
+        }
+    }
+
+    /* Enhanced focus styles for accessibility */
+    .btn:focus {
+        outline: none !important;
+        box-shadow: 0 0 0 0.25rem rgba(28, 100, 255, 0.25) !important;
+    }
+
+    .btn-danger:focus {
+        box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important;
+    }
+
+    .btn-outline-secondary:focus {
+        box-shadow: 0 0 0 0.25rem rgba(217, 217, 217, 0.5) !important;
+    }
+
+    /* Smooth transitions */
+    .btn,
+    .card {
+        transition: all 0.2s ease !important;
+    }
+
+    /* Loading spinner animation */
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .spinner-border-sm {
+        animation: spin 1s linear infinite;
+    }
+
+    /* Enhanced danger button styling */
+    .btn-danger {
+        background-color: #dc3545 !important;
+        border-color: #dc3545 !important;
+    }
+
+    .btn-danger:hover {
+        background-color: #c82333 !important;
+        border-color: #bd2130 !important;
+    }
+
+    .btn-danger:disabled {
+        background-color: #dc3545 !important;
+        border-color: #dc3545 !important;
+        opacity: 0.65;
+    }
+
+    /* Enhanced secondary button styling */
+    .btn-outline-secondary {
+        border-color: #D9D9D9 !important;
+        color: #696969 !important;
+    }
+
+    .btn-outline-secondary:hover {
+        background-color: #D9D9D9 !important;
+        border-color: #D9D9D9 !important;
+        color: #495057 !important;
+    }
+
+    /* Card shadow enhancement */
+    .shadow-lg {
+        box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175) !important;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 576px) {
+        .card {
+            margin: 1rem;
+        }
+        
+        .btn-lg {
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+        }
+        
+        .fs-5 {
+            font-size: 1.1rem !important;
+        }
+    }
+
+    /* High contrast mode support */
+    @media (prefers-contrast: high) {
+        .card {
+            border: 2px solid #000 !important;
+        }
+        
+        .btn {
+            border-width: 2px !important;
+        }
+    }
+
+    /* Reduced motion support */
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+
+    /* Print styles */
+    @media print {
+        .toast-container {
+            display: none !important;
+        }
+        
+        .btn {
+            border: 2px solid #000 !important;
+            background: white !important;
+            color: #000 !important;
+        }
+    }
 </style>
 
-<div class="confirmation-overlay">
-    <div class="confirmation-modal">
-        <div class="warning-icon"></div>
-        
-        <h2 class="confirmation-title">Confirm Delete</h2>
-        
-        <p class="confirmation-message">
-            Are you sure you want to delete the task
-            <span class="task-name">{{ task.title }}</span>?
-            This action cannot be undone.
-        </p>
+<div class="container-fluid vh-100 d-flex align-items-center justify-content-center" style="background-color: #FFFFFF;">
+    <div class="row justify-content-center w-100">
+        <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5">
+            <!-- Confirmation Card -->
+            <div class="card border-0 shadow-lg" style="background-color: #FFFFFF; border-radius: 1rem;">
+                <!-- Header with Warning Icon -->
+                <div class="card-header text-center py-4 border-0" style="background-color: #C3E4FF; border-radius: 1rem 1rem 0 0;">
+                    <div class="mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle" 
+                             style="width: 80px; height: 80px; background-color: rgba(220, 53, 69, 0.1); border: 3px solid rgba(220, 53, 69, 0.2);">
+                            <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
+                        </div>
+                    </div>
+                    <h2 class="h3 fw-bold mb-0" style="color: #1C64FF;">Confirm Delete</h2>
+                </div>
 
-        <form method="post">
-            {% csrf_token %}
-            <div class="button-group">
-                <button type="submit" class="btn btn-danger">
-                    Yes, Delete Task
-                </button>
-                <a href="{% url 'task_list' %}" class="btn btn-secondary">
-                    Cancel
-                </a>
+                <!-- Card Body -->
+                <div class="card-body p-4 text-center">
+                    <div class="mb-4">
+                        <p class="fs-5 mb-3" style="color: #696969;">
+                            Are you sure you want to delete the task
+                        </p>
+                        <div class="alert alert-light border-0 d-inline-block px-3 py-2 mx-2" 
+                             style="background-color: #C3E4FF; color: #1C64FF; border-radius: 0.5rem;">
+                            <i class="fas fa-tasks me-2"></i>
+                            <strong>{{ task.title }}</strong>
+                        </div>
+                        <p class="fs-6 mt-3 mb-0" style="color: #696969;">
+                            <i class="fas fa-info-circle me-2 text-warning"></i>
+                            This action cannot be undone and will permanently remove the task.
+                        </p>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
+                            <button type="submit" 
+                                    class="btn btn-danger btn-lg px-4 py-2 order-2 order-sm-1" 
+                                    id="deleteBtn">
+                                <i class="fas fa-trash me-2"></i>
+                                Yes, Delete Task
+                            </button>
+                            <a href="{% url 'task_list' %}" 
+                               class="btn btn-outline-secondary btn-lg px-4 py-2 order-1 order-sm-2" 
+                               style="border-color: #D9D9D9; color: #696969;">
+                                <i class="fas fa-times me-2"></i>
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Additional Info Footer -->
+                <div class="card-footer text-center py-3 border-0" style="background-color: #f8f9fa; border-radius: 0 0 1rem 1rem;">
+                    <small class="text-muted d-flex align-items-center justify-content-center gap-2">
+                        <i class="fas fa-shield-alt" style="color: #1C64FF;"></i>
+                        Your data is protected and this action requires confirmation
+                    </small>
+                </div>
             </div>
-        </form>
+        </div>
     </div>
 </div>
+
+<!-- Toast Container for Feedback -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+    <div id="deleteToast" class="toast border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header border-0" style="background-color: #f8d7da;">
+            <i class="fas fa-trash text-danger me-2"></i>
+            <strong class="me-auto text-danger">Task Deletion</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" style="background-color: #FFFFFF; color: #696969;">
+            Processing deletion request...
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteBtn = document.getElementById('deleteBtn');
+    const form = document.querySelector('form');
+    const deleteToast = document.getElementById('deleteToast');
+
+    // Enhanced button interactions
+    const buttons = document.querySelectorAll('.btn');
+    buttons.forEach(button => {
+        // Hover effects
+        button.addEventListener('mouseenter', function() {
+            if (!this.disabled) {
+                this.style.transform = 'translateY(-2px)';
+                this.style.transition = 'all 0.2s ease';
+                
+                if (this.classList.contains('btn-danger')) {
+                    this.style.boxShadow = '0 8px 25px rgba(220, 53, 69, 0.3)';
+                } else {
+                    this.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+                }
+            }
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '';
+        });
+        
+        // Click feedback
+        button.addEventListener('click', function(e) {
+            if (this.disabled) return;
+            
+            // Create ripple effect
+            const ripple = document.createElement('span');
+            const rect = this.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = e.clientX - rect.left - size / 2;
+            const y = e.clientY - rect.top - size / 2;
+            
+            ripple.style.cssText = `
+                position: absolute;
+                width: ${size}px;
+                height: ${size}px;
+                left: ${x}px;
+                top: ${y}px;
+                background: rgba(255, 255, 255, 0.3);
+                border-radius: 50%;
+                transform: scale(0);
+                animation: ripple 0.6s ease-out;
+                pointer-events: none;
+            `;
+            
+            this.style.position = 'relative';
+            this.appendChild(ripple);
+            
+            setTimeout(() => ripple.remove(), 600);
+        });
+    });
+
+    // Form submission handling
+    if (form && deleteBtn) {
+        form.addEventListener('submit', function(e) {
+            // Show loading state
+            deleteBtn.disabled = true;
+            const originalContent = deleteBtn.innerHTML;
+            deleteBtn.innerHTML = `
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Deleting...
+            `;
+            
+            // Show toast notification
+            if (deleteToast) {
+                const toast = new bootstrap.Toast(deleteToast, {
+                    autohide: false
+                });
+                toast.show();
+            }
+            
+            // Add visual feedback to the card
+            const card = document.querySelector('.card');
+            if (card) {
+                card.style.opacity = '0.7';
+                card.style.transform = 'scale(0.98)';
+                card.style.transition = 'all 0.3s ease';
+            }
+        });
+    }
+
+    // Keyboard navigation enhancement
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            // Navigate back to task list on Escape
+            window.location.href = "{% url 'task_list' %}";
+        } else if (e.key === 'Enter' && e.ctrlKey) {
+            // Ctrl+Enter to confirm deletion
+            if (deleteBtn && !deleteBtn.disabled) {
+                deleteBtn.click();
+            }
+        }
+    });
+
+    // Add entrance animation
+    const card = document.querySelector('.card');
+    if (card) {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px) scale(0.95)';
+        card.style.transition = 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+        
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0) scale(1)';
+        }, 100);
+    }
+
+    // Warning icon pulse animation
+    const warningIcon = document.querySelector('.fa-exclamation-triangle');
+    if (warningIcon) {
+        setInterval(() => {
+            warningIcon.style.transform = 'scale(1.1)';
+            setTimeout(() => {
+                warningIcon.style.transform = 'scale(1)';
+            }, 200);
+        }, 2000);
+    }
+
+    // Auto-focus on cancel button for better UX
+    const cancelBtn = document.querySelector('.btn-outline-secondary');
+    if (cancelBtn) {
+        setTimeout(() => {
+            cancelBtn.focus();
+        }, 500);
+    }
+
+    // Add confirmation dialog for extra safety
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', function(e) {
+            if (!this.disabled) {
+                const taskTitle = "{{ task.title|escapejs }}";
+                const confirmed = confirm(`Are you absolutely sure you want to delete "${taskTitle}"? This action cannot be undone.`);
+                
+                if (!confirmed) {
+                    e.preventDefault();
+                    return false;
+                }
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

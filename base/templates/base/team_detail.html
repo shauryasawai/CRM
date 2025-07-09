@@ -3,79 +3,572 @@
 {% block title %}{{ team.name }} Details{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>{{ team.name }}</h1>
-        <div>
-            {% if user_role in 'business_head top_management' or team.leader == request.user %}
-            <a href="{% url 'edit_team' team.id %}" class="btn btn-outline-secondary">
-                <i class="fas fa-edit"></i> Edit Team
-            </a>
-            {% endif %}
-            <a href="{% url 'team_management' %}" class="btn btn-outline-primary">
-                <i class="fas fa-arrow-left"></i> Back to Teams
-            </a>
+<div class="container py-4">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="background-color: #FFFFFF; border-left: 4px solid #1C64FF !important;">
+                <div class="card-body py-4">
+                    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3">
+                        <div>
+                            <h1 class="display-6 fw-bold mb-2" style="color: #1C64FF;">
+                                <i class="fas fa-users me-3"></i>{{ team.name }}
+                            </h1>
+                            <p class="text-muted mb-0" style="color: #696969;">Team Details and Member Information</p>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% if user_role in 'business_head top_management' or team.leader == request.user %}
+                            <a href="{% url 'edit_team' team.id %}" class="btn btn-outline-primary px-4 py-2" style="border-color: #1C64FF; color: #1C64FF;">
+                                <i class="fas fa-edit me-2"></i>Edit Team
+                            </a>
+                            {% endif %}
+                            <a href="{% url 'team_management' %}" class="btn btn-secondary px-4 py-2" style="background-color: #696969; border-color: #696969;">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Teams
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5 class="card-title">Team Information</h5>
-            <div class="row">
-                <div class="col-md-6">
-                    <p><strong>Leader:</strong> {{ team.leader.get_full_name|default:team.leader.username }}</p>
+    <!-- Team Information Card -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="background-color: #FFFFFF; border: 1px solid #D9D9D9;">
+                <div class="card-header py-3 border-0" style="background-color: #C3E4FF;">
+                    <h5 class="mb-0 fw-semibold d-flex align-items-center" style="color: #1C64FF;">
+                        <i class="fas fa-info-circle me-2"></i>Team Information
+                    </h5>
                 </div>
-                <div class="col-md-6">
-                    <p><strong>Member Count:</strong> {{ team.members.count }}</p>
+                <div class="card-body p-4">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3 rounded" style="background-color: rgba(28, 100, 255, 0.05); border-left: 3px solid #1C64FF;">
+                                <div class="me-3">
+                                    <div class="d-flex align-items-center justify-content-center rounded-circle" 
+                                         style="width: 50px; height: 50px; background-color: #1C64FF;">
+                                        <i class="fas fa-crown text-white"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1 fw-semibold" style="color: #1C64FF;">Team Leader</h6>
+                                    <p class="mb-0" style="color: #696969;">
+                                        {{ team.leader.get_full_name|default:team.leader.username }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center p-3 rounded" style="background-color: rgba(28, 100, 255, 0.05); border-left: 3px solid #1C64FF;">
+                                <div class="me-3">
+                                    <div class="d-flex align-items-center justify-content-center rounded-circle" 
+                                         style="width: 50px; height: 50px; background-color: #1C64FF;">
+                                        <i class="fas fa-users text-white"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1 fw-semibold" style="color: #1C64FF;">Total Members</h6>
+                                    <p class="mb-0" style="color: #696969;">
+                                        {{ team.members.count }} member{{ team.members.count|pluralize }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-header">
-            <h5 class="mb-0">Team Members</h5>
-        </div>
-        <div class="card-body">
-            {% if team.members.all %}
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Role</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for member in team.members.all %}
-                        <tr>
-                            <td>
-                                <a href="{% url 'user_profile' member.id %}">
-                                    {{ member.get_full_name|default:member.username }}
-                                </a>
-                            </td>
-                            <td>{{ member.email }}</td>
-                            <td>
-                                <span class="badge 
-                                    {% if member.role == 'rm' %}badge-primary
-                                    {% elif member.role == 'rm_head' %}badge-success
-                                    {% elif member.role == 'business_head' %}badge-warning
-                                    {% else %}badge-dark{% endif %}">
-                                    {{ member.get_role_display }}
-                                </span>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    <!-- Team Members Section -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="background-color: #FFFFFF; border: 1px solid #D9D9D9;">
+                <div class="card-header py-3 border-0 d-flex justify-content-between align-items-center" style="background-color: #C3E4FF;">
+                    <h5 class="mb-0 fw-semibold d-flex align-items-center" style="color: #1C64FF;">
+                        <i class="fas fa-users me-2"></i>Team Members
+                    </h5>
+                    <span class="badge rounded-pill px-3 py-2" style="background-color: #1C64FF; color: white;">
+                        {{ team.members.count }} member{{ team.members.count|pluralize }}
+                    </span>
+                </div>
+                <div class="card-body p-0">
+                    {% if team.members.all %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead style="background-color: #1C64FF;">
+                                <tr>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">
+                                        <i class="fas fa-user me-2"></i>Name
+                                    </th>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">
+                                        <i class="fas fa-envelope me-2"></i>Email
+                                    </th>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">
+                                        <i class="fas fa-id-badge me-2"></i>Role
+                                    </th>
+                                    <th scope="col" class="text-white fw-semibold py-3 px-4 border-0">
+                                        <i class="fas fa-cog me-2"></i>Actions
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for member in team.members.all %}
+                                <tr style="border-bottom: 1px solid #D9D9D9;">
+                                    <td class="py-3 px-4 align-middle">
+                                        <div class="d-flex align-items-center">
+                                            <div class="me-3">
+                                                <div class="d-flex align-items-center justify-content-center rounded-circle" 
+                                                     style="width: 40px; height: 40px; background-color: #C3E4FF; color: #1C64FF;">
+                                                    <i class="fas fa-user"></i>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0 fw-semibold text-dark">
+                                                    {{ member.get_full_name|default:member.username }}
+                                                </h6>
+                                                {% if member == team.leader %}
+                                                <small class="text-muted d-flex align-items-center mt-1">
+                                                    <i class="fas fa-crown me-1" style="color: #ffc107;"></i>
+                                                    Team Leader
+                                                </small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4 align-middle">
+                                        <div class="d-flex align-items-center" style="color: #696969;">
+                                            <i class="fas fa-envelope me-2" style="color: #1C64FF;"></i>
+                                            <span>{{ member.email }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4 align-middle">
+                                        {% if member.role == 'rm' %}
+                                            <span class="badge rounded-pill px-3 py-2" style="background-color: #e3f2fd; color: #1976d2; border: 1px solid #bbdefb;">
+                                                <i class="fas fa-user me-1"></i>{{ member.get_role_display }}
+                                            </span>
+                                        {% elif member.role == 'rm_head' %}
+                                            <span class="badge rounded-pill px-3 py-2" style="background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9;">
+                                                <i class="fas fa-user-tie me-1"></i>{{ member.get_role_display }}
+                                            </span>
+                                        {% elif member.role == 'business_head' %}
+                                            <span class="badge rounded-pill px-3 py-2" style="background-color: #fff3e0; color: #f57c00; border: 1px solid #ffcc02;">
+                                                <i class="fas fa-briefcase me-1"></i>{{ member.get_role_display }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge rounded-pill px-3 py-2" style="background-color: #f5f5f5; color: #424242; border: 1px solid #e0e0e0;">
+                                                <i class="fas fa-user-circle me-1"></i>{{ member.get_role_display }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-3 px-4 align-middle">
+                                        <a href="{% url 'user_profile' member.id %}" 
+                                           class="btn btn-outline-primary btn-sm px-3 py-2" 
+                                           style="border-color: #1C64FF; color: #1C64FF;">
+                                            <i class="fas fa-eye me-1"></i>View Profile
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <!-- Empty State -->
+                    <div class="text-center py-5">
+                        <div class="mb-4">
+                            <i class="fas fa-users fa-4x" style="color: #D9D9D9;"></i>
+                        </div>
+                        <h4 class="fw-bold mb-3" style="color: #1C64FF;">No Team Members</h4>
+                        <p class="text-muted mb-4" style="color: #696969;">
+                            This team doesn't have any members yet. Add members to get started.
+                        </p>
+                        {% if user_role in 'business_head top_management' or team.leader == request.user %}
+                        <a href="{% url 'edit_team' team.id %}" class="btn btn-primary px-4 py-2" style="background-color: #1C64FF; border-color: #1C64FF;">
+                            <i class="fas fa-plus me-2"></i>Add Members
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
             </div>
-            {% else %}
-            <div class="alert alert-info">
-                No members in this team.
-            </div>
-            {% endif %}
         </div>
     </div>
 </div>
+
+<!-- Toast Container for Notifications -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+    <div id="infoToast" class="toast border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header border-0" style="background-color: #C3E4FF;">
+            <i class="fas fa-info-circle text-primary me-2" style="color: #1C64FF !important;"></i>
+            <strong class="me-auto" style="color: #1C64FF;">Team Information</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" style="background-color: #FFFFFF; color: #696969;">
+            <span id="toastMessage"></span>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Enhanced button hover effects
+    const buttons = document.querySelectorAll('.btn');
+    buttons.forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+            this.style.transition = 'all 0.2s ease';
+            
+            if (this.classList.contains('btn-primary') || this.classList.contains('btn-outline-primary')) {
+                this.style.boxShadow = '0 8px 25px rgba(28, 100, 255, 0.3)';
+            } else {
+                this.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+            }
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '';
+        });
+    });
+
+    // Enhanced table row interactions
+    const tableRows = document.querySelectorAll('.table tbody tr');
+    tableRows.forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = '#C3E4FF';
+            this.style.transition = 'background-color 0.2s ease';
+            this.style.cursor = 'pointer';
+        });
+        
+        row.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+        });
+        
+        // Add click to view profile functionality
+        row.addEventListener('click', function(e) {
+            // Don't trigger if clicking on action buttons
+            if (!e.target.closest('.btn')) {
+                const profileLink = this.querySelector('a[href*="user_profile"]');
+                if (profileLink) {
+                    window.location.href = profileLink.href;
+                }
+            }
+        });
+    });
+
+    // Add entrance animations
+    const cards = document.querySelectorAll('.card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.transition = 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+        
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 150);
+    });
+
+    // Add ripple effect to buttons
+    buttons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            // Create ripple effect
+            const ripple = document.createElement('span');
+            const rect = this.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = e.clientX - rect.left - size / 2;
+            const y = e.clientY - rect.top - size / 2;
+            
+            ripple.style.cssText = `
+                position: absolute;
+                width: ${size}px;
+                height: ${size}px;
+                left: ${x}px;
+                top: ${y}px;
+                background: rgba(255, 255, 255, 0.3);
+                border-radius: 50%;
+                transform: scale(0);
+                animation: ripple 0.6s ease-out;
+                pointer-events: none;
+            `;
+            
+            this.style.position = 'relative';
+            this.appendChild(ripple);
+            
+            setTimeout(() => ripple.remove(), 600);
+        });
+    });
+
+    // Add CSS for ripple animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes ripple {
+            to {
+                transform: scale(2);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Badge hover effects
+    const badges = document.querySelectorAll('.badge');
+    badges.forEach(badge => {
+        badge.addEventListener('mouseenter', function() {
+            this.style.transform = 'scale(1.05)';
+            this.style.transition = 'transform 0.2s ease';
+        });
+        
+        badge.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1)';
+        });
+    });
+
+    // Show team statistics in toast
+    function showTeamStats() {
+        const memberCount = {{ team.members.count }};
+        const teamName = "{{ team.name|escapejs }}";
+        const leaderName = "{{ team.leader.get_full_name|default:team.leader.username|escapejs }}";
+        
+        const message = `Team "${teamName}" has ${memberCount} member${memberCount !== 1 ? 's' : ''} led by ${leaderName}`;
+        
+        document.getElementById('toastMessage').textContent = message;
+        
+        const toastElement = document.getElementById('infoToast');
+        const toast = new bootstrap.Toast(toastElement, {
+            autohide: true,
+            delay: 4000
+        });
+        
+        // Show toast after a brief delay
+        setTimeout(() => {
+            toast.show();
+        }, 1000);
+    }
+
+    // Show team stats toast on page load
+    showTeamStats();
+
+    // Enhanced accessibility
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            // Navigate back to teams on Escape
+            window.location.href = "{% url 'team_management' %}";
+        }
+    });
+
+    // Add loading states for profile links
+    const profileLinks = document.querySelectorAll('a[href*="user_profile"]');
+    profileLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            const icon = this.querySelector('i');
+            if (icon) {
+                const originalClass = icon.className;
+                icon.className = 'fas fa-spinner fa-spin me-1';
+                
+                setTimeout(() => {
+                    icon.className = originalClass;
+                }, 1000);
+            }
+        });
+    });
+
+    // Smooth scroll to sections
+    function scrollToSection(sectionId) {
+        const section = document.getElementById(sectionId);
+        if (section) {
+            section.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
+    }
+
+    // Add search functionality for team members
+    function addMemberSearch() {
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.className = 'form-control mb-3';
+        searchInput.placeholder = 'Search team members...';
+        searchInput.style.borderColor = '#D9D9D9';
+        
+        const tableContainer = document.querySelector('.table-responsive');
+        if (tableContainer && tableRows.length > 0) {
+            tableContainer.parentNode.insertBefore(searchInput, tableContainer);
+            
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                tableRows.forEach(row => {
+                    const name = row.querySelector('h6').textContent.toLowerCase();
+                    const email = row.querySelector('td:nth-child(2) span').textContent.toLowerCase();
+                    const role = row.querySelector('.badge').textContent.toLowerCase();
+                    
+                    const matches = name.includes(searchTerm) || 
+                                  email.includes(searchTerm) || 
+                                  role.includes(searchTerm);
+                    
+                    row.style.display = matches ? '' : 'none';
+                });
+            });
+        }
+    }
+
+    // Add search if there are more than 5 members
+    if (tableRows.length > 5) {
+        addMemberSearch();
+    }
+
+    // Add member count animation
+    const memberCountElements = document.querySelectorAll('p:contains("member")');
+    memberCountElements.forEach(element => {
+        if (element.textContent.includes('member')) {
+            const count = parseInt(element.textContent.match(/\d+/));
+            if (count > 0) {
+                let currentCount = 0;
+                const increment = Math.ceil(count / 20);
+                const timer = setInterval(() => {
+                    currentCount += increment;
+                    if (currentCount >= count) {
+                        currentCount = count;
+                        clearInterval(timer);
+                    }
+                    element.textContent = element.textContent.replace(/\d+/, currentCount);
+                }, 50);
+            }
+        }
+    });
+});
+</script>
+
+<style>
+/* Enhanced button styles */
+.btn-primary {
+    background-color: #1C64FF !important;
+    border-color: #1C64FF !important;
+}
+
+.btn-primary:hover {
+    background-color: #1557e6 !important;
+    border-color: #1557e6 !important;
+}
+
+.btn-outline-primary {
+    border-color: #1C64FF !important;
+    color: #1C64FF !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: #1C64FF !important;
+    border-color: #1C64FF !important;
+    color: white !important;
+}
+
+.btn-secondary {
+    background-color: #696969 !important;
+    border-color: #696969 !important;
+}
+
+.btn-secondary:hover {
+    background-color: #5a5a5a !important;
+    border-color: #5a5a5a !important;
+}
+
+/* Enhanced focus styles */
+.btn:focus,
+.form-control:focus {
+    box-shadow: 0 0 0 0.25rem rgba(28, 100, 255, 0.25) !important;
+}
+
+/* Smooth transitions */
+.btn,
+.card,
+.badge,
+.table tbody tr {
+    transition: all 0.2s ease !important;
+}
+
+/* Enhanced table styling */
+.table tbody tr:hover {
+    background-color: #C3E4FF !important;
+}
+
+/* Badge enhancements */
+.badge {
+    font-weight: 500 !important;
+    font-size: 0.75rem !important;
+}
+
+/* Card shadow enhancements */
+.shadow-sm {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .display-6 {
+        font-size: 1.75rem !important;
+    }
+    
+    .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .d-flex.flex-wrap.gap-2 {
+        flex-direction: column !important;
+    }
+    
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+}
+
+/* Loading animation */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.fa-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Enhanced accessibility */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .card {
+        border: 2px solid #000 !important;
+    }
+    
+    .btn {
+        border-width: 2px !important;
+    }
+}
+
+/* Print styles */
+@media print {
+    .btn,
+    .toast-container {
+        display: none !important;
+    }
+    
+    .card {
+        border: 1px solid #000 !important;
+        box-shadow: none !important;
+    }
+}
+</style>
 {% endblock %}
