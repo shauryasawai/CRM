@@ -178,3 +178,45 @@ LOGIN_URL = '/admin/login/'
 LOGIN_REDIRECT_URL = '/hrm/'
 LOGOUT_REDIRECT_URL = '/admin/login/'
 
+# settings.py
+
+import os
+
+# Media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+
+# settings.py - Add these SMTP settings
+
+import os
+from django.core.exceptions import ImproperlyConfigured
+
+# Email Settings
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+# SMTP Configuration
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
+EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() == 'true'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+
+# Default from email
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
+# Email timeout (in seconds)
+EMAIL_TIMEOUT = 30
+
+# For development - print emails to console instead of sending
+if os.environ.get('EMAIL_BACKEND') == 'console':
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Validate email configuration
+if not EMAIL_HOST_USER and EMAIL_BACKEND == 'django.core.mail.backends.smtp.EmailBackend':
+    raise ImproperlyConfigured("EMAIL_HOST_USER must be set for SMTP email backend")
+
+
+

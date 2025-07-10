@@ -151,6 +151,30 @@
             color: white;
         }
         
+        /* Logout Form Styling */
+        #logout-form {
+            display: inline;
+        }
+        
+        #logout-form button {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            font-size: 0.9rem;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        
+        #logout-form button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        
         /* Navigation */
         #nav-global {
             background: rgba(255, 255, 255, 0.1);
@@ -442,7 +466,10 @@
                         {% if user.has_usable_password %}
                             <a href="{% url 'admin:password_change' %}">{% trans 'Change password' %}</a> /
                         {% endif %}
-                        <a href="{% url 'admin:logout' %}">{% trans 'Log out' %}</a>
+                        <form id="logout-form" method="post" action="{% url 'admin:logout' %}">
+                            {% csrf_token %}
+                            <button type="submit">{% trans "Log out" %}</button>
+                        </form>
                     {% endblock %}
                 </div>
             {% endif %}

@@ -14,6 +14,7 @@ from django.dispatch import receiver
 import pandas as pd
 from threading import Thread
 from django.db.models.signals import post_save
+from django.db.models import Q
 
 logger = logging.getLogger(__name__)
 
@@ -510,128 +511,202 @@ class SchemeUpload(models.Model):
             self.create_log(0, 'error', error_msg)
             return False
     
-    def _process_single_scheme_row(self, row, row_number):
-        """Process a single scheme row"""
-        try:
-            # Extract data with better error handling
-            amc_name = self._safe_string_convert(row.get('AMC Name', ''))
-            scheme_name = self._safe_string_convert(row.get('Scheme NAV Name', ''))
-            category = self._safe_string_convert(row.get('Category', ''))
-            isin_growth = self._safe_string_convert(row.get('ISIN Div Payout / ISIN Growth', ''))
-            isin_div = self._safe_string_convert(row.get('ISIN Div Reinvestment', ''))
-            
-            # Validate required fields
-            if not amc_name or not scheme_name:
-                self.failed_rows += 1
-                self.create_log(row_number, 'error', 
-                    f"Missing required fields - AMC: '{amc_name}', Scheme: '{scheme_name}'", 
-                    amc_name, scheme_name)
-                return
-            
-            # Generate scheme code
-            scheme_code = self._generate_scheme_code(amc_name, scheme_name, isin_growth)
-            
-            # Determine scheme type
-            scheme_type = self._categorize_scheme_type(category)
-            
-            # Check if scheme exists (by ISIN first, then by name)
-            existing_scheme = None
-            search_method = ""
-            
-            if isin_growth:
-                try:
-                    existing_scheme = MutualFundScheme.objects.get(isin_growth=isin_growth)
-                    search_method = f"ISIN Growth: {isin_growth}"
-                except MutualFundScheme.DoesNotExist:
-                    pass
-                except MutualFundScheme.MultipleObjectsReturned:
-                    # Handle duplicate ISINs
-                    existing_scheme = MutualFundScheme.objects.filter(isin_growth=isin_growth).first()
-                    search_method = f"ISIN Growth (multiple found): {isin_growth}"
-            
-            if not existing_scheme:
-                try:
-                    existing_scheme = MutualFundScheme.objects.get(
-                        amc_name__iexact=amc_name,
-                        scheme_name__iexact=scheme_name
-                    )
-                    search_method = f"AMC + Name: {amc_name} - {scheme_name}"
-                except MutualFundScheme.DoesNotExist:
-                    pass
-                except MutualFundScheme.MultipleObjectsReturned:
-                    existing_scheme = MutualFundScheme.objects.filter(
-                        amc_name__iexact=amc_name,
-                        scheme_name__iexact=scheme_name
-                    ).first()
-                    search_method = f"AMC + Name (multiple found): {amc_name} - {scheme_name}"
-            
-            # Prepare scheme data
-            scheme_data = {
-                'amc_name': amc_name,
-                'scheme_name': scheme_name,
-                'category': category,
-                'scheme_type': scheme_type,
-                'isin_growth': isin_growth if isin_growth else None,
-                'isin_div_reinvestment': isin_div if isin_div else None,
-                'scheme_code': scheme_code,
-                'is_active': True,
-                'last_updated': timezone.now(),
-                'upload_batch': self
-            }
-            
-            if existing_scheme and self.update_existing:
-                # Update existing scheme
-                for field, value in scheme_data.items():
-                    if field != 'upload_batch':  # Don't change upload_batch for existing
-                        setattr(existing_scheme, field, value)
-                existing_scheme.save()
-                
-                self.updated_rows += 1
-                self.create_log(row_number, 'success', 
-                    f"Updated existing scheme ({search_method})", 
-                    amc_name, scheme_name, existing_scheme)
-                
-            elif existing_scheme and not self.update_existing:
-                # Skip existing scheme
-                self.create_log(row_number, 'warning', 
-                    f"Skipped existing scheme ({search_method}) - update disabled", 
-                    amc_name, scheme_name)
-                
-            else:
-                # Create new scheme
-                new_scheme = MutualFundScheme.objects.create(**scheme_data)
-                
-                self.successful_rows += 1
-                self.create_log(row_number, 'success', 
-                    f"Created new scheme - Code: {scheme_code}", 
-                    amc_name, scheme_name, new_scheme)
-            
-        except Exception as e:
+def _process_single_scheme_row(self, row, row_number):
+    """Process a single scheme row"""
+    try:
+        # Extract data with better error handling
+        amc_name = self._safe_string_convert(row.get('AMC Name', ''))
+        scheme_name = self._safe_string_convert(row.get('Scheme NAV Name', ''))
+        category = self._safe_string_convert(row.get('Category', ''))
+        isin_growth = self._safe_string_convert(row.get('ISIN Div Payout / ISIN Growth', ''))
+        isin_div = self._safe_string_convert(row.get('ISIN Div Reinvestment', ''))
+        
+        # Validate required fields
+        if not amc_name or not scheme_name:
             self.failed_rows += 1
-            error_message = f"Row processing error: {str(e)}"
+            self.create_log(row_number, 'error', 
+                f"Missing required fields - AMC: '{amc_name}', Scheme: '{scheme_name}'", 
+                amc_name, scheme_name)
+            return
+        
+        # Generate scheme code
+        scheme_code = self._generate_scheme_code(amc_name, scheme_name, isin_growth)
+        
+        # Determine scheme type
+        scheme_type = self._categorize_scheme_type(category)
+        
+        # Check if scheme exists with enhanced search methods
+        existing_scheme = None
+        search_method = ""
+        
+        # Method 1: Search by ISIN Growth
+        if isin_growth:
+            try:
+                existing_scheme = MutualFundScheme.objects.get(isin_growth=isin_growth)
+                search_method = f"ISIN Growth: {isin_growth}"
+            except MutualFundScheme.DoesNotExist:
+                pass
+            except MutualFundScheme.MultipleObjectsReturned:
+                # Handle duplicate ISINs
+                existing_scheme = MutualFundScheme.objects.filter(isin_growth=isin_growth).first()
+                search_method = f"ISIN Growth (multiple found): {isin_growth}"
+        
+        # Method 2: Search by exact Scheme NAV Name
+        if not existing_scheme:
+            try:
+                existing_scheme = MutualFundScheme.objects.get(scheme_name__iexact=scheme_name)
+                search_method = f"Scheme NAV Name (exact): {scheme_name}"
+            except MutualFundScheme.DoesNotExist:
+                pass
+            except MutualFundScheme.MultipleObjectsReturned:
+                existing_scheme = MutualFundScheme.objects.filter(scheme_name__iexact=scheme_name).first()
+                search_method = f"Scheme NAV Name (multiple found): {scheme_name}"
+        
+        # Method 3: Search by AMC Name + Scheme NAV Name combination
+        if not existing_scheme:
+            try:
+                existing_scheme = MutualFundScheme.objects.get(
+                    amc_name__iexact=amc_name,
+                    scheme_name__iexact=scheme_name
+                )
+                search_method = f"AMC + Scheme NAV Name: {amc_name} - {scheme_name}"
+            except MutualFundScheme.DoesNotExist:
+                pass
+            except MutualFundScheme.MultipleObjectsReturned:
+                existing_scheme = MutualFundScheme.objects.filter(
+                    amc_name__iexact=amc_name,
+                    scheme_name__iexact=scheme_name
+                ).first()
+                search_method = f"AMC + Scheme NAV Name (multiple found): {amc_name} - {scheme_name}"
+        
+        # Method 4: Fuzzy search by Scheme NAV Name (if enabled)
+        if not existing_scheme and hasattr(self, 'enable_fuzzy_search') and self.enable_fuzzy_search:
+            fuzzy_matches = self._fuzzy_search_by_scheme_name(scheme_name)
+            if fuzzy_matches:
+                existing_scheme = fuzzy_matches[0]
+                search_method = f"Scheme NAV Name (fuzzy match): {scheme_name} -> {existing_scheme.scheme_name}"
+        
+        # Prepare scheme data
+        scheme_data = {
+            'amc_name': amc_name,
+            'scheme_name': scheme_name,
+            'category': category,
+            'scheme_type': scheme_type,
+            'isin_growth': isin_growth if isin_growth else None,
+            'isin_div_reinvestment': isin_div if isin_div else None,
+            'scheme_code': scheme_code,
+            'is_active': True,
+            'last_updated': timezone.now(),
+            'upload_batch': self
+        }
+        
+        if existing_scheme and self.update_existing:
+            # Update existing scheme
+            for field, value in scheme_data.items():
+                if field != 'upload_batch':  # Don't change upload_batch for existing
+                    setattr(existing_scheme, field, value)
+            existing_scheme.save()
             
-            self.create_log(row_number, 'error', error_message,
-                amc_name if 'amc_name' in locals() else '',
-                scheme_name if 'scheme_name' in locals() else '')
+            self.updated_rows += 1
+            self.create_log(row_number, 'success', 
+                f"Updated existing scheme ({search_method})", 
+                amc_name, scheme_name, existing_scheme)
             
-            logger.error(f"Error processing row {row_number}: {e}")
+        elif existing_scheme and not self.update_existing:
+            # Skip existing scheme
+            self.create_log(row_number, 'warning', 
+                f"Skipped existing scheme ({search_method}) - update disabled", 
+                amc_name, scheme_name)
+            
+        else:
+            # Create new scheme
+            new_scheme = MutualFundScheme.objects.create(**scheme_data)
+            
+            self.successful_rows += 1
+            self.create_log(row_number, 'success', 
+                f"Created new scheme - Code: {scheme_code}", 
+                amc_name, scheme_name, new_scheme)
+        
+    except Exception as e:
+        self.failed_rows += 1
+        error_message = f"Row processing error: {str(e)}"
+        
+        self.create_log(row_number, 'error', error_message,
+            amc_name if 'amc_name' in locals() else '',
+            scheme_name if 'scheme_name' in locals() else '')
+        
+        logger.error(f"Error processing row {row_number}: {e}")
+
+def _fuzzy_search_by_scheme_name(self, scheme_name, similarity_threshold=0.8):
+    """
+    Perform fuzzy search on scheme names using string similarity
+    Returns list of matching schemes ordered by similarity
+    """
+    from difflib import SequenceMatcher
     
-    def _safe_string_convert(self, value):
-        """Safely convert values to string, handling NaN and None"""
-        if value is None:
-            return ''
+    # Get all schemes to compare against
+    all_schemes = MutualFundScheme.objects.all()
+    matches = []
+    
+    for scheme in all_schemes:
+        # Calculate similarity ratio
+        similarity = SequenceMatcher(None, scheme_name.lower(), scheme.scheme_name.lower()).ratio()
         
-        if pd.isna(value):
-            return ''
+        if similarity >= similarity_threshold:
+            matches.append((scheme, similarity))
+    
+    # Sort by similarity (highest first)
+    matches.sort(key=lambda x: x[1], reverse=True)
+    
+    # Return just the scheme objects
+    return [match[0] for match in matches]
+
+def _safe_string_convert(self, value):
+    """Safely convert values to string, handling NaN and None"""
+    if value is None:
+        return ''
+    
+    if pd.isna(value):
+        return ''
+    
+    # Convert to string and strip whitespace
+    result = str(value).strip()
+    
+    # Handle 'nan' string
+    if result.lower() == 'nan':
+        return ''
         
-        # Convert to string and strip whitespace
-        result = str(value).strip()
-        
-        # Handle 'nan' string
-        if result.lower() == 'nan':
-            return ''
-            
-        return result
+    return result
+
+def _apply_scheme_nav_name_filter(self, queryset, search_term):
+    """
+    Apply search filter based on Scheme NAV Name column
+    Supports exact match, partial match, and case-insensitive search
+    """
+    if not search_term:
+        return queryset
+    
+    # Clean the search term
+    search_term = search_term.strip()
+    
+    # Apply multiple search strategies
+    return queryset.filter(
+        Q(scheme_name__icontains=search_term) |  # Partial match (case-insensitive)
+        Q(scheme_name__iexact=search_term) |     # Exact match (case-insensitive)
+        Q(scheme_name__istartswith=search_term) | # Starts with (case-insensitive)
+        Q(scheme_name__iendswith=search_term)     # Ends with (case-insensitive)
+    ).distinct()
+
+def get_filtered_schemes_by_nav_name(self, nav_name_filter=None):
+    """
+    Get schemes filtered by Scheme NAV Name
+    """
+    queryset = MutualFundScheme.objects.all()
+    
+    if nav_name_filter:
+        queryset = self._apply_scheme_nav_name_filter(queryset, nav_name_filter)
+    
+    return queryset.order_by('amc_name', 'scheme_name')
     
     def _categorize_scheme_type(self, category):
         """Categorize scheme type based on category"""

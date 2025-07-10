@@ -209,7 +209,6 @@ urlpatterns = [
         path('<int:plan_id>/send-to-client/', views.send_to_client, name='send_to_client'),
         path('<int:plan_id>/mark-client-approved/', views.mark_client_approved, name='mark_client_approved'),
         path('<int:plan_id>/start-execution/', views.start_execution, name='start_execution'),
-        path('<int:plan_id>/download-excel/', views.download_excel, name='download_excel'),
         path('<int:plan_id>/add-comment/', views.add_comment, name='add_comment'),
         path('<int:plan_id>/analytics/', views.plan_analytics, name='plan_analytics'),
         path('action/<int:action_id>/execute/', views.execute_action, name='execute_action'),
@@ -229,7 +228,11 @@ urlpatterns = [
         path('api/templates/<int:template_id>/', views.load_template_ajax, name='load_template_ajax'),
         path('api/templates/save/', views.save_template, name='save_template'),
     ])),
+    
 
     # Analytics
     path('analytics/', views.analytics_dashboard, name='analytics_dashboard'),
+    path('execution-plans/<int:plan_id>/download-excel/', views.download_excel, name='download_excel'),
+    path('execution-plans/<int:plan_id>/generate-excel/', views.generate_excel, name='generate_excel'),
+    path('execution-plans/<int:plan_id>/email-plan/', views.email_plan, name='email_plan'),
 ]

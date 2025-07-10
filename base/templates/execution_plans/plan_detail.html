@@ -107,21 +107,11 @@
     </div>
     
     <div class="btn-group">
-        {% if execution_plan.excel_file %}
-        <a href="{% url 'execution_plans:download_excel' execution_plan.id %}" class="btn btn-outline-primary">
-            <i class="fas fa-download me-2"></i>Download Excel
-        </a>
-        {% endif %}
-        
         {% if can_edit %}
         <a href="{% url 'create_plan_step2' execution_plan.client.id %}" class="btn btn-outline-secondary">
             <i class="fas fa-edit me-2"></i>Edit Plan
         </a>
         {% endif %}
-        
-        <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#analyticsModal">
-            <i class="fas fa-chart-bar me-2"></i>Analytics
-        </button>
     </div>
 </div>
 
@@ -611,6 +601,198 @@
         </div>
     </div>
 </div>
+<!-- Enhanced Download Options Section -->
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <h1 class="h3">
+            <i class="fas fa-file-alt text-primary me-2"></i>
+            {{ execution_plan.plan_name }}
+        </h1>
+        <p class="text-muted mb-2">
+            Plan ID: <strong>{{ execution_plan.plan_id }}</strong> | 
+            Client: <strong>{{ execution_plan.client.name }}</strong>
+        </p>
+        <div class="d-flex align-items-center gap-3">
+            {% if execution_plan.status == 'draft' %}
+                <span class="badge bg-secondary fs-6">Draft</span>
+            {% elif execution_plan.status == 'pending_approval' %}
+                <span class="badge bg-warning fs-6">Pending Approval</span>
+            {% elif execution_plan.status == 'approved' %}
+                <span class="badge bg-success fs-6">Approved</span>
+            {% elif execution_plan.status == 'client_approved' %}
+                <span class="badge bg-info fs-6">Client Approved</span>
+            {% elif execution_plan.status == 'in_execution' %}
+                <span class="badge bg-primary fs-6">In Execution</span>
+            {% elif execution_plan.status == 'completed' %}
+                <span class="badge bg-success fs-6">Completed</span>
+            {% elif execution_plan.status == 'rejected' %}
+                <span class="badge bg-danger fs-6">Rejected</span>
+            {% endif %}
+            
+            <small class="text-muted">
+                Created: {{ execution_plan.created_at|date:"M d, Y" }} by {{ execution_plan.created_by.get_full_name|default:execution_plan.created_by.username }}
+            </small>
+        </div>
+    </div>
+    
+    <!-- Enhanced Action Buttons with Download Options -->
+    <div class="btn-group">
+        <!-- Download Options Dropdown -->
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-download me-2"></i>Download
+            </button>
+            <ul class="dropdown-menu">
+                <li>
+                    <a class="dropdown-item" href="#" onclick="downloadExcel()">
+                        <i class="fas fa-file-excel text-success me-2"></i>Excel File
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item" href="#" onclick="generateFreshExcel()">
+                        <i class="fas fa-sync-alt text-primary me-2"></i>Generate Fresh Excel
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- Print Button -->
+        <button type="button" class="btn btn-outline-secondary" onclick="printPlan()">
+            <i class="fas fa-print me-2"></i>Print
+        </button>
+        
+        {% if can_edit %}
+        <a href="{% url 'create_plan_step2' execution_plan.client.id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-edit me-2"></i>Edit Plan
+        </a>
+        {% endif %}
+        
+        <!-- Email Plan Button -->
+        {% if execution_plan.status in 'approved,client_approved,completed' %}
+        <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#emailPlanModal">
+            <i class="fas fa-envelope me-2"></i>Email Plan
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Download Progress Modal -->
+<div class="modal fade" id="downloadProgressModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-download me-2"></i>Preparing Download
+                </h5>
+            </div>
+            <div class="modal-body text-center">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p id="downloadStatus">Generating file...</p>
+                <div class="progress">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" style="width: 0%" id="downloadProgress"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Email Plan Modal -->
+<div class="modal fade" id="emailPlanModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-envelope me-2"></i>Email Execution Plan
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="emailPlanForm">
+                    <div class="mb-3">
+                        <label for="emailTo" class="form-label">To Email Address *</label>
+                        <input type="email" class="form-control" id="emailTo" 
+                               value="{{ execution_plan.client.email|default:'' }}" required>
+                        <div class="form-text">Client's email will be used if available</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="emailCc" class="form-label">CC Email Address</label>
+                        <input type="email" class="form-control" id="emailCc" 
+                               placeholder="Additional email addresses (comma separated)">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="emailSubject" class="form-label">Subject</label>
+                        <input type="text" class="form-control" id="emailSubject" 
+                               value="Execution Plan - {{ execution_plan.plan_name }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="emailMessage" class="form-label">Message</label>
+                        <textarea class="form-control" id="emailMessage" rows="4" 
+                                  placeholder="Enter your message to the client...">Dear {{ execution_plan.client.name }},
+
+Please find attached the execution plan for your investment portfolio.
+
+Plan Details:
+- Plan Name: {{ execution_plan.plan_name }}
+- Plan ID: {{ execution_plan.plan_id }}
+- Created Date: {{ execution_plan.created_at|date:"M d, Y" }}
+- Total Actions: {{ actions.count }}
+
+Please review the plan and let us know if you have any questions.
+
+Best regards,
+{{ execution_plan.created_by.get_full_name|default:execution_plan.created_by.username }}</textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="attachExcel" checked>
+                                <label class="form-check-label" for="attachExcel">
+                                    Attach Excel File
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="attachPDF">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="sendEmailPlan()">
+                    <i class="fas fa-paper-plane me-2"></i>Send Email
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Download Status Card (appears when files are ready) -->
+<div id="downloadStatusCard" class="alert alert-success alert-dismissible fade" role="alert" style="display: none;">
+    <div class="d-flex align-items-center">
+        <i class="fas fa-check-circle me-2 text-success"></i>
+        <div class="flex-grow-1">
+            <strong>Download Ready!</strong>
+            <p class="mb-0" id="downloadMessage">Your file has been generated successfully.</p>
+        </div>
+        <div class="ms-3">
+            <a href="#" id="downloadLink" class="btn btn-sm btn-success" download>
+                <i class="fas fa-download me-1"></i>Download
+            </a>
+        </div>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -632,6 +814,364 @@ function submitForApproval() {
         });
     }
 }
+// Download Functions for Execution Plan
+
+// Download Excel file
+function downloadExcel() {
+    showDownloadProgress();
+    updateDownloadProgress(20, 'Checking existing Excel file...');
+    
+    // Check if Excel file already exists
+    if ({{ execution_plan.excel_file|yesno:"true,false" }}) {
+        updateDownloadProgress(60, 'Excel file found, preparing download...');
+        
+        // Use existing Excel file
+        const downloadUrl = `/execution-plans/{{ execution_plan.id }}/download-excel/`;
+        downloadFile(downloadUrl, '{{ execution_plan.plan_id }}_execution_plan.xlsx');
+        
+        updateDownloadProgress(100, 'Download started!');
+        setTimeout(() => {
+            hideDownloadProgress();
+            showDownloadSuccess('Excel file downloaded successfully!');
+        }, 1000);
+    } else {
+        // Generate new Excel file
+        generateFreshExcel();
+    }
+}
+
+// Generate fresh Excel file
+function generateFreshExcel() {
+    showDownloadProgress();
+    updateDownloadProgress(10, 'Generating new Excel file...');
+    
+    $.ajax({
+        url: `/execution-plans/{{ execution_plan.id }}/generate-excel/`,
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        xhr: function() {
+            const xhr = new window.XMLHttpRequest();
+            // Track upload progress
+            xhr.upload.addEventListener("progress", function(evt) {
+                if (evt.lengthComputable) {
+                    const percentComplete = (evt.loaded / evt.total) * 100;
+                    updateDownloadProgress(Math.min(percentComplete, 90), 'Generating Excel file...');
+                }
+            }, false);
+            return xhr;
+        },
+        success: function(response) {
+            if (response.success) {
+                updateDownloadProgress(95, 'File generated, starting download...');
+                
+                // Download the generated file
+                const downloadUrl = `/execution-plans/{{ execution_plan.id }}/download-excel/`;
+                downloadFile(downloadUrl, response.filename || '{{ execution_plan.plan_id }}_execution_plan.xlsx');
+                
+                updateDownloadProgress(100, 'Download completed!');
+                setTimeout(() => {
+                    hideDownloadProgress();
+                    showDownloadSuccess('Excel file generated and downloaded successfully!');
+                }, 1000);
+            } else {
+                hideDownloadProgress();
+                alert('Error generating Excel file: ' + response.error);
+            }
+        },
+        error: function(xhr) {
+            hideDownloadProgress();
+            console.error('Excel generation error:', xhr);
+            alert('Error generating Excel file. Please try again.');
+        }
+    });
+}
+
+// Download PDF report
+function downloadPDF() {
+    showDownloadProgress();
+    updateDownloadProgress(20, 'Generating PDF report...');
+    
+    $.ajax({
+        url: `/execution-plans/{{ execution_plan.id }}/generate-pdf/`,
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        success: function(response) {
+            if (response.success) {
+                updateDownloadProgress(80, 'PDF generated, starting download...');
+                downloadFile(response.download_url, response.filename);
+                updateDownloadProgress(100, 'Download completed!');
+                setTimeout(() => {
+                    hideDownloadProgress();
+                    showDownloadSuccess('PDF report downloaded successfully!');
+                }, 1000);
+            } else {
+                hideDownloadProgress();
+                alert('Error generating PDF: ' + response.error);
+            }
+        },
+        error: function(xhr) {
+            hideDownloadProgress();
+            alert('Error generating PDF. Please try again.');
+        }
+    });
+}
+
+// Download CSV data
+function downloadCSV() {
+    showDownloadProgress();
+    updateDownloadProgress(30, 'Preparing CSV data...');
+    
+    const csvUrl = `/execution-plans/{{ execution_plan.id }}/export-csv/`;
+    
+    updateDownloadProgress(70, 'Generating CSV file...');
+    downloadFile(csvUrl, '{{ execution_plan.plan_id }}_actions.csv');
+    
+    updateDownloadProgress(100, 'Download completed!');
+    setTimeout(() => {
+        hideDownloadProgress();
+        showDownloadSuccess('CSV data downloaded successfully!');
+    }, 1000);
+}
+
+// Email plan function
+function sendEmailPlan() {
+    const emailTo = $('#emailTo').val().trim();
+    const emailCc = $('#emailCc').val().trim();
+    const emailSubject = $('#emailSubject').val().trim();
+    const emailMessage = $('#emailMessage').val().trim();
+    const attachExcel = $('#attachExcel').is(':checked');
+    const attachPDF = $('#attachPDF').is(':checked');
+    
+    if (!emailTo) {
+        alert('Please enter a recipient email address');
+        return;
+    }
+    
+    if (!emailSubject) {
+        alert('Please enter an email subject');
+        return;
+    }
+    
+    // Show loading state
+    const sendBtn = $('#emailPlanModal .btn-primary');
+    const originalText = sendBtn.html();
+    sendBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Sending...');
+    
+    $.ajax({
+        url: `/execution-plans/{{ execution_plan.id }}/email-plan/`,
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val(),
+            'Content-Type': 'application/json'
+        },
+        data: JSON.stringify({
+            email_to: emailTo,
+            email_cc: emailCc,
+            subject: emailSubject,
+            message: emailMessage,
+            attach_excel: attachExcel,
+            attach_pdf: attachPDF
+        }),
+        success: function(response) {
+            sendBtn.prop('disabled', false).html(originalText);
+            
+            if (response.success) {
+                $('#emailPlanModal').modal('hide');
+                showDownloadSuccess('Email sent successfully to ' + emailTo);
+                
+                // Reset form
+                $('#emailPlanForm')[0].reset();
+                $('#emailSubject').val('Execution Plan - {{ execution_plan.plan_name }}');
+                $('#attachExcel').prop('checked', true);
+            } else {
+                alert('Error sending email: ' + response.error);
+            }
+        },
+        error: function(xhr) {
+            sendBtn.prop('disabled', false).html(originalText);
+            console.error('Email sending error:', xhr);
+            alert('Error sending email. Please try again.');
+        }
+    });
+}
+
+// Utility functions for download progress
+function showDownloadProgress() {
+    $('#downloadProgressModal').modal('show');
+    updateDownloadProgress(0, 'Starting...');
+}
+
+function hideDownloadProgress() {
+    $('#downloadProgressModal').modal('hide');
+    updateDownloadProgress(0, 'Starting...');
+}
+
+function updateDownloadProgress(percent, message) {
+    $('#downloadProgress').css('width', percent + '%').attr('aria-valuenow', percent);
+    $('#downloadStatus').text(message);
+}
+
+function showDownloadSuccess(message) {
+    $('#downloadMessage').text(message);
+    $('#downloadStatusCard').addClass('show').show();
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        $('#downloadStatusCard').removeClass('show').fadeOut();
+    }, 5000);
+}
+
+// Generic file download function
+function downloadFile(url, filename) {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename || 'download';
+    link.target = '_blank';
+    
+    // Append to body, click, and remove
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Update download link in success card
+    $('#downloadLink').attr('href', url).attr('download', filename);
+}
+
+// Print function
+function printPlan() {
+    // Hide non-printable elements
+    $('.btn, .modal, .dropdown').hide();
+    
+    // Print
+    window.print();
+    
+    // Restore hidden elements
+    $('.btn, .modal, .dropdown').show();
+}
+
+// Bulk download function (for multiple plans)
+function bulkDownloadPlans(planIds, format = 'excel') {
+    if (!planIds || planIds.length === 0) {
+        alert('No plans selected for download');
+        return;
+    }
+    
+    showDownloadProgress();
+    updateDownloadProgress(10, `Preparing ${format} files for ${planIds.length} plans...`);
+    
+    $.ajax({
+        url: '/execution-plans/bulk-download/',
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val(),
+            'Content-Type': 'application/json'
+        },
+        data: JSON.stringify({
+            plan_ids: planIds,
+            format: format
+        }),
+        success: function(response) {
+            if (response.success) {
+                updateDownloadProgress(80, 'Files ready, starting download...');
+                downloadFile(response.download_url, response.filename);
+                updateDownloadProgress(100, 'Bulk download completed!');
+                setTimeout(() => {
+                    hideDownloadProgress();
+                    showDownloadSuccess(`${planIds.length} plans downloaded as ${format.toUpperCase()}`);
+                }, 1000);
+            } else {
+                hideDownloadProgress();
+                alert('Error in bulk download: ' + response.error);
+            }
+        },
+        error: function(xhr) {
+            hideDownloadProgress();
+            alert('Error in bulk download. Please try again.');
+        }
+    });
+}
+
+// Download with custom options
+function downloadWithOptions() {
+    const options = {
+        include_client_details: $('#includeClientDetails').is(':checked'),
+        include_portfolio: $('#includePortfolio').is(':checked'),
+        include_comments: $('#includeComments').is(':checked'),
+        include_workflow: $('#includeWorkflow').is(':checked'),
+        format: $('#downloadFormat').val()
+    };
+    
+    showDownloadProgress();
+    updateDownloadProgress(20, 'Applying custom options...');
+    
+    $.ajax({
+        url: `/execution-plans/{{ execution_plan.id }}/download-custom/`,
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val(),
+            'Content-Type': 'application/json'
+        },
+        data: JSON.stringify(options),
+        success: function(response) {
+            if (response.success) {
+                updateDownloadProgress(80, 'Custom file generated...');
+                downloadFile(response.download_url, response.filename);
+                updateDownloadProgress(100, 'Custom download completed!');
+                setTimeout(() => {
+                    hideDownloadProgress();
+                    showDownloadSuccess('Custom file downloaded successfully!');
+                }, 1000);
+            } else {
+                hideDownloadProgress();
+                alert('Error generating custom file: ' + response.error);
+            }
+        },
+        error: function(xhr) {
+            hideDownloadProgress();
+            alert('Error generating custom file. Please try again.');
+        }
+    });
+}
+
+// Initialize download tracking
+$(document).ready(function() {
+    // Track download events
+    $(document).on('click', '[href*="download"]', function() {
+        const downloadType = $(this).attr('href').includes('excel') ? 'excel' : 
+                           $(this).attr('href').includes('pdf') ? 'pdf' : 'other';
+        
+        // Track download analytics
+        gtag && gtag('event', 'download', {
+            'event_category': 'execution_plan',
+            'event_label': downloadType,
+            'value': {{ execution_plan.id }}
+        });
+    });
+    
+    // Keyboard shortcuts for downloads
+    $(document).on('keydown', function(e) {
+        if (e.ctrlKey && e.altKey) {
+            switch(e.which) {
+                case 69: // Ctrl+Alt+E for Excel
+                    e.preventDefault();
+                    downloadExcel();
+                    break;
+                case 80: // Ctrl+Alt+P for PDF
+                    e.preventDefault();
+                    downloadPDF();
+                    break;
+                case 67: // Ctrl+Alt+C for CSV
+                    e.preventDefault();
+                    downloadCSV();
+                    break;
+            }
+        }
+    });
+});
 
 // Approve plan
 function approvePlan() {
