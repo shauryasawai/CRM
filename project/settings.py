@@ -189,8 +189,6 @@ LOGIN_URL = '/admin/login/'
 LOGIN_REDIRECT_URL = '/hrm/'
 LOGOUT_REDIRECT_URL = '/admin/login/'
 
-# settings.py
-
 import os
 
 # Media files
@@ -236,6 +234,45 @@ CSRF_COOKIE_HTTPONLY = True
 PASSWORD_RESET_TIMEOUT = 86400  # 24 hours (in seconds)
 
 # Logging Configuration for Email Debugging
+import tempfile
+
+# Create handlers based on environment
+handlers = {
+    'console': {
+        'level': 'DEBUG',
+        'class': 'logging.StreamHandler',
+        'formatter': 'simple',
+    },
+}
+
+# Try to add file handler if possible
+try:
+    # Check if we can write to logs directory
+    log_dir = 'logs'
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir, exist_ok=True)
+    
+    # Test if we can write to the directory
+    test_file = os.path.join(log_dir, 'test.log')
+    with open(test_file, 'w') as f:
+        f.write('test')
+    os.remove(test_file)
+    
+    # If successful, add file handler
+    handlers['email_file'] = {
+        'level': 'INFO',
+        'class': 'logging.FileHandler',
+        'filename': 'logs/django_email.log',
+        'formatter': 'verbose',
+    }
+    email_handlers = ['email_file', 'console']
+    app_handlers = ['email_file', 'console']
+    
+except (OSError, PermissionError):
+    # If file logging fails, use only console
+    email_handlers = ['console']
+    app_handlers = ['console']
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -249,32 +286,17 @@ LOGGING = {
             'style': '{',
         },
     },
-    'handlers': {
-        'email_file': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': 'logs/django_email.log',
-            'formatter': 'verbose',
-        },
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
-        },
-    },
+    'handlers': handlers,
     'loggers': {
         'django.core.mail': {
-            'handlers': ['email_file', 'console'],
+            'handlers': email_handlers,
             'level': 'DEBUG',
             'propagate': True,
         },
         'base.views': {  # Your app name
-            'handlers': ['email_file', 'console'],
+            'handlers': app_handlers,
             'level': 'INFO',
             'propagate': True,
         },
     },
 }
-
-
-
