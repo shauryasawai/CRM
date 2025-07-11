@@ -17,3 +17,13 @@ INFO 2025-07-11 12:32:30,392 views 16656 2112 Password reset email sent successf
 INFO 2025-07-11 12:50:11,119 views 21044 26588 Password reset email sent successfully to sawaisushil@gmail.com
 ERROR 2025-07-11 18:04:11,264 views 3768 12936 Unexpected error in send_to_client_enhanced: 'EmailMessage' object has no attribute 'attach_alternative'
 ERROR 2025-07-11 18:04:19,193 views 3768 28208 Unexpected error in send_to_client_enhanced: 'EmailMessage' object has no attribute 'attach_alternative'
+INFO 2025-07-11 18:13:12,216 views 2112 28896 Found 1 actions for execution plan 28
+INFO 2025-07-11 18:13:12,439 views 2112 28896 Excel file generated successfully: execution_plans/execution_plan_EP202507100001_20250711_181312.xlsx
+INFO 2025-07-11 18:13:12,439 views 2112 28896 Total actions exported: 1
+INFO 2025-07-11 18:13:12,531 views 2112 28896 Generated fresh Excel file for plan EP202507100001
+INFO 2025-07-11 18:13:12,606 views 2112 28896 Excel file attached: EP202507100001_execution_plan.xlsx
+INFO 2025-07-11 18:13:17,184 views 2112 28896 Enhanced client email sent successfully for plan EP202507100001 to sawaisushil@gmail.com
+INFO 2025-07-11 18:25:12,452 views 2112 20120 create_plan_step2 called with client_id: 21 (type: <class 'str'>)
+INFO 2025-07-11 18:25:12,521 views 2112 20120 Found legacy client: Shauryaman (ID: 21)
+INFO 2025-07-11 18:25:12,723 views 2112 20120 Found linked profile for client 21
+INFO 2025-07-11 18:25:12,813 views 2112 20120 Found 8 portfolio holdings for client 21
