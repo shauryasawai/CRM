@@ -58,9 +58,9 @@
     }
 
     .user-name-display {
-        font-size: 1.5rem;
+        font-size: 2.0rem;
         font-weight: 600;
-        color: var(--secondary-text);
+        color: var(--primary-color);
         margin: 0;
     }
 
@@ -144,7 +144,7 @@
     }
 
     .header-btn {
-        background: var(--primary-color);
+        background: rgba(255, 255, 255, 0.15);
         color: white;
         padding: 0.875rem 2rem;
         border-radius: 50px;
@@ -155,6 +155,16 @@
         align-items: center;
         gap: 0.5rem;
         border: 2px solid var(--primary-color);
+
+       
+        /* border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        margin: 0 auto 1.5rem; */
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
     .header-btn:hover {
@@ -222,7 +232,7 @@
     /* Metrics Grid */
     .metrics-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        grid-template-columns: repeat(4, minmax(180px, 1fr));
         gap: 1.5rem;
         margin-bottom: 3rem;
     }
@@ -598,7 +608,7 @@
     /* Insights Section */
     .insights-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        grid-template-columns: repeat(3, minmax(250px, 1fr));
         gap: 2rem;
         margin-bottom: 3rem;
     }
@@ -1026,8 +1036,9 @@
     <!-- Header Section -->
     <div class="header-section">
         <div class="welcome-content">
-            <h1 class="welcome-text">Welcome back, <span class="user-name">{{ user.get_full_name|default:user.username }}</span></h1>
+            <h1 class="welcome-text">Welcome back !</h1>
             <p class="user-name-display">{{ user.get_full_name|default:user.username }}</p>
+           
         </div>
         
         <div class="header-info">
@@ -1041,30 +1052,31 @@
                 </div>
             </div>
             
-            <div class="datetime-info">
+            <div class="datetime-info mt-3">
                 <div class="date-text" id="current-date"></div>
                 <div class="time-text" id="current-time"></div>
             </div>
         </div>
     </div>
 
-    <!-- Header Actions -->
+   
+
+    <!-- Business Intelligence Section -->
+    <div class="bi-section">
+        <div class="bi-content">
+            <!-- <div class="bi-icon">
+                <i class="fas fa-chart-bar"></i>
+            </div> -->
+            <h2 class="bi-title">Business Intelligence Hub</h2>
+            <!-- <p class="bi-subtitle">Comprehensive overview of system performance and team analytics</p> -->
+        </div>
+         <!-- Header Actions -->
     <div class="header-actions">
         <a href="{% url 'hrm_dashboard' %}" class="header-btn">
             <i class="fas fa-clipboard-list"></i>
             <span>HRMS Portal</span>
         </a>
     </div>
-
-    <!-- Business Intelligence Section -->
-    <div class="bi-section">
-        <div class="bi-content">
-            <div class="bi-icon">
-                <i class="fas fa-chart-bar"></i>
-            </div>
-            <h2 class="bi-title">Business Intelligence Hub</h2>
-            <p class="bi-subtitle">Comprehensive overview of system performance and team analytics</p>
-        </div>
     </div>
 
     <!-- Key Performance Statistics -->
@@ -1076,7 +1088,7 @@
                         <i class="fas fa-crown"></i>
                     </div>
                 </div>
-                <div class="metric-badge">Regional Managers</div>
+                <!-- <div class="metric-badge">Regional Managers</div> -->
             </div>
             <div class="metric-value">{{ rm_heads.count|default:0 }}</div>
             <div class="metric-label">RM Heads</div>
@@ -1093,7 +1105,7 @@
                         <i class="fas fa-bullseye"></i>
                     </div>
                 </div>
-                <div class="metric-badge">System-wide</div>
+                <!-- <div class="metric-badge">System-wide</div> -->
             </div>
             <div class="metric-value">{{ total_leads|default:0 }}</div>
             <div class="metric-label">Total Leads</div>
@@ -1110,7 +1122,7 @@
                         <i class="fas fa-check-circle"></i>
                     </div>
                 </div>
-                <div class="metric-badge">{{ lead_conversion_rate|floatformat:1|default:0 }}% Rate</div>
+                <!-- <div class="metric-badge">{{ lead_conversion_rate|floatformat:1|default:0 }}% Rate</div> -->
             </div>
             <div class="metric-value">{{ converted_leads|default:0 }}</div>
             <div class="metric-label">Converted Leads</div>
@@ -1219,14 +1231,13 @@
             <div class="section-icon">
                 <i class="fas fa-crown"></i>
             </div>
-            Regional Manager Performance
-        </h2>
-        <div class="section-stats">
+            Relationship Manager Performance
+            <div class="section-stats">
             <span class="section-stat">{{ rm_heads.count|default:0 }} Active RM Head{{ rm_heads.count|pluralize }}</span>
         </div>
-    </div>
-
-    <div class="table-container">
+        </h2>
+        
+         <div class="table-container">
         <table class="table">
             <thead>
                 <tr>
@@ -1274,19 +1285,20 @@
                         {% endwith %}
                     </td>
                     <td>
-                        {% with leads_count=rm_head.lead_set.count|default:0 %}
-                        {% with performance_score=leads_count|add:5 %}
-                        <div class="performance-indicator">
-                            <div class="performance-bar">
-                                <div class="performance-fill" style="width: {% if performance_score > 20 %}100{% else %}{% widthratio performance_score 20 100 %}{% endif %}%;"></div>
+                    {% with leads_count=rm_head.lead_set.count|default:0 %}
+                    {% with performance_score=leads_count|add:5 %}
+                    <div class="performance-indicator">
+                        <div class="performance-bar">
+                            <div class="performance-fill" style="width: {% if performance_score > 20 %}100{% else %}{% widthratio performance_score 20 100 %}{% endif %}%;"></div>
                             </div>
-                            <span class="performance-text">
-                                {% if performance_score > 20 %}100{% else %}{% widthratio performance_score 20 100 %}{% endif %}%
-                            </span>
-                        </div>
-                        {% endwith %}
-                        {% endwith %}
+                        <span class="performance-text">
+                        {% if performance_score > 20 %}100{% else %}{% widthratio performance_score 20 100 %}{% endif %}%
+                        </span>
+                    </div>
+                    {% endwith %}
+                    {% endwith %}
                     </td>
+
                     <td>
                         {% with leads_count=rm_head.lead_set.count|default:0 %}
                         {% if leads_count >= 15 %}
@@ -1318,6 +1330,9 @@
         </table>
     </div>
 
+    </div>
+
+   
     <!-- Regional Managers Overview -->
     {% if all_rms %}
     <div class="section-header">
@@ -1325,21 +1340,21 @@
             <div class="section-icon">
                 <i class="fas fa-globe"></i>
             </div>
-            All Regional Managers
-        </h2>
-        <div class="section-stats">
-            <span class="section-stat">{{ all_rms.count }} Active RM{{ all_rms.count|pluralize }}</span>
+            All Relationship Managers
+             <div class="section-stats">
+            <span class="section-stat mb-3">{{ all_rms.count }} Active RM{{ all_rms.count|pluralize }}</span>
         </div>
-    </div>
-
+        </h2>
+       
+        
     <div class="table-container">
         <table class="table">
             <thead>
                 <tr>
-                    <th><i class="fas fa-user me-2"></i>Regional Manager</th>
+                    <th><i class="fas fa-user me-2"></i>RM</th>
                     <th><i class="fas fa-envelope me-2"></i>Contact</th>
-                    <th><i class="fas fa-crown me-2"></i>Reports To</th>
-                    <th><i class="fas fa-bullseye me-2"></i>Individual Leads</th>
+                    <th><i class="fas fa-crown me-2"></i>Report</th>
+                    <th><i class="fas fa-bullseye me-2"></i>Lead</th>
                     <th><i class="fas fa-tasks me-2"></i>Tasks</th>
                     <th><i class="fas fa-chart-bar me-2"></i>Activity</th>
                 </tr>
@@ -1413,6 +1428,8 @@
         </table>
     </div>
     {% endif %}
+    </div>
+
 
     <!-- System Insights -->
     <div class="section-header">
@@ -1422,9 +1439,7 @@
             </div>
             System Insights & Recommendations
         </h2>
-    </div>
-
-    <div class="insights-grid">
+        <div class="insights-grid">
         <div class="insight-card primary">
             <h4 class="insight-title">
                 <i class="fas fa-chart-bar"></i>
@@ -1493,6 +1508,9 @@
             </div>
         </div>
     </div>
+    </div>
+
+    
 
     <!-- Recent Notes Section -->
     {% if recent_notes %}
@@ -1648,7 +1666,8 @@ document.addEventListener('DOMContentLoaded', function() {
             greeting = 'Good evening';
         }
         
-        welcomeText.innerHTML = greeting + ', <span class="user-name">{{ user.get_full_name|default:user.username }}</span>';
+        // welcomeText.innerHTML = greeting + ', <span class="user-name">{{ user.get_full_name|default:user.username }}</span>';
+        welcomeText.innerHTML = greeting+',';
     }
 
     // Enhanced button interactions
