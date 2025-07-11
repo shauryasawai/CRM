@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import authenticate, login, logout
 from django.urls import reverse
 from django.contrib import messages
+from django.core.mail import EmailMultiAlternatives, send_mail
 from django.utils import timezone
 from django.db.models import Sum, Count, Q, Avg
 from django.http import HttpResponse, JsonResponse, HttpResponseForbidden
@@ -8014,7 +8015,7 @@ def email_plan(request, plan_id):
             return JsonResponse({'error': 'Email subject is required'}, status=400)
         
         # Create email
-        email = EmailMessage(
+        email = EmailMultiAlternatives(
             subject=subject,
             body=message,
             from_email=settings.DEFAULT_FROM_EMAIL,
@@ -9873,3 +9874,1146 @@ def password_reset_confirm(request, uidb64, token):
     return render(request, 'registration/password_reset_confirm.html', context)
 
 
+# Add these enhanced email functions to your views.py
+
+import logging
+from django.core.mail import EmailMessage, send_mail
+from django.template.loader import render_to_string
+from django.conf import settings
+from django.utils import timezone
+from datetime import datetime
+import os
+
+logger = logging.getLogger(__name__)
+
+def get_client_email(execution_plan):
+    """
+    Get client email from various possible sources
+    """
+    client_email = None
+    
+    # Try to get email from different client model relationships
+    try:
+        # First try: Direct client email
+        if hasattr(execution_plan.client, 'email') and execution_plan.client.email:
+            client_email = execution_plan.client.email
+        
+        # Second try: Client contact_info (if it's an email)
+        elif hasattr(execution_plan.client, 'contact_info') and execution_plan.client.contact_info:
+            contact_info = execution_plan.client.contact_info
+            if '@' in contact_info:
+                client_email = contact_info
+        
+        # Third try: Client profile email
+        elif hasattr(execution_plan.client, 'client_profile') and execution_plan.client.client_profile:
+            if hasattr(execution_plan.client.client_profile, 'email') and execution_plan.client.client_profile.email:
+                client_email = execution_plan.client.client_profile.email
+        
+        # Fourth try: User email (if client is linked to a user)
+        elif hasattr(execution_plan.client, 'user') and execution_plan.client.user:
+            if hasattr(execution_plan.client.user, 'email') and execution_plan.client.user.email:
+                client_email = execution_plan.client.user.email
+                
+        logger.info(f"Found client email: {client_email} for plan {execution_plan.plan_id}")
+        
+    except Exception as e:
+        logger.error(f"Error getting client email for plan {execution_plan.plan_id}: {str(e)}")
+    
+    return client_email
+
+
+def send_execution_plan_email(execution_plan, email_type='approved', custom_message=None, 
+                            include_excel=True, send_to_rm=False, send_to_client=True):
+    """
+    Enhanced function to send execution plan emails automatically
+    
+    Args:
+        execution_plan: ExecutionPlan object
+        email_type: 'approved', 'completed', 'updated', 'client_approved'
+        custom_message: Optional custom message
+        include_excel: Whether to attach Excel file
+        send_to_rm: Whether to send copy to RM
+        send_to_client: Whether to send to client
+    """
+    try:
+        # Get recipient emails
+        recipients = []
+        cc_recipients = []
+        
+        # Client email
+        if send_to_client:
+            client_email = get_client_email(execution_plan)
+            if client_email:
+                recipients.append(client_email)
+            else:
+                logger.warning(f"No client email found for plan {execution_plan.plan_id}")
+                if not send_to_rm:
+                    return False, "No client email found"
+        
+        # RM email
+        if send_to_rm and execution_plan.created_by and execution_plan.created_by.email:
+            if execution_plan.created_by.email not in recipients:
+                cc_recipients.append(execution_plan.created_by.email)
+        
+        if not recipients and not cc_recipients:
+            return False, "No valid email recipients found"
+        
+        # Prepare email content based on type
+        subject_templates = {
+            'approved': f"✅ Investment Plan Approved - {execution_plan.plan_name}",
+            'completed': f"✅ Investment Plan Executed - {execution_plan.plan_name}",
+            'updated': f"📋 Investment Plan Updated - {execution_plan.plan_name}",
+            'client_approved': f"🎯 Ready for Execution - {execution_plan.plan_name}",
+            'rejected': f"❌ Investment Plan Rejected - {execution_plan.plan_name}",
+            'pending_approval': f"⏳ Investment Plan Submitted - {execution_plan.plan_name}"
+        }
+        
+        subject = subject_templates.get(email_type, f"Investment Plan Update - {execution_plan.plan_name}")
+        
+        # Prepare email context
+        context = {
+            'execution_plan': execution_plan,
+            'client': execution_plan.client,
+            'rm': execution_plan.created_by,
+            'email_type': email_type,
+            'custom_message': custom_message,
+            'company_name': getattr(settings, 'COMPANY_NAME', 'Investment Management'),
+            'current_date': timezone.now().strftime('%B %d, %Y'),
+            'plan_url': f"{getattr(settings, 'SITE_URL', 'https://your-domain.com')}/execution-plans/{execution_plan.id}/",
+        }
+        
+        # Get client name
+        client_name = "Valued Client"
+        if hasattr(execution_plan.client, 'name') and execution_plan.client.name:
+            client_name = execution_plan.client.name
+        elif hasattr(execution_plan.client, 'client_full_name') and execution_plan.client.client_full_name:
+            client_name = execution_plan.client.client_full_name
+        
+        context['client_name'] = client_name
+        
+        # Generate email content
+        try:
+            # Try to use custom template if exists
+            html_template = f'execution_plans/emails/{email_type}_email.html'
+            text_template = f'execution_plans/emails/{email_type}_email.txt'
+            
+            html_message = render_to_string(html_template, context)
+            text_message = render_to_string(text_template, context)
+            
+        except:
+            # Fallback to default template
+            html_message, text_message = generate_default_email_content(context, email_type)
+        
+        # Create email message
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_message,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@yourcompany.com'),
+            to=recipients,
+            cc=cc_recipients,
+            reply_to=[execution_plan.created_by.email] if execution_plan.created_by.email else None
+        )
+        
+        # Add HTML content
+        email.attach_alternative(html_message, "text/html")
+        
+        # Attach Excel file if requested and available
+        if include_excel:
+            excel_attached = attach_excel_file(email, execution_plan)
+            if not excel_attached:
+                logger.warning(f"Could not attach Excel file for plan {execution_plan.plan_id}")
+        
+        # Send email
+        email.send(fail_silently=False)
+        
+        # Log the email sending
+        logger.info(f"Email sent successfully for plan {execution_plan.plan_id} to {recipients}")
+        
+        # Create comment record
+        try:
+            PlanComment.objects.create(
+                execution_plan=execution_plan,
+                comment=f"Email sent to client ({', '.join(recipients)}) - {email_type}",
+                commented_by=execution_plan.created_by if execution_plan.created_by else None,
+                is_internal=True
+            )
+        except:
+            pass  # Don't fail if comment creation fails
+        
+        return True, f"Email sent successfully to {', '.join(recipients)}"
+        
+    except Exception as e:
+        logger.error(f"Error sending email for plan {execution_plan.plan_id}: {str(e)}")
+        return False, f"Error sending email: {str(e)}"
+
+
+def attach_excel_file(email, execution_plan):
+    """
+    Attach Excel file to email message
+    """
+    try:
+        # Check if Excel file exists
+        if execution_plan.excel_file and os.path.exists(execution_plan.excel_file.path):
+            file_path = execution_plan.excel_file.path
+            filename = f"{execution_plan.plan_id}_execution_plan.xlsx"
+        else:
+            # Generate Excel file if it doesn't exist
+            excel_file_path = generate_execution_plan_excel(execution_plan)
+            if excel_file_path:
+                execution_plan.excel_file = excel_file_path
+                execution_plan.save()
+                file_path = os.path.join(settings.MEDIA_ROOT, excel_file_path)
+                filename = f"{execution_plan.plan_id}_execution_plan.xlsx"
+            else:
+                return False
+        
+        # Read and attach file
+        with open(file_path, 'rb') as f:
+            email.attach(
+                filename, 
+                f.read(), 
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error attaching Excel file: {str(e)}")
+        return False
+
+
+def generate_default_email_content(context, email_type):
+    """
+    Generate default email content when templates are not available
+    """
+    execution_plan = context['execution_plan']
+    client_name = context['client_name']
+    rm_name = context['rm'].get_full_name() if context['rm'] else "Your Relationship Manager"
+    
+    # Email content based on type
+    content_map = {
+        'approved': {
+            'greeting': f"Dear {client_name},",
+            'main_message': f"We are pleased to inform you that your investment execution plan '{execution_plan.plan_name}' has been approved and is ready for your review.",
+            'action_required': "Please review the attached execution plan details. Once you approve, we will proceed with the execution.",
+            'closing': "We look forward to helping you achieve your investment goals."
+        },
+        'completed': {
+            'greeting': f"Dear {client_name},",
+            'main_message': f"Your investment execution plan '{execution_plan.plan_name}' has been successfully executed.",
+            'action_required': "Please find the attached execution summary with all transaction details.",
+            'closing': "Thank you for trusting us with your investments."
+        },
+        'updated': {
+            'greeting': f"Dear {client_name},",
+            'main_message': f"Your investment execution plan '{execution_plan.plan_name}' has been updated with new information.",
+            'action_required': "Please review the attached updated plan details.",
+            'closing': "If you have any questions, please don't hesitate to contact us."
+        },
+        'client_approved': {
+            'greeting': f"Dear {client_name},",
+            'main_message': f"Thank you for approving your investment execution plan '{execution_plan.plan_name}'.",
+            'action_required': "Our operations team will now begin executing your plan. You will receive updates as each transaction is completed.",
+            'closing': "We appreciate your trust in our services."
+        }
+    }
+    
+    content = content_map.get(email_type, content_map['updated'])
+    
+    # Generate HTML message
+    html_message = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+            .header {{ background-color: #1C64FF; color: white; padding: 20px; text-align: center; }}
+            .content {{ padding: 20px; background-color: #f9f9f9; }}
+            .plan-details {{ background-color: white; padding: 15px; margin: 15px 0; border-left: 4px solid #1C64FF; }}
+            .footer {{ background-color: #333; color: white; padding: 15px; text-align: center; font-size: 12px; }}
+            .btn {{ background-color: #1C64FF; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>{context['company_name']}</h1>
+                <h2>Investment Execution Plan</h2>
+            </div>
+            
+            <div class="content">
+                <p>{content['greeting']}</p>
+                
+                <p>{content['main_message']}</p>
+                
+                <div class="plan-details">
+                    <h3>Plan Details:</h3>
+                    <ul>
+                        <li><strong>Plan Name:</strong> {execution_plan.plan_name}</li>
+                        <li><strong>Plan ID:</strong> {execution_plan.plan_id}</li>
+                        <li><strong>Status:</strong> {execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else execution_plan.status}</li>
+                        <li><strong>Created Date:</strong> {execution_plan.created_at.strftime('%B %d, %Y') if execution_plan.created_at else 'N/A'}</li>
+                        <li><strong>Your RM:</strong> {rm_name}</li>
+                    </ul>
+                </div>
+                
+                <p>{content['action_required']}</p>
+                
+                {f'<p><strong>Additional Message:</strong><br>{context["custom_message"]}</p>' if context.get('custom_message') else ''}
+                
+                <p>If you have any questions or concerns, please don't hesitate to contact your relationship manager at {context['rm'].email if context['rm'] and context['rm'].email else 'your usual contact'}.</p>
+                
+                <p>{content['closing']}</p>
+            </div>
+            
+            <div class="footer">
+                <p>{context['company_name']} | Investment Management Services</p>
+                <p>This is an automated message. Please do not reply to this email.</p>
+                <p>Generated on {context['current_date']}</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    # Generate text message
+    text_message = f"""
+{content['greeting']}
+
+{content['main_message']}
+
+Plan Details:
+- Plan Name: {execution_plan.plan_name}
+- Plan ID: {execution_plan.plan_id}
+- Status: {execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else execution_plan.status}
+- Created Date: {execution_plan.created_at.strftime('%B %d, %Y') if execution_plan.created_at else 'N/A'}
+- Your RM: {rm_name}
+
+{content['action_required']}
+
+{f'Additional Message: {context["custom_message"]}' if context.get('custom_message') else ''}
+
+If you have any questions or concerns, please contact your relationship manager.
+
+{content['closing']}
+
+Best regards,
+{context['company_name']} Team
+
+---
+This is an automated message generated on {context['current_date']}.
+    """
+    
+    return html_message, text_message
+
+
+# Enhanced workflow functions with automatic email sending
+
+@login_required
+@require_http_methods(["POST"])
+def approve_plan_with_email(request, plan_id):
+    """
+    Approve execution plan and automatically send email to client
+    """
+    try:
+        execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+        
+        # Check permission
+        if not can_approve_plan(request.user, execution_plan):
+            return JsonResponse({
+                'success': False, 
+                'error': 'Access denied. Only Business Head or Top Management can approve execution plans.'
+            }, status=403)
+        
+        if execution_plan.status != 'pending_approval':
+            return JsonResponse({
+                'success': False,
+                'error': f'Plan cannot be approved. Current status: {execution_plan.get_status_display()}'
+            }, status=400)
+        
+        comments = request.POST.get('comments', '')
+        send_email = request.POST.get('send_email', 'true').lower() == 'true'
+        
+        # Use transaction for data consistency
+        with transaction.atomic():
+            # Approve the plan
+            if execution_plan.approve(request.user):
+                # Create workflow history
+                PlanWorkflowHistory.objects.create(
+                    execution_plan=execution_plan,
+                    from_status='pending_approval',
+                    to_status='approved',
+                    changed_by=request.user,
+                    comments=comments or 'Plan approved'
+                )
+                
+                # Add comment if provided
+                if comments:
+                    PlanComment.objects.create(
+                        execution_plan=execution_plan,
+                        comment=comments,
+                        commented_by=request.user,
+                        is_internal=True
+                    )
+                
+                # Send email notification if requested
+                email_sent = False
+                email_message = ""
+                
+                if send_email:
+                    email_success, email_result = send_execution_plan_email(
+                        execution_plan=execution_plan,
+                        email_type='approved',
+                        custom_message=comments,
+                        include_excel=True,
+                        send_to_rm=True,
+                        send_to_client=True
+                    )
+                    
+                    if email_success:
+                        email_sent = True
+                        email_message = email_result
+                    else:
+                        logger.warning(f"Email failed for approved plan {execution_plan.plan_id}: {email_result}")
+                        email_message = f"Plan approved but email failed: {email_result}"
+                
+                return JsonResponse({
+                    'success': True, 
+                    'message': 'Plan approved successfully',
+                    'new_status': execution_plan.status,
+                    'email_sent': email_sent,
+                    'email_message': email_message
+                })
+            else:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'Failed to approve plan'
+                }, status=400)
+    
+    except Exception as e:
+        logger.error(f"Error approving plan with email: {str(e)}")
+        return JsonResponse({
+            'success': False, 
+            'error': 'An error occurred while approving the plan'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def mark_client_approved_with_email(request, plan_id):
+    """
+    Mark plan as client approved and send notification
+    """
+    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+    
+    # Check permission - only RM who created the plan can mark as client approved
+    if execution_plan.created_by != request.user:
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    if execution_plan.mark_client_approved():
+        # Create workflow history
+        PlanWorkflowHistory.objects.create(
+            execution_plan=execution_plan,
+            from_status='approved',
+            to_status='client_approved',
+            changed_by=request.user,
+            comments='Client approval confirmed'
+        )
+        
+        # Send email to operations team
+        send_execution_plan_email(
+            execution_plan=execution_plan,
+            email_type='client_approved',
+            include_excel=True,
+            send_to_rm=True,
+            send_to_client=False  # This goes to ops team
+        )
+        
+        # Notify operations team
+        notify_ops_team(execution_plan)
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Plan marked as client approved and operations team notified'
+        })
+    else:
+        return JsonResponse({'error': 'Failed to mark as client approved'}, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])  
+def complete_execution_with_email(request, plan_id):
+    """
+    Mark execution as completed and send completion email to client
+    """
+    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+    
+    # Check permission
+    if not can_execute_plan(request.user, execution_plan):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    try:
+        with transaction.atomic():
+            # Mark as completed
+            execution_plan.status = 'completed'
+            execution_plan.completed_at = timezone.now()
+            execution_plan.save()
+            
+            # Create workflow history
+            PlanWorkflowHistory.objects.create(
+                execution_plan=execution_plan,
+                from_status='in_execution',
+                to_status='completed',
+                changed_by=request.user,
+                comments='Execution completed successfully'
+            )
+            
+            # Generate fresh Excel with execution results
+            try:
+                excel_file_path = generate_execution_plan_excel(execution_plan)
+                if excel_file_path:
+                    execution_plan.excel_file = excel_file_path
+                    execution_plan.save()
+            except Exception as e:
+                logger.warning(f"Could not generate completion Excel: {str(e)}")
+            
+            # Send completion email
+            email_success, email_result = send_execution_plan_email(
+                execution_plan=execution_plan,
+                email_type='completed',
+                custom_message="All transactions in your execution plan have been completed successfully.",
+                include_excel=True,
+                send_to_rm=True,
+                send_to_client=True
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Execution completed successfully',
+                'email_sent': email_success,
+                'email_message': email_result
+            })
+            
+    except Exception as e:
+        logger.error(f"Error completing execution: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+# Modified existing view to include automatic email
+@login_required
+@require_http_methods(["POST"])
+def submit_for_approval_with_email(request, plan_id):
+    """
+    Submit execution plan for approval with email notification
+    """
+    try:
+        execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+        
+        # Check permission
+        if execution_plan.created_by != request.user:
+            return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+        
+        if execution_plan.status != 'draft':
+            return JsonResponse({
+                'success': False, 
+                'error': f'Plan cannot be submitted for approval. Current status: {execution_plan.get_status_display()}'
+            }, status=400)
+        
+        # Validate that plan has actions
+        if not execution_plan.actions.exists():
+            return JsonResponse({
+                'success': False, 
+                'error': 'Cannot submit plan without any actions'
+            }, status=400)
+        
+        # Use transaction to ensure data consistency
+        with transaction.atomic():
+            # Update plan status
+            execution_plan.status = 'pending_approval'
+            execution_plan.submitted_at = timezone.now()
+            execution_plan.save()
+            
+            # Create workflow history
+            PlanWorkflowHistory.objects.create(
+                execution_plan=execution_plan,
+                from_status='draft',
+                to_status='pending_approval',
+                changed_by=request.user,
+                comments='Plan submitted for approval'
+            )
+            
+            # Send email notification to approval managers
+            try:
+                # Find approval managers
+                approval_managers = User.objects.filter(
+                    role__in=['rm_head', 'business_head', 'business_head_ops', 'top_management']
+                )
+                
+                for manager in approval_managers:
+                    if manager.email:
+                        send_approval_notification_email(execution_plan, manager)
+                        
+            except Exception as e:
+                logger.warning(f"Failed to send approval notifications: {str(e)}")
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Plan submitted for approval successfully',
+            'new_status': execution_plan.status
+        })
+        
+    except Exception as e:
+        logger.error(f"Error submitting plan for approval: {str(e)}")
+        return JsonResponse({
+            'success': False, 
+            'error': 'Failed to submit plan for approval'
+        }, status=500)
+
+
+def send_approval_notification_email(execution_plan, manager):
+    """
+    Send email to manager for approval request
+    """
+    try:
+        subject = f"📋 Execution Plan Approval Required - {execution_plan.plan_name}"
+        
+        html_message = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background-color: #1C64FF; color: white; padding: 20px; text-align: center;">
+                <h2>Execution Plan Approval Required</h2>
+            </div>
+            
+            <div style="padding: 20px; background-color: #f9f9f9;">
+                <p>Dear {manager.get_full_name() or manager.username},</p>
+                
+                <p>A new execution plan requires your approval:</p>
+                
+                <div style="background-color: white; padding: 15px; margin: 15px 0; border-left: 4px solid #1C64FF;">
+                    <h3>Plan Details:</h3>
+                    <ul>
+                        <li><strong>Plan Name:</strong> {execution_plan.plan_name}</li>
+                        <li><strong>Plan ID:</strong> {execution_plan.plan_id}</li>
+                        <li><strong>Client:</strong> {execution_plan.client.name if hasattr(execution_plan.client, 'name') else 'N/A'}</li>
+                        <li><strong>Created By:</strong> {execution_plan.created_by.get_full_name() or execution_plan.created_by.username}</li>
+                        <li><strong>Submitted:</strong> {execution_plan.submitted_at.strftime('%B %d, %Y at %I:%M %p') if execution_plan.submitted_at else 'N/A'}</li>
+                        <li><strong>Total Actions:</strong> {execution_plan.actions.count()}</li>
+                    </ul>
+                </div>
+                
+                <p>Please log into the system to review and approve this execution plan.</p>
+                
+                <div style="text-align: center; margin: 20px 0;">
+                    <a href="{getattr(settings, 'SITE_URL', 'https://your-domain.com')}/execution-plans/{execution_plan.id}/" 
+                       style="background-color: #1C64FF; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+                        Review Plan
+                    </a>
+                </div>
+            </div>
+            
+            <div style="background-color: #333; color: white; padding: 15px; text-align: center; font-size: 12px;">
+                <p>This is an automated notification from the Investment Management System</p>
+            </div>
+        </div>
+        """
+        
+        text_message = f"""
+Execution Plan Approval Required
+
+Dear {manager.get_full_name() or manager.username},
+
+A new execution plan requires your approval:
+
+Plan Details:
+- Plan Name: {execution_plan.plan_name}
+- Plan ID: {execution_plan.plan_id}  
+- Client: {execution_plan.client.name if hasattr(execution_plan.client, 'name') else 'N/A'}
+- Created By: {execution_plan.created_by.get_full_name() or execution_plan.created_by.username}
+- Submitted: {execution_plan.submitted_at.strftime('%B %d, %Y at %I:%M %p') if execution_plan.submitted_at else 'N/A'}
+- Total Actions: {execution_plan.actions.count()}
+
+Please log into the system to review and approve this execution plan.
+
+Best regards,
+Investment Management System
+        """
+        
+        send_mail(
+            subject=subject,
+            message=text_message,
+            html_message=html_message,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@yourcompany.com'),
+            recipient_list=[manager.email],
+            fail_silently=False
+        )
+        
+        logger.info(f"Approval notification sent to {manager.email} for plan {execution_plan.plan_id}")
+        
+    except Exception as e:
+        logger.error(f"Error sending approval notification to {manager.email}: {str(e)}")
+
+
+# Utility function to send bulk emails
+def send_bulk_execution_plan_emails(execution_plans, email_type='updated'):
+    """
+    Send emails for multiple execution plans
+    """
+    results = []
+    
+    for plan in execution_plans:
+        try:
+            success, message = send_execution_plan_email(
+                execution_plan=plan,
+                email_type=email_type,
+                include_excel=True,
+                send_to_client=True,
+                send_to_rm=True
+            )
+            
+            results.append({
+                'plan_id': plan.plan_id,
+                'success': success,
+                'message': message
+            })
+            
+        except Exception as e:
+            results.append({
+                'plan_id': plan.plan_id,
+                'success': False,
+                'message': str(e)
+            })
+    
+    return results
+
+@login_required
+@require_http_methods(["POST"])
+def send_to_client_enhanced(request, plan_id):
+    """Enhanced send to client with comprehensive email handling and automatic client email detection"""
+    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+    
+    # Check access permission
+    if not can_access_plan(request.user, execution_plan):
+        return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+    
+    try:
+        # Get form data
+        email_to = request.POST.get('email_to', '').strip()
+        subject = request.POST.get('subject', '').strip()
+        message = request.POST.get('message', '').strip()
+        include_excel = request.POST.get('include_excel', 'false').lower() == 'true'
+        generate_fresh = request.POST.get('generate_fresh', 'false').lower() == 'true'
+        copy_to_rm = request.POST.get('copy_to_rm', 'false').lower() == 'true'
+        copy_to_ops = request.POST.get('copy_to_ops', 'false').lower() == 'true'
+        
+        # Auto-detect client email if not provided
+        if not email_to:
+            email_to = get_client_email(execution_plan)
+            if not email_to:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'No client email provided or found in database. Please enter email manually.'
+                })
+        
+        # Validate email format
+        from django.core.validators import validate_email
+        try:
+            validate_email(email_to)
+        except ValidationError:
+            return JsonResponse({
+                'success': False, 
+                'error': f'Invalid email address format: {email_to}'
+            })
+        
+        # Set default subject if not provided
+        if not subject:
+            if execution_plan.status == 'approved':
+                subject = f"✅ Your Investment Plan is Ready for Review - {execution_plan.plan_name}"
+            elif execution_plan.status == 'completed':
+                subject = f"🎯 Investment Plan Executed Successfully - {execution_plan.plan_name}"
+            else:
+                subject = f"📋 Investment Plan Update - {execution_plan.plan_name}"
+        
+        # Set default message if not provided
+        if not message:
+            client_name = execution_plan.client.name if hasattr(execution_plan.client, 'name') else 'Valued Client'
+            rm_name = execution_plan.created_by.get_full_name() or execution_plan.created_by.username
+            
+            if execution_plan.status == 'approved':
+                message = f"""Dear {client_name},
+
+I hope this email finds you well.
+
+I'm pleased to inform you that your investment execution plan "{execution_plan.plan_name}" has been approved and is ready for your review.
+
+The plan includes {execution_plan.actions.count()} carefully selected action{'s' if execution_plan.actions.count() != 1 else ''} designed to optimize your investment portfolio based on our recent discussions and market analysis.
+
+Please review the attached execution plan details. Once you're satisfied with the plan, please confirm your approval so we can proceed with the execution.
+
+Key highlights of your plan:
+- Plan ID: {execution_plan.plan_id}
+- Total Actions: {execution_plan.actions.count()}
+- Created Date: {execution_plan.created_at.strftime('%B %d, %Y') if execution_plan.created_at else 'N/A'}
+
+If you have any questions or would like to discuss any aspect of the plan, please don't hesitate to reach out to me directly.
+
+Thank you for your continued trust in our services.
+
+Best regards,
+{rm_name}
+{execution_plan.created_by.email if execution_plan.created_by.email else ''}"""
+            
+            elif execution_plan.status == 'completed':
+                message = f"""Dear {client_name},
+
+Excellent news! Your investment execution plan "{execution_plan.plan_name}" has been completed successfully.
+
+All {execution_plan.actions.count()} action{'s' if execution_plan.actions.count() != 1 else ''} in your plan have been executed as planned. Please find attached the detailed execution summary with all transaction confirmations.
+
+Execution Summary:
+- Plan ID: {execution_plan.plan_id}
+- Completion Date: {execution_plan.completed_at.strftime('%B %d, %Y') if execution_plan.completed_at else 'Today'}
+- Total Actions Executed: {execution_plan.actions.count()}
+- Success Rate: 100%
+
+Your portfolio has been updated according to the executed plan. You can expect to see these changes reflected in your statements within the next 1-2 business days.
+
+If you have any questions about the executed transactions or would like to discuss your portfolio further, please don't hesitate to contact me.
+
+Thank you for your trust in our services.
+
+Best regards,
+{rm_name}"""
+            
+            else:
+                message = f"""Dear {client_name},
+
+I hope this email finds you well.
+
+Your investment execution plan "{execution_plan.plan_name}" has been updated with new information.
+
+Plan Details:
+- Plan ID: {execution_plan.plan_id}
+- Current Status: {execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else execution_plan.status}
+- Total Actions: {execution_plan.actions.count()}
+
+Please review the attached plan details. If you have any questions or concerns, please don't hesitate to contact me.
+
+Best regards,
+{rm_name}"""
+        
+        # Prepare email recipients
+        recipients = [email_to]
+        cc_recipients = []
+        bcc_recipients = []
+        
+        # Add RM to CC if requested
+        if copy_to_rm and execution_plan.created_by and execution_plan.created_by.email:
+            if execution_plan.created_by.email not in recipients:
+                cc_recipients.append(execution_plan.created_by.email)
+        
+        # Add operations team to BCC if requested
+        if copy_to_ops:
+            ops_emails = User.objects.filter(
+                role__in=['ops_team_lead', 'ops_exec', 'business_head_ops'],
+                email__isnull=False
+            ).exclude(email='').values_list('email', flat=True)
+            
+            for ops_email in ops_emails:
+                if ops_email not in recipients and ops_email not in cc_recipients:
+                    bcc_recipients.append(ops_email)
+        
+        # Generate fresh Excel if requested and include_excel is True
+        excel_file_path = None
+        if include_excel:
+            if generate_fresh or not execution_plan.excel_file:
+                try:
+                    excel_file_path = generate_execution_plan_excel(execution_plan)
+                    if excel_file_path:
+                        execution_plan.excel_file = excel_file_path
+                        execution_plan.save()
+                        logger.info(f"Generated fresh Excel file for plan {execution_plan.plan_id}")
+                except Exception as e:
+                    logger.warning(f"Could not generate fresh Excel: {str(e)}")
+                    # Continue with existing file if available
+            
+            # Use existing file if fresh generation failed or wasn't requested
+            if execution_plan.excel_file:
+                excel_file_path = execution_plan.excel_file.path if hasattr(execution_plan.excel_file, 'path') else os.path.join(settings.MEDIA_ROOT, str(execution_plan.excel_file))
+        
+        # Create email message
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=message,  # Plain text version
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@yourcompany.com'),
+            to=recipients,
+            cc=cc_recipients if cc_recipients else None,
+            bcc=bcc_recipients if bcc_recipients else None,
+            reply_to=[execution_plan.created_by.email] if execution_plan.created_by and execution_plan.created_by.email else None
+        )
+        
+        # Create HTML version of the email
+        company_name = getattr(settings, 'COMPANY_NAME', 'Investment Management')
+        current_date = timezone.now().strftime('%B %d, %Y')
+        
+        html_message = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>{subject}</title>
+            <style>
+                body {{ 
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                    line-height: 1.6; 
+                    color: #333; 
+                    margin: 0; 
+                    padding: 0; 
+                    background-color: #f5f5f5;
+                }}
+                .container {{ 
+                    max-width: 600px; 
+                    margin: 20px auto; 
+                    background-color: #ffffff;
+                    border-radius: 10px;
+                    overflow: hidden;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                }}
+                .header {{ 
+                    background: linear-gradient(135deg, #1C64FF 0%, #0052CC 100%);
+                    color: white; 
+                    padding: 30px 20px; 
+                    text-align: center; 
+                }}
+                .header h1 {{
+                    margin: 0 0 10px 0;
+                    font-size: 24px;
+                    font-weight: 600;
+                }}
+                .header h2 {{
+                    margin: 0;
+                    font-size: 18px;
+                    font-weight: 400;
+                    opacity: 0.9;
+                }}
+                .content {{ 
+                    padding: 30px 20px; 
+                    white-space: pre-line; 
+                    font-size: 16px;
+                }}
+                .plan-details {{ 
+                    background-color: #f8f9fa; 
+                    padding: 20px; 
+                    margin: 20px 0; 
+                    border-left: 4px solid #1C64FF; 
+                    border-radius: 5px;
+                }}
+                .plan-details h3 {{
+                    margin-top: 0;
+                    color: #1C64FF;
+                    font-size: 18px;
+                }}
+                .plan-details ul {{
+                    margin: 0;
+                    padding-left: 20px;
+                }}
+                .plan-details li {{
+                    margin-bottom: 8px;
+                }}
+                .status-badge {{
+                    display: inline-block;
+                    padding: 4px 12px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }}
+                .status-approved {{ background-color: #d4edda; color: #155724; }}
+                .status-completed {{ background-color: #d1ecf1; color: #0c5460; }}
+                .status-pending {{ background-color: #fff3cd; color: #856404; }}
+                .footer {{ 
+                    background-color: #343a40; 
+                    color: white; 
+                    padding: 20px; 
+                    text-align: center; 
+                    font-size: 14px;
+                }}
+                .footer p {{
+                    margin: 5px 0;
+                }}
+                .disclaimer {{
+                    background-color: #e9ecef;
+                    padding: 15px;
+                    margin: 20px 0;
+                    border-radius: 5px;
+                    font-size: 12px;
+                    color: #6c757d;
+                    text-align: center;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>{company_name}</h1>
+                    <h2>Investment Execution Plan</h2>
+                </div>
+                
+                <div class="content">
+                    {message}
+                    
+                    <div class="plan-details">
+                        <h3>📋 Plan Information</h3>
+                        <ul>
+                            <li><strong>Plan Name:</strong> {execution_plan.plan_name}</li>
+                            <li><strong>Plan ID:</strong> {execution_plan.plan_id}</li>
+                            <li><strong>Status:</strong> 
+                                <span class="status-badge status-{execution_plan.status}">
+                                    {execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else execution_plan.status}
+                                </span>
+                            </li>
+                            <li><strong>Total Actions:</strong> {execution_plan.actions.count()}</li>
+                            <li><strong>Created Date:</strong> {execution_plan.created_at.strftime('%B %d, %Y') if execution_plan.created_at else 'N/A'}</li>
+                            <li><strong>Your Relationship Manager:</strong> {execution_plan.created_by.get_full_name() or execution_plan.created_by.username}</li>
+                        </ul>
+                    </div>
+                    
+                    {"<p><strong>📎 Attachment:</strong> Detailed execution plan (Excel format)</p>" if include_excel else ""}
+                </div>
+                
+                <div class="disclaimer">
+                    This email contains confidential information intended only for the specified recipient(s). 
+                    If you have received this email in error, please notify the sender immediately.
+                </div>
+                
+                <div class="footer">
+                    <p><strong>{company_name}</strong> | Investment Management Services</p>
+                    <p>Email sent on {current_date}</p>
+                    <p>This is an automated message from our Investment Management System</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Attach HTML version
+        email.attach_alternative(html_message, "text/html")
+        
+        # Attach Excel file if requested and available
+        excel_attached = False
+        if include_excel and excel_file_path and os.path.exists(excel_file_path):
+            try:
+                filename = f"{execution_plan.plan_id}_execution_plan.xlsx"
+                with open(excel_file_path, 'rb') as f:
+                    email.attach(
+                        filename, 
+                        f.read(), 
+                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                    )
+                excel_attached = True
+                logger.info(f"Excel file attached: {filename}")
+            except Exception as e:
+                logger.error(f"Error attaching Excel file: {str(e)}")
+                excel_attached = False
+        
+        # Send email
+        try:
+            email.send(fail_silently=False)
+            logger.info(f"Enhanced client email sent successfully for plan {execution_plan.plan_id} to {email_to}")
+            
+            # Create comment record for audit trail
+            attachment_note = " with Excel attachment" if excel_attached else ""
+            cc_note = f" (CC: {', '.join(cc_recipients)})" if cc_recipients else ""
+            bcc_note = f" (BCC: Operations team)" if bcc_recipients else ""
+            
+            PlanComment.objects.create(
+                execution_plan=execution_plan,
+                comment=f"Plan sent to client via enhanced email: {email_to}{attachment_note}{cc_note}{bcc_note}",
+                commented_by=request.user,
+                is_internal=True
+            )
+            
+            # Update plan metadata if needed
+            if not hasattr(execution_plan, 'client_communication_sent') or not execution_plan.client_communication_sent:
+                try:
+                    execution_plan.client_communication_sent = True
+                    execution_plan.save(update_fields=['client_communication_sent'])
+                except:
+                    pass  # Field might not exist in model
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Email sent successfully to {email_to}',
+                'details': {
+                    'recipient': email_to,
+                    'cc_recipients': cc_recipients,
+                    'excel_attached': excel_attached,
+                    'subject': subject,
+                    'timestamp': timezone.now().isoformat()
+                }
+            })
+            
+        except Exception as e:
+            logger.error(f"Error sending enhanced client email: {str(e)}")
+            return JsonResponse({
+                'success': False, 
+                'error': f'Failed to send email: {str(e)}'
+            })
+            
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid request data'})
+    except Exception as e:
+        logger.error(f"Unexpected error in send_to_client_enhanced: {str(e)}")
+        return JsonResponse({
+            'success': False, 
+            'error': f'An unexpected error occurred: {str(e)}'
+        })
+
+
+# Helper function to send completion email (used by completion notification)
+@login_required
+@require_http_methods(["POST"])
+def send_completion_email(request, plan_id):
+    """Send completion email directly (used by auto-completion detection)"""
+    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+    
+    if not can_access_plan(request.user, execution_plan):
+        return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+    
+    try:
+        # Auto-detect client email
+        client_email = get_client_email(execution_plan)
+        
+        if not client_email:
+            return JsonResponse({
+                'success': False, 
+                'error': 'No client email found for completion notification'
+            })
+        
+        # Send completion email using the enhanced email system
+        email_success, email_result = send_execution_plan_email(
+            execution_plan=execution_plan,
+            email_type='completed',
+            custom_message="All transactions in your execution plan have been completed successfully.",
+            include_excel=True,
+            send_to_rm=True,
+            send_to_client=True
+        )
+        
+        if email_success:
+            return JsonResponse({
+                'success': True,
+                'message': email_result,
+                'recipient': client_email
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': email_result
+            })
+            
+    except Exception as e:
+        logger.error(f"Error sending completion email: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)})

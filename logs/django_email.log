@@ -15,3 +15,5 @@ INFO 2025-07-11 12:17:37,269 views 19864 17340 Password reset email sent success
 INFO 2025-07-11 12:22:38,130 views 19864 26984 Password reset email sent successfully to sawaisushil@gmail.com
 INFO 2025-07-11 12:32:30,392 views 16656 2112 Password reset email sent successfully to sawaisushil@gmail.com
 INFO 2025-07-11 12:50:11,119 views 21044 26588 Password reset email sent successfully to sawaisushil@gmail.com
+ERROR 2025-07-11 18:04:11,264 views 3768 12936 Unexpected error in send_to_client_enhanced: 'EmailMessage' object has no attribute 'attach_alternative'
+ERROR 2025-07-11 18:04:19,193 views 3768 28208 Unexpected error in send_to_client_enhanced: 'EmailMessage' object has no attribute 'attach_alternative'

@@ -1,4 +1,4 @@
-# urls.py - Essential URL patterns for the CRM system
+# urls.py - Enhanced with email integration for execution plans
 
 from django.urls import path, include
 from . import views
@@ -11,7 +11,7 @@ urlpatterns = [
     # Dashboard
     path('dashboard/', views.dashboard, name='dashboard'),
     
-    # Portfolio Management - ADD THIS NEW SECTION
+    # Portfolio Management
     path('portfolio/', include([
         # Dashboard and main views
         path('', views.portfolio_dashboard, name='portfolio_dashboard'),
@@ -177,6 +177,69 @@ urlpatterns = [
         path('compliance/', views.bh_ops_compliance, name='bh_ops_compliance'),
     ])),
 
+    # ===== ENHANCED EXECUTION PLANS WITH EMAIL INTEGRATION =====
+    path('execution-plans/', include([
+        # Main execution plan views
+        path('', views.ongoing_plans, name='ongoing_plans'),
+        path('create/', views.create_plan, name='create_plan'),
+        path('create/<str:client_id>/', views.create_plan_step2, name='create_plan_step2'),
+        path('save/', views.save_execution_plan, name='save_execution_plan'),
+        path('<int:plan_id>/', views.execution_plan_detail, name='execution_plan_detail'),
+        path('completed/', views.completed_plans, name='completed_plans'),
+        path('reports/', views.execution_reports, name='execution_reports'),
+        path('templates/', views.plan_templates, name='plan_templates'),
+        path('<int:plan_id>/analytics/', views.plan_analytics, name='plan_analytics'),
+        
+        # ===== ENHANCED WORKFLOW ACTIONS WITH EMAIL =====
+        # Original workflow actions (kept for backward compatibility)
+        path('<int:plan_id>/submit/', views.submit_for_approval, name='submit_for_approval'),
+        path('<int:plan_id>/approve/', views.approve_plan, name='approve_plan'),
+        path('<int:plan_id>/reject/', views.reject_plan, name='reject_plan'),
+        path('<int:plan_id>/mark-client-approved/', views.mark_client_approved, name='mark_client_approved'),
+        path('<int:plan_id>/start-execution/', views.start_execution, name='start_execution'),
+        path('<int:plan_id>/send-to-client/', views.send_to_client, name='send_to_client'),
+        
+        # ===== NEW EMAIL-ENHANCED WORKFLOW ACTIONS =====
+        path('<int:plan_id>/submit-with-email/', views.submit_for_approval_with_email, name='submit_for_approval_with_email'),
+        path('<int:plan_id>/approve-with-email/', views.approve_plan_with_email, name='approve_plan_with_email'),
+        path('<int:plan_id>/mark-client-approved-with-email/', views.mark_client_approved_with_email, name='mark_client_approved_with_email'),
+        path('<int:plan_id>/complete-with-email/', views.complete_execution_with_email, name='complete_execution_with_email'),
+        
+        path('<int:plan_id>/send-to-client-enhanced/', views.send_to_client_enhanced, name='send_to_client_enhanced'),
+
+        
+        # ===== ACTION MANAGEMENT =====
+        path('actions/<int:action_id>/details/', views.get_action_details, name='get_action_details'),
+        path('actions/<int:action_id>/execute/', views.execute_action, name='execute_action'),
+        path('actions/<int:action_id>/mark-failed/', views.mark_action_failed, name='mark_action_failed'),
+        
+        # ===== WORKFLOW TRACKING =====
+        path('<int:plan_id>/track-workflow/', views.track_workflow, name='track_workflow'),
+        
+        # ===== COMMENTS AND COMMUNICATION =====
+        path('<int:plan_id>/add-comment/', views.add_comment, name='add_comment'),
+        path('<int:plan_id>/comments/add/', views.add_comment, name='add_comment_alt'),
+        
+        # ===== FILE OPERATIONS =====
+        path('<int:plan_id>/download-excel/', views.download_excel, name='download_excel'),
+        path('<int:plan_id>/generate-excel/', views.generate_excel, name='generate_excel'),
+        path('<int:plan_id>/email-plan/', views.email_plan, name='email_plan'),
+        
+        # ===== TEMPLATE MANAGEMENT =====
+        path('templates/save/', views.save_template, name='save_template'),
+        path('templates/<int:template_id>/load/', views.load_template_ajax, name='load_template_ajax'),
+        
+        # ===== BULK OPERATIONS =====
+        path('bulk-action/', views.bulk_action_plans, name='bulk_action_plans'),
+        
+        # ===== API ENDPOINTS =====
+        path('api/client/<str:client_id>/portfolio/', views.client_portfolio_ajax, name='client_portfolio_ajax'),
+        path('api/schemes/search/', views.search_schemes_ajax, name='search_schemes_ajax'),
+        path('api/execution-plans/save/', views.save_execution_plan, name='save_execution_plan_api'),
+        path('api/templates/<int:template_id>/', views.load_template_ajax, name='load_template_ajax_api'),
+        path('api/templates/save/', views.save_template, name='save_template_api'),
+    ])),
+
     # API endpoints
     path('api/', include([
         path('dashboard-stats/', views.get_dashboard_stats, name='get_dashboard_stats'),
@@ -194,49 +257,10 @@ urlpatterns = [
         path('lead-search/', views.quick_lead_search, name='quick_lead_search'),
     ])),
     
-    path('execution-plans/', include([
-        path('', views.ongoing_plans, name='ongoing_plans'),
-        path('create/', views.create_plan, name='create_plan'),
-        path('create/<str:client_id>/', views.create_plan_step2, name='create_plan_step2'),  # Changed to str
-        path('save/', views.save_execution_plan, name='save_execution_plan'),
-        path('<int:plan_id>/', views.plan_detail, name='plan_detail'),
-        path('actions/<int:action_id>/details/', views.get_action_details, name='get_action_details'),
-        path('<int:plan_id>/submit/', views.submit_for_approval, name='submit_for_approval'),
-        path('<int:plan_id>/track-workflow/', views.track_workflow, name='track_workflow'),
-        path('<int:plan_id>/approve/', views.approve_plan, name='approve_plan'),
-        path('<int:plan_id>/reject/', views.reject_plan, name='reject_plan'),
-        path('<int:plan_id>/send-to-client/', views.send_to_client, name='send_to_client'),
-        path('<int:plan_id>/mark-client-approved/', views.mark_client_approved, name='mark_client_approved'),
-        path('<int:plan_id>/start-execution/', views.start_execution, name='start_execution'),
-        path('<int:plan_id>/add-comment/', views.add_comment, name='add_comment'),
-        path('<int:plan_id>/analytics/', views.plan_analytics, name='plan_analytics'),
-        path('action/<int:action_id>/execute/', views.execute_action, name='execute_action'),
-        path('action/<int:action_id>/mark-failed/', views.mark_action_failed, name='mark_action_failed'),
-        path('completed/', views.completed_plans, name='completed_plans'),
-        path('reports/', views.execution_reports, name='execution_reports'),
-        path('templates/', views.plan_templates, name='plan_templates'),
-        path('templates/save/', views.save_template, name='save_template'),
-        path('templates/<int:template_id>/load/', views.load_template_ajax, name='load_template_ajax'),
-        path('bulk-action/', views.bulk_action_plans, name='bulk_action_plans'),
-        path('<int:plan_id>/', views.execution_plan_detail, name='execution_plan_detail'),
-        
-        # API endpoints for execution plans - UPDATED to handle string client IDs
-        path('api/client/<str:client_id>/portfolio/', views.client_portfolio_ajax, name='client_portfolio_ajax'),  # Changed to str
-        path('api/schemes/search/', views.search_schemes_ajax, name='search_schemes_ajax'),
-        path('api/execution-plans/save/', views.save_execution_plan, name='save_execution_plan'),
-        path('api/templates/<int:template_id>/', views.load_template_ajax, name='load_template_ajax'),
-        path('api/templates/save/', views.save_template, name='save_template'),
-    ])),
-    
+    # Password Reset
     path('password-reset/', views.password_reset_request, name='password_reset_request'),
     path('password-reset/confirm/<uidb64>/<token>/', views.password_reset_confirm, name='password_reset_confirm'),
     
-
     # Analytics
     path('analytics/', views.analytics_dashboard, name='analytics_dashboard'),
-    path('execution-plans/<int:plan_id>/download-excel/', views.download_excel, name='download_excel'),
-    path('execution-plans/<int:plan_id>/generate-excel/', views.generate_excel, name='generate_excel'),
-    path('execution-plans/<int:plan_id>/email-plan/', views.email_plan, name='email_plan'),
-    
-    
 ]
