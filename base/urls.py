@@ -6,7 +6,6 @@ from . import views
 urlpatterns = [
     # Authentication
     path('', views.user_login, name='login'),
-    path('login/', views.user_login, name='login'),
     path('logout/', views.user_logout, name='logout'),
     
     # Dashboard
@@ -229,10 +228,15 @@ urlpatterns = [
         path('api/templates/save/', views.save_template, name='save_template'),
     ])),
     
+    path('password-reset/', views.password_reset_request, name='password_reset_request'),
+    path('password-reset/confirm/<uidb64>/<token>/', views.password_reset_confirm, name='password_reset_confirm'),
+    
 
     # Analytics
     path('analytics/', views.analytics_dashboard, name='analytics_dashboard'),
     path('execution-plans/<int:plan_id>/download-excel/', views.download_excel, name='download_excel'),
     path('execution-plans/<int:plan_id>/generate-excel/', views.generate_excel, name='generate_excel'),
     path('execution-plans/<int:plan_id>/email-plan/', views.email_plan, name='email_plan'),
+    
+    
 ]

@@ -49,6 +49,7 @@ from openpyxl.utils import get_column_letter
 from decimal import Decimal, InvalidOperation
 from django.template.loader import render_to_string
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side, NamedStyle
+from django.views.decorators.csrf import ensure_csrf_cookie, csrf_protect
 
 # Helper functions for role checks
 def is_top_management(user):
@@ -72,8 +73,9 @@ def is_ops_team_lead(user):
 def is_ops_exec(user):
     return user.role == 'ops_exec'
 
-# Login View
+@ensure_csrf_cookie
 def user_login(request):
+    """Enhanced login view with CSRF token"""
     if request.user.is_authenticated:
         return redirect('dashboard')
 
@@ -85,8 +87,15 @@ def user_login(request):
             login(request, user)
             return redirect('dashboard')
         else:
+            messages.error(request, 'Invalid credentials')
             return render(request, 'base/login.html', {'error': 'Invalid credentials'})
-    return render(request, 'base/login.html')
+    
+    # Ensure CSRF token is available in template
+    context = {
+        'csrf_token': get_token(request)
+    }
+    return render(request, 'base/login.html', context)
+
 
 # Logout View
 @login_required
@@ -9638,3 +9647,229 @@ def track_workflow(request, plan_id):
     except Exception as e:
         logger.error(f"Error tracking workflow: {str(e)}")
         return JsonResponse({'success': False, 'error': 'Failed to track workflow change'}, status=500)
+    
+    
+
+
+####RESET PASSWORD######
+
+
+from django.contrib.auth.tokens import default_token_generator
+from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.urls import reverse
+from django.contrib.sites.shortcuts import get_current_site
+from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+import json
+import logging
+from django.middleware.csrf import get_token
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
+
+@ensure_csrf_cookie
+@require_http_methods(["POST"])
+def password_reset_request(request):
+    """
+    Handle password reset requests via AJAX
+    """
+    try:
+        data = json.loads(request.body)
+        username_or_email = data.get('username_or_email', '').strip().lower()
+        
+        if not username_or_email:
+            return JsonResponse({
+                'success': False,
+                'message': 'Username or email is required.'
+            })
+        
+        # Try to find user by username or email
+        user = None
+        
+        # First try by email
+        if '@' in username_or_email:
+            try:
+                user = User.objects.get(email__iexact=username_or_email, is_active=True)
+            except User.DoesNotExist:
+                pass
+        
+        # If not found by email, try by username
+        if not user:
+            try:
+                user = User.objects.get(username__iexact=username_or_email, is_active=True)
+            except User.DoesNotExist:
+                pass
+        
+        # Security: Always return success message to prevent user enumeration
+        if not user:
+            return JsonResponse({
+                'success': True,
+                'message': 'If an account with that username or email exists, password reset instructions have been sent.'
+            })
+        
+        # Check if user has an email address
+        if not user.email:
+            return JsonResponse({
+                'success': True,
+                'message': 'If an account with that username or email exists, password reset instructions have been sent.'
+            })
+        
+        # Generate password reset token
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        
+        # Get current site
+        current_site = get_current_site(request)
+        
+        # Build reset URL
+        reset_url = request.build_absolute_uri(
+            reverse('password_reset_confirm', kwargs={'uidb64': uid, 'token': token})
+        )
+        
+        # Prepare email context
+        context = {
+            'user': user,
+            'reset_url': reset_url,
+            'site_name': current_site.name,
+            'domain': current_site.domain,
+            'protocol': 'https' if request.is_secure() else 'http',
+            'company_name': getattr(settings, 'COMPANY_NAME', 'Financial CRM'),
+        }
+        
+        # Render email templates
+        subject = f"Password Reset - {context['company_name']}"
+        email_template_name = 'registration/password_reset_email.html'
+        email_template_text = 'registration/password_reset_email.txt'
+        
+        try:
+            # Try HTML template first
+            html_message = render_to_string(email_template_name, context)
+            text_message = render_to_string(email_template_text, context)
+        except:
+            # Fallback to simple text message
+            html_message = f"""
+            <h2>Password Reset Request</h2>
+            <p>Hello {user.get_full_name() or user.username},</p>
+            <p>You have requested a password reset for your {context['company_name']} account.</p>
+            <p>Click the link below to reset your password:</p>
+            <p><a href="{reset_url}" style="background-color: #1C64FF; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a></p>
+            <p>If you didn't request this password reset, please ignore this email.</p>
+            <p>This link will expire in 24 hours for security reasons.</p>
+            <br>
+            <p>Best regards,<br>{context['company_name']} Team</p>
+            """
+            
+            text_message = f"""
+            Password Reset Request
+            
+            Hello {user.get_full_name() or user.username},
+            
+            You have requested a password reset for your {context['company_name']} account.
+            
+            Click the link below to reset your password:
+            {reset_url}
+            
+            If you didn't request this password reset, please ignore this email.
+            This link will expire in 24 hours for security reasons.
+            
+            Best regards,
+            {context['company_name']} Team
+            """
+        
+        # Send email
+        try:
+            send_mail(
+                subject=subject,
+                message=text_message,
+                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com'),
+                recipient_list=[user.email],
+                html_message=html_message,
+                fail_silently=False,
+            )
+            
+            logger.info(f"Password reset email sent successfully to {user.email}")
+            
+        except Exception as e:
+            logger.error(f"Failed to send password reset email to {user.email}: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'message': 'Failed to send reset email. Please try again later or contact support.'
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Password reset instructions have been sent to your email address.'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': 'Invalid request format.'
+        })
+    except Exception as e:
+        logger.error(f"Unexpected error in password reset: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': 'An unexpected error occurred. Please try again later.'
+        })
+
+
+def password_reset_confirm(request, uidb64, token):
+    """
+    Handle password reset confirmation page
+    """
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+    
+    # Check if token is valid
+    if user is not None and default_token_generator.check_token(user, token):
+        validlink = True
+        
+        if request.method == 'POST':
+            password1 = request.POST.get('new_password1')
+            password2 = request.POST.get('new_password2')
+            
+            # Validate passwords
+            if not password1 or not password2:
+                messages.error(request, 'Both password fields are required.')
+            elif password1 != password2:
+                messages.error(request, 'Passwords do not match.')
+            elif len(password1) < 8:
+                messages.error(request, 'Password must be at least 8 characters long.')
+            else:
+                # Set new password
+                user.set_password(password1)
+                user.save()
+                
+                # Log the user out from all sessions for security
+                from django.contrib.sessions.models import Session
+                for session in Session.objects.all():
+                    try:
+                        session_data = session.get_decoded()
+                        if session_data.get('_auth_user_id') == str(user.id):
+                            session.delete()
+                    except:
+                        pass
+                
+                messages.success(request, 'Your password has been reset successfully. You can now log in with your new password.')
+                return redirect('login')
+    else:
+        validlink = False
+        messages.error(request, 'This password reset link is invalid or has expired.')
+    
+    context = {
+        'validlink': validlink,
+        'user': user,
+        'uidb64': uidb64,
+        'token': token,
+    }
+    
+    return render(request, 'registration/password_reset_confirm.html', context)
+
+

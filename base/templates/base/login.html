@@ -22,6 +22,8 @@
             --border-color: #D9D9D9;
             --accent-color: #C3E4FF;
             --transition-speed: 0.3s;
+            --error-color: #dc3545;
+            --success-color: #198754;
         }
 
         * {
@@ -304,6 +306,134 @@
             to { transform: translateY(-50%) rotate(360deg); }
         }
 
+        /* Forgot Password Link Styling */
+        .forgot-password-container {
+            text-align: center;
+            margin: 1.5rem 0 1rem;
+        }
+
+        .forgot-password-link {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all var(--transition-speed) ease;
+            padding: 0.5rem 0;
+        }
+
+        .forgot-password-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0.25rem;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--primary-color);
+            transition: width var(--transition-speed) ease;
+        }
+
+        .forgot-password-link:hover {
+            color: #1557e6;
+            transform: translateY(-1px);
+        }
+
+        .forgot-password-link:hover::after {
+            width: 100%;
+        }
+
+        .forgot-password-link i {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        /* Admin Panel Link Styling */
+        .admin-panel-container {
+            text-align: center;
+            margin: 1rem 0 1.5rem;
+        }
+
+        .admin-panel-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+            text-decoration: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all var(--transition-speed) ease;
+            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .admin-panel-link::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+            transition: all 0.6s ease;
+        }
+
+        .admin-panel-link:hover {
+            background: linear-gradient(135deg, #495057 0%, #343a40 100%);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(108, 117, 125, 0.3);
+        }
+
+        .admin-panel-link:hover::before {
+            left: 100%;
+        }
+
+        .admin-panel-link i:first-child {
+            font-size: 1rem;
+        }
+
+        .admin-panel-link i:last-child {
+            font-size: 0.75rem;
+            opacity: 0.8;
+        }
+
+        .admin-panel-link span {
+            flex: 1;
+        }
+
+        /* Alternative Admin Panel Styles - uncomment to use different style */
+        /*
+        .admin-panel-link {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            border: 2px solid transparent;
+        }
+
+        .admin-panel-link:hover {
+            background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+            border-color: #dc3545;
+        }
+        */
+
+        /* Dark theme admin button - uncomment for dark theme */
+        /*
+        .admin-panel-link {
+            background: linear-gradient(135deg, #212529 0%, #16181b 100%);
+            border: 2px solid #343a40;
+        }
+
+        .admin-panel-link:hover {
+            background: linear-gradient(135deg, #16181b 0%, #0d0e0f 100%);
+            border-color: #6c757d;
+        }
+        */
+
         .login-footer {
             text-align: center;
             margin-top: 2rem;
@@ -387,6 +517,56 @@
             font-weight: 500;
         }
 
+        /* Modal Styles for Forgot Password */
+        .modal-content {
+            border-radius: 16px;
+            border: none;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        .modal-header {
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.5rem 2rem 1rem;
+            border-radius: 16px 16px 0 0;
+        }
+
+        .modal-title {
+            color: var(--primary-color);
+            font-weight: 700;
+            font-size: 1.25rem;
+        }
+
+        .modal-body {
+            padding: 1.5rem 2rem;
+        }
+
+        .modal-footer {
+            border-top: 1px solid var(--border-color);
+            padding: 1rem 2rem 1.5rem;
+            border-radius: 0 0 16px 16px;
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            border: 2px solid var(--border-color);
+            color: var(--secondary-text);
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all var(--transition-speed) ease;
+        }
+
+        .btn-secondary:hover {
+            background: #e9ecef;
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .text-muted {
+            color: var(--secondary-text) !important;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
         /* Responsive Design */
         @media (max-width: 992px) {
             .login-wrapper {
@@ -458,36 +638,42 @@
             }
         }
 
-        @media (max-width: 480px) {
-            .image-section,
-            .form-section {
-                padding: 1rem;
-            }
-            
-            .image-section {
-                min-height: 35vh;
-            }
-            
-            .login-title {
-                font-size: 1.75rem;
-            }
+            @media (max-width: 480px) {
+                .image-section,
+                .form-section {
+                    padding: 1rem;
+                }
+                
+                .image-section {
+                    min-height: 35vh;
+                }
+                
+                .login-title {
+                    font-size: 1.75rem;
+                }
 
-            .form-control {
-                padding: 0.9rem 1.1rem;
-            }
+                .form-control {
+                    padding: 0.9rem 1.1rem;
+                }
 
-            .btn-primary {
-                padding: 0.9rem;
+                .btn-primary {
+                    padding: 0.9rem;
+                }
+
+                .admin-panel-link {
+                    padding: 0.6rem 1.2rem;
+                    font-size: 0.85rem;
+                    gap: 0.6rem;
+                }
+                
+                .welcome-text h2 {
+                    font-size: 1.75rem;
+                }
+                
+                .welcome-text p {
+                    font-size: 0.95rem;
+                }
             }
-            
-            .welcome-text h2 {
-                font-size: 1.75rem;
-            }
-            
-            .welcome-text p {
-                font-size: 0.95rem;
-            }
-        }
 
         /* Large screens - optimize background image display */
         @media (min-width: 1200px) {
@@ -567,9 +753,6 @@
             <div class="login-container">
                 <!-- Header Section -->
                 <div class="login-header">
-                    <!-- <div class="login-icon">
-                        <i class="fas fa-chart-line"></i>
-                    </div> -->
                     <h1 class="login-title">Finployee</h1>
                     <p class="login-subtitle">Login here to access</p>
                 </div>
@@ -656,10 +839,75 @@
                     </div>
                 </form>
 
+                <!-- Forgot Password Link -->
+                <div class="forgot-password-container">
+                    <a href="#" class="forgot-password-link" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">
+                        <i class="fas fa-key"></i>
+                        Forgot your password?
+                    </a>
+                </div>
+
+                <!-- Admin Panel Access -->
+                <div class="admin-panel-container">
+                    <a href="{% url 'admin:index' %}" class="admin-panel-link" target="_blank">
+                        <i class="fas fa-cog"></i>
+                        <span>Admin Panel</span>
+                        <i class="fas fa-external-link-alt"></i>
+                    </a>
+                </div>
+
                 <!-- Footer -->
                 <div class="login-footer">
                     <p>Need help? <a href="#" id="supportLink">Contact support</a></p>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-labelledby="forgotPasswordModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="forgotPasswordModalLabel">
+                        <i class="fas fa-key me-2"></i>Reset Password
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="forgotPasswordForm">
+                    <div class="modal-body">
+                        <p class="text-muted mb-4">
+                            Enter your username or email address and we'll send you instructions to reset your password.
+                        </p>
+                        
+                        <div class="mb-3">
+                            <label for="resetUsername" class="form-label">
+                                <i class="fas fa-user me-2"></i>Username or Email
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="resetUsername" 
+                                   name="username_or_email" 
+                                   placeholder="Enter your username or email address" 
+                                   required>
+                            <div class="invalid-feedback">
+                                Please enter your username or email address.
+                            </div>
+                        </div>
+
+                        <!-- Success/Error messages for modal -->
+                        <div id="modalMessages" class="mb-3" style="display: none;"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="resetPasswordBtn">
+                            <i class="fas fa-paper-plane me-2"></i>
+                            <span class="btn-text">Send Reset Link</span>
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -676,6 +924,12 @@
             const passwordInput = document.getElementById('password');
             const toggleIcon = document.getElementById('toggleIcon');
             const usernameInput = document.getElementById('username');
+            
+            // Forgot password elements
+            const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+            const resetPasswordBtn = document.getElementById('resetPasswordBtn');
+            const resetBtnText = resetPasswordBtn.querySelector('.btn-text');
+            const modalMessages = document.getElementById('modalMessages');
 
             // Form validation
             loginForm.addEventListener('submit', function(event) {
@@ -690,6 +944,89 @@
                 }
                 
                 loginForm.classList.add('was-validated');
+            });
+
+            // Forgot password form submission
+            forgotPasswordForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                
+                if (!forgotPasswordForm.checkValidity()) {
+                    forgotPasswordForm.classList.add('was-validated');
+                    return;
+                }
+
+                // Show loading state
+                resetPasswordBtn.classList.add('loading');
+                resetPasswordBtn.disabled = true;
+                resetBtnText.textContent = 'Sending...';
+
+                // Get form data
+                const formData = new FormData(forgotPasswordForm);
+                const usernameOrEmail = formData.get('username_or_email');
+
+                // Simulate API call (replace with actual endpoint)
+                fetch('/password-reset/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({
+                        username_or_email: usernameOrEmail
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showModalMessage('success', 'Password reset instructions have been sent to your email address.');
+                        forgotPasswordForm.reset();
+                        forgotPasswordForm.classList.remove('was-validated');
+                    } else {
+                        showModalMessage('error', data.message || 'An error occurred. Please try again.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showModalMessage('error', 'Network error. Please check your connection and try again.');
+                })
+                .finally(() => {
+                    // Reset button state
+                    resetPasswordBtn.classList.remove('loading');
+                    resetPasswordBtn.disabled = false;
+                    resetBtnText.textContent = 'Send Reset Link';
+                });
+            });
+
+            // Function to show messages in modal
+            function showModalMessage(type, message) {
+                const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+                const iconClass = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+                
+                modalMessages.innerHTML = `
+                    <div class="alert ${alertClass}" role="alert">
+                        <i class="fas ${iconClass}"></i>
+                        <span>${message}</span>
+                    </div>
+                `;
+                modalMessages.style.display = 'block';
+
+                // Auto-hide success messages after 5 seconds
+                if (type === 'success') {
+                    setTimeout(() => {
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('forgotPasswordModal'));
+                        modal.hide();
+                    }, 3000);
+                }
+            }
+
+            // Clear modal messages when modal is closed
+            document.getElementById('forgotPasswordModal').addEventListener('hidden.bs.modal', function() {
+                modalMessages.style.display = 'none';
+                forgotPasswordForm.reset();
+                forgotPasswordForm.classList.remove('was-validated');
+                resetPasswordBtn.classList.remove('loading');
+                resetPasswordBtn.disabled = false;
+                resetBtnText.textContent = 'Send Reset Link';
             });
 
             // Password visibility toggle
@@ -738,6 +1075,14 @@
                 if (e.key === 'Enter' && (e.target === usernameInput || e.target === passwordInput)) {
                     e.preventDefault();
                     loginForm.dispatchEvent(new Event('submit'));
+                }
+
+                // Escape key to close modal
+                if (e.key === 'Escape') {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('forgotPasswordModal'));
+                    if (modal) {
+                        modal.hide();
+                    }
                 }
             });
 
@@ -836,6 +1181,110 @@
                     loginBtn.focus();
                 }
             });
+
+            // Enhanced admin panel link interactions
+            const adminPanelLink = document.querySelector('.admin-panel-link');
+            if (adminPanelLink) {
+                adminPanelLink.addEventListener('mouseenter', function() {
+                    this.style.willChange = 'transform, box-shadow';
+                });
+                
+                adminPanelLink.addEventListener('mouseleave', function() {
+                    this.style.willChange = 'auto';
+                });
+
+                // Add click tracking for analytics (optional)
+                adminPanelLink.addEventListener('click', function() {
+                    console.log('Admin panel accessed from login page');
+                    // You can add analytics tracking here
+                });
+            }
+
+            // Enhanced forgot password link interactions
+            const forgotPasswordLink = document.querySelector('.forgot-password-link');
+            forgotPasswordLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                const modal = new bootstrap.Modal(document.getElementById('forgotPasswordModal'));
+                modal.show();
+                
+                // Focus on the input field when modal opens
+                setTimeout(() => {
+                    document.getElementById('resetUsername').focus();
+                }, 300);
+            });
+
+            // Form validation for reset password
+            const resetUsernameInput = document.getElementById('resetUsername');
+            resetUsernameInput.addEventListener('input', function() {
+                if (this.value.trim() === '') {
+                    this.classList.add('is-invalid');
+                } else {
+                    this.classList.remove('is-invalid');
+                }
+            });
+
+            // Email validation for reset form
+            resetUsernameInput.addEventListener('blur', function() {
+                const value = this.value.trim();
+                const isEmail = value.includes('@');
+                const isValid = value.length > 0;
+                
+                if (!isValid) {
+                    this.classList.add('is-invalid');
+                    this.nextElementSibling.textContent = 'Please enter your username or email address.';
+                } else if (isEmail && !isValidEmail(value)) {
+                    this.classList.add('is-invalid');
+                    this.nextElementSibling.textContent = 'Please enter a valid email address.';
+                } else {
+                    this.classList.remove('is-invalid');
+                }
+            });
+
+            // Email validation helper function
+            function isValidEmail(email) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return emailRegex.test(email);
+            }
+
+            // Prevent multiple form submissions
+            let isSubmitting = false;
+            forgotPasswordForm.addEventListener('submit', function(e) {
+                if (isSubmitting) {
+                    e.preventDefault();
+                    return;
+                }
+                isSubmitting = true;
+                
+                // Reset flag after a delay
+                setTimeout(() => {
+                    isSubmitting = false;
+                }, 3000);
+            });
+
+            // Add loading animation for better UX
+            function addLoadingAnimation(button) {
+                button.classList.add('loading');
+                button.disabled = true;
+            }
+
+            function removeLoadingAnimation(button) {
+                button.classList.remove('loading');
+                button.disabled = false;
+            }
+
+            // Initialize tooltips if Bootstrap tooltips are available
+            if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                tooltipTriggerList.map(function (tooltipTriggerEl) {
+                    return new bootstrap.Tooltip(tooltipTriggerEl);
+                });
+            }
+
+            // Print debug info for development
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                console.log('Login page loaded successfully');
+                console.log('Forgot password functionality initialized');
+            }
         });
     </script>
 </body>

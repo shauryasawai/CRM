@@ -1,0 +1,16 @@
+ERROR 2025-07-11 11:15:15,720 views 28704 8616 Unexpected error in password reset: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
+ERROR 2025-07-11 11:34:10,518 views 28460 24256 Failed to send password reset email to sawaisushil@gmail.com: (535, b'5.7.8 Username and Password not accepted. For more information, go to\n5.7.8  https://support.google.com/mail/?p=BadCredentials d9443c01a7336-23de436ee28sm37734075ad.257 - gsmtp')
+ERROR 2025-07-11 11:38:18,332 views 21304 7220 Failed to send password reset email to sawaisushil@gmail.com: (535, b'5.7.8 Username and Password not accepted. For more information, go to\n5.7.8  https://support.google.com/mail/?p=BadCredentials d2e1a72fcca58-74eb9f22d93sm4350967b3a.89 - gsmtp')
+INFO 2025-07-11 11:42:54,638 views 28992 26208 Password reset email sent successfully to sawaisushil@gmail.com
+INFO 2025-07-11 11:51:12,500 views 29396 23492 Password reset email sent successfully to sawaisushil@gmail.com
+INFO 2025-07-11 11:56:53,496 views 10724 13556 Password reset email sent successfully to sawaisushil@gmail.com
+INFO 2025-07-11 12:00:34,195 views 10724 19572 Password reset email sent successfully to sawaisushil@gmail.com
+INFO 2025-07-11 12:17:37,269 views 19864 17340 Password reset email sent successfully to sawaisushil@gmail.com
+INFO 2025-07-11 12:22:38,130 views 19864 26984 Password reset email sent successfully to sawaisushil@gmail.com
+INFO 2025-07-11 12:32:30,392 views 16656 2112 Password reset email sent successfully to sawaisushil@gmail.com
