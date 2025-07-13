@@ -9872,7 +9872,241 @@ def password_reset_confirm(request, uidb64, token):
     }
     
     return render(request, 'registration/password_reset_confirm.html', context)
+# Add this view to your views.py
 
+@login_required
+@require_http_methods(["GET"])
+def get_action_statuses(request, plan_id):
+    """Get action statuses for execution plan (AJAX endpoint)"""
+    try:
+        execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+        
+        # Check access permission
+        if not can_access_plan(request.user, execution_plan):
+            return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+        
+        # Get all actions for this plan
+        actions = execution_plan.actions.all().select_related('scheme', 'target_scheme', 'executed_by')
+        
+        action_data = []
+        for action in actions:
+            # Get scheme information
+            scheme_name = "Unknown Scheme"
+            if action.scheme:
+                scheme_name = action.scheme.scheme_name
+            
+            target_scheme_name = ""
+            if action.target_scheme:
+                target_scheme_name = action.target_scheme.scheme_name
+            
+            # Get execution details
+            executed_by_name = ""
+            if action.executed_by:
+                executed_by_name = action.executed_by.get_full_name() or action.executed_by.username
+            
+            # Get action display name
+            action_type_display = action.get_action_type_display() if hasattr(action, 'get_action_type_display') else action.action_type
+            
+            # Get status display
+            status_display = action.get_status_display() if hasattr(action, 'get_status_display') else action.status
+            
+            action_info = {
+                'id': action.id,
+                'action_type': action.action_type,
+                'action_type_display': action_type_display,
+                'scheme_name': scheme_name,
+                'target_scheme_name': target_scheme_name,
+                'amount': str(action.amount) if action.amount else '',
+                'units': str(action.units) if action.units else '',
+                'status': action.status,
+                'status_display': status_display,
+                'priority': action.priority,
+                'executed_by': executed_by_name,
+                'executed_at': action.executed_at.isoformat() if hasattr(action, 'executed_at') and action.executed_at else None,
+                'transaction_id': getattr(action, 'transaction_id', ''),
+                'notes': action.notes or '',
+                'can_execute': action.status == 'pending' and can_execute_plan(request.user, execution_plan),
+                'can_mark_failed': action.status == 'pending' and can_execute_plan(request.user, execution_plan),
+            }
+            
+            # Add action-specific fields
+            if action.action_type == 'sip_start':
+                action_info.update({
+                    'sip_date': action.sip_date,
+                    'frequency': getattr(action, 'frequency', ''),
+                })
+            elif action.action_type in ['switch', 'stp_start']:
+                action_info['target_scheme_required'] = True
+            
+            action_data.append(action_info)
+        
+        # Calculate summary statistics
+        total_actions = len(action_data)
+        pending_actions = len([a for a in action_data if a['status'] == 'pending'])
+        completed_actions = len([a for a in action_data if a['status'] == 'completed'])
+        failed_actions = len([a for a in action_data if a['status'] == 'failed'])
+        
+        summary = {
+            'total_actions': total_actions,
+            'pending_actions': pending_actions,
+            'completed_actions': completed_actions,
+            'failed_actions': failed_actions,
+            'completion_percentage': round((completed_actions / total_actions * 100), 2) if total_actions > 0 else 0,
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'actions': action_data,
+            'summary': summary,
+            'plan_status': execution_plan.status,
+            'plan_id': execution_plan.plan_id if hasattr(execution_plan, 'plan_id') else plan_id,
+        })
+        
+    except ExecutionPlan.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Execution plan not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error getting action statuses for plan {plan_id}: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'Failed to load action statuses'}, status=500)
+
+
+# Also add this helper view for updating action status
+@login_required
+@require_http_methods(["POST"])
+def update_action_status(request, action_id):
+    """Update individual action status (AJAX endpoint)"""
+    try:
+        action = get_object_or_404(PlanAction, id=action_id)
+        execution_plan = action.execution_plan
+        
+        # Check permissions
+        if not can_execute_plan(request.user, execution_plan):
+            return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+        
+        data = json.loads(request.body)
+        new_status = data.get('status')
+        notes = data.get('notes', '')
+        
+        # Validate status
+        valid_statuses = ['pending', 'in_progress', 'completed', 'failed', 'skipped']
+        if new_status not in valid_statuses:
+            return JsonResponse({'success': False, 'error': 'Invalid status'}, status=400)
+        
+        # Update action
+        old_status = action.status
+        action.status = new_status
+        
+        if notes:
+            action.notes = notes
+        
+        # Set timestamp fields based on status
+        if new_status == 'completed':
+            action.executed_at = timezone.now()
+            action.executed_by = request.user
+        elif new_status == 'failed':
+            action.failed_at = timezone.now() if hasattr(action, 'failed_at') else None
+            action.failed_by = request.user if hasattr(action, 'failed_by') else None
+        
+        action.save()
+        
+        # Check if all actions are completed to auto-complete the plan
+        remaining_actions = execution_plan.actions.exclude(status__in=['completed', 'failed', 'skipped']).count()
+        
+        plan_status_changed = False
+        if remaining_actions == 0 and execution_plan.status == 'in_execution':
+            execution_plan.status = 'completed'
+            execution_plan.completed_at = timezone.now()
+            execution_plan.save()
+            plan_status_changed = True
+            
+            # Create workflow history
+            PlanWorkflowHistory.objects.create(
+                execution_plan=execution_plan,
+                from_status='in_execution',
+                to_status='completed',
+                changed_by=request.user,
+                comments='All actions completed - plan auto-completed'
+            )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Action status updated from {old_status} to {new_status}',
+            'action_id': action.id,
+            'old_status': old_status,
+            'new_status': new_status,
+            'plan_status_changed': plan_status_changed,
+            'plan_completed': plan_status_changed,
+            'remaining_actions': remaining_actions,
+        })
+        
+    except PlanAction.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Action not found'}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        logger.error(f"Error updating action status: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'Failed to update action status'}, status=500)
+
+
+# Add this view for getting execution progress
+@login_required
+@require_http_methods(["GET"])
+def get_execution_progress(request, plan_id):
+    """Get execution progress for a plan (AJAX endpoint)"""
+    try:
+        execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+        
+        # Check access permission
+        if not can_access_plan(request.user, execution_plan):
+            return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+        
+        # Get action counts by status
+        actions = execution_plan.actions.all()
+        status_counts = {
+            'total': actions.count(),
+            'pending': actions.filter(status='pending').count(),
+            'in_progress': actions.filter(status='in_progress').count(),
+            'completed': actions.filter(status='completed').count(),
+            'failed': actions.filter(status='failed').count(),
+            'skipped': actions.filter(status='skipped').count(),
+        }
+        
+        # Calculate percentages
+        total = status_counts['total']
+        progress = {
+            'completion_percentage': round((status_counts['completed'] / total * 100), 2) if total > 0 else 0,
+            'failure_rate': round((status_counts['failed'] / total * 100), 2) if total > 0 else 0,
+            'remaining_percentage': round(((status_counts['pending'] + status_counts['in_progress']) / total * 100), 2) if total > 0 else 0,
+        }
+        
+        # Get recent activity
+        recent_actions = actions.filter(
+            status__in=['completed', 'failed']
+        ).order_by('-executed_at' if hasattr(PlanAction, 'executed_at') else '-updated_at')[:5]
+        
+        recent_activity = []
+        for action in recent_actions:
+            activity = {
+                'action_type': action.get_action_type_display() if hasattr(action, 'get_action_type_display') else action.action_type,
+                'scheme_name': action.scheme.scheme_name if action.scheme else 'Unknown',
+                'status': action.status,
+                'timestamp': action.executed_at.isoformat() if hasattr(action, 'executed_at') and action.executed_at else None,
+                'executed_by': action.executed_by.get_full_name() if hasattr(action, 'executed_by') and action.executed_by else None,
+            }
+            recent_activity.append(activity)
+        
+        return JsonResponse({
+            'success': True,
+            'plan_status': execution_plan.status,
+            'status_counts': status_counts,
+            'progress': progress,
+            'recent_activity': recent_activity,
+            'can_execute': can_execute_plan(request.user, execution_plan),
+            'last_updated': timezone.now().isoformat(),
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting execution progress: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'Failed to load execution progress'}, status=500)
 
 # Add these enhanced email functions to your views.py
 

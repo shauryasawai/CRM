@@ -190,6 +190,10 @@ urlpatterns = [
         path('templates/', views.plan_templates, name='plan_templates'),
         path('<int:plan_id>/analytics/', views.plan_analytics, name='plan_analytics'),
         
+        path('<int:plan_id>/action-statuses/', views.get_action_statuses, name='get_action_statuses'),
+        path('<int:plan_id>/execution-progress/', views.get_execution_progress, name='get_execution_progress'),
+        path('actions/<int:action_id>/update-status/', views.update_action_status, name='update_action_status'),
+        
         # ===== ENHANCED WORKFLOW ACTIONS WITH EMAIL =====
         # Original workflow actions (kept for backward compatibility)
         path('<int:plan_id>/submit/', views.submit_for_approval, name='submit_for_approval'),
