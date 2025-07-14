@@ -5,1222 +5,1391 @@
 {% block title %}RM Head Dashboard{% endblock %}
 
 {% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 <style>
-/* Dashboard Wrapper */
-.dashboard-wrapper {
-    padding: 2rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
-/* Header Section */
-.dashboard-header {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
-    padding: 2rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    position: relative;
-    overflow: hidden;
-}
-
-.dashboard-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #667eea, #764ba2, #f093fb, #f5576c);
-    background-size: 300% 100%;
-    animation: gradient-shift 3s ease-in-out infinite;
-}
-
-@keyframes gradient-shift {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-}
-
-.main-title {
-    font-size: 2.5rem;
-    font-weight: 800;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin-bottom: 0.5rem;
-    text-align: center;
-}
-
-.welcome-subtitle {
-    font-size: 1.2rem;
-    color: #6b7280;
-    text-align: center;
-    margin-bottom: 1rem;
-}
-
-.role-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: linear-gradient(135deg, #f093fb, #f5576c);
-    color: white;
-    padding: 0.75rem 1.5rem;
-    border-radius: 50px;
-    font-weight: 600;
-    font-size: 1rem;
-    box-shadow: 0 10px 20px rgba(240, 147, 251, 0.3);
-    margin: 1rem auto;
-    display: block;
-    width: fit-content;
-}
-
-.header-actions {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    margin-top: 1.5rem;
-}
-
-/* Metrics Grid */
-.metrics-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 3rem;
-}
-
-.metric-card {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
-    padding: 2rem;
-    position: relative;
-    overflow: hidden;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-}
-
-.metric-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    transition: all 0.3s ease;
-}
-
-.metric-card.blue::before {
-    background: linear-gradient(90deg, #3b82f6, #1d4ed8);
-}
-
-.metric-card.green::before {
-    background: linear-gradient(90deg, #10b981, #059669);
-}
-
-.metric-card.orange::before {
-    background: linear-gradient(90deg, #f59e0b, #d97706);
-}
-
-.metric-card.purple::before {
-    background: linear-gradient(90deg, #8b5cf6, #7c3aed);
-}
-
-.metric-card:hover {
-    transform: translateY(-10px) scale(1.02);
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-}
-
-.metric-icon {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
-    display: block;
-}
-
-.metric-label {
-    font-size: 0.9rem;
-    color: #6b7280;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-}
-
-.metric-value {
-    font-size: 2.2rem;
-    font-weight: 800;
-    color: #1f2937;
-    margin-bottom: 1rem;
-    line-height: 1;
-}
-
-.metric-trend {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.9rem;
-    font-weight: 500;
-}
-
-.trend-positive {
-    color: #10b981;
-}
-
-.trend-negative {
-    color: #ef4444;
-}
-
-.progress-ring {
-    position: absolute;
-    top: 1.5rem;
-    right: 1.5rem;
-    width: 60px;
-    height: 60px;
-    transform: rotate(-90deg);
-}
-
-.progress-ring .background {
-    fill: none;
-    stroke: #e5e7eb;
-    stroke-width: 3;
-}
-
-.progress-ring .progress {
-    fill: none;
-    stroke: #3b82f6;
-    stroke-width: 3;
-    stroke-linecap: round;
-    stroke-dasharray: 157;
-    animation: progress-animation 2s ease-out;
-}
-
-@keyframes progress-animation {
-    from { stroke-dashoffset: 157; }
-}
-
-/* Team Cards */
-.team-card {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 15px;
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.team-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
-}
-
-.team-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #667eea, #764ba2);
-}
-
-.team-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-
-.team-name {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #1f2937;
-    margin: 0;
-}
-
-.team-leader {
-    font-size: 0.9rem;
-    color: #6b7280;
-}
-
-.team-stats {
-    display: flex;
-    gap: 1rem;
-    margin-top: 1rem;
-}
-
-.team-stat {
-    flex: 1;
-    text-align: center;
-    padding: 0.5rem;
-    background: rgba(241, 245, 249, 0.5);
-    border-radius: 10px;
-}
-
-.team-stat-value {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: #1f2937;
-}
-
-.team-stat-label {
-    font-size: 0.75rem;
-    color: #6b7280;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.team-actions {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 1rem;
-}
-
-/* Section Divider */
-.section-divider {
-    text-align: center;
-    margin: 3rem 0 2rem;
-    position: relative;
-}
-
-.section-divider span {
-    background: rgba(255, 255, 255, 0.95);
-    padding: 1rem 2rem;
-    border-radius: 50px;
-    font-weight: 600;
-    color: #374151;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-/* Team Section */
-.team-section {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
-    padding: 2rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-    flex-wrap: wrap;
-    gap: 1rem;
-}
-
-.section-title {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #1f2937;
-    margin: 0;
-}
-
-.title-icon {
-    font-size: 1.8rem;
-}
-
-.team-stats-header {
-    display: flex;
-    gap: 1.5rem;
-    flex-wrap: wrap;
-}
-
-.team-stats-header span {
-    background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
-    padding: 0.5rem 1rem;
-    border-radius: 50px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #374151;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-/* Data Table */
-.data-table-container {
-    overflow-x: auto;
-    border-radius: 15px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-}
-
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: white;
-    border-radius: 15px;
-    overflow: hidden;
-}
-
-.data-table thead {
-    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-}
-
-.data-table th {
-    padding: 1rem 1.5rem;
-    text-align: left;
-    font-weight: 600;
-    color: #374151;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-bottom: 2px solid #e5e7eb;
-}
-
-.data-table td {
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid #f3f4f6;
-    vertical-align: middle;
-}
-
-.data-table tbody tr {
-    transition: all 0.3s ease;
-}
-
-.data-table tbody tr:hover {
-    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-    transform: scale(1.01);
-}
-
-.data-table tbody tr:last-child td {
-    border-bottom: none;
-}
-
-/* Badges */
-.badge, .metric-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.375rem 0.75rem;
-    border-radius: 50px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.badge-blue, .metric-badge.badge-blue {
-    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
-    color: #1d4ed8;
-}
-
-.badge-green, .metric-badge.badge-green {
-    background: linear-gradient(135deg, #dcfce7, #bbf7d0);
-    color: #166534;
-}
-
-.badge-orange, .metric-badge.badge-orange {
-    background: linear-gradient(135deg, #fed7aa, #fdba74);
-    color: #c2410c;
-}
-
-.badge-red, .metric-badge.badge-red {
-    background: linear-gradient(135deg, #fecaca, #fca5a5);
-    color: #dc2626;
-}
-
-.badge-purple, .metric-badge.badge-purple {
-    background: linear-gradient(135deg, #e9d5ff, #d8b4fe);
-    color: #7c2d12;
-}
-
-/* Action Buttons */
-.action-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    border-radius: 50px;
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 0.9rem;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    position: relative;
-    overflow: hidden;
-    border: none;
-    cursor: pointer;
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-}
-
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.6);
-}
-
-.btn-secondary {
-    background: linear-gradient(135deg, #6b7280, #4b5563);
-    color: white;
-    box-shadow: 0 5px 15px rgba(107, 114, 128, 0.4);
-}
-
-.btn-secondary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(107, 114, 128, 0.6);
-}
-
-.btn-accent {
-    background: linear-gradient(135deg, #10b981, #059669);
-    color: white;
-    box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
-}
-
-.btn-accent:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(16, 185, 129, 0.6);
-}
-
-.btn-danger {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    color: white;
-    box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
-}
-
-.btn-danger:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(239, 68, 68, 0.6);
-}
-
-/* Action Panel */
-.action-panel {
-    margin-top: 3rem;
-    padding: 2rem;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.action-buttons {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-    flex-wrap: wrap;
-}
-
-/* Empty State */
-.empty-state {
-    text-align: center;
-    padding: 3rem 2rem;
-    color: #6b7280;
-}
-
-.empty-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    opacity: 0.5;
-}
-
-.empty-message {
-    font-size: 1.2rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-}
-
-.empty-submessage {
-    font-size: 0.9rem;
-    opacity: 0.7;
-}
-
-/* Performance Indicator */
-.performance-indicator {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.performance-score {
-    font-weight: 700;
-    color: #1f2937;
-    font-size: 0.9rem;
-}
-
-.performance-bar {
-    width: 60px;
-    height: 6px;
-    background: #e5e7eb;
-    border-radius: 3px;
-    overflow: hidden;
-    position: relative;
-}
-
-.performance-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #ef4444 0%, #f59e0b 25%, #10b981 50%, #059669 100%);
-    transition: width 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    border-radius: 3px;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .dashboard-wrapper {
-        padding: 1rem;
+    :root {
+        --primary-color: #1C64FF;
+        --secondary-text: #696969;
+        --background-color: #FFFFFF;
+        --border-color: #D9D9D9;
+        --highlight-color: #C3E4FF;
+        --light-gray: #F8F9FA;
     }
-    
-    .main-title {
-        font-size: 2rem;
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background-color: var(--light-gray);
+        color: #333;
+        line-height: 1.5;
     }
-    
-    .metrics-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
+
+    .main-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
     }
-    
-    .metric-card {
-        padding: 1.5rem;
-    }
-    
-    .section-header {
-        flex-direction: column;
+
+    /* Header Section */
+    .header-section {
+        display: flex;
+        justify-content: space-between;
         align-items: flex-start;
+        margin-bottom: 3rem;
+        flex-wrap: wrap;
         gap: 1rem;
     }
-    
-    .team-stats-header {
+
+    .welcome-content {
+        display: flex;
+        flex-direction: column;
         gap: 0.5rem;
     }
-    
-    .team-stats-header span {
-        padding: 0.375rem 0.75rem;
+
+    .welcome-text {
+        font-size: 2.5rem;
+        font-weight: 400;
+        color: #333;
+        margin: 0;
+    }
+
+    .user-name {
+        color: var(--primary-color);
+        font-weight: 600;
+    }
+
+    .user-name-display {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--secondary-text);
+        margin: 0;
+    }
+
+    .header-info {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.5rem;
+    }
+
+    .command-badge {
+        background: var(--highlight-color);
+        border-radius: 20px;
+        padding: 1rem 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        border: none;
+        box-shadow: 0 2px 8px rgba(28, 100, 255, 0.1);
+    }
+
+    .command-badge-content {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .command-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #333;
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .command-subtitle {
+        font-size: 0.9rem;
+        color: var(--secondary-text);
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .user-icon {
+        width: 40px;
+        height: 40px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.2rem;
+    }
+
+    .datetime-info {
+        text-align: right;
+        color: #333;
+    }
+
+    .date-text {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .time-text {
+        font-size: 1rem;
+        color: var(--primary-color);
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    /* Header Actions */
+    .header-actions {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin-top: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .header-btn {
+        background: var(--primary-color);
+        color: white;
+        padding: 0.875rem 2rem;
+        border-radius: 50px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        border: 2px solid var(--primary-color);
+    }
+
+    .header-btn:hover {
+        background: white;
+        color: var(--primary-color);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(28, 100, 255, 0.2);
+    }
+
+    .header-btn.btn-secondary {
+        background: white;
+        color: var(--primary-color);
+        border-color: var(--border-color);
+    }
+
+    .header-btn.btn-secondary:hover {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+
+    /* Metrics Grid */
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 3rem;
+    }
+
+    .metric-card {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        border: 1px solid #f0f0f0;
+        position: relative;
+        transition: all 0.2s ease;
+    }
+
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--primary-color);
+        border-radius: 16px 16px 0 0;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    }
+
+    .metric-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+    }
+
+    .metric-icon-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .metric-icon {
+        width: 50px;
+        height: 50px;
+        background: var(--highlight-color);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--primary-color);
+        font-size: 1.25rem;
+    }
+
+    .metric-badge {
+        background: var(--highlight-color);
+        color: var(--primary-color);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        border: none;
+    }
+
+    .metric-value {
+        font-size: 3rem;
+        font-weight: 700;
+        color: #333;
+        margin: 0 0 0.5rem 0;
+        line-height: 1;
+    }
+
+    .metric-label {
+        font-size: 1.1rem;
+        color: var(--secondary-text);
+        margin: 0 0 1rem 0;
+        font-weight: 500;
+    }
+
+    .metric-trend {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    .trend-positive {
+        color: #28a745;
+    }
+
+    .trend-negative {
+        color: #dc3545;
+    }
+
+    /* Section Headers */
+    .section-header {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        border: 1px solid #f0f0f0;
+        position: relative;
+    }
+
+    .section-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary-color), var(--highlight-color));
+        border-radius: 16px 16px 0 0;
+    }
+
+    .section-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #333;
+        margin: 0 0 1rem 0;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .section-icon {
+        width: 50px;
+        height: 50px;
+        background: var(--highlight-color);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--primary-color);
+        font-size: 1.25rem;
+    }
+
+    .section-stats {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+    }
+
+    .section-stat {
+        background: var(--light-gray);
+        padding: 0.75rem 1.25rem;
+        border-radius: 25px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--secondary-text);
+        border: 1px solid var(--border-color);
+    }
+
+    /* Team Cards */
+    .team-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .team-card {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        border: 1px solid #f0f0f0;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .team-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--primary-color);
+        border-radius: 16px 16px 0 0;
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+    }
+
+    .team-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+        border-color: var(--primary-color);
+    }
+
+    .team-card:hover::before {
+        transform: scaleX(1);
+    }
+
+    .team-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .team-name {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #333;
+        margin: 0;
+    }
+
+    .team-leader {
+        font-size: 0.9rem;
+        color: var(--secondary-text);
+        margin-top: 0.25rem;
+    }
+
+    .team-member-count {
+        background: var(--highlight-color);
+        color: var(--primary-color);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .team-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        margin: 1.5rem 0;
+    }
+
+    .team-stat {
+        text-align: center;
+        padding: 1rem;
+        background: var(--light-gray);
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+    }
+
+    .team-stat-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 0.25rem;
+    }
+
+    .team-stat-label {
+        font-size: 0.8rem;
+        color: var(--secondary-text);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .team-actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+    }
+
+    /* Data Tables */
+    .table-container {
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        border: 1px solid #f0f0f0;
+        margin-bottom: 2rem;
+    }
+
+    .table {
+        margin: 0;
+        border-collapse: collapse;
+    }
+
+    .table thead {
+        background: var(--light-gray);
+    }
+
+    .table th {
+        padding: 1.25rem 1.5rem;
+        font-weight: 600;
+        color: #333;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid var(--border-color);
+        border-top: none;
+    }
+
+    .table td {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #f0f0f0;
+        vertical-align: middle;
+    }
+
+    .table tbody tr {
+        transition: all 0.2s ease;
+    }
+
+    .table tbody tr:hover {
+        background: var(--light-gray);
+    }
+
+    .table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    /* Badges */
+    .badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .badge-primary {
+        background: var(--highlight-color);
+        color: var(--primary-color);
+    }
+
+    .badge-success {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .badge-warning {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .badge-danger {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    /* Action Buttons */
+    .action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+        border: 1px solid var(--border-color);
+        background: white;
+        color: #333;
+    }
+
+    .action-btn:hover {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(28, 100, 255, 0.2);
+    }
+
+    .action-btn.btn-primary {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+
+    .action-btn.btn-primary:hover {
+        background: #0d47a1;
+        border-color: #0d47a1;
+    }
+
+    .action-btn.btn-sm {
+        padding: 0.5rem 1rem;
         font-size: 0.8rem;
     }
-    
+
+    /* Action Panel */
+    .action-panel {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        border: 1px solid #f0f0f0;
+        margin-bottom: 2rem;
+    }
+
     .action-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: var(--secondary-text);
+    }
+
+    .empty-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .empty-message {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #333;
+    }
+
+    .empty-submessage {
+        font-size: 0.9rem;
+        opacity: 0.7;
+    }
+
+    /* Performance Indicator */
+    .performance-indicator {
+        display: flex;
         flex-direction: column;
         align-items: center;
+        gap: 0.5rem;
     }
-    
-    .action-btn {
-        width: 100%;
-        justify-content: center;
-        max-width: 300px;
-    }
-    
-    .data-table {
-        font-size: 0.85rem;
-    }
-    
-    .data-table th,
-    .data-table td {
-        padding: 0.75rem 1rem;
-    }
-}
 
-@media (max-width: 480px) {
-    .dashboard-wrapper {
-        padding: 0.5rem;
+    .performance-score {
+        font-weight: 700;
+        color: #333;
+        font-size: 0.9rem;
     }
-    
-    .dashboard-header {
-        padding: 1.5rem;
-    }
-    
-    .main-title {
-        font-size: 1.75rem;
-    }
-    
-    .welcome-subtitle {
-        font-size: 1rem;
-    }
-    
-    .team-section {
-        padding: 1.5rem;
-    }
-    
-    .action-panel {
-        padding: 1.5rem;
-    }
-}
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-    .dashboard-wrapper {
-        background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+    .performance-bar {
+        width: 60px;
+        height: 6px;
+        background: #e5e7eb;
+        border-radius: 3px;
+        overflow: hidden;
     }
-    
-    .dashboard-header,
-    .team-section,
-    .action-panel {
-        background: rgba(31, 41, 55, 0.95);
-        border: 1px solid rgba(75, 85, 99, 0.3);
+
+    .performance-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #dc3545 0%, #ffc107 25%, #28a745 50%, #20c997 100%);
+        transition: width 0.8s ease;
+        border-radius: 3px;
     }
-    
-    .main-title {
-        color: #f9fafb;
+
+    /* Member Info */
+    .member-info strong {
+        display: block;
+        margin-bottom: 0.25rem;
     }
-    
-    .welcome-subtitle {
-        color: #d1d5db;
+
+    .member-info small {
+        color: var(--secondary-text);
+        font-size: 0.8rem;
     }
-    
-    .section-title {
-        color: #f9fafb;
+
+    /* Task Info */
+    .task-info strong {
+        display: block;
+        margin-bottom: 0.25rem;
     }
-    
-    .data-table {
-        background: #374151;
-        color: #f9fafb;
+
+    .task-info small {
+        color: var(--secondary-text);
+        font-size: 0.8rem;
     }
-    
-    .data-table thead {
-        background: linear-gradient(135deg, #4b5563, #374151);
+
+    /* Request Info */
+    .request-info strong {
+        display: block;
+        margin-bottom: 0.25rem;
     }
-    
-    .data-table th {
-        color: #e5e7eb;
-        border-bottom-color: #4b5563;
+
+    .request-info small {
+        color: var(--secondary-text);
+        font-size: 0.8rem;
     }
-    
-    .data-table td {
-        border-bottom-color: #4b5563;
+
+    /* Due Date */
+    .due-date.overdue {
+        color: #dc3545;
+        font-weight: 600;
     }
-    
-    .data-table tbody tr:hover {
-        background: linear-gradient(135deg, #4b5563, #374151);
+
+    .overdue-label {
+        font-size: 0.75rem;
+        background: #dc3545;
+        color: white;
+        padding: 0.125rem 0.375rem;
+        border-radius: 0.25rem;
+        margin-left: 0.5rem;
     }
-}
+
+    /* Task Summary */
+    .task-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .main-container {
+            padding: 1rem;
+        }
+
+        .header-section {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1.5rem;
+        }
+
+        .header-info {
+            align-items: flex-start;
+            width: 100%;
+        }
+
+        .command-badge {
+            align-self: flex-end;
+        }
+
+        .welcome-text {
+            font-size: 2rem;
+        }
+
+        .user-name-display {
+            font-size: 1.25rem;
+        }
+
+        .metrics-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .team-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .team-stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .action-buttons {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .action-btn {
+            width: 100%;
+            max-width: 300px;
+            justify-content: center;
+        }
+
+        .header-actions {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header-btn {
+            width: 100%;
+            max-width: 300px;
+            justify-content: center;
+        }
+
+        .section-stats {
+            justify-content: center;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .welcome-text {
+            font-size: 1.75rem;
+        }
+
+        .user-name-display {
+            font-size: 1.1rem;
+        }
+
+        .section-header {
+            padding: 1.5rem;
+        }
+
+        .team-card {
+            padding: 1.5rem;
+        }
+
+        .action-panel {
+            padding: 1.5rem;
+        }
+
+        .team-stats-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .table th,
+        .table td {
+            padding: 1rem;
+            font-size: 0.85rem;
+        }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-wrapper">
+<div class="main-container">
     <!-- Header Section -->
-    <div class="dashboard-header">
-        <h1 class="main-title">Regional Command Center</h1>
-        <p class="welcome-subtitle">Welcome back, {{ user.get_full_name|default:user.username }}</p>
-        <div class="role-badge">
-            <span>👑</span> Regional Manager Head
+    <div class="header-section">
+        <div class="welcome-content">
+            <h1 class="welcome-text">Welcome back, <span class="user-name">{{ user.get_full_name|default:user.username }}</span></h1>
+            <!-- <p class="user-name-display">{{ user.get_full_name|default:user.username }}</p> -->
         </div>
-        <div class="header-actions">
-            <a href="{% url 'hrm_dashboard' %}" class="action-btn btn-accent">
-                <span>👥</span> HRMS Portal
-            </a>
-            <a href="{% url 'team_management' %}" class="action-btn btn-primary">
-                <span>🏛️</span> Team Management
-            </a>
+        
+        <div class="header-info">
+            <div class="command-badge">
+                <div class="command-badge-content">
+                    <div class="command-title">Regional Command Center</div>
+                    <div class="command-subtitle">Regional Manager Head</div>
+                </div>
+                <div class="user-icon">
+                    <i class="fas fa-crown"></i>
+                </div>
+            </div>
+<!--             
+            <div class="datetime-info">
+                <div class="date-text" id="current-date"></div>
+                <div class="time-text" id="current-time"></div>
+            </div> -->
         </div>
+    </div>
+
+    <!-- Header Actions -->
+    <div class="header-actions">
+        <a href="{% url 'hrm_dashboard' %}" class="header-btn mb-3">
+            <i class="fas fa-users"></i>
+            <span>HRMS Portal</span>
+        </a>
+        <a href="{% url 'team_management' %}" class="header-btn btn-secondary mb-3">
+            <i class="fas fa-cogs"></i>
+            <span>Team Management</span>
+        </a>
     </div>
 
     <!-- Metrics Overview -->
     <div class="metrics-grid">
-        <div class="metric-card blue">
-            <div class="metric-icon">🎯</div>
-            <div class="metric-label">Team Leads</div>
+        <div class="metric-card">
+            <div class="metric-header">
+                <div class="metric-icon-badge">
+                    <div class="metric-icon">
+                        <i class="fas fa-bullseye"></i>
+                    </div>
+                </div>
+                <div class="metric-badge">{{ leads_count|default:0 }} Active</div>
+            </div>
             <div class="metric-value">{{ leads_count|default:0 }}</div>
+            <div class="metric-label">Team Leads</div>
             <div class="metric-trend trend-positive">
-                <span>📈</span> {{ leads_count|default:0 }} Active
+                <i class="fas fa-arrow-up"></i>
+                <span>{{ leads_count|default:0 }} Active</span>
             </div>
-            {% with percentage=leads_count|default:0 %}
-                {% if percentage > 0 %}
-                    <svg class="progress-ring">
-                        <circle class="background" cx="30" cy="30" r="25"></circle>
-                        <circle class="progress" cx="30" cy="30" r="25" 
-                                style="stroke-dashoffset: calc(157 - (157 * {{ percentage|floatformat:0 }}) / 100);"></circle>
-                    </svg>
-                {% endif %}
-            {% endwith %}
         </div>
 
-        <div class="metric-card green">
-            <div class="metric-icon">💰</div>
-            <div class="metric-label">Team AUM</div>
+        <div class="metric-card">
+            <div class="metric-header">
+                <div class="metric-icon-badge">
+                    <div class="metric-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+                <div class="metric-badge">{{ clients_count|default:0 }} Clients</div>
+            </div>
             <div class="metric-value">₹{{ team_aum|intcomma|default:"0" }}</div>
+            <div class="metric-label">Team AUM</div>
             <div class="metric-trend trend-positive">
-                <span>📊</span> {{ clients_count|default:0 }} Clients
+                <i class="fas fa-chart-bar"></i>
+                <span>{{ clients_count|default:0 }} Clients</span>
             </div>
-            {% with total_aum=team_aum|default:0 %}
-                {% if total_aum > 0 %}
-                    <svg class="progress-ring">
-                        <circle class="background" cx="30" cy="30" r="25"></circle>
-                        <circle class="progress" cx="30" cy="30" r="25" 
-                                style="stroke-dashoffset: calc(157 - (157 * 60) / 100);"></circle>
-                    </svg>
-                {% endif %}
-            {% endwith %}
         </div>
 
-        <div class="metric-card orange">
-            <div class="metric-icon">📋</div>
-            <div class="metric-label">Pending Tasks</div>
+        <div class="metric-card">
+            <div class="metric-header">
+                <div class="metric-icon-badge">
+                    <div class="metric-icon">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                </div>
+                <div class="metric-badge">{{ overdue_tasks|default:0 }} Overdue</div>
+            </div>
             <div class="metric-value">{{ pending_tasks|default:0 }}</div>
+            <div class="metric-label">Pending Tasks</div>
             <div class="metric-trend {% if overdue_tasks > 0 %}trend-negative{% else %}trend-positive{% endif %}">
-                <span>{% if overdue_tasks > 0 %}⚠️{% else %}✅{% endif %}</span> 
-                {{ overdue_tasks|default:0 }} Overdue
+                <i class="fas fa-{% if overdue_tasks > 0 %}exclamation-triangle{% else %}check-circle{% endif %}"></i>
+                <span>{{ overdue_tasks|default:0 }} Overdue</span>
             </div>
-            {% with total_tasks=team_tasks.count|default:1 completed_tasks=team_tasks.count|default:0 %}
-                {% if total_tasks > 0 %}
-                    {% widthratio completed_tasks total_tasks 100 as completion_percentage %}
-                    <svg class="progress-ring">
-                        <circle class="background" cx="30" cy="30" r="25"></circle>
-                        <circle class="progress" cx="30" cy="30" r="25" 
-                                style="stroke-dashoffset: calc(157 - (157 * {{ completion_percentage|default:0 }}) / 100);"></circle>
-                    </svg>
-                {% endif %}
-            {% endwith %}
         </div>
 
-        <div class="metric-card purple">
-            <div class="metric-icon">🔄</div>
-            <div class="metric-label">Team SIP</div>
-            <div class="metric-value">₹{{ team_sip|intcomma|default:"0" }}</div>
-            <div class="metric-trend trend-positive">
-                <span>📈</span> Monthly Recurring
+        <div class="metric-card">
+            <div class="metric-header">
+                <div class="metric-icon-badge">
+                    <div class="metric-icon">
+                        <i class="fas fa-sync-alt"></i>
+                    </div>
+                </div>
+                <div class="metric-badge">Monthly Recurring</div>
             </div>
-            {% with total_sip=team_sip|default:0 %}
-                {% if total_sip > 0 %}
-                    <svg class="progress-ring">
-                        <circle class="background" cx="30" cy="30" r="25"></circle>
-                        <circle class="progress" cx="30" cy="30" r="25" 
-                                style="stroke-dashoffset: calc(157 - (157 * 30) / 100);"></circle>
-                    </svg>
-                {% endif %}
-            {% endwith %}
+            <div class="metric-value">₹{{ team_sip|intcomma|default:"0" }}</div>
+            <div class="metric-label">Team SIP</div>
+            <div class="metric-trend trend-positive">
+                <i class="fas fa-arrow-up"></i>
+                <span>Monthly Recurring</span>
+            </div>
         </div>
     </div>
 
     <!-- Team Leadership Section -->
-    <div class="section-divider">
-        <span>My Leadership Teams</span>
-    </div>
-
-    <div class="team-section">
-        <div class="section-header">
-            <h2 class="section-title">
-                <div class="title-icon">🏛️</div>
-                Teams Under My Leadership
-            </h2>
-            <div class="team-stats-header">
-                <span>{{ user.led_teams.count|default:0 }} Teams</span>
-                <span>{{ team_members|length|default:0 }} Members</span>
-                <span>₹{{ team_aum|intcomma|default:"0" }} Total AUM</span>
+    <div class="section-header">
+        <h2 class="section-title">
+            <div class="section-icon">
+                <i class="fas fa-users-cog"></i>
             </div>
-        </div>
-
-        <div class="row">
-            {% for team in user.led_teams.all %}
-            <div class="col-md-6">
-                <div class="team-card">
-                    <div class="team-card-header">
-                        <h3 class="team-name">{{ team.name }}</h3>
-                        <span class="badge badge-blue">{{ team.members.count|default:0 }} members</span>
-                    </div>
-                    <div class="team-leader">
-                        Leader: {{ team.leader.get_full_name|default:team.leader.username }}
-                    </div>
-                    
-                    <div class="team-stats">
-                        <div class="team-stat">
-                            <div class="team-stat-value">{{ team.members.count|default:0 }}</div>
-                            <div class="team-stat-label">Members</div>
-                        </div>
-                        <div class="team-stat">
-                            <div class="team-stat-value">₹{{ team.get_team_aum|intcomma|default:"0" }}</div>
-                            <div class="team-stat-label">AUM</div>
-                        </div>
-                        <div class="team-stat">
-                            <div class="team-stat-value">{{ team.get_active_tasks.count|default:0 }}</div>
-                            <div class="team-stat-label">Tasks</div>
-                        </div>
-                    </div>
-                    
-                    <div class="team-actions">
-                        <a href="{% url 'team_detail' team.id %}" class="action-btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
-                            View Team
-                        </a>
-                        <a href="{% url 'edit_team' team.id %}" class="action-btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
-                            Manage
-                        </a>
-                    </div>
+            My Leadership Teams
+            <div class="section-stats">
+            <span class="section-stat mb-3">{{ user.led_teams.count|default:0 }} Teams</span>
+            <span class="section-stat mb-3">{{ team_members|length|default:0 }} Members</span>
+            <!-- <span class="section-stat mb-3">₹{{ team_aum|intcomma|default:"0" }} Total AUM</span> -->
+            </div>
+        </h2>
+      
+        <div class="team-grid">
+        {% for team in user.led_teams.all %}
+        <div class="team-card">
+            <div class="team-card-header">
+                <div>
+                    <h3 class="team-name">{{ team.name }}</h3>
+                    <div class="team-leader">Leader: {{ team.leader.get_full_name|default:team.leader.username }}</div>
+                </div>
+                <span class="team-member-count">{{ team.members.count|default:0 }} members</span>
+            </div>
+            
+            <div class="team-stats-grid">
+                <div class="team-stat">
+                    <div class="team-stat-value">{{ team.members.count|default:0 }}</div>
+                    <div class="team-stat-label">Members</div>
+                </div>
+                <div class="team-stat">
+                    <div class="team-stat-value">₹{{ team.get_team_aum|intcomma|default:"0" }}</div>
+                    <div class="team-stat-label">AUM</div>
+                </div>
+                <div class="team-stat">
+                    <div class="team-stat-value">{{ team.get_active_tasks.count|default:0 }}</div>
+                    <div class="team-stat-label">Tasks</div>
                 </div>
             </div>
-            {% empty %}
-            <div class="col-12">
-                <div class="empty-state">
-                    <div class="empty-icon">🏛️</div>
-                    <div class="empty-message">No teams under your leadership</div>
-                    <div class="empty-submessage">Teams you lead will appear here</div>
-                </div>
+            
+            <div class="team-actions">
+                <a href="{% url 'team_detail' team.id %}" class="action-btn btn-sm">
+                    <i class="fas fa-eye"></i>
+                    View Team
+                </a>
+                <a href="{% url 'edit_team' team.id %}" class="action-btn btn-primary btn-sm">
+                    <i class="fas fa-edit"></i>
+                    Manage
+                </a>
             </div>
-            {% endfor %}
         </div>
+        {% empty %}
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-users-cog"></i>
+            </div>
+            <div class="empty-message">No teams under your leadership</div>
+            <div class="empty-submessage">Teams you lead will appear here</div>
+        </div>
+        {% endfor %}
     </div>
+    </div>
+
+    
 
     <!-- Team Performance Section -->
-    <div class="section-divider">
-        <span>Team Performance Analytics</span>
-    </div>
-
-    <div class="team-section">
-        <div class="section-header">
-            <h2 class="section-title">
-                <div class="title-icon">👥</div>
-                My Team Members
-            </h2>
-            <div class="team-stats-header">
-                <span>{{ team_members|length|default:0 }} Members</span>
-                <span>{{ clients_count|default:0 }} Clients</span>
-                <span>₹{{ team_aum|intcomma|default:"0" }} AUM</span>
+    <div class="section-header">
+        <h2 class="section-title">
+            <div class="section-icon">
+                <i class="fas fa-chart-bar"></i>
             </div>
+            Team Performance Analytics
+            <div class="section-stats">
+            <span class="section-stat mb-3">{{ team_members|length|default:0 }} Members</span>
+            <span class="section-stat mb-3">{{ clients_count|default:0 }} Clients</span>
+            <!-- <span class="section-stat">₹{{ team_aum|intcomma|default:"0" }} AUM</span> -->
         </div>
-
-        <div class="data-table-container">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Team Member</th>
-                        <th>Leads</th>
-                        <th>Clients</th>
-                        <th>AUM</th>
-                        <th>SIP</th>
-                        <th>Tasks</th>
-                        <th>Performance</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for member_data in team_members_data %}
-                    <tr>
-                        <td>
-                            <div class="member-info">
-                                <strong>{{ member_data.member.get_full_name|default:member_data.member.username }}</strong>
-                                <small>{{ member_data.member.email }}</small>
+        </h2>
+        
+            <div class="table-container">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Team Member</th>
+                    <th>Leads</th>
+                    <th>Clients</th>
+                    <th>AUM</th>
+                    <th>SIP</th>
+                    <th>Tasks</th>
+                    <th>Performance</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for member_data in team_members_data %}
+                <tr>
+                    <td>
+                        <div class="member-info">
+                            <strong>{{ member_data.member.get_full_name|default:member_data.member.username }}</strong>
+                            <small>{{ member_data.member.email }}</small>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge badge-primary">{{ member_data.lead_count|default:0 }}</span>
+                    </td>
+                    <td>
+                        <span class="badge badge-success">{{ member_data.client_count|default:0 }}</span>
+                    </td>
+                    <td>₹{{ member_data.aum|intcomma|default:"0" }}</td>
+                    <td>₹{{ member_data.sip|intcomma|default:"0" }}</td>
+                    <td>
+                        <div class="task-summary">
+                            <span class="badge {% if member_data.pending_tasks > 5 %}badge-danger{% elif member_data.pending_tasks > 0 %}badge-warning{% else %}badge-success{% endif %}">
+                                {{ member_data.pending_tasks|default:0 }} pending
+                            </span>
+                            {% if member_data.overdue_tasks > 0 %}
+                            <span class="badge badge-danger">
+                                {{ member_data.overdue_tasks }} overdue
+                            </span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="performance-indicator">
+                            <span class="performance-score">{{ member_data.performance_score|default:0 }}%</span>
+                            <div class="performance-bar">
+                                <div class="performance-fill" style="width: {{ member_data.performance_score|default:0 }}%"></div>
                             </div>
-                        </td>
-                        <td>
-                            <span class="metric-badge badge-blue">{{ member_data.lead_count|default:0 }}</span>
-                        </td>
-                        <td>
-                            <span class="metric-badge badge-green">{{ member_data.client_count|default:0 }}</span>
-                        </td>
-                        <td>₹{{ member_data.aum|intcomma|default:"0" }}</td>
-                        <td>₹{{ member_data.sip|intcomma|default:"0" }}</td>
-                        <td>
-                            <div class="task-summary">
-                                <span class="badge {% if member_data.pending_tasks > 5 %}badge-red{% elif member_data.pending_tasks > 0 %}badge-orange{% else %}badge-green{% endif %}">
-                                    {{ member_data.pending_tasks|default:0 }} pending
-                                </span>
-                                {% if member_data.overdue_tasks > 0 %}
-                                <span class="badge badge-red" style="margin-left: 5px;">
-                                    {{ member_data.overdue_tasks }} overdue
-                                </span>
-                                {% endif %}
-                            </div>
-                        </td>
-                        <td>
-                            <div class="performance-indicator">
-                                <span class="performance-score">{{ member_data.performance_score|default:0 }}%</span>
-                                <div class="performance-bar">
-                                    <div class="performance-fill" style="width: {{ member_data.performance_score|default:0 }}%"></div>
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="7" class="empty-state">
-                            <div class="empty-icon">👥</div>
-                            <div class="empty-message">No team members found</div>
-                            <div class="empty-submessage">Your team will appear here once assigned</div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="empty-message">No team members found</div>
+                        <div class="empty-submessage">Your team will appear here once assigned</div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
+    </div>
+
+
 
     <!-- Tasks Overview Section -->
-    <div class="section-divider">
-        <span>Tasks & Service Requests</span>
-    </div>
-
-    <div class="team-section">
-        <div class="section-header">
-            <h2 class="section-title">
-                <div class="title-icon">📋</div>
-                Team Tasks Overview
-            </h2>
-            <div class="team-stats-header">
-                <span>{{ pending_tasks|default:0 }} Pending</span>
-                <span>{{ overdue_tasks|default:0 }} Overdue</span>
-                <span>{{ team_tasks.count|default:0 }} Total</span>
+    <div class="section-header">
+        <h2 class="section-title">
+            <div class="section-icon">
+                <i class="fas fa-clipboard-list"></i>
             </div>
-        </div>
+            Team Tasks Overview
+            <div class="section-stats">
+            <span class="section-stat mb-3">{{ pending_tasks|default:0 }} Pending</span>
+            <span class="section-stat mb-3">{{ overdue_tasks|default:0 }} Overdue</span>
+            <span class="section-stat mb-3">{{ team_tasks.count|default:0 }} Total</span>
+            </div>
 
-        <div class="data-table-container">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Task</th>
-                        <th>Assigned To</th>
-                        <th>Due Date</th>
-                        <th>Priority</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for task in team_tasks %}
-                        {% if not task.completed %}
-                            <tr>
-                                <td>
-                                    <div class="task-info">
-                                        <strong>{{ task.title|default:"Untitled Task" }}</strong>
-                                        {% if task.description %}
-                                        <small>{{ task.description|truncatechars:50 }}</small>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                                <td>{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</td>
-                                <td>
-                                    {% if task.due_date %}
-                                    <div class="due-date {% if task.due_date < now %}overdue{% endif %}">
-                                        {{ task.due_date|date:"M d, Y" }}
-                                        {% if task.due_date < now %}
-                                        <span class="overdue-label">(Overdue)</span>
-                                        {% endif %}
-                                    </div>
-                                    {% else %}
-                                    <span class="text-muted">No due date</span>
+        </h2>
+        
+        <div class="table-container">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Task</th>
+                    <th>Assigned To</th>
+                    <th>Due Date</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for task in team_tasks %}
+                    {% if not task.completed %}
+                        <tr>
+                            <td>
+                                <div class="task-info">
+                                    <strong>{{ task.title|default:"Untitled Task" }}</strong>
+                                    {% if task.description %}
+                                    <small>{{ task.description|truncatechars:50 }}</small>
                                     {% endif %}
-                                </td>
-                                <td>
-                                    <span class="metric-badge 
-                                        {% if task.priority == 'high' %}badge-red
-                                        {% elif task.priority == 'medium' %}badge-orange
-                                        {% else %}badge-blue{% endif %}">
-                                        {{ task.get_priority_display|default:task.priority|default:"Normal"|title }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="metric-badge 
-                                        {% if task.completed %}badge-green
-                                        {% else %}badge-orange{% endif %}">
-                                        {% if task.completed %}Completed{% else %}Pending{% endif %}
-                                    </span>
-                                </td>
-                                <td>
-                                    <a href="{% url 'task_list' %}?task_id={{ task.id }}" class="action-btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
-                                        View
-                                    </a>
-                                </td>
-                            </tr>
-                        {% endif %}
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="empty-state">
-                            <div class="empty-icon">✅</div>
-                            <div class="empty-message">No pending tasks found</div>
-                            <div class="empty-submessage">All tasks are completed</div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <div class="action-panel" style="margin-top: 2rem;">
-            <div class="action-buttons">
-                <a href="{% url 'task_list' %}?status=pending" class="action-btn btn-secondary">
-                    <span>📋</span> View All Pending Tasks ({{ pending_tasks|default:0 }})
-                </a>
-                <a href="{% url 'task_list' %}?status=overdue" class="action-btn btn-danger">
-                    <span>⚠️</span> View Overdue Tasks ({{ overdue_tasks|default:0 }})
-                </a>
-                <a href="{% url 'task_list' %}" class="action-btn btn-primary">
-                    <span>➕</span> Manage Tasks
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Service Requests Section -->
-    <div class="team-section">
-        <div class="section-header">
-            <h2 class="section-title">
-                <div class="title-icon">🛠️</div>
-                Recent Service Requests
-            </h2>
-            <div class="team-stats-header">
-                <span>{{ team_service_requests.count|default:0 }} Total</span>
-                {% with open_requests=team_service_requests|length %}
-                <span>{{ open_requests|default:0 }} Open</span>
-                {% endwith %}
-                <span>{{ team_service_requests.count|default:0 }} Processed</span>
-            </div>
-        </div>
-
-        <div class="data-table-container">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Request</th>
-                        <th>Client</th>
-                        <th>Raised By</th>
-                        <th>Priority</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for request in team_service_requests|slice:":10" %}
-                    <tr>
-                        <td>
-                            <div class="request-info">
-                                <strong>{{ request.request_type|default:"Service Request" }}</strong>
-                                {% if request.description %}
-                                <small>{{ request.description|truncatechars:40 }}</small>
+                                </div>
+                            </td>
+                            <td>{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</td>
+                            <td>
+                                {% if task.due_date %}
+                                <div class="due-date {% if task.due_date < now %}overdue{% endif %}">
+                                    {{ task.due_date|date:"M d, Y" }}
+                                    {% if task.due_date < now %}
+                                    <span class="overdue-label">Overdue</span>
+                                    {% endif %}
+                                </div>
+                                {% else %}
+                                <span style="color: var(--secondary-text); font-style: italic;">No due date</span>
                                 {% endif %}
-                            </div>
-                        </td>
-                        <td>
-                            {% if request.client %}
-                            <a href="{% url 'client_list' %}?client_id={{ request.client.id }}">
-                                {{ request.client.name }}
-                            </a>
-                            {% else %}
-                            <span class="text-muted">System Request</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ request.raised_by.get_full_name|default:request.raised_by.username }}</td>
-                        <td>
-                            <span class="metric-badge 
-                                {% if request.priority == 'high' %}badge-red
-                                {% elif request.priority == 'medium' %}badge-orange
-                                {% else %}badge-blue{% endif %}">
-                                {{ request.get_priority_display|default:request.priority|default:"Normal"|title }}
-                            </span>
-                        </td>
-                        <td>
-                            <span class="metric-badge 
-                                {% if request.status == 'resolved' %}badge-green
-                                {% elif request.status == 'in_progress' %}badge-orange
-                                {% else %}badge-red{% endif %}">
-                                {{ request.get_status_display|default:request.status|default:"Open"|title }}
-                            </span>
-                        </td>
-                        <td>
-                            <a href="{% url 'service_request_list' %}?request_id={{ request.id }}" class="action-btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">
-                                View
-                            </a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="empty-state">
-                            <div class="empty-icon">🛠️</div>
-                            <div class="empty-message">No service requests found</div>
-                            <div class="empty-submessage">All service requests are processed</div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <div class="action-panel" style="margin-top: 2rem;">
-            <div class="action-buttons">
-                <a href="{% url 'service_request_list' %}?status=open" class="action-btn btn-secondary">
-                    <span>🛠️</span> View Open Requests
-                </a>
-                <a href="{% url 'service_request_list' %}" class="action-btn btn-accent">
-                    <span>📋</span> View All Requests
-                </a>
-                <a href="{% url 'service_request_list' %}" class="action-btn btn-primary">
-                    <span>➕</span> Manage Requests
-                </a>
-            </div>
-        </div>
+                            </td>
+                            <td>
+                                <span class="badge 
+                                    {% if task.priority == 'high' %}badge-danger
+                                    {% elif task.priority == 'medium' %}badge-warning
+                                    {% else %}badge-primary{% endif %}">
+                                    {{ task.get_priority_display|default:task.priority|default:"Normal"|title }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge 
+                                    {% if task.completed %}badge-success
+                                    {% else %}badge-warning{% endif %}">
+                                    {% if task.completed %}Completed{% else %}Pending{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{% url 'task_list' %}?task_id={{ task.id }}" class="action-btn btn-sm">
+                                    <i class="fas fa-eye"></i>
+                                    View
+                                </a>
+                            </td>
+                        </tr>
+                    {% endif %}
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="empty-message">No pending tasks found</div>
+                        <div class="empty-submessage">All tasks are completed</div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 
-    <!-- Action Panel -->
     <div class="action-panel">
         <div class="action-buttons">
-            <a href="{% url 'lead_list' %}" class="action-btn btn-primary">
-                <span>🎯</span> View All Leads ({{ leads_count|default:0 }})
+            <a href="{% url 'task_list' %}?status=pending" class="action-btn">
+                <i class="fas fa-clipboard-list"></i>
+                View All Pending Tasks ({{ pending_tasks|default:0 }})
             </a>
-            <a href="{% url 'client_list' %}" class="action-btn btn-accent">
-                <span>💰</span> View Client Portfolio ({{ clients_count|default:0 }})
+            <a href="{% url 'task_list' %}?status=overdue" class="action-btn" style="background: #dc3545; color: white; border-color: #dc3545;">
+                <i class="fas fa-exclamation-triangle"></i>
+                View Overdue Tasks ({{ overdue_tasks|default:0 }})
             </a>
-            <a href="{% url 'task_list' %}" class="action-btn btn-secondary">
-                <span>📋</span> Manage Tasks ({{ team_tasks.count|default:0 }})
-            </a>
-            <a href="{% url 'dashboard' %}" class="action-btn btn-accent">
-                <span>📈</span> Dashboard Home
+            <a href="{% url 'task_list' %}" class="action-btn btn-primary">
+                <i class="fas fa-plus"></i>
+                Manage Tasks
             </a>
         </div>
     </div>
+  
+
+
+
+   
+
+    <!-- Service Requests Section -->
+    <div class="section-header">
+        <h2 class="section-title">
+            <div class="section-icon">
+                <i class="fas fa-tools"></i>
+            </div>
+            Recent Service Requests
+        </h2>
+        <div class="section-stats">
+            <span class="section-stat">{{ team_service_requests.count|default:0 }} Total</span>
+            {% with open_requests=team_service_requests|length %}
+            <span class="section-stat">{{ open_requests|default:0 }} Open</span>
+            {% endwith %}
+            <span class="section-stat">{{ team_service_requests.count|default:0 }} Processed</span>
+        </div>
+         <div class="table-container">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Request</th>
+                    <th>Client</th>
+                    <th>Raised By</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for request in team_service_requests|slice:":10" %}
+                <tr>
+                    <td>
+                        <div class="request-info">
+                            <strong>{{ request.request_type|default:"Service Request" }}</strong>
+                            {% if request.description %}
+                            <small>{{ request.description|truncatechars:40 }}</small>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        {% if request.client %}
+                        <a href="{% url 'client_list' %}?client_id={{ request.client.id }}" style="color: var(--primary-color); text-decoration: none;">
+                            {{ request.client.name }}
+                        </a>
+                        {% else %}
+                        <span style="color: var(--secondary-text); font-style: italic;">System Request</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ request.raised_by.get_full_name|default:request.raised_by.username }}</td>
+                    <td>
+                        <span class="badge 
+                            {% if request.priority == 'high' %}badge-danger
+                            {% elif request.priority == 'medium' %}badge-warning
+                            {% else %}badge-primary{% endif %}">
+                            {{ request.get_priority_display|default:request.priority|default:"Normal"|title }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge 
+                            {% if request.status == 'resolved' %}badge-success
+                            {% elif request.status == 'in_progress' %}badge-warning
+                            {% else %}badge-danger{% endif %}">
+                            {{ request.get_status_display|default:request.status|default:"Open"|title }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{% url 'service_request_list' %}?request_id={{ request.id }}" class="action-btn btn-sm">
+                            <i class="fas fa-eye"></i>
+                            View
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-tools"></i>
+                        </div>
+                        <div class="empty-message">No service requests found</div>
+                        <div class="empty-submessage">All service requests are processed</div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="action-panel">
+        <div class="action-buttons">
+            <a href="{% url 'service_request_list' %}?status=open" class="action-btn">
+                <i class="fas fa-tools"></i>
+                View Open Requests
+            </a>
+            <a href="{% url 'service_request_list' %}" class="action-btn">
+                <i class="fas fa-clipboard-list"></i>
+                View All Requests
+            </a>
+            <a href="{% url 'service_request_list' %}" class="action-btn btn-primary">
+                <i class="fas fa-plus"></i>
+                Manage Requests
+            </a>
+        </div>
+    </div>
+    
+    <!-- Final Action Panel -->
+    <!-- <div class="action-panel">
+        <div class="action-buttons">
+            <a href="{% url 'lead_list' %}" class="action-btn btn-primary">
+                <i class="fas fa-bullseye"></i>
+                View All Leads ({{ leads_count|default:0 }})
+            </a>
+            <a href="{% url 'client_list' %}" class="action-btn">
+                <i class="fas fa-chart-line"></i>
+                View Client Portfolio ({{ clients_count|default:0 }})
+            </a>
+            <a href="{% url 'task_list' %}" class="action-btn">
+                <i class="fas fa-tasks"></i>
+                Manage Tasks ({{ team_tasks.count|default:0 }})
+            </a>
+            <a href="{% url 'dashboard' %}" class="action-btn">
+                <i class="fas fa-home"></i>
+                Dashboard Home
+            </a>
+        </div>
+    </div> -->
+
+    </div>
+
+   
 </div>
 
-<!-- Notification Panel -->
-<div id="notificationPanel" class="notification-panel"></div>
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Get current time for overdue task checking
-    const now = new Date();
-
-    // Animate metric cards on load
-    const metricCards = document.querySelectorAll('.metric-card');
-    metricCards.forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(30px)';
-        setTimeout(() => {
-            card.style.transition = 'all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-        }, index * 200);
-    });
-
-    // Add interactive hover effects
-    metricCards.forEach(card => {
-        card.addEventListener('mouseenter', function() {
-            this.style.zIndex = '10';
-        });
+    // Update date and time
+    function updateDateTime() {
+        const now = new Date();
+        const dateOptions = { 
+            day: 'numeric', 
+            month: 'short', 
+            year: 'numeric' 
+        };
+        const timeOptions = { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            second: '2-digit',
+            hour12: false
+        };
         
-        card.addEventListener('mouseleave', function() {
-            this.style.zIndex = '1';
+        document.getElementById('current-date').textContent = now.toLocaleDateString('en-GB', dateOptions);
+        document.getElementById('current-time').textContent = now.toLocaleTimeString('en-GB', timeOptions);
+    }
+    
+    // Update immediately and then every second
+    updateDateTime();
+    setInterval(updateDateTime, 1000);
+
+    // Animate counters
+    function animateCounter(element, target, duration = 1500) {
+        const start = 0;
+        const increment = target / (duration / 16);
+        let current = start;
+        
+        const timer = setInterval(() => {
+            current += increment;
+            if (current >= target) {
+                current = target;
+                clearInterval(timer);
+            }
+            
+            if (element.textContent.includes('₹')) {
+                element.textContent = '₹' + Math.floor(current).toLocaleString('en-IN');
+            } else {
+                element.textContent = Math.floor(current);
+            }
+        }, 16);
+    }
+
+    // Apply counter animation
+    setTimeout(() => {
+        const metricValues = document.querySelectorAll('.metric-value');
+        metricValues.forEach((element, index) => {
+            let targetValue = 0;
+            const textContent = element.textContent.replace(/[₹,]/g, '');
+            targetValue = parseInt(textContent) || 0;
+            
+            if (targetValue > 0) {
+                setTimeout(() => {
+                    animateCounter(element, targetValue);
+                }, index * 200);
+            }
         });
-    });
 
-    // Animate table rows
-    const tableRows = document.querySelectorAll('tbody tr:not(.empty-state)');
-    tableRows.forEach((row, index) => {
-        row.style.opacity = '0';
-        row.style.transform = 'translateX(-20px)';
-        setTimeout(() => {
-            row.style.transition = 'all 0.5s ease';
-            row.style.opacity = '1';
-            row.style.transform = 'translateX(0)';
-        }, 500 + (index * 100));
-    });
+        const teamStatValues = document.querySelectorAll('.team-stat-value');
+        teamStatValues.forEach((element, index) => {
+            let targetValue = 0;
+            const textContent = element.textContent.replace(/[₹,]/g, '');
+            targetValue = parseInt(textContent) || 0;
+            
+            if (targetValue > 0) {
+                setTimeout(() => {
+                    animateCounter(element, targetValue, 1000);
+                }, 500 + (index * 100));
+            }
+        });
+    }, 600);
 
-    // Add click ripple effect to buttons
-    const buttons = document.querySelectorAll('.action-btn, .approval-btn');
-    buttons.forEach(button => {
-        button.addEventListener('click', function(e) {
+    // Dynamic greeting
+    const hour = new Date().getHours();
+    const welcomeText = document.querySelector('.welcome-text');
+    if (welcomeText) {
+        let greeting = 'Welcome back';
+        
+        if (hour < 12) {
+            greeting = 'Good morning';
+        } else if (hour < 17) {
+            greeting = 'Good afternoon';
+        } else {
+            greeting = 'Good evening';
+        }
+        
+        welcomeText.innerHTML = greeting + ', <span class="user-name">{{ user.get_full_name|default:user.username }}</span>';
+    }
+
+    // Enhanced button interactions
+    const actionButtons = document.querySelectorAll('.action-btn, .header-btn');
+    actionButtons.forEach(btn => {
+        btn.addEventListener('click', function(e) {
             const ripple = document.createElement('span');
             const rect = this.getBoundingClientRect();
-            const size = Math.max(rect.height, rect.width);
+            const size = Math.max(rect.width, rect.height);
             const x = e.clientX - rect.left - size / 2;
             const y = e.clientY - rect.top - size / 2;
             
@@ -1228,216 +1397,59 @@ document.addEventListener('DOMContentLoaded', function() {
                 position: absolute;
                 width: ${size}px;
                 height: ${size}px;
-                background: rgba(255,255,255,0.3);
+                left: ${x}px;
+                top: ${y}px;
+                background: rgba(255, 255, 255, 0.4);
                 border-radius: 50%;
-                transform: translate(${x}px, ${y}px) scale(0);
-                animation: ripple 0.6s ease-out;
+                transform: scale(0);
+                animation: ripple 0.8s ease-out;
                 pointer-events: none;
+                z-index: 1;
             `;
             
+            this.style.position = 'relative';
+            this.style.overflow = 'hidden';
             this.appendChild(ripple);
-            setTimeout(() => ripple.remove(), 600);
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 800);
         });
     });
 
-    // Progress ring animation
-    const progressRings = document.querySelectorAll('.progress-ring .progress');
+    // Intersection Observer for scroll animations
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
-                entry.target.style.animationPlayState = 'running';
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
             }
         });
+    }, observerOptions);
+
+    // Observe elements for scroll animations
+    const animateOnScroll = document.querySelectorAll('.metric-card, .team-card, .section-header, .table-container, .action-panel');
+    animateOnScroll.forEach((el, index) => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(30px)';
+        el.style.transition = `all 0.6s ease ${index * 0.1}s`;
+        observer.observe(el);
     });
-
-    progressRings.forEach(ring => {
-        observer.observe(ring);
-    });
-
-    // Auto-refresh simulation
-    let refreshCounter = 0;
-    setInterval(() => {
-        refreshCounter++;
-        const refreshIndicator = document.querySelector('.team-stats span:last-child');
-        if (refreshIndicator) {
-            refreshIndicator.style.opacity = '0.5';
-            setTimeout(() => {
-                refreshIndicator.style.opacity = '1';
-            }, 300);
-        }
-    }, 30000); // Every 30 seconds
-
-    // Add real-time data refresh for team metrics (if API endpoint exists)
-    function refreshTeamMetrics() {
-        // Only attempt if the API endpoint exists
-        if (typeof window.teamMetricsApiUrl !== 'undefined') {
-            fetch(window.teamMetricsApiUrl)
-                .then(response => response.json())
-                .then(data => {
-                    // Update leads count
-                    const leadsElement = document.querySelector('.metric-card.blue .metric-value');
-                    if (leadsElement) leadsElement.textContent = data.leads_count;
-                    
-                    // Update AUM
-                    const aumElement = document.querySelector('.metric-card.green .metric-value');
-                    if (aumElement) aumElement.textContent = '₹' + new Intl.NumberFormat().format(data.team_aum);
-                    
-                    // Update tasks
-                    const tasksElement = document.querySelector('.metric-card.orange .metric-value');
-                    if (tasksElement) tasksElement.textContent = data.pending_tasks;
-                    
-                    const overdueElement = document.querySelector('.metric-card.orange .metric-trend');
-                    if (overdueElement) {
-                        overdueElement.innerHTML = `<span>⚠️</span> ${data.overdue_tasks} Overdue`;
-                    }
-                    
-                    // Update SIP
-                    const sipElement = document.querySelector('.metric-card.purple .metric-value');
-                    if (sipElement) sipElement.textContent = '₹' + new Intl.NumberFormat().format(data.team_sip);
-                    
-                    // Show notification if data was updated
-                    if (data.updated) {
-                        showNotification('info', 'Data Updated', 'Team metrics have been refreshed');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error refreshing metrics:', error);
-                });
-        }
-    }
-    
-    // Refresh every 2 minutes if API is available
-    if (typeof window.teamMetricsApiUrl !== 'undefined') {
-        setInterval(refreshTeamMetrics, 120000);
-    }
 });
 
-// Notification system
-function showNotification(type, title, message, actions = []) {
-    const notificationPanel = document.getElementById('notificationPanel');
-    const notificationId = 'notification-' + Date.now();
-    
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.id = notificationId;
-    
-    let actionsHTML = '';
-    if (actions.length > 0) {
-        actionsHTML = `<div class="notification-footer">`;
-        actions.forEach(action => {
-            if (action.method === 'POST') {
-                actionsHTML += `
-                    <form method="post" action="${action.url}" style="display: inline;">
-                        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                        <button type="submit" class="notification-btn notification-btn-primary">${action.text}</button>
-                    </form>
-                `;
-            } else {
-                actionsHTML += `<a href="${action.url}" class="notification-btn notification-btn-primary">${action.text}</a>`;
-            }
-        });
-        actionsHTML += `</div>`;
-    }
-    
-    notification.innerHTML = `
-        <div class="notification-header">
-            <div class="notification-title">${title}</div>
-            <button class="notification-close" onclick="document.getElementById('${notificationId}').remove()">&times;</button>
-        </div>
-        <div class="notification-body">${message}</div>
-        ${actionsHTML}
-    `;
-    
-    notificationPanel.appendChild(notification);
-    
-    // Auto-remove notification after 10 seconds
-    setTimeout(() => {
-        if (document.getElementById(notificationId)) {
-            notification.style.opacity = '0';
-            notification.style.transform = 'translateX(50px)';
-            setTimeout(() => {
-                notification.remove();
-            }, 500);
-        }
-    }, 10000);
-}
-
-// Add CSS for ripple animation and additional styles
+// Enhanced CSS animations
 const style = document.createElement('style');
 style.textContent = `
     @keyframes ripple {
         to {
-            transform: translate(var(--x), var(--y)) scale(4);
+            transform: scale(2.5);
             opacity: 0;
         }
-    }
-    
-    .member-info small {
-        display: block;
-        color: #6b7280;
-        font-size: 0.75rem;
-    }
-    
-    .task-info small {
-        display: block;
-        color: #6b7280;
-        font-size: 0.75rem;
-    }
-    
-    .request-info small {
-        display: block;
-        color: #6b7280;
-        font-size: 0.75rem;
-    }
-    
-    .due-date.overdue {
-        color: #ef4444;
-        font-weight: bold;
-    }
-    
-    .overdue-label {
-        font-size: 0.75rem;
-        background: #ef4444;
-        color: white;
-        padding: 0.125rem 0.375rem;
-        border-radius: 0.25rem;
-        margin-left: 0.5rem;
-    }
-    
-    .performance-indicator {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .performance-score {
-        font-weight: bold;
-        margin-bottom: 0.25rem;
-    }
-    
-    .performance-bar {
-        width: 50px;
-        height: 4px;
-        background: #e5e7eb;
-        border-radius: 2px;
-        overflow: hidden;
-    }
-    
-    .performance-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #ef4444 0%, #f59e0b 50%, #10b981 100%);
-        transition: width 0.3s ease;
-    }
-    
-    .task-summary {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.25rem;
-    }
-    
-    .text-muted {
-        color: #6b7280;
-        font-style: italic;
     }
 `;
 document.head.appendChild(style);

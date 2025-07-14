@@ -3,136 +3,124 @@
 {% block title %}Confirm Delete Task{% endblock %}
 
 {% block content %}
+<!-- Bootstrap 5 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<!-- Bootstrap Icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
 <style>
-    /* Modern CSS Reset and Base Styles */
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
+    :root {
+        --bs-primary: #1C64FF;
+        --bs-primary-rgb: 28, 100, 255;
+        --bs-secondary: #696969;
+        --bs-secondary-rgb: 105, 105, 105;
+        --bs-light: #C3E4FF;
+        --bs-light-rgb: 195, 228, 255;
+        --bs-border-color: #D9D9D9;
+        --bs-body-bg: #FFFFFF;
+        --bs-body-color: #212529;
+        --bs-danger: #dc3545;
+        --bs-danger-rgb: 220, 53, 69;
     }
 
     body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-        background: linear-gradient(135deg, #D3FF61 0%, #B8E849 100%);
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-        line-height: 1.6;
+        font-family: 'Inter', sans-serif;
+        background-color: var(--bs-body-bg);
+        color: var(--bs-body-color);
     }
 
-    .confirmation-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(10px);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-        animation: fadeIn 0.3s ease-out;
+    .btn-primary {
+        background-color: var(--bs-primary);
+        border-color: var(--bs-primary);
+        font-weight: 600;
     }
 
-    .confirmation-modal {
-        background: white;
-        border-radius: 24px;
-        padding: 48px;
-        max-width: 520px;
-        width: 100%;
-        box-shadow: 
-            0 32px 64px rgba(0, 0, 0, 0.15),
-            0 8px 32px rgba(0, 0, 0, 0.1),
-            0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-        position: relative;
-        transform: translateY(0);
-        animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        text-align: center;
+    .btn-primary:hover {
+        background-color: #1557e6;
+        border-color: #1557e6;
+    }
+
+    .btn-danger {
+        background-color: var(--bs-danger);
+        border-color: var(--bs-danger);
+        font-weight: 600;
+    }
+
+    .btn-danger:hover {
+        background-color: #c82333;
+        border-color: #bd2130;
+    }
+
+    .btn-outline-secondary {
+        color: var(--bs-secondary);
+        border-color: var(--bs-border-color);
+        font-weight: 600;
+    }
+
+    .btn-outline-secondary:hover {
+        background-color: var(--bs-border-color);
+        border-color: var(--bs-border-color);
+        color: #495057;
+    }
+
+    .text-primary {
+        color: var(--bs-primary) !important;
+    }
+
+    .text-secondary {
+        color: var(--bs-secondary) !important;
+    }
+
+    .bg-light-custom {
+        background-color: var(--bs-light) !important;
+    }
+
+    .border-custom {
+        border-color: var(--bs-border-color) !important;
+    }
+
+    .card {
+        border: 1px solid var(--bs-border-color);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        transition: all 0.3s ease;
     }
 
     .warning-icon {
         width: 80px;
         height: 80px;
-        background: linear-gradient(135deg, #ff6b6b, #ff5252);
-        border-radius: 50%;
-        margin: 0 auto 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        background: linear-gradient(135deg, rgba(220, 53, 69, 0.1), rgba(220, 53, 69, 0.05));
+        border: 3px solid rgba(220, 53, 69, 0.2);
         animation: pulse 2s infinite;
-        position: relative;
     }
 
-    .warning-icon::before {
-        content: '⚠';
-        font-size: 36px;
-        color: white;
-        font-weight: bold;
-    }
-
-    .warning-icon::after {
-        content: '';
-        position: absolute;
-        top: -8px;
-        left: -8px;
-        right: -8px;
-        bottom: -8px;
-        border: 2px solid rgba(255, 107, 107, 0.3);
-        border-radius: 50%;
-        animation: ripple 2s infinite;
-    }
-
-    .confirmation-title {
-        font-size: 32px;
-        font-weight: 800;
-        color: #1a1a1a;
-        margin-bottom: 16px;
-        letter-spacing: -0.02em;
-    }
-
-    .confirmation-message {
-        font-size: 18px;
-        color: #4a4a4a;
-        margin-bottom: 40px;
-        line-height: 1.5;
-    }
-
-    .task-name {
-        color: #1a1a1a;
-        font-weight: 700;
-        background: linear-gradient(135deg, #D3FF61, #B8E849);
-        padding: 4px 12px;
-        border-radius: 8px;
+    .task-highlight {
+        background: linear-gradient(135deg, var(--bs-light), rgba(195, 228, 255, 0.5));
+        border: 1px solid rgba(28, 100, 255, 0.2);
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
         display: inline-block;
-        margin: 0 4px;
-        box-shadow: 0 2px 8px rgba(211, 255, 97, 0.3);
+        margin: 0.5rem 0;
     }
 
-    .button-group {
-        display: flex;
-        gap: 16px;
-        justify-content: center;
-        flex-wrap: wrap;
+    .confirmation-container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, rgba(195, 228, 255, 0.1) 0%, rgba(255, 255, 255, 1) 100%);
     }
 
     .btn {
-        padding: 16px 32px;
-        border: none;
-        border-radius: 16px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        text-decoration: none;
-        display: inline-block;
-        min-width: 140px;
+        transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
-        text-align: center;
-        letter-spacing: 0.02em;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .btn:active {
+        transform: translateY(0);
     }
 
     .btn::before {
@@ -142,7 +130,7 @@
         left: -100%;
         width: 100%;
         height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
         transition: left 0.5s;
     }
 
@@ -150,62 +138,15 @@
         left: 100%;
     }
 
-    .btn-danger {
-        background: linear-gradient(135deg, #ff6b6b, #ff5252);
-        color: white;
-        box-shadow: 0 8px 24px rgba(255, 107, 107, 0.4);
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+        animation: spin 1s linear infinite;
     }
 
-    .btn-danger:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 32px rgba(255, 107, 107, 0.6);
-        background: linear-gradient(135deg, #ff5252, #ff4444);
-    }
-
-    .btn-danger:active {
-        transform: translateY(0);
-        box-shadow: 0 4px 16px rgba(255, 107, 107, 0.4);
-    }
-
-    .btn-secondary {
-        background: #f8f9fa;
-        color: #495057;
-        border: 2px solid #e9ecef;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-    }
-
-    .btn-secondary:hover {
-        background: white;
-        border-color: #D3FF61;
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-        color: #1a1a1a;
-    }
-
-    .btn-secondary:active {
-        transform: translateY(0);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Animations */
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-        }
-        to {
-            opacity: 1;
-        }
-    }
-
-    @keyframes slideUp {
-        from {
-            opacity: 0;
-            transform: translateY(40px) scale(0.95);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
     }
 
     @keyframes pulse {
@@ -217,170 +158,33 @@
         }
     }
 
-    @keyframes ripple {
-        0% {
-            transform: scale(1);
-            opacity: 1;
-        }
-        100% {
-            transform: scale(1.3);
+    @keyframes fadeInUp {
+        from {
             opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
         }
     }
 
-    /* Responsive Design */
-    @media (max-width: 768px) {
-        .confirmation-modal {
-            padding: 32px 24px;
-            margin: 20px;
-            border-radius: 20px;
-        }
-
-        .confirmation-title {
-            font-size: 28px;
-        }
-
-        .confirmation-message {
-            font-size: 16px;
-        }
-
-        .button-group {
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 14px 24px;
-        }
-
-        .warning-icon {
-            width: 64px;
-            height: 64px;
-            margin-bottom: 24px;
-        }
-
-        .warning-icon::before {
-            font-size: 28px;
-        }
+    .fade-in-up {
+        animation: fadeInUp 0.6s ease-out;
     }
 
-    @media (max-width: 480px) {
-        .confirmation-modal {
-            padding: 24px 20px;
-        }
-
-        .confirmation-title {
-            font-size: 24px;
-            margin-bottom: 12px;
-        }
-
-        .confirmation-message {
-            font-size: 15px;
-            margin-bottom: 32px;
-        }
-    }
-
-    /* Focus States for Accessibility */
+    /* Focus states for accessibility */
     .btn:focus {
         outline: none;
-        box-shadow: 0 0 0 3px rgba(211, 255, 97, 0.5), 0 8px 24px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 0 0 0.25rem rgba(28, 100, 255, 0.25);
     }
 
     .btn-danger:focus {
-        box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.3), 0 12px 32px rgba(255, 107, 107, 0.6);
-    }
-
-    /* High contrast mode support */
-    @media (prefers-contrast: high) {
-        .confirmation-modal {
-            border: 2px solid #000;
-        }
-        
-        .btn {
-            border: 2px solid currentColor;
-        }
-    }
-
-    /* Reduced motion support */
-    @media (prefers-reduced-motion: reduce) {
-        * {
-            animation-duration: 0.01ms !important;
-            animation-iteration-count: 1 !important;
-            transition-duration: 0.01ms !important;
-        }
-    }
-
-    /* Custom ripple animation */
-    @keyframes ripple {
-        to {
-            transform: scale(2);
-            opacity: 0;
-        }
-    }
-
-    /* Enhanced focus styles for accessibility */
-    .btn:focus {
-        outline: none !important;
-        box-shadow: 0 0 0 0.25rem rgba(28, 100, 255, 0.25) !important;
-    }
-
-    .btn-danger:focus {
-        box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important;
+        box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
     }
 
     .btn-outline-secondary:focus {
-        box-shadow: 0 0 0 0.25rem rgba(217, 217, 217, 0.5) !important;
-    }
-
-    /* Smooth transitions */
-    .btn,
-    .card {
-        transition: all 0.2s ease !important;
-    }
-
-    /* Loading spinner animation */
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-
-    .spinner-border-sm {
-        animation: spin 1s linear infinite;
-    }
-
-    /* Enhanced danger button styling */
-    .btn-danger {
-        background-color: #dc3545 !important;
-        border-color: #dc3545 !important;
-    }
-
-    .btn-danger:hover {
-        background-color: #c82333 !important;
-        border-color: #bd2130 !important;
-    }
-
-    .btn-danger:disabled {
-        background-color: #dc3545 !important;
-        border-color: #dc3545 !important;
-        opacity: 0.65;
-    }
-
-    /* Enhanced secondary button styling */
-    .btn-outline-secondary {
-        border-color: #D9D9D9 !important;
-        color: #696969 !important;
-    }
-
-    .btn-outline-secondary:hover {
-        background-color: #D9D9D9 !important;
-        border-color: #D9D9D9 !important;
-        color: #495057 !important;
-    }
-
-    /* Card shadow enhancement */
-    .shadow-lg {
-        box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175) !important;
+        box-shadow: 0 0 0 0.25rem rgba(217, 217, 217, 0.5);
     }
 
     /* Responsive adjustments */
@@ -394,19 +198,20 @@
             font-size: 1rem;
         }
         
-        .fs-5 {
-            font-size: 1.1rem !important;
+        .warning-icon {
+            width: 60px;
+            height: 60px;
         }
     }
 
     /* High contrast mode support */
     @media (prefers-contrast: high) {
         .card {
-            border: 2px solid #000 !important;
+            border: 2px solid #000;
         }
         
         .btn {
-            border-width: 2px !important;
+            border-width: 2px;
         }
     }
 
@@ -420,80 +225,80 @@
             transition-duration: 0.01ms !important;
         }
     }
-
-    /* Print styles */
-    @media print {
-        .toast-container {
-            display: none !important;
-        }
-        
-        .btn {
-            border: 2px solid #000 !important;
-            background: white !important;
-            color: #000 !important;
-        }
-    }
 </style>
 
-<div class="container-fluid vh-100 d-flex align-items-center justify-content-center" style="background-color: #FFFFFF;">
-    <div class="row justify-content-center w-100">
-        <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5">
-            <!-- Confirmation Card -->
-            <div class="card border-0 shadow-lg" style="background-color: #FFFFFF; border-radius: 1rem;">
-                <!-- Header with Warning Icon -->
-                <div class="card-header text-center py-4 border-0" style="background-color: #C3E4FF; border-radius: 1rem 1rem 0 0;">
-                    <div class="mb-3">
-                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle" 
-                             style="width: 80px; height: 80px; background-color: rgba(220, 53, 69, 0.1); border: 3px solid rgba(220, 53, 69, 0.2);">
-                            <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
+<div class="confirmation-container d-flex align-items-center justify-content-center py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5">
+                <!-- Confirmation Card -->
+                <div class="card border-0 shadow-lg fade-in-up" style="border-radius: 1rem;">
+                    <!-- Header with Warning Icon -->
+                    <div class="card-header text-center py-4 border-0 bg-light-custom" style="border-radius: 1rem 1rem 0 0;">
+                        <div class="mb-3">
+                            <div class="warning-icon rounded-circle d-inline-flex align-items-center justify-content-center">
+                                <i class="bi bi-exclamation-triangle-fill fs-1 text-danger"></i>
+                            </div>
                         </div>
-                    </div>
-                    <h2 class="h3 fw-bold mb-0" style="color: #1C64FF;">Confirm Delete</h2>
-                </div>
-
-                <!-- Card Body -->
-                <div class="card-body p-4 text-center">
-                    <div class="mb-4">
-                        <p class="fs-5 mb-3" style="color: #696969;">
-                            Are you sure you want to delete the task
-                        </p>
-                        <div class="alert alert-light border-0 d-inline-block px-3 py-2 mx-2" 
-                             style="background-color: #C3E4FF; color: #1C64FF; border-radius: 0.5rem;">
-                            <i class="fas fa-tasks me-2"></i>
-                            <strong>{{ task.title }}</strong>
-                        </div>
-                        <p class="fs-6 mt-3 mb-0" style="color: #696969;">
-                            <i class="fas fa-info-circle me-2 text-warning"></i>
-                            This action cannot be undone and will permanently remove the task.
-                        </p>
+                        <h2 class="h3 fw-bold mb-0 text-primary">Confirm Deletion</h2>
+                        <p class="text-secondary mb-0 mt-2">This action requires your confirmation</p>
                     </div>
 
-                    <!-- Action Buttons -->
-                    <form method="post" class="d-inline">
-                        {% csrf_token %}
-                        <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
-                            <button type="submit" 
-                                    class="btn btn-danger btn-lg px-4 py-2 order-2 order-sm-1" 
-                                    id="deleteBtn">
-                                <i class="fas fa-trash me-2"></i>
-                                Yes, Delete Task
-                            </button>
-                            <a href="{% url 'task_list' %}" 
-                               class="btn btn-outline-secondary btn-lg px-4 py-2 order-1 order-sm-2" 
-                               style="border-color: #D9D9D9; color: #696969;">
-                                <i class="fas fa-times me-2"></i>
-                                Cancel
-                            </a>
+                    <!-- Card Body -->
+                    <div class="card-body p-4 text-center">
+                        <div class="mb-4">
+                            <p class="fs-5 mb-3 text-secondary">
+                                Are you sure you want to permanently delete this task?
+                            </p>
+                            
+                            <div class="task-highlight">
+                                <i class="bi bi-list-task me-2 text-primary"></i>
+                                <strong class="text-primary">{{ task.title }}</strong>
+                            </div>
+                            
+                            <div class="alert alert-warning border-0 mt-3" style="background-color: rgba(255, 193, 7, 0.1);">
+                                <i class="bi bi-info-circle-fill me-2"></i>
+                                <small class="text-warning-emphasis">
+                                    <strong>Warning:</strong> This action cannot be undone and will permanently remove the task from the system.
+                                </small>
+                            </div>
                         </div>
-                    </form>
+
+                        <!-- Action Buttons -->
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
+                                <button type="submit" 
+                                        class="btn btn-danger btn-lg px-4 py-3 order-2 order-sm-1" 
+                                        id="deleteBtn"
+                                        aria-describedby="deleteWarning">
+                                    <i class="bi bi-trash3-fill me-2"></i>
+                                    Yes, Delete Task
+                                </button>
+                                <a href="{% url 'task_list' %}" 
+                                   class="btn btn-outline-secondary btn-lg px-4 py-3 order-1 order-sm-2">
+                                    <i class="bi bi-x-circle me-2"></i>
+                                    Cancel
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Security Footer -->
+                    <div class="card-footer text-center py-3 border-0" style="background-color: #f8f9fa; border-radius: 0 0 1rem 1rem;">
+                        <small class="text-muted d-flex align-items-center justify-content-center gap-2">
+                            <i class="bi bi-shield-check text-primary"></i>
+                            Your data is protected and this action requires confirmation
+                        </small>
+                    </div>
                 </div>
 
-                <!-- Additional Info Footer -->
-                <div class="card-footer text-center py-3 border-0" style="background-color: #f8f9fa; border-radius: 0 0 1rem 1rem;">
-                    <small class="text-muted d-flex align-items-center justify-content-center gap-2">
-                        <i class="fas fa-shield-alt" style="color: #1C64FF;"></i>
-                        Your data is protected and this action requires confirmation
-                    </small>
+                <!-- Back to List Link -->
+                <div class="text-center mt-4">
+                    <a href="{% url 'task_list' %}" class="text-decoration-none text-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>
+                        Back to Task List
+                    </a>
                 </div>
             </div>
         </div>
@@ -503,22 +308,45 @@
 <!-- Toast Container for Feedback -->
 <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
     <div id="deleteToast" class="toast border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="toast-header border-0" style="background-color: #f8d7da;">
-            <i class="fas fa-trash text-danger me-2"></i>
+        <div class="toast-header border-0" style="background-color: rgba(220, 53, 69, 0.1);">
+            <i class="bi bi-trash3-fill text-danger me-2"></i>
             <strong class="me-auto text-danger">Task Deletion</strong>
             <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
-        <div class="toast-body" style="background-color: #FFFFFF; color: #696969;">
-            Processing deletion request...
+        <div class="toast-body bg-white">
+            <div class="d-flex align-items-center">
+                <div class="spinner-border spinner-border-sm text-danger me-2" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <span class="text-secondary">Processing deletion request...</span>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- Success Toast -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+    <div id="successToast" class="toast border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header border-0 bg-light-custom">
+            <i class="bi bi-check-circle-fill text-success me-2"></i>
+            <strong class="me-auto text-success">Success</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body bg-white text-secondary">
+            Task has been successfully deleted.
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap 5 JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const deleteBtn = document.getElementById('deleteBtn');
     const form = document.querySelector('form');
     const deleteToast = document.getElementById('deleteToast');
+    const successToast = document.getElementById('successToast');
 
     // Enhanced button interactions
     const buttons = document.querySelectorAll('.btn');
@@ -527,10 +355,11 @@ document.addEventListener('DOMContentLoaded', function() {
         button.addEventListener('mouseenter', function() {
             if (!this.disabled) {
                 this.style.transform = 'translateY(-2px)';
-                this.style.transition = 'all 0.2s ease';
                 
                 if (this.classList.contains('btn-danger')) {
                     this.style.boxShadow = '0 8px 25px rgba(220, 53, 69, 0.3)';
+                } else if (this.classList.contains('btn-primary')) {
+                    this.style.boxShadow = '0 8px 25px rgba(28, 100, 255, 0.3)';
                 } else {
                     this.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
                 }
@@ -542,11 +371,10 @@ document.addEventListener('DOMContentLoaded', function() {
             this.style.boxShadow = '';
         });
         
-        // Click feedback
+        // Click ripple effect
         button.addEventListener('click', function(e) {
             if (this.disabled) return;
             
-            // Create ripple effect
             const ripple = document.createElement('span');
             const rect = this.getBoundingClientRect();
             const size = Math.max(rect.width, rect.height);
@@ -564,6 +392,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 transform: scale(0);
                 animation: ripple 0.6s ease-out;
                 pointer-events: none;
+                z-index: 1;
             `;
             
             this.style.position = 'relative';
@@ -580,7 +409,9 @@ document.addEventListener('DOMContentLoaded', function() {
             deleteBtn.disabled = true;
             const originalContent = deleteBtn.innerHTML;
             deleteBtn.innerHTML = `
-                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <div class="spinner-border spinner-border-sm me-2" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
                 Deleting...
             `;
             
@@ -595,10 +426,25 @@ document.addEventListener('DOMContentLoaded', function() {
             // Add visual feedback to the card
             const card = document.querySelector('.card');
             if (card) {
-                card.style.opacity = '0.7';
+                card.style.opacity = '0.8';
                 card.style.transform = 'scale(0.98)';
-                card.style.transition = 'all 0.3s ease';
             }
+            
+            // Simulate success after a delay (remove this in production)
+            setTimeout(() => {
+                if (deleteToast) {
+                    const toast = bootstrap.Toast.getInstance(deleteToast);
+                    if (toast) toast.hide();
+                }
+                
+                if (successToast) {
+                    const successToastInstance = new bootstrap.Toast(successToast, {
+                        autohide: true,
+                        delay: 3000
+                    });
+                    successToastInstance.show();
+                }
+            }, 2000);
         });
     }
 
@@ -607,37 +453,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.key === 'Escape') {
             // Navigate back to task list on Escape
             window.location.href = "{% url 'task_list' %}";
-        } else if (e.key === 'Enter' && e.ctrlKey) {
-            // Ctrl+Enter to confirm deletion
+        } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            // Ctrl/Cmd+Enter to confirm deletion
             if (deleteBtn && !deleteBtn.disabled) {
                 deleteBtn.click();
             }
         }
     });
-
-    // Add entrance animation
-    const card = document.querySelector('.card');
-    if (card) {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(20px) scale(0.95)';
-        card.style.transition = 'all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-        
-        setTimeout(() => {
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0) scale(1)';
-        }, 100);
-    }
-
-    // Warning icon pulse animation
-    const warningIcon = document.querySelector('.fa-exclamation-triangle');
-    if (warningIcon) {
-        setInterval(() => {
-            warningIcon.style.transform = 'scale(1.1)';
-            setTimeout(() => {
-                warningIcon.style.transform = 'scale(1)';
-            }, 200);
-        }, 2000);
-    }
 
     // Auto-focus on cancel button for better UX
     const cancelBtn = document.querySelector('.btn-outline-secondary');
@@ -652,7 +474,7 @@ document.addEventListener('DOMContentLoaded', function() {
         deleteBtn.addEventListener('click', function(e) {
             if (!this.disabled) {
                 const taskTitle = "{{ task.title|escapejs }}";
-                const confirmed = confirm(`Are you absolutely sure you want to delete "${taskTitle}"? This action cannot be undone.`);
+                const confirmed = confirm(`⚠️ Final Confirmation\n\nAre you absolutely sure you want to delete "${taskTitle}"?\n\nThis action cannot be undone and will permanently remove the task from the system.`);
                 
                 if (!confirmed) {
                     e.preventDefault();
@@ -661,6 +483,18 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Add CSS for ripple animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes ripple {
+            to {
+                transform: scale(2);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
 });
 </script>
 {% endblock %}
