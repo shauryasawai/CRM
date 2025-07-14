@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends "execution_plans/base.html" %}
 {% load static %}
 
 {% block title %}Completed Plans{% endblock %}
@@ -324,7 +324,7 @@
                                 <i class="fas fa-chart-bar"></i> Analytics
                             </a>
                             {% if user.role in 'rm,rm_head' %}
-                            <button class="btn btn-sm btn-outline-success" onclick="clonePlan({{ plan.id }})">
+                            <button class="btn btn-sm btn-outline-success" onclick="clonePlan('{{ plan.id }}')">
                                 <i class="fas fa-copy"></i> Clone
                             </button>
                             {% endif %}
@@ -390,7 +390,7 @@
                                             <i class="fas fa-chart-bar"></i>
                                         </a>
                                         {% if user.role in 'rm,rm_head' %}
-                                        <button class="btn btn-outline-success" onclick="clonePlan({{ plan.id }})">
+                                        <button class="btn btn-outline-success" onclick="clonePlan('{{ plan.id }}')">
                                             <i class="fas fa-copy"></i>
                                         </button>
                                         {% endif %}
