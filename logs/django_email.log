@@ -49,3 +49,6 @@ INFO 2025-07-13 16:29:13,387 views 10908 2308 Password reset email sent successf
 INFO 2025-07-13 16:31:37,964 views 4216 16712 Password reset email sent successfully to sawaisushil@gmail.com
 ERROR 2025-07-13 16:32:55,806 views 2984 1856 Failed to send password reset email to sawaisushil@gmail.com: (535, b'5.7.8 Username and Password not accepted. For more information, go to\n5.7.8  https://support.google.com/mail/?p=BadCredentials d2e1a72fcca58-74eb9c75734sm8675458b3a.0 - gsmtp')
 ERROR 2025-07-13 16:33:27,069 views 2984 2472 Failed to send password reset email to sawaisushil@gmail.com: (535, b'5.7.8 Username and Password not accepted. For more information, go to\n5.7.8  https://support.google.com/mail/?p=BadCredentials d9443c01a7336-23de42aef8fsm81178395ad.76 - gsmtp')
+INFO 2025-07-13 16:34:05,937 views 12236 20680 Password reset email sent successfully to sawaisushil@gmail.com
+INFO 2025-07-13 16:35:33,142 views 12236 7840 Enhanced client email sent successfully for plan EP202507070006 to sawaisushil@gmail.com
+INFO 2025-07-13 16:35:38,376 views 12236 21716 Enhanced client email sent successfully for plan EP202507070006 to sawaisushil@gmail.com
