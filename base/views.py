@@ -1,9 +1,12 @@
+from email.message import EmailMessage
 import os
+import traceback
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import authenticate, login, logout
 from django.urls import reverse
 from django.contrib import messages
+from django.core.mail import EmailMultiAlternatives, send_mail
 from django.utils import timezone
 from django.db.models import Sum, Count, Q, Avg
 from django.http import HttpResponse, JsonResponse, HttpResponseForbidden
@@ -33,7 +36,7 @@ from datetime import datetime, timedelta
 from django.core.mail import send_mail
 from project import settings
 from .models import (
-    ActionPlanWorkflow, ClientPortfolio, ExecutionMetrics, ExecutionPlan, MutualFundScheme, PlanAction, PlanComment, PlanTemplate, PlanWorkflowHistory, PortfolioAction, PortfolioActionPlan, ServiceRequestComment, ServiceRequestDocument, ServiceRequestType, User, Lead, Client, Task, ServiceRequest, BusinessTracker, 
+    ActionPlanWorkflow, ClientInteraction, ClientPortfolio, ExecutionMetrics, ExecutionPlan, MutualFundScheme, PlanAction, PlanComment, PlanTemplate, PlanWorkflowHistory, PortfolioAction, PortfolioActionPlan, ServiceRequestComment, ServiceRequestDocument, ServiceRequestType, User, Lead, Client, Task, ServiceRequest, BusinessTracker, 
     Team, ProductDiscussion, ClientProfile,
     Note, NoteList
 )
@@ -46,6 +49,8 @@ from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 from decimal import Decimal, InvalidOperation
 from django.template.loader import render_to_string
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side, NamedStyle
+from django.views.decorators.csrf import ensure_csrf_cookie, csrf_protect
 
 # Helper functions for role checks
 def is_top_management(user):
@@ -69,8 +74,9 @@ def is_ops_team_lead(user):
 def is_ops_exec(user):
     return user.role == 'ops_exec'
 
-# Login View
+@ensure_csrf_cookie
 def user_login(request):
+    """Enhanced login view with CSRF token"""
     if request.user.is_authenticated:
         return redirect('dashboard')
 
@@ -82,8 +88,15 @@ def user_login(request):
             login(request, user)
             return redirect('dashboard')
         else:
+            messages.error(request, 'Invalid credentials')
             return render(request, 'base/login.html', {'error': 'Invalid credentials'})
-    return render(request, 'base/login.html')
+    
+    # Ensure CSRF token is available in template
+    context = {
+        'csrf_token': get_token(request)
+    }
+    return render(request, 'base/login.html', context)
+
 
 # Logout View
 @login_required
@@ -3313,8 +3326,6 @@ def client_profile_detail(request, pk):
     
     # Get related accounts using the correct related names from your models
     mfu_accounts = client_profile.mfu_accounts.all()
-    motilal_accounts = client_profile.motilal_accounts.all()
-    prabhudas_accounts = client_profile.prabhudas_accounts.all()
     
     # Get modification history if available
     try:
@@ -3328,22 +3339,53 @@ def client_profile_detail(request, pk):
     except AttributeError:
         interactions = []
     
+    # Calculate interaction counts for the stats section
+    try:
+        total_interactions = client_profile.interactions.count()
+        follow_up_interactions = client_profile.interactions.filter(follow_up_required=True).count()
+        # Additional stats that might be useful
+        recent_interactions = client_profile.interactions.filter(
+            interaction_date__gte=timezone.now() - timedelta(days=30)
+        ).count()
+        urgent_interactions = client_profile.interactions.filter(
+            priority='urgent'
+        ).count()
+        high_priority_interactions = client_profile.interactions.filter(
+            priority='high'
+        ).count()
+    except AttributeError:
+        total_interactions = 0
+        follow_up_interactions = 0
+        recent_interactions = 0
+        urgent_interactions = 0
+        high_priority_interactions = 0
+    
     # Check if user can add interactions (only assigned RM)
     can_add_interaction = (
         request.user.role == 'rm' and 
         client_profile.mapped_rm == request.user
     )
     
+    # Check if user can modify this client's profile
+    can_modify = request.user.can_modify_client_profile()
+    
+    # Check if user can mute notifications for this client
+    can_mute = request.user.role in ['business_head', 'top_management', 'ops_team_lead']
+    
     context = {
         'client_profile': client_profile,
         'mfu_accounts': mfu_accounts,
-        'motilal_accounts': motilal_accounts,
-        'prabhudas_accounts': prabhudas_accounts,
         'modifications': modifications,
         'interactions': interactions,
-        'can_modify': request.user.can_modify_client_profile(),
-        'can_mute': request.user.role in ['business_head', 'top_management', 'ops_team_lead'],
+        'can_modify': can_modify,
+        'can_mute': can_mute,
         'can_add_interaction': can_add_interaction,
+        # Interaction statistics - these will be available in the template
+        'total_interactions': total_interactions,
+        'follow_up_interactions': follow_up_interactions,
+        'recent_interactions': recent_interactions,
+        'urgent_interactions': urgent_interactions,
+        'high_priority_interactions': high_priority_interactions,
     }
     
     return render(request, 'base/client_profile_detail.html', context)
@@ -3579,37 +3621,72 @@ def client_interaction_list(request, profile_id):
         return redirect('client_profile_detail', pk=profile_id)
 
 @login_required
-def client_interaction_detail(request, profile_id, interaction_id):
-    """View details of a specific client interaction"""
-    client_profile = get_object_or_404(ClientProfile, id=profile_id)
+def client_interaction_detail(request, client_pk, interaction_pk):
+    """View for displaying detailed information about a specific client interaction"""
     
-    # Check if user can access this client's data
+    # Get the client profile and interaction
+    client_profile = get_object_or_404(ClientProfile, pk=client_pk)
+    interaction = get_object_or_404(ClientInteraction, pk=interaction_pk, client_profile=client_profile)
+    
+    # Check permissions
+    if not request.user.can_view_client_profile():
+        raise PermissionDenied("You don't have permission to view client profiles.")
+    
+    # Check if user can access this specific client's data
     if not request.user.can_access_user_data(client_profile.mapped_rm):
-        raise PermissionDenied("You don't have permission to view this client's interactions.")
+        raise PermissionDenied("You don't have permission to view this client's profile.")
     
+    # Check if the user can edit this interaction
+    # Users can edit interactions within 24 hours of creation and only if they created it
+    can_edit = False
+    if interaction.created_by == request.user:
+        time_diff = timezone.now() - interaction.created_at
+        if time_diff.total_seconds() < 24 * 60 * 60:  # 24 hours in seconds
+            can_edit = True
+    
+    # Calculate interaction statistics for the sidebar
     try:
-        interaction = get_object_or_404(client_profile.interactions.select_related('created_by'), id=interaction_id)
+        total_interactions = client_profile.interactions.count()
+        follow_up_interactions = client_profile.interactions.filter(follow_up_required=True).count()
+        # Additional stats that might be useful
+        recent_interactions = client_profile.interactions.filter(
+            interaction_date__gte=timezone.now() - timedelta(days=30)
+        ).count()
+        urgent_interactions = client_profile.interactions.filter(
+            priority='urgent'
+        ).count()
+        high_priority_interactions = client_profile.interactions.filter(
+            priority='high'
+        ).count()
         
-        # Check if user can edit this interaction (only creator and within 24 hours)
-        from django.utils import timezone
-        from datetime import timedelta
-        
-        can_edit = (
-            request.user == interaction.created_by and
-            timezone.now() - interaction.created_at <= timedelta(hours=24)
-        )
-        
-        context = {
-            'client_profile': client_profile,
-            'interaction': interaction,
-            'can_edit': can_edit,
-        }
-        
-        return render(request, 'base/client_interaction_detail.html', context)
+        # Get recent interactions list (excluding current one)
+        recent_interactions_list = client_profile.interactions.exclude(
+            id=interaction.id
+        ).select_related('created_by').order_by('-interaction_date')[:5]
         
     except AttributeError:
-        messages.error(request, "Client interaction feature is not available.")
-        return redirect('client_profile_detail', pk=profile_id)
+        # Handle case where the interactions relationship doesn't exist
+        total_interactions = 0
+        follow_up_interactions = 0
+        recent_interactions = 0
+        urgent_interactions = 0
+        high_priority_interactions = 0
+        recent_interactions_list = []
+    
+    context = {
+        'client_profile': client_profile,
+        'interaction': interaction,
+        'can_edit': can_edit,
+        # Pass the calculated statistics to the template
+        'total_interactions': total_interactions,
+        'follow_up_interactions': follow_up_interactions,
+        'recent_interactions': recent_interactions,
+        'urgent_interactions': urgent_interactions,
+        'high_priority_interactions': high_priority_interactions,
+        'recent_interactions_list': recent_interactions_list,
+    }
+    
+    return render(request, 'base/client_interaction_detail.html', context)
 
 @login_required
 def client_interaction_update(request, profile_id, interaction_id):
@@ -6317,7 +6394,7 @@ def can_create_action_plan(user, portfolio):
 @login_required
 @require_http_methods(["POST"])
 def save_execution_plan(request):
-    """Save execution plan with actions - FIXED VERSION"""
+    """Save execution plan with actions - ENHANCED FIXED VERSION"""
     try:
         data = json.loads(request.body)
         client_id = data.get('client_id')
@@ -6326,8 +6403,13 @@ def save_execution_plan(request):
         actions_data = data.get('actions', [])
         submit_for_approval = data.get('submit_for_approval', False)
         
-        if not client_id or not plan_name or not actions_data:
-            return JsonResponse({'error': 'Missing required data'}, status=400)
+        # Enhanced validation
+        if not client_id:
+            return JsonResponse({'error': 'Client ID is required'}, status=400)
+        if not plan_name or not plan_name.strip():
+            return JsonResponse({'error': 'Plan name is required'}, status=400)
+        if not actions_data:
+            return JsonResponse({'error': 'At least one action is required'}, status=400)
         
         # Get the client object (handle integer ID)
         try:
@@ -6338,46 +6420,62 @@ def save_execution_plan(request):
         
         # Check access permission
         if request.user.role == 'rm' and client.user != request.user:
-            return JsonResponse({'error': 'Access denied'}, status=403)
+            return JsonResponse({'error': 'Access denied - not your client'}, status=403)
         elif request.user.role == 'rm_head':
             team_members = User.objects.filter(manager=request.user, role='rm')
             if client.user not in team_members and client.user != request.user:
-                return JsonResponse({'error': 'Access denied'}, status=403)
+                return JsonResponse({'error': 'Access denied - client not in your team'}, status=403)
         elif request.user.role not in ['business_head', 'business_head_ops', 'top_management']:
-            return JsonResponse({'error': 'Access denied'}, status=403)
+            return JsonResponse({'error': 'Access denied - insufficient permissions'}, status=403)
         
         with transaction.atomic():
             # Create execution plan
             execution_plan = ExecutionPlan.objects.create(
                 client=client,
-                plan_name=plan_name,
-                description=description,
+                plan_name=plan_name.strip(),
+                description=description.strip(),
                 created_by=request.user,
                 status='draft'
             )
             
+            logger.info(f"Created execution plan {execution_plan.plan_id} for client {client.id}")
+            
             # Create plan actions
             created_actions = []
+            failed_actions = []
+            
             for i, action_data in enumerate(actions_data):
                 try:
+                    # Enhanced logging
+                    logger.info(f"Processing action {i + 1}: {action_data}")
+                    
                     action = process_action_data(action_data, execution_plan, client, i + 1)
                     if action:
                         created_actions.append(action)
+                        logger.info(f"Successfully created action {action.id}")
+                    else:
+                        failed_actions.append(f"Action {i + 1}: Unknown error")
                     
                 except Exception as e:
+                    error_msg = f"Action {i + 1}: {str(e)}"
                     logger.error(f"Error creating action {i + 1}: {str(e)}")
                     logger.error(f"Action data: {action_data}")
+                    failed_actions.append(error_msg)
                     continue
             
             if not created_actions:
-                return JsonResponse({'error': 'No valid actions could be created'}, status=400)
+                return JsonResponse({
+                    'error': 'No valid actions could be created',
+                    'failed_actions': failed_actions
+                }, status=400)
             
-            # Generate Excel file
+            # Generate Excel file (optional)
             try:
                 excel_file_path = generate_execution_plan_excel(execution_plan)
                 if excel_file_path:
                     execution_plan.excel_file = excel_file_path
                     execution_plan.save()
+                    logger.info(f"Generated Excel file for plan {execution_plan.plan_id}")
             except Exception as e:
                 logger.warning(f"Could not generate Excel file: {str(e)}")
             
@@ -6387,11 +6485,11 @@ def save_execution_plan(request):
                 from_status='',
                 to_status='draft',
                 changed_by=request.user,
-                comments='Execution plan created'
+                comments=f'Execution plan created with {len(created_actions)} actions'
             )
             
             # Submit for approval if requested
-            if submit_for_approval:
+            if submit_for_approval and len(created_actions) > 0:
                 try:
                     if execution_plan.submit_for_approval():
                         PlanWorkflowHistory.objects.create(
@@ -6401,18 +6499,31 @@ def save_execution_plan(request):
                             changed_by=request.user,
                             comments='Plan submitted for approval'
                         )
+                        logger.info(f"Plan {execution_plan.plan_id} submitted for approval")
+                        
                         # Notify approval manager
-                        notify_approval_required(execution_plan)
+                        try:
+                            notify_approval_required(execution_plan)
+                        except Exception as e:
+                            logger.warning(f"Failed to send approval notification: {str(e)}")
                 except Exception as e:
                     logger.warning(f"Could not submit for approval: {str(e)}")
             
-            return JsonResponse({
+            # Prepare response
+            response_data = {
                 'success': True,
-                'plan_id': execution_plan.id,
+                'plan_id': execution_plan.plan_id,
                 'plan_url': reverse('execution_plan_detail', args=[execution_plan.id]),
-                'message': 'Execution plan created successfully',
-                'actions_created': len(created_actions)
-            })
+                'message': f'Execution plan created successfully with {len(created_actions)} actions',
+                'actions_created': len(created_actions),
+                'actions_failed': len(failed_actions)
+            }
+            
+            if failed_actions:
+                response_data['failed_actions'] = failed_actions
+                response_data['message'] += f'. {len(failed_actions)} actions failed.'
+            
+            return JsonResponse(response_data)
             
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON data'}, status=400)
@@ -6422,114 +6533,120 @@ def save_execution_plan(request):
 
 
 def process_action_data(action_data, execution_plan, client, priority):
-    """Process individual action data and create appropriate action record"""
+    """Process individual action data and create appropriate action record - FIXED VERSION"""
     action_type = action_data.get('action_type')
     
     if not action_type:
         logger.error(f"No action type specified for action: {action_data}")
         return None
     
-    # Find source scheme (for portfolio-based actions)
-    source_scheme = None
-    source_portfolio = None
+    # Find the scheme object - this is the key fix
+    scheme_obj = None
+    scheme_id = action_data.get('scheme_id')
+    source_scheme_id = action_data.get('source_scheme_id')
+    target_scheme_id = action_data.get('target_scheme_id')
     
-    if action_type in ['redeem', 'switch', 'stp', 'swp']:
-        source_scheme_name = action_data.get('source_scheme')
-        portfolio_id = action_data.get('portfolio_id') or action_data.get('source_portfolio_id')
-        
-        if portfolio_id:
+    # For purchase/SIP actions, use target_scheme_id or scheme_id
+    if action_type in ['purchase', 'sip_start', 'sip_modify']:
+        scheme_lookup_id = target_scheme_id or scheme_id
+        if scheme_lookup_id:
             try:
-                source_portfolio = ClientPortfolio.objects.get(
-                    id=portfolio_id, 
-                    client=client
-                )
-                source_scheme = source_portfolio.scheme_name
-            except ClientPortfolio.DoesNotExist:
-                logger.error(f"Portfolio {portfolio_id} not found for client {client.id}")
-                if source_scheme_name:
-                    source_scheme = source_scheme_name
-                else:
-                    raise ValueError(f"Source portfolio {portfolio_id} not found")
-        elif source_scheme_name:
-            source_scheme = source_scheme_name
-        else:
-            raise ValueError("Source scheme is required for this action type")
-    
-    # Find target scheme (for investment actions)
-    target_scheme = None
-    target_scheme_obj = None
-    
-    if action_type in ['sip', 'switch', 'stp']:
-        target_scheme_name = action_data.get('target_scheme')
-        target_scheme_id = action_data.get('target_scheme_id')
-        target_scheme_code = action_data.get('target_scheme_code')
-        
-        if not target_scheme_name:
-            raise ValueError("Target scheme is required for this action type")
-        
-        # Try to find the scheme by ID first
-        if target_scheme_id:
-            try:
-                target_scheme_obj = MutualFundScheme.objects.get(id=target_scheme_id)
-                target_scheme = target_scheme_obj.scheme_name
+                scheme_obj = MutualFundScheme.objects.get(id=scheme_lookup_id)
             except MutualFundScheme.DoesNotExist:
-                logger.warning(f"Scheme with ID {target_scheme_id} not found")
-        
-        # If not found by ID, try by code
-        if not target_scheme_obj and target_scheme_code:
-            target_scheme_obj = MutualFundScheme.objects.filter(
-                Q(isin_growth=target_scheme_code) | 
-                Q(isin_div_reinvestment=target_scheme_code) |
-                Q(scheme_code=target_scheme_code)
-            ).first()
-            
-            if target_scheme_obj:
-                target_scheme = target_scheme_obj.scheme_name
-        
-        # If still not found, try by exact name match
-        if not target_scheme_obj:
-            target_scheme_obj = MutualFundScheme.objects.filter(
-                scheme_name__iexact=target_scheme_name
-            ).first()
-            
-            if target_scheme_obj:
-                target_scheme = target_scheme_obj.scheme_name
-        
-        # If still not found, create a basic scheme record
-        if not target_scheme_obj:
-            logger.warning(f"Creating new scheme record for: {target_scheme_name}")
-            target_scheme_obj = MutualFundScheme.objects.create(
-                scheme_name=target_scheme_name,
-                scheme_code=target_scheme_code or '',
-                amc_name=action_data.get('amc_name', 'Unknown'),
-                is_active=True,
-                minimum_investment=action_data.get('target_scheme_min_investment', 500),
-                minimum_sip=action_data.get('target_scheme_min_sip', 500)
-            )
-            target_scheme = target_scheme_obj.scheme_name
+                logger.error(f"Target scheme with ID {scheme_lookup_id} not found")
+                # Try to create a basic scheme record if scheme name is provided
+                scheme_name = action_data.get('target_scheme') or action_data.get('scheme')
+                if scheme_name:
+                    scheme_obj = MutualFundScheme.objects.create(
+                        scheme_name=scheme_name,
+                        amc_name='Unknown',
+                        scheme_code=f"TEMP_{scheme_lookup_id}",
+                        scheme_type='other',
+                        is_active=True,
+                        minimum_investment=500,
+                        minimum_sip=500
+                    )
+                else:
+                    raise ValueError(f"Scheme with ID {scheme_lookup_id} not found and no scheme name provided")
     
-    # Create the base plan action
-    action = PlanAction.objects.create(
-        execution_plan=execution_plan,
-        action_type=action_type,
-        scheme=target_scheme_obj,  # For SIP, this will be the target scheme
-        notes=action_data.get('notes', ''),
-        priority=priority
-    )
+    # For redemption/switch actions, use source_scheme_id
+    elif action_type in ['redemption', 'switch', 'stp_start', 'swp_start']:
+        scheme_lookup_id = source_scheme_id or scheme_id
+        if scheme_lookup_id:
+            try:
+                scheme_obj = MutualFundScheme.objects.get(id=scheme_lookup_id)
+            except MutualFundScheme.DoesNotExist:
+                logger.error(f"Source scheme with ID {scheme_lookup_id} not found")
+                # Try to find by name
+                scheme_name = action_data.get('source_scheme') or action_data.get('scheme')
+                if scheme_name:
+                    scheme_obj = MutualFundScheme.objects.filter(
+                        scheme_name__icontains=scheme_name
+                    ).first()
+                    if not scheme_obj:
+                        scheme_obj = MutualFundScheme.objects.create(
+                            scheme_name=scheme_name,
+                            amc_name='Unknown',
+                            scheme_code=f"TEMP_{scheme_lookup_id}",
+                            scheme_type='other',
+                            is_active=True,
+                            minimum_investment=500,
+                            minimum_sip=500
+                        )
+                else:
+                    raise ValueError(f"Scheme with ID {scheme_lookup_id} not found and no scheme name provided")
     
-    # Create action-type specific records
-    if action_type == 'sip':
-        create_sip_action(action, action_data, target_scheme_obj)
-    elif action_type == 'redeem':
-        create_redeem_action(action, action_data, source_portfolio, source_scheme)
-    elif action_type == 'switch':
-        create_switch_action(action, action_data, source_portfolio, source_scheme, target_scheme_obj)
-    elif action_type == 'stp':
-        create_stp_action(action, action_data, source_portfolio, source_scheme, target_scheme_obj)
-    elif action_type == 'swp':
-        create_swp_action(action, action_data, source_portfolio, source_scheme)
+    # If still no scheme found, this is a critical error
+    if not scheme_obj:
+        error_msg = f"No valid scheme found for action type {action_type}. Action data: {action_data}"
+        logger.error(error_msg)
+        raise ValueError(error_msg)
     
-    return action
+    # Find target scheme for switch/STP operations
+    target_scheme_obj = None
+    if action_type in ['switch', 'stp_start'] and target_scheme_id:
+        try:
+            target_scheme_obj = MutualFundScheme.objects.get(id=target_scheme_id)
+        except MutualFundScheme.DoesNotExist:
+            target_scheme_name = action_data.get('target_scheme')
+            if target_scheme_name:
+                target_scheme_obj = MutualFundScheme.objects.filter(
+                    scheme_name__icontains=target_scheme_name
+                ).first()
+                if not target_scheme_obj:
+                    target_scheme_obj = MutualFundScheme.objects.create(
+                        scheme_name=target_scheme_name,
+                        amc_name='Unknown',
+                        scheme_code=f"TEMP_TGT_{target_scheme_id}",
+                        scheme_type='other',
+                        is_active=True,
+                        minimum_investment=500,
+                        minimum_sip=500
+                    )
+    
+    # Create the main plan action - THE CRITICAL FIX
+    try:
+        action = PlanAction.objects.create(
+            execution_plan=execution_plan,
+            action_type=action_type,
+            scheme=scheme_obj,  # This must not be None
+            target_scheme=target_scheme_obj,
+            amount=safe_decimal(action_data.get('purchase_amount') or action_data.get('amount')),
+            units=safe_decimal(action_data.get('units')),
+            sip_date=safe_int(action_data.get('sip_date')),
+            notes=action_data.get('notes', ''),
+            priority=priority,
+            status='pending'
+        )
+        
+        logger.info(f"Successfully created action {action.id} with scheme {scheme_obj.id}")
+        return action
+        
+    except Exception as e:
+        logger.error(f"Error creating PlanAction: {str(e)}")
+        logger.error(f"Action data: {action_data}")
+        logger.error(f"Scheme object: {scheme_obj}")
+        raise
 
 
 def create_sip_action(action, action_data, target_scheme):
@@ -6690,21 +6807,23 @@ def create_swp_action(action, action_data, source_portfolio, source_scheme):
 
 def safe_decimal(value):
     """Safely convert value to Decimal"""
-    if value is None or value == '':
+    if value is None or value == '' or value == 'null':
         return None
     try:
         return Decimal(str(value))
     except (ValueError, TypeError, InvalidOperation):
+        logger.warning(f"Could not convert to decimal: {value}")
         return None
 
 
 def safe_int(value):
     """Safely convert value to int"""
-    if value is None or value == '':
+    if value is None or value == '' or value == 'null':
         return None
     try:
         return int(value)
     except (ValueError, TypeError):
+        logger.warning(f"Could not convert to int: {value}")
         return None
 
 
@@ -6726,141 +6845,419 @@ def notify_approval_required(execution_plan):
 
 
 def generate_execution_plan_excel(execution_plan):
-    """Generate Excel file for execution plan - Enhanced version"""
+    """Generate Excel file for execution plan with actual data"""
     try:
-        # Create workbook
+        # Initialize plan_actions first
+        plan_actions = []
+        
+        # Get plan actions based on your model structure
+        try:
+            # Your model has 'actions' related name from PlanAction
+            if hasattr(execution_plan, 'actions'):
+                plan_actions = list(execution_plan.actions.all().order_by('priority', 'id'))
+                logger.info(f"Found {len(plan_actions)} actions for execution plan {execution_plan.id}")
+            else:
+                logger.warning(f"No actions relationship found on ExecutionPlan {execution_plan.id}")
+        except Exception as e:
+            logger.error(f"Error getting plan actions: {str(e)}")
+            plan_actions = []
+        
+        # Create a new workbook
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Execution Plan"
         
-        # Styling
-        header_font = Font(bold=True, color="FFFFFF")
-        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-        border = Border(
+        # Set column widths
+        ws.column_dimensions['A'].width = 8
+        ws.column_dimensions['B'].width = 35
+        ws.column_dimensions['C'].width = 15
+        ws.column_dimensions['D'].width = 15
+        ws.column_dimensions['E'].width = 15
+        ws.column_dimensions['F'].width = 15
+        ws.column_dimensions['G'].width = 12
+        ws.column_dimensions['H'].width = 12
+        ws.column_dimensions['I'].width = 15
+        ws.column_dimensions['J'].width = 15
+        ws.column_dimensions['K'].width = 20
+        
+        # Create header style
+        header_style = NamedStyle(name="header")
+        header_style.font = Font(name='Arial', size=11, bold=True, color='FFFFFF')
+        header_style.fill = PatternFill(start_color='366092', end_color='366092', fill_type='solid')
+        header_style.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        header_style.border = Border(
             left=Side(style='thin'),
             right=Side(style='thin'),
             top=Side(style='thin'),
             bottom=Side(style='thin')
         )
         
-        # Title
-        ws.merge_cells('A1:I1')
-        ws['A1'] = f"EXECUTION PLAN - {execution_plan.client.name.upper()}"
-        ws['A1'].font = Font(bold=True, size=16)
-        ws['A1'].alignment = Alignment(horizontal='center')
+        # Plan header information
+        row = 1
+        ws.merge_cells(f'A{row}:K{row}')
+        plan_id = getattr(execution_plan, 'plan_id', f"Plan #{execution_plan.id}")
+        ws[f'A{row}'] = f"EXECUTION PLAN - {plan_id}"
+        ws[f'A{row}'].font = Font(name='Arial', size=16, bold=True)
+        ws[f'A{row}'].alignment = Alignment(horizontal='center')
+        row += 1
         
-        # Plan details
-        ws['A3'] = "Plan ID:"
-        ws['B3'] = execution_plan.plan_id
-        ws['A4'] = "Client Name:"
-        ws['B4'] = execution_plan.client.name
+        # Plan details - Handle different client attribute names
+        client_name = "Unknown Client"
+        if hasattr(execution_plan, 'client') and execution_plan.client:
+            if hasattr(execution_plan.client, 'name'):
+                client_name = execution_plan.client.name
+            elif hasattr(execution_plan.client, 'client_full_name'):
+                client_name = execution_plan.client.client_full_name
+            elif hasattr(execution_plan.client, 'full_name'):
+                client_name = execution_plan.client.full_name
+            else:
+                client_name = str(execution_plan.client)
+        elif hasattr(execution_plan, 'client_name'):
+            client_name = execution_plan.client_name
         
-        # Add PAN number if available
-        client_pan = 'N/A'
-        if hasattr(execution_plan.client, 'client_profile') and execution_plan.client.client_profile:
-            client_pan = execution_plan.client.client_profile.pan_number
-        ws['A5'] = "Client PAN:"
-        ws['B5'] = client_pan
+        ws[f'A{row}'] = "Client:"
+        ws[f'B{row}'] = client_name
+        ws[f'F{row}'] = "Date:"
+        ws[f'G{row}'] = execution_plan.created_at.strftime('%Y-%m-%d') if hasattr(execution_plan, 'created_at') else "N/A"
+        row += 1
         
-        ws['A6'] = "Plan Name:"
-        ws['B6'] = execution_plan.plan_name
-        ws['A7'] = "Created Date:"
-        ws['B7'] = execution_plan.created_at.strftime('%d/%m/%Y')
-        ws['A8'] = "Created By:"
-        ws['B8'] = execution_plan.created_by.get_full_name() or execution_plan.created_by.username
+        # Get total amount from actions
+        total_amount = 0
+        if plan_actions:
+            total_amount = sum(float(action.amount) for action in plan_actions if action.amount)
         
-        if execution_plan.description:
-            ws['A9'] = "Description:"
-            ws['B9'] = execution_plan.description
-            start_row = 11
-        else:
-            start_row = 10
+        ws[f'A{row}'] = "Total Amount:"
+        ws[f'B{row}'] = f"₹{total_amount:,.2f}"
+        ws[f'F{row}'] = "Status:"
+        ws[f'G{row}'] = execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else (execution_plan.status if hasattr(execution_plan, 'status') else "N/A")
+        row += 1
         
-        # Headers
+        # Add RM and other details if available
+        if hasattr(execution_plan, 'created_by') and execution_plan.created_by:
+            ws[f'A{row}'] = "Created By:"
+            ws[f'B{row}'] = execution_plan.created_by.get_full_name() or execution_plan.created_by.username
+            row += 1
+        
+        if hasattr(execution_plan, 'plan_name') and execution_plan.plan_name:
+            ws[f'A{row}'] = "Plan Name:"
+            ws[f'B{row}'] = execution_plan.plan_name
+            row += 1
+        
+        if hasattr(execution_plan, 'description') and execution_plan.description:
+            ws[f'A{row}'] = "Description:"
+            ws[f'B{row}'] = execution_plan.description
+            row += 1
+        
+        row += 1  # Empty row
+        
+        # Table headers - More comprehensive
         headers = [
-            'Sr.', 'Action Type', 'Scheme Name', 'ISIN', 'Amount (₹)', 
-            'Units', 'SIP Date', 'Target Scheme', 'Priority', 'Notes'
+            'Sr. No.',
+            'Scheme Name',
+            'ISIN',
+            'Transaction Type',
+            'Amount (₹)',
+            'SIP Amount (₹)',
+            'SIP Date',
+            'Frequency',
+            'Status',
+            'Priority',
+            'Remarks'
         ]
+        
         for col, header in enumerate(headers, 1):
-            cell = ws.cell(row=start_row, column=col, value=header)
-            cell.font = header_font
-            cell.fill = header_fill
-            cell.border = border
-            cell.alignment = Alignment(horizontal='center')
+            cell = ws.cell(row=row, column=col)
+            cell.value = header
+            cell.style = header_style
         
-        # Actions data
-        actions = execution_plan.actions.all().select_related('scheme', 'target_scheme')
-        for row, action in enumerate(actions, start_row + 1):
-            ws.cell(row=row, column=1, value=row - start_row).border = border
-            ws.cell(row=row, column=2, value=action.get_action_type_display()).border = border
-            ws.cell(row=row, column=3, value=action.scheme.scheme_name).border = border
-            ws.cell(row=row, column=4, value=action.scheme.isin_number or '').border = border
+        row += 1
+        
+        # Get plan actions based on your model structure
+        plan_actions = []
+        try:
+            # Your model has 'actions' related name from PlanAction
+            if hasattr(execution_plan, 'actions'):
+                plan_actions = execution_plan.actions.all().order_by('priority', 'id')
+            else:
+                logger.warning(f"No actions relationship found on ExecutionPlan {execution_plan.id}")
+        except Exception as e:
+            logger.error(f"Error getting plan actions: {str(e)}")
+            plan_actions = []
+        
+        # Data rows for actions
+        total_amount = 0
+        
+        for idx, action in enumerate(plan_actions, 1):
+            # Get scheme information
+            scheme = None
+            scheme_name = "Unknown Scheme"
+            isin_value = "N/A"
             
-            amount_cell = ws.cell(row=row, column=5, value=float(action.amount) if action.amount else '')
-            amount_cell.border = border
-            amount_cell.number_format = '#,##0.00'
+            if hasattr(action, 'scheme') and action.scheme:
+                scheme = action.scheme
+                # Handle different possible attribute names for scheme name
+                if hasattr(scheme, 'scheme_name'):
+                    scheme_name = scheme.scheme_name
+                elif hasattr(scheme, 'name'):
+                    scheme_name = scheme.name
+                elif hasattr(scheme, 'scheme_title'):
+                    scheme_name = scheme.scheme_title
+                elif hasattr(scheme, 'fund_name'):
+                    scheme_name = scheme.fund_name
+                
+                # Handle different possible attribute names for ISIN
+                if hasattr(scheme, 'isin_growth'):
+                    isin_value = scheme.isin_growth or "N/A"
+                elif hasattr(scheme, 'isin_number'):
+                    isin_value = scheme.isin_number or "N/A"
+                elif hasattr(scheme, 'isin'):
+                    isin_value = scheme.isin or "N/A"
+                elif hasattr(scheme, 'isin_code'):
+                    isin_value = scheme.isin_code or "N/A"
             
-            units_cell = ws.cell(row=row, column=6, value=float(action.units) if action.units else '')
-            units_cell.border = border
-            units_cell.number_format = '#,##0.0000'
+            # Get action details
+            action_type = "N/A"
+            if hasattr(action, 'action_type'):
+                if hasattr(action, 'get_action_type_display'):
+                    action_type = action.get_action_type_display()
+                else:
+                    action_type = action.action_type
             
-            ws.cell(row=row, column=7, value=action.sip_date or '').border = border
-            ws.cell(row=row, column=8, value=action.target_scheme.scheme_name if action.target_scheme else '').border = border
-            ws.cell(row=row, column=9, value=action.priority).border = border
-            ws.cell(row=row, column=10, value=action.notes or '').border = border
+            # Get amount
+            amount = 0
+            if hasattr(action, 'amount') and action.amount:
+                amount = float(action.amount)
+            
+            # Get SIP details
+            sip_amount = ""
+            if hasattr(action, 'sip_amount') and action.sip_amount:
+                sip_amount = f"₹{action.sip_amount:,.2f}"
+            
+            sip_date = ""
+            if hasattr(action, 'sip_date') and action.sip_date:
+                sip_date = str(action.sip_date)
+            
+            # Get frequency
+            frequency = ""
+            if hasattr(action, 'frequency'):
+                frequency = action.frequency
+            
+            # Get status
+            status = ""
+            if hasattr(action, 'status'):
+                if hasattr(action, 'get_status_display'):
+                    status = action.get_status_display()
+                else:
+                    status = action.status
+            
+            # Get priority
+            priority = ""
+            if hasattr(action, 'priority'):
+                priority = str(action.priority)
+            
+            # Get notes
+            notes = ""
+            if hasattr(action, 'notes') and action.notes:
+                notes = action.notes
+            
+            # Build row data
+            data = [
+                idx,
+                scheme_name,
+                isin_value,
+                action_type,
+                f"₹{amount:,.2f}" if amount > 0 else "N/A",
+                sip_amount if sip_amount else "N/A",
+                sip_date if sip_date else "N/A",
+                frequency if frequency else "N/A",
+                status if status else "N/A",
+                priority if priority else "N/A",
+                notes if notes else ""
+            ]
+            
+            # Add to total
+            total_amount += amount
+            
+            # Write row data
+            for col, value in enumerate(data, 1):
+                cell = ws.cell(row=row, column=col)
+                cell.value = value
+                cell.alignment = Alignment(horizontal='center' if col in [1, 3, 5, 7, 9, 10] else 'left', vertical='center')
+                cell.border = Border(
+                    left=Side(style='thin'),
+                    right=Side(style='thin'),
+                    top=Side(style='thin'),
+                    bottom=Side(style='thin')
+                )
+                
+                # Format amount columns
+                if col in [5, 6] and value != "N/A" and value:
+                    cell.font = Font(name='Arial', size=10, bold=True)
+            
+            row += 1
         
-        # Summary section
-        summary_row = start_row + len(actions) + 2
-        ws.merge_cells(f'A{summary_row}:I{summary_row}')
-        ws[f'A{summary_row}'] = "PLAN SUMMARY"
-        ws[f'A{summary_row}'].font = Font(bold=True, size=14)
-        ws[f'A{summary_row}'].alignment = Alignment(horizontal='center')
+        # Add totals row
+        if plan_actions:
+            row += 1
+            ws[f'A{row}'] = "TOTAL"
+            ws[f'A{row}'].font = Font(bold=True)
+            ws[f'E{row}'] = f"₹{total_amount:,.2f}"
+            ws[f'E{row}'].font = Font(bold=True)
+            
+            # Add border to total row
+            for col in range(1, 12):
+                cell = ws.cell(row=row, column=col)
+                cell.border = Border(
+                    left=Side(style='thin'),
+                    right=Side(style='thin'),
+                    top=Side(style='thick'),
+                    bottom=Side(style='thick')
+                )
         
-        # Calculate summary metrics
-        total_investment = sum(float(action.amount) for action in actions if action.amount and action.action_type in ['purchase', 'sip_start'])
-        total_redemption = sum(float(action.amount) for action in actions if action.amount and action.action_type == 'redemption')
-        sip_count = len([action for action in actions if action.action_type in ['sip_start', 'sip_modify']])
+        # Add summary information
+        row += 3
+        ws[f'A{row}'] = "Summary:"
+        ws[f'A{row}'].font = Font(bold=True)
+        row += 1
         
-        summary_row += 2
-        ws[f'A{summary_row}'] = "Total Investment:"
-        ws[f'B{summary_row}'] = total_investment
-        ws[f'B{summary_row}'].number_format = '#,##0.00'
+        ws[f'A{row}'] = f"Total Actions: {len(plan_actions)}"
+        row += 1
         
-        summary_row += 1
-        ws[f'A{summary_row}'] = "Total Redemption:"
-        ws[f'B{summary_row}'] = total_redemption
-        ws[f'B{summary_row}'].number_format = '#,##0.00'
+        ws[f'A{row}'] = f"Total Amount: ₹{total_amount:,.2f}"
+        row += 1
         
-        summary_row += 1
-        ws[f'A{summary_row}'] = "Net Investment:"
-        ws[f'B{summary_row}'] = total_investment - total_redemption
-        ws[f'B{summary_row}'].number_format = '#,##0.00'
+        ws[f'A{row}'] = f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        row += 1
         
-        summary_row += 1
-        ws[f'A{summary_row}'] = "SIP Count:"
-        ws[f'B{summary_row}'] = sip_count
+        # Generate filename
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        plan_id_clean = str(plan_id).replace('#', '').replace(' ', '_')
+        filename = f"execution_plans/execution_plan_{plan_id_clean}_{timestamp}.xlsx"
         
-        # Adjust column widths
-        column_widths = [5, 15, 35, 15, 15, 12, 10, 25, 8, 30]
-        for col, width in enumerate(column_widths, 1):
-            ws.column_dimensions[get_column_letter(col)].width = width
+        # Get media root path with fallback
+        if hasattr(settings, 'MEDIA_ROOT') and settings.MEDIA_ROOT:
+            media_root = settings.MEDIA_ROOT
+        elif hasattr(settings, 'BASE_DIR'):
+            # Fallback to BASE_DIR/media
+            media_root = os.path.join(settings.BASE_DIR, 'media')
+        else:
+            # Last resort fallback
+            media_root = os.path.join(os.getcwd(), 'media')
         
-        # Save file
-        filename = execution_plan.get_filename()
-        file_path = os.path.join('media', 'execution_plans', 'excel', filename)
-        
-        # Ensure directory exists
+        # Create directory if it doesn't exist
+        file_path = os.path.join(media_root, filename)
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         
+        # Save the workbook
         wb.save(file_path)
         
-        # Return relative path for storing in database
-        return f'execution_plans/excel/{filename}'
+        logger.info(f"Excel file generated successfully: {filename}")
+        logger.info(f"Total actions exported: {len(plan_actions)}")
+        logger.info(f"Total amount: ₹{total_amount:,.2f}")
+        
+        return filename
         
     except Exception as e:
-        print(f"Error generating Excel: {str(e)}")
+        logger.error(f"Error generating Excel for execution plan {execution_plan.id}: {str(e)}")
+        logger.error(f"Error traceback: {traceback.format_exc()}")
         return None
 
+
+def debug_scheme_attributes(scheme):
+    """Debug function to check available attributes on MutualFundScheme object"""
+    logger.info(f"Scheme object type: {type(scheme)}")
+    logger.info(f"Scheme attributes: {dir(scheme)}")
+    
+    # Check for common ISIN attribute names
+    isin_attributes = ['isin_number', 'isin', 'isin_code', 'scheme_isin', 'security_id']
+    name_attributes = ['scheme_name', 'name', 'scheme_title', 'title']
+    
+    logger.info("Available ISIN-related attributes:")
+    for attr in isin_attributes:
+        if hasattr(scheme, attr):
+            logger.info(f"  {attr}: {getattr(scheme, attr)}")
+    
+    logger.info("Available name-related attributes:")
+    for attr in name_attributes:
+        if hasattr(scheme, attr):
+            logger.info(f"  {attr}: {getattr(scheme, attr)}")
+
+
+def debug_scheme_attributes(scheme):
+    """Debug function to check available attributes on MutualFundScheme object"""
+    logger.info(f"Scheme object type: {type(scheme)}")
+    logger.info(f"Scheme attributes: {dir(scheme)}")
+    
+    # Check for common ISIN attribute names
+    isin_attributes = ['isin_number', 'isin', 'isin_code', 'scheme_isin', 'security_id']
+    name_attributes = ['scheme_name', 'name', 'scheme_title', 'title']
+    
+    logger.info("Available ISIN-related attributes:")
+    for attr in isin_attributes:
+        if hasattr(scheme, attr):
+            logger.info(f"  {attr}: {getattr(scheme, attr)}")
+    
+    logger.info("Available name-related attributes:")
+    for attr in name_attributes:
+        if hasattr(scheme, attr):
+            logger.info(f"  {attr}: {getattr(scheme, attr)}")
+
+
+def debug_scheme_attributes(scheme):
+    """Debug function to check available attributes on MutualFundScheme object"""
+    logger.info(f"Scheme object type: {type(scheme)}")
+    logger.info(f"Scheme attributes: {dir(scheme)}")
+    
+    # Check for common ISIN attribute names
+    isin_attributes = ['isin_number', 'isin', 'isin_code', 'scheme_isin', 'security_id']
+    name_attributes = ['scheme_name', 'name', 'scheme_title', 'title']
+    
+    logger.info("Available ISIN-related attributes:")
+    for attr in isin_attributes:
+        if hasattr(scheme, attr):
+            logger.info(f"  {attr}: {getattr(scheme, attr)}")
+    
+    logger.info("Available name-related attributes:")
+    for attr in name_attributes:
+        if hasattr(scheme, attr):
+            logger.info(f"  {attr}: {getattr(scheme, attr)}")
+
+
+def debug_execution_plan_structure(execution_plan):
+    """Debug function to check available attributes on ExecutionPlan object"""
+    logger.info(f"ExecutionPlan object type: {type(execution_plan)}")
+    logger.info(f"ExecutionPlan ID: {execution_plan.id}")
+    
+    # Check for common client relationship names
+    client_attributes = ['client_profile', 'client', 'client_name', 'customer']
+    logger.info("Available client-related attributes:")
+    for attr in client_attributes:
+        if hasattr(execution_plan, attr):
+            value = getattr(execution_plan, attr)
+            logger.info(f"  {attr}: {value} (type: {type(value)})")
+    
+    # Check for plan items relationship
+    items_attributes = ['execution_plan_items', 'executionplanitem_set', 'items', 'plan_items']
+    logger.info("Available plan items-related attributes:")
+    for attr in items_attributes:
+        if hasattr(execution_plan, attr):
+            try:
+                value = getattr(execution_plan, attr)
+                if hasattr(value, 'all'):
+                    count = value.all().count()
+                    logger.info(f"  {attr}: {count} items")
+                else:
+                    logger.info(f"  {attr}: {value}")
+            except Exception as e:
+                logger.info(f"  {attr}: Error accessing - {e}")
+    
+    # Check for common fields
+    common_fields = ['total_amount', 'status', 'created_at', 'plan_id']
+    logger.info("Available common fields:")
+    for field in common_fields:
+        if hasattr(execution_plan, field):
+            value = getattr(execution_plan, field)
+            logger.info(f"  {field}: {value}")
 
 @login_required
 def plan_detail(request, plan_id):
@@ -7494,42 +7891,176 @@ def mark_action_failed(request, action_id):
 
 @login_required
 def download_excel(request, plan_id):
-    """Download execution plan Excel file"""
+    """Download execution plan Excel file - Enhanced version"""
     execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
     
     # Check access permission
     if not can_access_plan(request.user, execution_plan):
         raise Http404("Access denied")
     
-    if not execution_plan.excel_file:
-        messages.error(request, "Excel file not available")
-        return redirect('plan_detail', plan_id=plan_id)
-    
     try:
-        file_path = os.path.join(settings.MEDIA_ROOT, execution_plan.excel_file.name)
-        
-        if not os.path.exists(file_path):
-            # Regenerate Excel file if missing
+        # Check if Excel file exists
+        if execution_plan.excel_file and os.path.exists(execution_plan.excel_file.path):
+            file_path = execution_plan.excel_file.path
+            filename = f"{execution_plan.plan_id}_execution_plan.xlsx"
+        else:
+            # Generate Excel file if it doesn't exist
             excel_file_path = generate_execution_plan_excel(execution_plan)
             if excel_file_path:
                 execution_plan.excel_file = excel_file_path
                 execution_plan.save()
-                file_path = os.path.join(settings.MEDIA_ROOT, execution_plan.excel_file.name)
+                file_path = os.path.join(settings.MEDIA_ROOT, excel_file_path)
+                filename = f"{execution_plan.plan_id}_execution_plan.xlsx"
             else:
-                messages.error(request, "Unable to generate Excel file")
-                return redirect('plan_detail', plan_id=plan_id)
+                return JsonResponse({'error': 'Unable to generate Excel file'}, status=500)
         
+        # Serve the file
         with open(file_path, 'rb') as f:
             response = HttpResponse(
                 f.read(),
                 content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             )
-            response['Content-Disposition'] = f'attachment; filename="{execution_plan.get_filename()}"'
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            
+            # Add additional headers
+            response['Content-Length'] = os.path.getsize(file_path)
+            response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
+            
             return response
             
     except Exception as e:
-        messages.error(request, f"Error downloading file: {str(e)}")
-        return redirect('plan_detail', plan_id=plan_id)
+        logger.error(f"Error downloading Excel file for plan {plan_id}: {str(e)}")
+        return JsonResponse({'error': f'Error downloading file: {str(e)}'}, status=500)
+
+@login_required
+@require_http_methods(["POST"])
+def generate_excel(request, plan_id):
+    """Generate fresh Excel file for execution plan"""
+    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+    
+    # Check access permission
+    if not can_access_plan(request.user, execution_plan):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    try:
+        # Debug: Check the execution plan structure
+        debug_execution_plan_structure(execution_plan)
+        
+        # Debug: Check the first scheme's attributes if items exist
+        plan_items = []
+        if hasattr(execution_plan, 'execution_plan_items'):
+            plan_items = execution_plan.execution_plan_items.all()
+        elif hasattr(execution_plan, 'executionplanitem_set'):
+            plan_items = execution_plan.executionplanitem_set.all()
+        elif hasattr(execution_plan, 'items'):
+            plan_items = execution_plan.items.all()
+        elif hasattr(execution_plan, 'plan_items'):
+            plan_items = execution_plan.plan_items.all()
+        
+        first_item = plan_items.first() if plan_items else None
+        if first_item and hasattr(first_item, 'scheme') and first_item.scheme:
+            debug_scheme_attributes(first_item.scheme)
+        
+        # Generate new Excel file
+        excel_file_path = generate_execution_plan_excel(execution_plan)
+        
+        if excel_file_path:
+            # Update the execution plan with new file
+            execution_plan.excel_file = excel_file_path
+            execution_plan.save()
+            
+            filename = f"{execution_plan.plan_id}_execution_plan.xlsx"
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Excel file generated successfully',
+                'filename': filename,
+                'file_path': excel_file_path
+            })
+        else:
+            return JsonResponse({'error': 'Failed to generate Excel file'}, status=500)
+            
+    except Exception as e:
+        logger.error(f"Error generating Excel for plan {plan_id}: {str(e)}")
+        logger.error(f"Error traceback: {traceback.format_exc()}")
+        return JsonResponse({'error': f'Error generating Excel: {str(e)}'}, status=500)
+    
+    
+@login_required
+@require_http_methods(["POST"])
+def email_plan(request, plan_id):
+    """Email execution plan to specified recipients"""
+    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+    
+    # Check access permission
+    if not can_access_plan(request.user, execution_plan):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    try:
+        data = json.loads(request.body)
+        
+        email_to = data.get('email_to', '').strip()
+        email_cc = data.get('email_cc', '').strip()
+        subject = data.get('subject', '').strip()
+        message = data.get('message', '').strip()
+        attach_excel = data.get('attach_excel', False)
+        attach_pdf = data.get('attach_pdf', False)
+        
+        if not email_to:
+            return JsonResponse({'error': 'Recipient email is required'}, status=400)
+        
+        if not subject:
+            return JsonResponse({'error': 'Email subject is required'}, status=400)
+        
+        # Create email
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[email_to],
+            cc=[email_cc] if email_cc else []
+        )
+        
+        # Attach Excel file
+        if attach_excel:
+            if execution_plan.excel_file and os.path.exists(execution_plan.excel_file.path):
+                excel_filename = f"{execution_plan.plan_id}_execution_plan.xlsx"
+                with open(execution_plan.excel_file.path, 'rb') as f:
+                    email.attach(excel_filename, f.read(), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            else:
+                # Generate Excel file if not exists
+                excel_file_path = generate_execution_plan_excel(execution_plan)
+                if excel_file_path:
+                    execution_plan.excel_file = excel_file_path
+                    execution_plan.save()
+                    excel_filename = f"{execution_plan.plan_id}_execution_plan.xlsx"
+                    with open(os.path.join(settings.MEDIA_ROOT, excel_file_path), 'rb') as f:
+                        email.attach(excel_filename, f.read(), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        
+        # Send email
+        email.send()
+        
+        # Add comment to execution plan
+        PlanComment.objects.create(
+            execution_plan=execution_plan,
+            comment=f"Execution plan emailed to {email_to} by {request.user.get_full_name() or request.user.username}",
+            commented_by=request.user,
+            is_internal=True
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Email sent successfully to {email_to}'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        logger.error(f"Error emailing plan {plan_id}: {str(e)}")
+        return JsonResponse({'error': f'Error sending email: {str(e)}'}, status=500)
+    
 
 
 @login_required
@@ -9117,3 +9648,1606 @@ def track_workflow(request, plan_id):
     except Exception as e:
         logger.error(f"Error tracking workflow: {str(e)}")
         return JsonResponse({'success': False, 'error': 'Failed to track workflow change'}, status=500)
+    
+    
+
+
+####RESET PASSWORD######
+
+
+from django.contrib.auth.tokens import default_token_generator
+from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.urls import reverse
+from django.contrib.sites.shortcuts import get_current_site
+from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+import json
+import logging
+from django.middleware.csrf import get_token
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
+
+@ensure_csrf_cookie
+@require_http_methods(["POST"])
+def password_reset_request(request):
+    """
+    Handle password reset requests via AJAX
+    """
+    try:
+        data = json.loads(request.body)
+        username_or_email = data.get('username_or_email', '').strip().lower()
+        
+        if not username_or_email:
+            return JsonResponse({
+                'success': False,
+                'message': 'Username or email is required.'
+            })
+        
+        # Try to find user by username or email
+        user = None
+        
+        # First try by email
+        if '@' in username_or_email:
+            try:
+                user = User.objects.get(email__iexact=username_or_email, is_active=True)
+            except User.DoesNotExist:
+                pass
+        
+        # If not found by email, try by username
+        if not user:
+            try:
+                user = User.objects.get(username__iexact=username_or_email, is_active=True)
+            except User.DoesNotExist:
+                pass
+        
+        # Security: Always return success message to prevent user enumeration
+        if not user:
+            return JsonResponse({
+                'success': True,
+                'message': 'If an account with that username or email exists, password reset instructions have been sent.'
+            })
+        
+        # Check if user has an email address
+        if not user.email:
+            return JsonResponse({
+                'success': True,
+                'message': 'If an account with that username or email exists, password reset instructions have been sent.'
+            })
+        
+        # Generate password reset token
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        
+        # Get current site
+        current_site = get_current_site(request)
+        
+        # Build reset URL
+        reset_url = request.build_absolute_uri(
+            reverse('password_reset_confirm', kwargs={'uidb64': uid, 'token': token})
+        )
+        
+        # Prepare email context
+        context = {
+            'user': user,
+            'reset_url': reset_url,
+            'site_name': current_site.name,
+            'domain': current_site.domain,
+            'protocol': 'https' if request.is_secure() else 'http',
+            'company_name': getattr(settings, 'COMPANY_NAME', 'Financial CRM'),
+        }
+        
+        # Render email templates
+        subject = f"Password Reset - {context['company_name']}"
+        email_template_name = 'registration/password_reset_email.html'
+        email_template_text = 'registration/password_reset_email.txt'
+        
+        try:
+            # Try HTML template first
+            html_message = render_to_string(email_template_name, context)
+            text_message = render_to_string(email_template_text, context)
+        except:
+            # Fallback to simple text message
+            html_message = f"""
+            <h2>Password Reset Request</h2>
+            <p>Hello {user.get_full_name() or user.username},</p>
+            <p>You have requested a password reset for your {context['company_name']} account.</p>
+            <p>Click the link below to reset your password:</p>
+            <p><a href="{reset_url}" style="background-color: #1C64FF; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a></p>
+            <p>If you didn't request this password reset, please ignore this email.</p>
+            <p>This link will expire in 24 hours for security reasons.</p>
+            <br>
+            <p>Best regards,<br>{context['company_name']} Team</p>
+            """
+            
+            text_message = f"""
+            Password Reset Request
+            
+            Hello {user.get_full_name() or user.username},
+            
+            You have requested a password reset for your {context['company_name']} account.
+            
+            Click the link below to reset your password:
+            {reset_url}
+            
+            If you didn't request this password reset, please ignore this email.
+            This link will expire in 24 hours for security reasons.
+            
+            Best regards,
+            {context['company_name']} Team
+            """
+        
+        # Send email
+        try:
+            send_mail(
+                subject=subject,
+                message=text_message,
+                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com'),
+                recipient_list=[user.email],
+                html_message=html_message,
+                fail_silently=False,
+            )
+            
+            logger.info(f"Password reset email sent successfully to {user.email}")
+            
+        except Exception as e:
+            logger.error(f"Failed to send password reset email to {user.email}: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'message': 'Failed to send reset email. Please try again later or contact support.'
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Password reset instructions have been sent to your email address.'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': 'Invalid request format.'
+        })
+    except Exception as e:
+        logger.error(f"Unexpected error in password reset: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': 'An unexpected error occurred. Please try again later.'
+        })
+
+
+def password_reset_confirm(request, uidb64, token):
+    """
+    Handle password reset confirmation page
+    """
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+    
+    # Check if token is valid
+    if user is not None and default_token_generator.check_token(user, token):
+        validlink = True
+        
+        if request.method == 'POST':
+            password1 = request.POST.get('new_password1')
+            password2 = request.POST.get('new_password2')
+            
+            # Validate passwords
+            if not password1 or not password2:
+                messages.error(request, 'Both password fields are required.')
+            elif password1 != password2:
+                messages.error(request, 'Passwords do not match.')
+            elif len(password1) < 8:
+                messages.error(request, 'Password must be at least 8 characters long.')
+            else:
+                # Set new password
+                user.set_password(password1)
+                user.save()
+                
+                # Log the user out from all sessions for security
+                from django.contrib.sessions.models import Session
+                for session in Session.objects.all():
+                    try:
+                        session_data = session.get_decoded()
+                        if session_data.get('_auth_user_id') == str(user.id):
+                            session.delete()
+                    except:
+                        pass
+                
+                messages.success(request, 'Your password has been reset successfully. You can now log in with your new password.')
+                return redirect('login')
+    else:
+        validlink = False
+        messages.error(request, 'This password reset link is invalid or has expired.')
+    
+    context = {
+        'validlink': validlink,
+        'user': user,
+        'uidb64': uidb64,
+        'token': token,
+    }
+    
+    return render(request, 'registration/password_reset_confirm.html', context)
+# Add this view to your views.py
+
+@login_required
+@require_http_methods(["GET"])
+def get_action_statuses(request, plan_id):
+    """Get action statuses for execution plan (AJAX endpoint)"""
+    try:
+        execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+        
+        # Check access permission
+        if not can_access_plan(request.user, execution_plan):
+            return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+        
+        # Get all actions for this plan
+        actions = execution_plan.actions.all().select_related('scheme', 'target_scheme', 'executed_by')
+        
+        action_data = []
+        for action in actions:
+            # Get scheme information
+            scheme_name = "Unknown Scheme"
+            if action.scheme:
+                scheme_name = action.scheme.scheme_name
+            
+            target_scheme_name = ""
+            if action.target_scheme:
+                target_scheme_name = action.target_scheme.scheme_name
+            
+            # Get execution details
+            executed_by_name = ""
+            if action.executed_by:
+                executed_by_name = action.executed_by.get_full_name() or action.executed_by.username
+            
+            # Get action display name
+            action_type_display = action.get_action_type_display() if hasattr(action, 'get_action_type_display') else action.action_type
+            
+            # Get status display
+            status_display = action.get_status_display() if hasattr(action, 'get_status_display') else action.status
+            
+            action_info = {
+                'id': action.id,
+                'action_type': action.action_type,
+                'action_type_display': action_type_display,
+                'scheme_name': scheme_name,
+                'target_scheme_name': target_scheme_name,
+                'amount': str(action.amount) if action.amount else '',
+                'units': str(action.units) if action.units else '',
+                'status': action.status,
+                'status_display': status_display,
+                'priority': action.priority,
+                'executed_by': executed_by_name,
+                'executed_at': action.executed_at.isoformat() if hasattr(action, 'executed_at') and action.executed_at else None,
+                'transaction_id': getattr(action, 'transaction_id', ''),
+                'notes': action.notes or '',
+                'can_execute': action.status == 'pending' and can_execute_plan(request.user, execution_plan),
+                'can_mark_failed': action.status == 'pending' and can_execute_plan(request.user, execution_plan),
+            }
+            
+            # Add action-specific fields
+            if action.action_type == 'sip_start':
+                action_info.update({
+                    'sip_date': action.sip_date,
+                    'frequency': getattr(action, 'frequency', ''),
+                })
+            elif action.action_type in ['switch', 'stp_start']:
+                action_info['target_scheme_required'] = True
+            
+            action_data.append(action_info)
+        
+        # Calculate summary statistics
+        total_actions = len(action_data)
+        pending_actions = len([a for a in action_data if a['status'] == 'pending'])
+        completed_actions = len([a for a in action_data if a['status'] == 'completed'])
+        failed_actions = len([a for a in action_data if a['status'] == 'failed'])
+        
+        summary = {
+            'total_actions': total_actions,
+            'pending_actions': pending_actions,
+            'completed_actions': completed_actions,
+            'failed_actions': failed_actions,
+            'completion_percentage': round((completed_actions / total_actions * 100), 2) if total_actions > 0 else 0,
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'actions': action_data,
+            'summary': summary,
+            'plan_status': execution_plan.status,
+            'plan_id': execution_plan.plan_id if hasattr(execution_plan, 'plan_id') else plan_id,
+        })
+        
+    except ExecutionPlan.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Execution plan not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error getting action statuses for plan {plan_id}: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'Failed to load action statuses'}, status=500)
+
+
+# Also add this helper view for updating action status
+@login_required
+@require_http_methods(["POST"])
+def update_action_status(request, action_id):
+    """Update individual action status (AJAX endpoint)"""
+    try:
+        action = get_object_or_404(PlanAction, id=action_id)
+        execution_plan = action.execution_plan
+        
+        # Check permissions
+        if not can_execute_plan(request.user, execution_plan):
+            return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+        
+        data = json.loads(request.body)
+        new_status = data.get('status')
+        notes = data.get('notes', '')
+        
+        # Validate status
+        valid_statuses = ['pending', 'in_progress', 'completed', 'failed', 'skipped']
+        if new_status not in valid_statuses:
+            return JsonResponse({'success': False, 'error': 'Invalid status'}, status=400)
+        
+        # Update action
+        old_status = action.status
+        action.status = new_status
+        
+        if notes:
+            action.notes = notes
+        
+        # Set timestamp fields based on status
+        if new_status == 'completed':
+            action.executed_at = timezone.now()
+            action.executed_by = request.user
+        elif new_status == 'failed':
+            action.failed_at = timezone.now() if hasattr(action, 'failed_at') else None
+            action.failed_by = request.user if hasattr(action, 'failed_by') else None
+        
+        action.save()
+        
+        # Check if all actions are completed to auto-complete the plan
+        remaining_actions = execution_plan.actions.exclude(status__in=['completed', 'failed', 'skipped']).count()
+        
+        plan_status_changed = False
+        if remaining_actions == 0 and execution_plan.status == 'in_execution':
+            execution_plan.status = 'completed'
+            execution_plan.completed_at = timezone.now()
+            execution_plan.save()
+            plan_status_changed = True
+            
+            # Create workflow history
+            PlanWorkflowHistory.objects.create(
+                execution_plan=execution_plan,
+                from_status='in_execution',
+                to_status='completed',
+                changed_by=request.user,
+                comments='All actions completed - plan auto-completed'
+            )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Action status updated from {old_status} to {new_status}',
+            'action_id': action.id,
+            'old_status': old_status,
+            'new_status': new_status,
+            'plan_status_changed': plan_status_changed,
+            'plan_completed': plan_status_changed,
+            'remaining_actions': remaining_actions,
+        })
+        
+    except PlanAction.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Action not found'}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        logger.error(f"Error updating action status: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'Failed to update action status'}, status=500)
+
+
+# Add this view for getting execution progress
+@login_required
+@require_http_methods(["GET"])
+def get_execution_progress(request, plan_id):
+    """Get execution progress for a plan (AJAX endpoint)"""
+    try:
+        execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+        
+        # Check access permission
+        if not can_access_plan(request.user, execution_plan):
+            return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+        
+        # Get action counts by status
+        actions = execution_plan.actions.all()
+        status_counts = {
+            'total': actions.count(),
+            'pending': actions.filter(status='pending').count(),
+            'in_progress': actions.filter(status='in_progress').count(),
+            'completed': actions.filter(status='completed').count(),
+            'failed': actions.filter(status='failed').count(),
+            'skipped': actions.filter(status='skipped').count(),
+        }
+        
+        # Calculate percentages
+        total = status_counts['total']
+        progress = {
+            'completion_percentage': round((status_counts['completed'] / total * 100), 2) if total > 0 else 0,
+            'failure_rate': round((status_counts['failed'] / total * 100), 2) if total > 0 else 0,
+            'remaining_percentage': round(((status_counts['pending'] + status_counts['in_progress']) / total * 100), 2) if total > 0 else 0,
+        }
+        
+        # Get recent activity
+        recent_actions = actions.filter(
+            status__in=['completed', 'failed']
+        ).order_by('-executed_at' if hasattr(PlanAction, 'executed_at') else '-updated_at')[:5]
+        
+        recent_activity = []
+        for action in recent_actions:
+            activity = {
+                'action_type': action.get_action_type_display() if hasattr(action, 'get_action_type_display') else action.action_type,
+                'scheme_name': action.scheme.scheme_name if action.scheme else 'Unknown',
+                'status': action.status,
+                'timestamp': action.executed_at.isoformat() if hasattr(action, 'executed_at') and action.executed_at else None,
+                'executed_by': action.executed_by.get_full_name() if hasattr(action, 'executed_by') and action.executed_by else None,
+            }
+            recent_activity.append(activity)
+        
+        return JsonResponse({
+            'success': True,
+            'plan_status': execution_plan.status,
+            'status_counts': status_counts,
+            'progress': progress,
+            'recent_activity': recent_activity,
+            'can_execute': can_execute_plan(request.user, execution_plan),
+            'last_updated': timezone.now().isoformat(),
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting execution progress: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'Failed to load execution progress'}, status=500)
+
+# Add these enhanced email functions to your views.py
+
+import logging
+from django.core.mail import EmailMessage, send_mail
+from django.template.loader import render_to_string
+from django.conf import settings
+from django.utils import timezone
+from datetime import datetime
+import os
+
+logger = logging.getLogger(__name__)
+
+def get_client_email(execution_plan):
+    """
+    Get client email from various possible sources
+    """
+    client_email = None
+    
+    # Try to get email from different client model relationships
+    try:
+        # First try: Direct client email
+        if hasattr(execution_plan.client, 'email') and execution_plan.client.email:
+            client_email = execution_plan.client.email
+        
+        # Second try: Client contact_info (if it's an email)
+        elif hasattr(execution_plan.client, 'contact_info') and execution_plan.client.contact_info:
+            contact_info = execution_plan.client.contact_info
+            if '@' in contact_info:
+                client_email = contact_info
+        
+        # Third try: Client profile email
+        elif hasattr(execution_plan.client, 'client_profile') and execution_plan.client.client_profile:
+            if hasattr(execution_plan.client.client_profile, 'email') and execution_plan.client.client_profile.email:
+                client_email = execution_plan.client.client_profile.email
+        
+        # Fourth try: User email (if client is linked to a user)
+        elif hasattr(execution_plan.client, 'user') and execution_plan.client.user:
+            if hasattr(execution_plan.client.user, 'email') and execution_plan.client.user.email:
+                client_email = execution_plan.client.user.email
+                
+        logger.info(f"Found client email: {client_email} for plan {execution_plan.plan_id}")
+        
+    except Exception as e:
+        logger.error(f"Error getting client email for plan {execution_plan.plan_id}: {str(e)}")
+    
+    return client_email
+
+
+def send_execution_plan_email(execution_plan, email_type='approved', custom_message=None, 
+                            include_excel=True, send_to_rm=False, send_to_client=True):
+    """
+    Enhanced function to send execution plan emails automatically
+    
+    Args:
+        execution_plan: ExecutionPlan object
+        email_type: 'approved', 'completed', 'updated', 'client_approved'
+        custom_message: Optional custom message
+        include_excel: Whether to attach Excel file
+        send_to_rm: Whether to send copy to RM
+        send_to_client: Whether to send to client
+    """
+    try:
+        # Get recipient emails
+        recipients = []
+        cc_recipients = []
+        
+        # Client email
+        if send_to_client:
+            client_email = get_client_email(execution_plan)
+            if client_email:
+                recipients.append(client_email)
+            else:
+                logger.warning(f"No client email found for plan {execution_plan.plan_id}")
+                if not send_to_rm:
+                    return False, "No client email found"
+        
+        # RM email
+        if send_to_rm and execution_plan.created_by and execution_plan.created_by.email:
+            if execution_plan.created_by.email not in recipients:
+                cc_recipients.append(execution_plan.created_by.email)
+        
+        if not recipients and not cc_recipients:
+            return False, "No valid email recipients found"
+        
+        # Prepare email content based on type
+        subject_templates = {
+            'approved': f"✅ Investment Plan Approved - {execution_plan.plan_name}",
+            'completed': f"✅ Investment Plan Executed - {execution_plan.plan_name}",
+            'updated': f"📋 Investment Plan Updated - {execution_plan.plan_name}",
+            'client_approved': f"🎯 Ready for Execution - {execution_plan.plan_name}",
+            'rejected': f"❌ Investment Plan Rejected - {execution_plan.plan_name}",
+            'pending_approval': f"⏳ Investment Plan Submitted - {execution_plan.plan_name}"
+        }
+        
+        subject = subject_templates.get(email_type, f"Investment Plan Update - {execution_plan.plan_name}")
+        
+        # Prepare email context
+        context = {
+            'execution_plan': execution_plan,
+            'client': execution_plan.client,
+            'rm': execution_plan.created_by,
+            'email_type': email_type,
+            'custom_message': custom_message,
+            'company_name': getattr(settings, 'COMPANY_NAME', 'Investment Management'),
+            'current_date': timezone.now().strftime('%B %d, %Y'),
+            'plan_url': f"{getattr(settings, 'SITE_URL', 'https://your-domain.com')}/execution-plans/{execution_plan.id}/",
+        }
+        
+        # Get client name
+        client_name = "Valued Client"
+        if hasattr(execution_plan.client, 'name') and execution_plan.client.name:
+            client_name = execution_plan.client.name
+        elif hasattr(execution_plan.client, 'client_full_name') and execution_plan.client.client_full_name:
+            client_name = execution_plan.client.client_full_name
+        
+        context['client_name'] = client_name
+        
+        # Generate email content
+        try:
+            # Try to use custom template if exists
+            html_template = f'execution_plans/emails/{email_type}_email.html'
+            text_template = f'execution_plans/emails/{email_type}_email.txt'
+            
+            html_message = render_to_string(html_template, context)
+            text_message = render_to_string(text_template, context)
+            
+        except:
+            # Fallback to default template
+            html_message, text_message = generate_default_email_content(context, email_type)
+        
+        # Create email message
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_message,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@yourcompany.com'),
+            to=recipients,
+            cc=cc_recipients,
+            reply_to=[execution_plan.created_by.email] if execution_plan.created_by.email else None
+        )
+        
+        # Add HTML content
+        email.attach_alternative(html_message, "text/html")
+        
+        # Attach Excel file if requested and available
+        if include_excel:
+            excel_attached = attach_excel_file(email, execution_plan)
+            if not excel_attached:
+                logger.warning(f"Could not attach Excel file for plan {execution_plan.plan_id}")
+        
+        # Send email
+        email.send(fail_silently=False)
+        
+        # Log the email sending
+        logger.info(f"Email sent successfully for plan {execution_plan.plan_id} to {recipients}")
+        
+        # Create comment record
+        try:
+            PlanComment.objects.create(
+                execution_plan=execution_plan,
+                comment=f"Email sent to client ({', '.join(recipients)}) - {email_type}",
+                commented_by=execution_plan.created_by if execution_plan.created_by else None,
+                is_internal=True
+            )
+        except:
+            pass  # Don't fail if comment creation fails
+        
+        return True, f"Email sent successfully to {', '.join(recipients)}"
+        
+    except Exception as e:
+        logger.error(f"Error sending email for plan {execution_plan.plan_id}: {str(e)}")
+        return False, f"Error sending email: {str(e)}"
+
+
+def attach_excel_file(email, execution_plan):
+    """
+    Attach Excel file to email message
+    """
+    try:
+        # Check if Excel file exists
+        if execution_plan.excel_file and os.path.exists(execution_plan.excel_file.path):
+            file_path = execution_plan.excel_file.path
+            filename = f"{execution_plan.plan_id}_execution_plan.xlsx"
+        else:
+            # Generate Excel file if it doesn't exist
+            excel_file_path = generate_execution_plan_excel(execution_plan)
+            if excel_file_path:
+                execution_plan.excel_file = excel_file_path
+                execution_plan.save()
+                file_path = os.path.join(settings.MEDIA_ROOT, excel_file_path)
+                filename = f"{execution_plan.plan_id}_execution_plan.xlsx"
+            else:
+                return False
+        
+        # Read and attach file
+        with open(file_path, 'rb') as f:
+            email.attach(
+                filename, 
+                f.read(), 
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error attaching Excel file: {str(e)}")
+        return False
+
+
+def generate_default_email_content(context, email_type):
+    """
+    Generate default email content when templates are not available
+    """
+    execution_plan = context['execution_plan']
+    client_name = context['client_name']
+    rm_name = context['rm'].get_full_name() if context['rm'] else "Your Relationship Manager"
+    
+    # Email content based on type
+    content_map = {
+        'approved': {
+            'greeting': f"Dear {client_name},",
+            'main_message': f"We are pleased to inform you that your investment execution plan '{execution_plan.plan_name}' has been approved and is ready for your review.",
+            'action_required': "Please review the attached execution plan details. Once you approve, we will proceed with the execution.",
+            'closing': "We look forward to helping you achieve your investment goals."
+        },
+        'completed': {
+            'greeting': f"Dear {client_name},",
+            'main_message': f"Your investment execution plan '{execution_plan.plan_name}' has been successfully executed.",
+            'action_required': "Please find the attached execution summary with all transaction details.",
+            'closing': "Thank you for trusting us with your investments."
+        },
+        'updated': {
+            'greeting': f"Dear {client_name},",
+            'main_message': f"Your investment execution plan '{execution_plan.plan_name}' has been updated with new information.",
+            'action_required': "Please review the attached updated plan details.",
+            'closing': "If you have any questions, please don't hesitate to contact us."
+        },
+        'client_approved': {
+            'greeting': f"Dear {client_name},",
+            'main_message': f"Thank you for approving your investment execution plan '{execution_plan.plan_name}'.",
+            'action_required': "Our operations team will now begin executing your plan. You will receive updates as each transaction is completed.",
+            'closing': "We appreciate your trust in our services."
+        }
+    }
+    
+    content = content_map.get(email_type, content_map['updated'])
+    
+    # Generate HTML message
+    html_message = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+            .header {{ background-color: #1C64FF; color: white; padding: 20px; text-align: center; }}
+            .content {{ padding: 20px; background-color: #f9f9f9; }}
+            .plan-details {{ background-color: white; padding: 15px; margin: 15px 0; border-left: 4px solid #1C64FF; }}
+            .footer {{ background-color: #333; color: white; padding: 15px; text-align: center; font-size: 12px; }}
+            .btn {{ background-color: #1C64FF; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>{context['company_name']}</h1>
+                <h2>Investment Execution Plan</h2>
+            </div>
+            
+            <div class="content">
+                <p>{content['greeting']}</p>
+                
+                <p>{content['main_message']}</p>
+                
+                <div class="plan-details">
+                    <h3>Plan Details:</h3>
+                    <ul>
+                        <li><strong>Plan Name:</strong> {execution_plan.plan_name}</li>
+                        <li><strong>Plan ID:</strong> {execution_plan.plan_id}</li>
+                        <li><strong>Status:</strong> {execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else execution_plan.status}</li>
+                        <li><strong>Created Date:</strong> {execution_plan.created_at.strftime('%B %d, %Y') if execution_plan.created_at else 'N/A'}</li>
+                        <li><strong>Your RM:</strong> {rm_name}</li>
+                    </ul>
+                </div>
+                
+                <p>{content['action_required']}</p>
+                
+                {f'<p><strong>Additional Message:</strong><br>{context["custom_message"]}</p>' if context.get('custom_message') else ''}
+                
+                <p>If you have any questions or concerns, please don't hesitate to contact your relationship manager at {context['rm'].email if context['rm'] and context['rm'].email else 'your usual contact'}.</p>
+                
+                <p>{content['closing']}</p>
+            </div>
+            
+            <div class="footer">
+                <p>{context['company_name']} | Investment Management Services</p>
+                <p>This is an automated message. Please do not reply to this email.</p>
+                <p>Generated on {context['current_date']}</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    # Generate text message
+    text_message = f"""
+{content['greeting']}
+
+{content['main_message']}
+
+Plan Details:
+- Plan Name: {execution_plan.plan_name}
+- Plan ID: {execution_plan.plan_id}
+- Status: {execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else execution_plan.status}
+- Created Date: {execution_plan.created_at.strftime('%B %d, %Y') if execution_plan.created_at else 'N/A'}
+- Your RM: {rm_name}
+
+{content['action_required']}
+
+{f'Additional Message: {context["custom_message"]}' if context.get('custom_message') else ''}
+
+If you have any questions or concerns, please contact your relationship manager.
+
+{content['closing']}
+
+Best regards,
+{context['company_name']} Team
+
+---
+This is an automated message generated on {context['current_date']}.
+    """
+    
+    return html_message, text_message
+
+
+# Enhanced workflow functions with automatic email sending
+
+@login_required
+@require_http_methods(["POST"])
+def approve_plan_with_email(request, plan_id):
+    """
+    Approve execution plan and automatically send email to client
+    """
+    try:
+        execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+        
+        # Check permission
+        if not can_approve_plan(request.user, execution_plan):
+            return JsonResponse({
+                'success': False, 
+                'error': 'Access denied. Only Business Head or Top Management can approve execution plans.'
+            }, status=403)
+        
+        if execution_plan.status != 'pending_approval':
+            return JsonResponse({
+                'success': False,
+                'error': f'Plan cannot be approved. Current status: {execution_plan.get_status_display()}'
+            }, status=400)
+        
+        comments = request.POST.get('comments', '')
+        send_email = request.POST.get('send_email', 'true').lower() == 'true'
+        
+        # Use transaction for data consistency
+        with transaction.atomic():
+            # Approve the plan
+            if execution_plan.approve(request.user):
+                # Create workflow history
+                PlanWorkflowHistory.objects.create(
+                    execution_plan=execution_plan,
+                    from_status='pending_approval',
+                    to_status='approved',
+                    changed_by=request.user,
+                    comments=comments or 'Plan approved'
+                )
+                
+                # Add comment if provided
+                if comments:
+                    PlanComment.objects.create(
+                        execution_plan=execution_plan,
+                        comment=comments,
+                        commented_by=request.user,
+                        is_internal=True
+                    )
+                
+                # Send email notification if requested
+                email_sent = False
+                email_message = ""
+                
+                if send_email:
+                    email_success, email_result = send_execution_plan_email(
+                        execution_plan=execution_plan,
+                        email_type='approved',
+                        custom_message=comments,
+                        include_excel=True,
+                        send_to_rm=True,
+                        send_to_client=True
+                    )
+                    
+                    if email_success:
+                        email_sent = True
+                        email_message = email_result
+                    else:
+                        logger.warning(f"Email failed for approved plan {execution_plan.plan_id}: {email_result}")
+                        email_message = f"Plan approved but email failed: {email_result}"
+                
+                return JsonResponse({
+                    'success': True, 
+                    'message': 'Plan approved successfully',
+                    'new_status': execution_plan.status,
+                    'email_sent': email_sent,
+                    'email_message': email_message
+                })
+            else:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'Failed to approve plan'
+                }, status=400)
+    
+    except Exception as e:
+        logger.error(f"Error approving plan with email: {str(e)}")
+        return JsonResponse({
+            'success': False, 
+            'error': 'An error occurred while approving the plan'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def mark_client_approved_with_email(request, plan_id):
+    """
+    Mark plan as client approved and send notification
+    """
+    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+    
+    # Check permission - only RM who created the plan can mark as client approved
+    if execution_plan.created_by != request.user:
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    if execution_plan.mark_client_approved():
+        # Create workflow history
+        PlanWorkflowHistory.objects.create(
+            execution_plan=execution_plan,
+            from_status='approved',
+            to_status='client_approved',
+            changed_by=request.user,
+            comments='Client approval confirmed'
+        )
+        
+        # Send email to operations team
+        send_execution_plan_email(
+            execution_plan=execution_plan,
+            email_type='client_approved',
+            include_excel=True,
+            send_to_rm=True,
+            send_to_client=False  # This goes to ops team
+        )
+        
+        # Notify operations team
+        notify_ops_team(execution_plan)
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Plan marked as client approved and operations team notified'
+        })
+    else:
+        return JsonResponse({'error': 'Failed to mark as client approved'}, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])  
+def complete_execution_with_email(request, plan_id):
+    """
+    Mark execution as completed and send completion email to client
+    """
+    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+    
+    # Check permission
+    if not can_execute_plan(request.user, execution_plan):
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    try:
+        with transaction.atomic():
+            # Mark as completed
+            execution_plan.status = 'completed'
+            execution_plan.completed_at = timezone.now()
+            execution_plan.save()
+            
+            # Create workflow history
+            PlanWorkflowHistory.objects.create(
+                execution_plan=execution_plan,
+                from_status='in_execution',
+                to_status='completed',
+                changed_by=request.user,
+                comments='Execution completed successfully'
+            )
+            
+            # Generate fresh Excel with execution results
+            try:
+                excel_file_path = generate_execution_plan_excel(execution_plan)
+                if excel_file_path:
+                    execution_plan.excel_file = excel_file_path
+                    execution_plan.save()
+            except Exception as e:
+                logger.warning(f"Could not generate completion Excel: {str(e)}")
+            
+            # Send completion email
+            email_success, email_result = send_execution_plan_email(
+                execution_plan=execution_plan,
+                email_type='completed',
+                custom_message="All transactions in your execution plan have been completed successfully.",
+                include_excel=True,
+                send_to_rm=True,
+                send_to_client=True
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Execution completed successfully',
+                'email_sent': email_success,
+                'email_message': email_result
+            })
+            
+    except Exception as e:
+        logger.error(f"Error completing execution: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+# Modified existing view to include automatic email
+@login_required
+@require_http_methods(["POST"])
+def submit_for_approval_with_email(request, plan_id):
+    """
+    Submit execution plan for approval with email notification
+    """
+    try:
+        execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+        
+        # Check permission
+        if execution_plan.created_by != request.user:
+            return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+        
+        if execution_plan.status != 'draft':
+            return JsonResponse({
+                'success': False, 
+                'error': f'Plan cannot be submitted for approval. Current status: {execution_plan.get_status_display()}'
+            }, status=400)
+        
+        # Validate that plan has actions
+        if not execution_plan.actions.exists():
+            return JsonResponse({
+                'success': False, 
+                'error': 'Cannot submit plan without any actions'
+            }, status=400)
+        
+        # Use transaction to ensure data consistency
+        with transaction.atomic():
+            # Update plan status
+            execution_plan.status = 'pending_approval'
+            execution_plan.submitted_at = timezone.now()
+            execution_plan.save()
+            
+            # Create workflow history
+            PlanWorkflowHistory.objects.create(
+                execution_plan=execution_plan,
+                from_status='draft',
+                to_status='pending_approval',
+                changed_by=request.user,
+                comments='Plan submitted for approval'
+            )
+            
+            # Send email notification to approval managers
+            try:
+                # Find approval managers
+                approval_managers = User.objects.filter(
+                    role__in=['rm_head', 'business_head', 'business_head_ops', 'top_management']
+                )
+                
+                for manager in approval_managers:
+                    if manager.email:
+                        send_approval_notification_email(execution_plan, manager)
+                        
+            except Exception as e:
+                logger.warning(f"Failed to send approval notifications: {str(e)}")
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Plan submitted for approval successfully',
+            'new_status': execution_plan.status
+        })
+        
+    except Exception as e:
+        logger.error(f"Error submitting plan for approval: {str(e)}")
+        return JsonResponse({
+            'success': False, 
+            'error': 'Failed to submit plan for approval'
+        }, status=500)
+
+
+def send_approval_notification_email(execution_plan, manager):
+    """
+    Send email to manager for approval request
+    """
+    try:
+        subject = f"📋 Execution Plan Approval Required - {execution_plan.plan_name}"
+        
+        html_message = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background-color: #1C64FF; color: white; padding: 20px; text-align: center;">
+                <h2>Execution Plan Approval Required</h2>
+            </div>
+            
+            <div style="padding: 20px; background-color: #f9f9f9;">
+                <p>Dear {manager.get_full_name() or manager.username},</p>
+                
+                <p>A new execution plan requires your approval:</p>
+                
+                <div style="background-color: white; padding: 15px; margin: 15px 0; border-left: 4px solid #1C64FF;">
+                    <h3>Plan Details:</h3>
+                    <ul>
+                        <li><strong>Plan Name:</strong> {execution_plan.plan_name}</li>
+                        <li><strong>Plan ID:</strong> {execution_plan.plan_id}</li>
+                        <li><strong>Client:</strong> {execution_plan.client.name if hasattr(execution_plan.client, 'name') else 'N/A'}</li>
+                        <li><strong>Created By:</strong> {execution_plan.created_by.get_full_name() or execution_plan.created_by.username}</li>
+                        <li><strong>Submitted:</strong> {execution_plan.submitted_at.strftime('%B %d, %Y at %I:%M %p') if execution_plan.submitted_at else 'N/A'}</li>
+                        <li><strong>Total Actions:</strong> {execution_plan.actions.count()}</li>
+                    </ul>
+                </div>
+                
+                <p>Please log into the system to review and approve this execution plan.</p>
+                
+                <div style="text-align: center; margin: 20px 0;">
+                    <a href="{getattr(settings, 'SITE_URL', 'https://your-domain.com')}/execution-plans/{execution_plan.id}/" 
+                       style="background-color: #1C64FF; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+                        Review Plan
+                    </a>
+                </div>
+            </div>
+            
+            <div style="background-color: #333; color: white; padding: 15px; text-align: center; font-size: 12px;">
+                <p>This is an automated notification from the Investment Management System</p>
+            </div>
+        </div>
+        """
+        
+        text_message = f"""
+Execution Plan Approval Required
+
+Dear {manager.get_full_name() or manager.username},
+
+A new execution plan requires your approval:
+
+Plan Details:
+- Plan Name: {execution_plan.plan_name}
+- Plan ID: {execution_plan.plan_id}  
+- Client: {execution_plan.client.name if hasattr(execution_plan.client, 'name') else 'N/A'}
+- Created By: {execution_plan.created_by.get_full_name() or execution_plan.created_by.username}
+- Submitted: {execution_plan.submitted_at.strftime('%B %d, %Y at %I:%M %p') if execution_plan.submitted_at else 'N/A'}
+- Total Actions: {execution_plan.actions.count()}
+
+Please log into the system to review and approve this execution plan.
+
+Best regards,
+Investment Management System
+        """
+        
+        send_mail(
+            subject=subject,
+            message=text_message,
+            html_message=html_message,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@yourcompany.com'),
+            recipient_list=[manager.email],
+            fail_silently=False
+        )
+        
+        logger.info(f"Approval notification sent to {manager.email} for plan {execution_plan.plan_id}")
+        
+    except Exception as e:
+        logger.error(f"Error sending approval notification to {manager.email}: {str(e)}")
+
+
+# Utility function to send bulk emails
+def send_bulk_execution_plan_emails(execution_plans, email_type='updated'):
+    """
+    Send emails for multiple execution plans
+    """
+    results = []
+    
+    for plan in execution_plans:
+        try:
+            success, message = send_execution_plan_email(
+                execution_plan=plan,
+                email_type=email_type,
+                include_excel=True,
+                send_to_client=True,
+                send_to_rm=True
+            )
+            
+            results.append({
+                'plan_id': plan.plan_id,
+                'success': success,
+                'message': message
+            })
+            
+        except Exception as e:
+            results.append({
+                'plan_id': plan.plan_id,
+                'success': False,
+                'message': str(e)
+            })
+    
+    return results
+
+@login_required
+@require_http_methods(["POST"])
+def send_to_client_enhanced(request, plan_id):
+    """Enhanced send to client with comprehensive email handling and automatic client email detection"""
+    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+    
+    # Check access permission
+    if not can_access_plan(request.user, execution_plan):
+        return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+    
+    try:
+        # Get form data
+        email_to = request.POST.get('email_to', '').strip()
+        subject = request.POST.get('subject', '').strip()
+        message = request.POST.get('message', '').strip()
+        include_excel = request.POST.get('include_excel', 'false').lower() == 'true'
+        generate_fresh = request.POST.get('generate_fresh', 'false').lower() == 'true'
+        copy_to_rm = request.POST.get('copy_to_rm', 'false').lower() == 'true'
+        copy_to_ops = request.POST.get('copy_to_ops', 'false').lower() == 'true'
+        
+        # Auto-detect client email if not provided
+        if not email_to:
+            email_to = get_client_email(execution_plan)
+            if not email_to:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'No client email provided or found in database. Please enter email manually.'
+                })
+        
+        # Validate email format
+        from django.core.validators import validate_email
+        try:
+            validate_email(email_to)
+        except ValidationError:
+            return JsonResponse({
+                'success': False, 
+                'error': f'Invalid email address format: {email_to}'
+            })
+        
+        # Set default subject if not provided
+        if not subject:
+            if execution_plan.status == 'approved':
+                subject = f"✅ Your Investment Plan is Ready for Review - {execution_plan.plan_name}"
+            elif execution_plan.status == 'completed':
+                subject = f"🎯 Investment Plan Executed Successfully - {execution_plan.plan_name}"
+            else:
+                subject = f"📋 Investment Plan Update - {execution_plan.plan_name}"
+        
+        # Set default message if not provided
+        if not message:
+            client_name = execution_plan.client.name if hasattr(execution_plan.client, 'name') else 'Valued Client'
+            rm_name = execution_plan.created_by.get_full_name() or execution_plan.created_by.username
+            
+            if execution_plan.status == 'approved':
+                message = f"""Dear {client_name},
+
+I hope this email finds you well.
+
+I'm pleased to inform you that your investment execution plan "{execution_plan.plan_name}" has been approved and is ready for your review.
+
+The plan includes {execution_plan.actions.count()} carefully selected action{'s' if execution_plan.actions.count() != 1 else ''} designed to optimize your investment portfolio based on our recent discussions and market analysis.
+
+Please review the attached execution plan details. Once you're satisfied with the plan, please confirm your approval so we can proceed with the execution.
+
+Key highlights of your plan:
+- Plan ID: {execution_plan.plan_id}
+- Total Actions: {execution_plan.actions.count()}
+- Created Date: {execution_plan.created_at.strftime('%B %d, %Y') if execution_plan.created_at else 'N/A'}
+
+If you have any questions or would like to discuss any aspect of the plan, please don't hesitate to reach out to me directly.
+
+Thank you for your continued trust in our services.
+
+Best regards,
+{rm_name}
+{execution_plan.created_by.email if execution_plan.created_by.email else ''}"""
+            
+            elif execution_plan.status == 'completed':
+                message = f"""Dear {client_name},
+
+Excellent news! Your investment execution plan "{execution_plan.plan_name}" has been completed successfully.
+
+All {execution_plan.actions.count()} action{'s' if execution_plan.actions.count() != 1 else ''} in your plan have been executed as planned. Please find attached the detailed execution summary with all transaction confirmations.
+
+Execution Summary:
+- Plan ID: {execution_plan.plan_id}
+- Completion Date: {execution_plan.completed_at.strftime('%B %d, %Y') if execution_plan.completed_at else 'Today'}
+- Total Actions Executed: {execution_plan.actions.count()}
+- Success Rate: 100%
+
+Your portfolio has been updated according to the executed plan. You can expect to see these changes reflected in your statements within the next 1-2 business days.
+
+If you have any questions about the executed transactions or would like to discuss your portfolio further, please don't hesitate to contact me.
+
+Thank you for your trust in our services.
+
+Best regards,
+{rm_name}"""
+            
+            else:
+                message = f"""Dear {client_name},
+
+I hope this email finds you well.
+
+Your investment execution plan "{execution_plan.plan_name}" has been updated with new information.
+
+Plan Details:
+- Plan ID: {execution_plan.plan_id}
+- Current Status: {execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else execution_plan.status}
+- Total Actions: {execution_plan.actions.count()}
+
+Please review the attached plan details. If you have any questions or concerns, please don't hesitate to contact me.
+
+Best regards,
+{rm_name}"""
+        
+        # Prepare email recipients
+        recipients = [email_to]
+        cc_recipients = []
+        bcc_recipients = []
+        
+        # Add RM to CC if requested
+        if copy_to_rm and execution_plan.created_by and execution_plan.created_by.email:
+            if execution_plan.created_by.email not in recipients:
+                cc_recipients.append(execution_plan.created_by.email)
+        
+        # Add operations team to BCC if requested
+        if copy_to_ops:
+            ops_emails = User.objects.filter(
+                role__in=['ops_team_lead', 'ops_exec', 'business_head_ops'],
+                email__isnull=False
+            ).exclude(email='').values_list('email', flat=True)
+            
+            for ops_email in ops_emails:
+                if ops_email not in recipients and ops_email not in cc_recipients:
+                    bcc_recipients.append(ops_email)
+        
+        # Generate fresh Excel if requested and include_excel is True
+        excel_file_path = None
+        if include_excel:
+            if generate_fresh or not execution_plan.excel_file:
+                try:
+                    excel_file_path = generate_execution_plan_excel(execution_plan)
+                    if excel_file_path:
+                        execution_plan.excel_file = excel_file_path
+                        execution_plan.save()
+                        logger.info(f"Generated fresh Excel file for plan {execution_plan.plan_id}")
+                except Exception as e:
+                    logger.warning(f"Could not generate fresh Excel: {str(e)}")
+                    # Continue with existing file if available
+            
+            # Use existing file if fresh generation failed or wasn't requested
+            if execution_plan.excel_file:
+                excel_file_path = execution_plan.excel_file.path if hasattr(execution_plan.excel_file, 'path') else os.path.join(settings.MEDIA_ROOT, str(execution_plan.excel_file))
+        
+        # Create email message
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=message,  # Plain text version
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@yourcompany.com'),
+            to=recipients,
+            cc=cc_recipients if cc_recipients else None,
+            bcc=bcc_recipients if bcc_recipients else None,
+            reply_to=[execution_plan.created_by.email] if execution_plan.created_by and execution_plan.created_by.email else None
+        )
+        
+        # Create HTML version of the email
+        company_name = getattr(settings, 'COMPANY_NAME', 'Investment Management')
+        current_date = timezone.now().strftime('%B %d, %Y')
+        
+        html_message = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>{subject}</title>
+            <style>
+                body {{ 
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                    line-height: 1.6; 
+                    color: #333; 
+                    margin: 0; 
+                    padding: 0; 
+                    background-color: #f5f5f5;
+                }}
+                .container {{ 
+                    max-width: 600px; 
+                    margin: 20px auto; 
+                    background-color: #ffffff;
+                    border-radius: 10px;
+                    overflow: hidden;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                }}
+                .header {{ 
+                    background: linear-gradient(135deg, #1C64FF 0%, #0052CC 100%);
+                    color: white; 
+                    padding: 30px 20px; 
+                    text-align: center; 
+                }}
+                .header h1 {{
+                    margin: 0 0 10px 0;
+                    font-size: 24px;
+                    font-weight: 600;
+                }}
+                .header h2 {{
+                    margin: 0;
+                    font-size: 18px;
+                    font-weight: 400;
+                    opacity: 0.9;
+                }}
+                .content {{ 
+                    padding: 30px 20px; 
+                    white-space: pre-line; 
+                    font-size: 16px;
+                }}
+                .plan-details {{ 
+                    background-color: #f8f9fa; 
+                    padding: 20px; 
+                    margin: 20px 0; 
+                    border-left: 4px solid #1C64FF; 
+                    border-radius: 5px;
+                }}
+                .plan-details h3 {{
+                    margin-top: 0;
+                    color: #1C64FF;
+                    font-size: 18px;
+                }}
+                .plan-details ul {{
+                    margin: 0;
+                    padding-left: 20px;
+                }}
+                .plan-details li {{
+                    margin-bottom: 8px;
+                }}
+                .status-badge {{
+                    display: inline-block;
+                    padding: 4px 12px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }}
+                .status-approved {{ background-color: #d4edda; color: #155724; }}
+                .status-completed {{ background-color: #d1ecf1; color: #0c5460; }}
+                .status-pending {{ background-color: #fff3cd; color: #856404; }}
+                .footer {{ 
+                    background-color: #343a40; 
+                    color: white; 
+                    padding: 20px; 
+                    text-align: center; 
+                    font-size: 14px;
+                }}
+                .footer p {{
+                    margin: 5px 0;
+                }}
+                .disclaimer {{
+                    background-color: #e9ecef;
+                    padding: 15px;
+                    margin: 20px 0;
+                    border-radius: 5px;
+                    font-size: 12px;
+                    color: #6c757d;
+                    text-align: center;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>{company_name}</h1>
+                    <h2>Investment Execution Plan</h2>
+                </div>
+                
+                <div class="content">
+                    {message}
+                    
+                    <div class="plan-details">
+                        <h3>📋 Plan Information</h3>
+                        <ul>
+                            <li><strong>Plan Name:</strong> {execution_plan.plan_name}</li>
+                            <li><strong>Plan ID:</strong> {execution_plan.plan_id}</li>
+                            <li><strong>Status:</strong> 
+                                <span class="status-badge status-{execution_plan.status}">
+                                    {execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else execution_plan.status}
+                                </span>
+                            </li>
+                            <li><strong>Total Actions:</strong> {execution_plan.actions.count()}</li>
+                            <li><strong>Created Date:</strong> {execution_plan.created_at.strftime('%B %d, %Y') if execution_plan.created_at else 'N/A'}</li>
+                            <li><strong>Your Relationship Manager:</strong> {execution_plan.created_by.get_full_name() or execution_plan.created_by.username}</li>
+                        </ul>
+                    </div>
+                    
+                    {"<p><strong>📎 Attachment:</strong> Detailed execution plan (Excel format)</p>" if include_excel else ""}
+                </div>
+                
+                <div class="disclaimer">
+                    This email contains confidential information intended only for the specified recipient(s). 
+                    If you have received this email in error, please notify the sender immediately.
+                </div>
+                
+                <div class="footer">
+                    <p><strong>{company_name}</strong> | Investment Management Services</p>
+                    <p>Email sent on {current_date}</p>
+                    <p>This is an automated message from our Investment Management System</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Attach HTML version
+        email.attach_alternative(html_message, "text/html")
+        
+        # Attach Excel file if requested and available
+        excel_attached = False
+        if include_excel and excel_file_path and os.path.exists(excel_file_path):
+            try:
+                filename = f"{execution_plan.plan_id}_execution_plan.xlsx"
+                with open(excel_file_path, 'rb') as f:
+                    email.attach(
+                        filename, 
+                        f.read(), 
+                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                    )
+                excel_attached = True
+                logger.info(f"Excel file attached: {filename}")
+            except Exception as e:
+                logger.error(f"Error attaching Excel file: {str(e)}")
+                excel_attached = False
+        
+        # Send email
+        try:
+            email.send(fail_silently=False)
+            logger.info(f"Enhanced client email sent successfully for plan {execution_plan.plan_id} to {email_to}")
+            
+            # Create comment record for audit trail
+            attachment_note = " with Excel attachment" if excel_attached else ""
+            cc_note = f" (CC: {', '.join(cc_recipients)})" if cc_recipients else ""
+            bcc_note = f" (BCC: Operations team)" if bcc_recipients else ""
+            
+            PlanComment.objects.create(
+                execution_plan=execution_plan,
+                comment=f"Plan sent to client via enhanced email: {email_to}{attachment_note}{cc_note}{bcc_note}",
+                commented_by=request.user,
+                is_internal=True
+            )
+            
+            # Update plan metadata if needed
+            if not hasattr(execution_plan, 'client_communication_sent') or not execution_plan.client_communication_sent:
+                try:
+                    execution_plan.client_communication_sent = True
+                    execution_plan.save(update_fields=['client_communication_sent'])
+                except:
+                    pass  # Field might not exist in model
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Email sent successfully to {email_to}',
+                'details': {
+                    'recipient': email_to,
+                    'cc_recipients': cc_recipients,
+                    'excel_attached': excel_attached,
+                    'subject': subject,
+                    'timestamp': timezone.now().isoformat()
+                }
+            })
+            
+        except Exception as e:
+            logger.error(f"Error sending enhanced client email: {str(e)}")
+            return JsonResponse({
+                'success': False, 
+                'error': f'Failed to send email: {str(e)}'
+            })
+            
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid request data'})
+    except Exception as e:
+        logger.error(f"Unexpected error in send_to_client_enhanced: {str(e)}")
+        return JsonResponse({
+            'success': False, 
+            'error': f'An unexpected error occurred: {str(e)}'
+        })
+
+
+# Helper function to send completion email (used by completion notification)
+@login_required
+@require_http_methods(["POST"])
+def send_completion_email(request, plan_id):
+    """Send completion email directly (used by auto-completion detection)"""
+    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+    
+    if not can_access_plan(request.user, execution_plan):
+        return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+    
+    try:
+        # Auto-detect client email
+        client_email = get_client_email(execution_plan)
+        
+        if not client_email:
+            return JsonResponse({
+                'success': False, 
+                'error': 'No client email found for completion notification'
+            })
+        
+        # Send completion email using the enhanced email system
+        email_success, email_result = send_execution_plan_email(
+            execution_plan=execution_plan,
+            email_type='completed',
+            custom_message="All transactions in your execution plan have been completed successfully.",
+            include_excel=True,
+            send_to_rm=True,
+            send_to_client=True
+        )
+        
+        if email_success:
+            return JsonResponse({
+                'success': True,
+                'message': email_result,
+                'recipient': client_email
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': email_result
+            })
+            
+    except Exception as e:
+        logger.error(f"Error sending completion email: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)})

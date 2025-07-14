@@ -67,6 +67,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -74,6 +75,16 @@ MIDDLEWARE = [
     
     
 ]
+
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_HTTPONLY = False  # Must be False for JavaScript access
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'https://crm-two-bice.vercel.app/',
+]
+
 
 ROOT_URLCONF = 'project.urls'
 
@@ -178,3 +189,115 @@ LOGIN_URL = '/admin/login/'
 LOGIN_REDIRECT_URL = '/hrm/'
 LOGOUT_REDIRECT_URL = '/admin/login/'
 
+import os
+
+# Media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Email Configuration - Hide only sensitive data
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_SSL = False
+EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = 'aqhcbbfqlqzqxckw'
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
+
+# Additional Email Settings
+EMAIL_TIMEOUT = 30  # Timeout in seconds
+EMAIL_SUBJECT_PREFIX = '[Financial CRM] '  # Optional: Prefix for all email subjects
+
+# Company Information (for email templates)
+COMPANY_NAME = 'ILNB Financial CRM'
+SUPPORT_EMAIL = 'mailer@ilnb.co.in'
+
+# Security Settings for Production
+if not DEBUG:  # Only in production
+    SECURE_SSL_REDIRECT = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+# Session and CSRF Settings
+SESSION_COOKIE_SECURE = not DEBUG  # True in production
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_AGE = 3600  # 1 hour
+CSRF_COOKIE_SECURE = not DEBUG  # True in production
+CSRF_COOKIE_HTTPONLY = True
+
+# Password Reset Settings
+PASSWORD_RESET_TIMEOUT = 86400  # 24 hours (in seconds)
+
+# Logging Configuration for Email Debugging
+import tempfile
+
+# Create handlers based on environment
+handlers = {
+    'console': {
+        'level': 'DEBUG',
+        'class': 'logging.StreamHandler',
+        'formatter': 'simple',
+    },
+}
+
+# Try to add file handler if possible
+try:
+    # Check if we can write to logs directory
+    log_dir = 'logs'
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir, exist_ok=True)
+    
+    # Test if we can write to the directory
+    test_file = os.path.join(log_dir, 'test.log')
+    with open(test_file, 'w') as f:
+        f.write('test')
+    os.remove(test_file)
+    
+    # If successful, add file handler
+    handlers['email_file'] = {
+        'level': 'INFO',
+        'class': 'logging.FileHandler',
+        'filename': 'logs/django_email.log',
+        'formatter': 'verbose',
+    }
+    email_handlers = ['email_file', 'console']
+    app_handlers = ['email_file', 'console']
+    
+except (OSError, PermissionError):
+    # If file logging fails, use only console
+    email_handlers = ['console']
+    app_handlers = ['console']
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': handlers,
+    'loggers': {
+        'django.core.mail': {
+            'handlers': email_handlers,
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'base.views': {  # Your app name
+            'handlers': app_handlers,
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}
