@@ -81,7 +81,7 @@
 
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(4, minmax(150px, 1fr));
     gap: 1.5rem;
     margin-bottom: 2rem;
 }
@@ -280,7 +280,7 @@
 }
 
 .modern-table {
-    width: 100%;
+    width: 50%;
     margin: 0;
     background: transparent;
 }
@@ -826,7 +826,7 @@
         <div class="search-section slide-up">
             <form method="GET">
                 <div class="row">
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <div class="mb-3">
                             <label class="form-label">Search</label>
                             <input type="text" class="form-control" name="search" 
@@ -889,24 +889,26 @@
         </div>
 
         <!-- Client Profiles Table -->
-        <div class="table-container slide-up">
-            <table class="modern-table">
+        <div class="table-container slide-up overflow-x-auto">
+            <div class="min-w-[1200px] w-full">
+                <table class="modern-table w-full table-auto">
+
                 <thead>
                     <tr>
-                        <th>Client Name</th>
-                        <th>Contact Info</th>
-                        <th>Assigned Personnel</th>
-                        <th>Status</th>
-                        <th>Interaction Summary</th>
-                        <th>Last Contact</th>
-                        <th>Follow-ups</th>
-                        <th>Actions</th>
+                        <th class="min-w-[160px] md:w-[200px] whitespace-nowrap">Client Name</th>
+                        <th class="min-w-[160px] md:w-[200px] whitespace-nowrap">Contact Info</th>
+                        <th class="min-w-[160px] md:w-[200px] whitespace-nowrap">Assigned Personnel</th>
+                        <th class="min-w-[160px] md:w-[200px] whitespace-nowrap">Status</th>
+                        <th class="min-w-[160px] md:w-[200px] whitespace-nowrap">Interaction Summary</th>
+                        <th class="min-w-[160px] md:w-[200px] whitespace-nowrap">Last Contact</th>
+                        <th class="min-w-[160px] md:w-[200px] whitespace-nowrap">Follow-ups</th>
+                        <th class="min-w-[160px] md:w-[200px] whitespace-nowrap">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for profile in client_profiles %}
                     <tr>
-                        <td>
+                        <td class="min-w-[160px] md:w-[200px]">
                             <div>
                                 <div class="client-name">{{ profile.client_full_name }}</div>
                                 <div class="client-id">ID: {{ profile.client_id }}</div>
@@ -915,14 +917,14 @@
                                 {% endif %}
                             </div>
                         </td>
-                        <td>
+                        <td class="min-w-[160px] md:w-[200px]">
                             <div class="contact-info">
                                 <div><strong>Email:</strong> {{ profile.email|default:'-' }}</div>
                                 <div><strong>Mobile:</strong> {{ profile.mobile_number|default:'-' }}</div>
                                 <div><strong>PAN:</strong> {{ profile.pan_number|default:'-' }}</div>
                             </div>
                         </td>
-                        <td>
+                        <td class="min-w-[160px] md:w-[200px]">
                             <div>
                                 <div>
                                     <strong>RM:</strong> 
@@ -942,7 +944,7 @@
                                 </div>
                             </div>
                         </td>
-                        <td>
+                        <td class="min-w-[160px] md:w-[200px]">
                             <div>
                                 {% if profile.status == 'active' %}
                                     <span class="status-badge badge-success">
@@ -969,7 +971,7 @@
                                 </div>
                             </div>
                         </td>
-                        <td>
+                        <td class="min-w-[160px] md:w-[200px]">
                             {% if profile.interaction_count %}
                                 <div class="interaction-summary {% if profile.interaction_count > 10 %}good{% elif profile.interaction_count > 3 %}warning{% else %}danger{% endif %}">
                                     <div class="interaction-stats">
@@ -1000,7 +1002,7 @@
                                 </div>
                             {% endif %}
                         </td>
-                        <td>
+                        <td class="min-w-[160px] md:w-[200px]">
                             {% if profile.last_interaction_date %}
                                 {% with days_since=profile.days_since_last_interaction %}
                                     {% if days_since == 0 %}
@@ -1020,7 +1022,7 @@
                                 <span class="contact-indicator contact-never">Never contacted</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td class="min-w-[160px] md:w-[200px]">
                             {% if profile.overdue_followups %}
                                 <span class="followup-badge badge-danger">
                                     <i class="fas fa-exclamation-triangle"></i> 
@@ -1042,7 +1044,7 @@
                                 </span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td class="min-w-[160px] md:w-[200px]">
                             <div class="action-group">
                                 <a href="{% url 'client_profile_detail' profile.pk %}" 
                                    class="action-btn btn-view" title="View Profile">
@@ -1096,6 +1098,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
         </div>
 
         <!-- Pagination -->
