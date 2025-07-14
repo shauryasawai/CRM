@@ -85,7 +85,7 @@
                             <td>{{ lead.assigned_to.get_full_name }}</td>
                             <td>{{ lead.created_at|date:"d M Y" }}</td>
                             <td>
-                                <a href="{% url 'lead_update' lead.pk %}" class="btn btn-sm btn-primary">View/Edit</a>
+                                <a href="{% url 'lead_update' lead.pk %}" class="btn btn-sm btn-primary">Edit</a>
                                 {% if user.role == 'business_head' or user.role == 'top_management' or lead.assigned_to == user or lead.created_by == user %}
                                 <a href="{% url 'lead_delete' lead.pk %}" class="btn btn-sm btn-danger">Delete</a>
                                 {% endif %}
