@@ -3,311 +3,145 @@
 {% block title %}Confirm Delete Investment Plan{% endblock %}
 
 {% block content %}
+<!-- Bootstrap 5 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<!-- Bootstrap Icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
 <style>
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
+    :root {
+        --bs-primary: #1C64FF;
+        --bs-primary-rgb: 28, 100, 255;
+        --bs-secondary: #696969;
+        --bs-secondary-rgb: 105, 105, 105;
+        --bs-light: #C3E4FF;
+        --bs-light-rgb: 195, 228, 255;
+        --bs-border-color: #D9D9D9;
+        --bs-body-bg: #FFFFFF;
+        --bs-body-color: #212529;
+        --bs-danger: #dc3545;
+        --bs-danger-rgb: 220, 53, 69;
+        --bs-warning: #ffc107;
+        --bs-warning-rgb: 255, 193, 7;
+        --bs-success: #198754;
+        --bs-success-rgb: 25, 135, 84;
     }
 
     body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-        background: linear-gradient(135deg, #D3FF61 0%, #b8e84a 25%, #a3d63a 50%, #8cc42a 75%, #75b21a 100%);
-        min-height: 100vh;
-        color: #1a1a1a;
-        line-height: 1.6;
-        overflow-x: hidden;
-        position: relative;
+        font-family: 'Inter', sans-serif;
+        background-color: var(--bs-body-bg);
+        color: var(--bs-body-color);
     }
 
-    /* Advanced background pattern */
-    body::before {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-image: 
-            radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
-            radial-gradient(circle at 75% 75%, rgba(0, 0, 0, 0.05) 0%, transparent 50%),
-            linear-gradient(45deg, transparent 49%, rgba(255, 255, 255, 0.03) 50%, transparent 51%);
-        background-size: 100px 100px, 150px 150px, 20px 20px;
-        animation: backgroundShift 20s ease-in-out infinite;
-        pointer-events: none;
-        z-index: -1;
+    .btn-primary {
+        background-color: var(--bs-primary);
+        border-color: var(--bs-primary);
+        font-weight: 600;
     }
 
-    @keyframes backgroundShift {
-        0%, 100% { transform: translate(0, 0) rotate(0deg); }
-        25% { transform: translate(-10px, -10px) rotate(0.5deg); }
-        50% { transform: translate(5px, -5px) rotate(-0.5deg); }
-        75% { transform: translate(-5px, 10px) rotate(0.25deg); }
+    .btn-primary:hover {
+        background-color: #1557e6;
+        border-color: #1557e6;
     }
 
-    .container {
-        max-width: 600px;
-        margin: 0 auto;
-        padding: 2rem 1.5rem;
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        position: relative;
+    .btn-danger {
+        background-color: var(--bs-danger);
+        border-color: var(--bs-danger);
+        font-weight: 600;
     }
 
-    /* Floating geometric shapes */
-    .bg-decoration {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: -1;
-        overflow: hidden;
+    .btn-danger:hover {
+        background-color: #c82333;
+        border-color: #bd2130;
     }
 
-    .bg-decoration::before {
-        content: '';
-        position: absolute;
-        top: 15%;
-        right: -5%;
-        width: 200px;
-        height: 200px;
-        background: linear-gradient(45deg, rgba(0, 0, 0, 0.08) 0%, transparent 70%);
-        border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
-        animation: morphFloat 12s ease-in-out infinite;
-        transform-origin: center;
+    .btn-outline-secondary {
+        color: var(--bs-secondary);
+        border-color: var(--bs-border-color);
+        font-weight: 600;
     }
 
-    .bg-decoration::after {
-        content: '';
-        position: absolute;
-        bottom: 15%;
-        left: -5%;
-        width: 150px;
-        height: 150px;
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-        border-radius: 50% 20% 80% 30%;
-        animation: morphFloat 15s ease-in-out infinite reverse;
-        transform-origin: center;
+    .btn-outline-secondary:hover {
+        background-color: var(--bs-border-color);
+        border-color: var(--bs-border-color);
+        color: #495057;
     }
 
-    @keyframes morphFloat {
-        0%, 100% { 
-            transform: translateY(0px) translateX(0px) rotate(0deg);
-            border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
-        }
-        25% { 
-            transform: translateY(-15px) translateX(8px) rotate(90deg);
-            border-radius: 50% 20% 80% 30% / 60% 30% 70% 40%;
-        }
-        50% { 
-            transform: translateY(-5px) translateX(-12px) rotate(180deg);
-            border-radius: 80% 20% 20% 80% / 20% 50% 50% 80%;
-        }
-        75% { 
-            transform: translateY(10px) translateX(15px) rotate(270deg);
-            border-radius: 20% 80% 30% 70% / 50% 70% 30% 50%;
-        }
+    .text-primary {
+        color: var(--bs-primary) !important;
     }
 
-    .delete-card {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(20px);
-        border: 2px solid rgba(255, 255, 255, 0.3);
-        border-radius: 32px;
-        padding: 3.5rem 3rem;
-        box-shadow: 
-            0 25px 60px rgba(0, 0, 0, 0.15),
-            0 10px 30px rgba(0, 0, 0, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 0.8),
-            0 0 0 1px rgba(255, 255, 255, 0.2);
-        position: relative;
-        overflow: hidden;
-        transform: translateY(30px);
-        opacity: 0;
-        animation: slideUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    .text-secondary {
+        color: var(--bs-secondary) !important;
     }
 
-    @keyframes slideUpFade {
-        to {
-            transform: translateY(0);
-            opacity: 1;
-        }
+    .bg-light-custom {
+        background-color: var(--bs-light) !important;
     }
 
-    .delete-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background: linear-gradient(90deg, 
-            transparent 0%, 
-            rgba(211, 255, 97, 0.8) 20%, 
-            rgba(211, 255, 97, 1) 50%, 
-            rgba(211, 255, 97, 0.8) 80%, 
-            transparent 100%);
-        animation: shimmer 3s ease-in-out infinite;
+    .border-custom {
+        border-color: var(--bs-border-color) !important;
     }
 
-    @keyframes shimmer {
-        0%, 100% { opacity: 0.5; }
-        50% { opacity: 1; }
+    .card {
+        border: 1px solid var(--bs-border-color);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        transition: all 0.3s ease;
+    }
+
+    .card:hover {
+        box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.2);
+        transform: translateY(-2px);
     }
 
     .warning-icon {
-        width: 100px;
-        height: 100px;
-        margin: 0 auto 2.5rem;
-        background: linear-gradient(135deg, #ff4757 0%, #ff3838 100%);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        width: 120px;
+        height: 120px;
+        background: linear-gradient(135deg, rgba(220, 53, 69, 0.1), rgba(220, 53, 69, 0.05));
+        border: 4px solid rgba(220, 53, 69, 0.2);
+        animation: pulse 2s infinite;
+    }
+
+    .investment-plan-highlight {
+        background: linear-gradient(135deg, var(--bs-light), rgba(195, 228, 255, 0.5));
+        border: 2px solid rgba(28, 100, 255, 0.2);
+        border-radius: 1rem;
+        padding: 2rem;
+        margin: 1.5rem 0;
         position: relative;
-        box-shadow: 
-            0 15px 40px rgba(255, 71, 87, 0.4),
-            0 5px 15px rgba(255, 71, 87, 0.3),
-            inset 0 2px 4px rgba(255, 255, 255, 0.2);
-        animation: warningPulse 2.5s ease-in-out infinite;
-        border: 3px solid rgba(255, 255, 255, 0.3);
+        overflow: hidden;
     }
 
-    @keyframes warningPulse {
-        0%, 100% { 
-            transform: scale(1);
-            box-shadow: 
-                0 15px 40px rgba(255, 71, 87, 0.4),
-                0 5px 15px rgba(255, 71, 87, 0.3),
-                inset 0 2px 4px rgba(255, 255, 255, 0.2);
-        }
-        50% { 
-            transform: scale(1.08);
-            box-shadow: 
-                0 20px 50px rgba(255, 71, 87, 0.5),
-                0 8px 20px rgba(255, 71, 87, 0.4),
-                inset 0 2px 4px rgba(255, 255, 255, 0.3);
-        }
-    }
-
-    .warning-icon::before {
-        content: '!';
-        font-size: 3rem;
-        font-weight: 900;
-        color: white;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    }
-
-    .warning-icon::after {
-        content: '';
-        position: absolute;
-        top: -10px;
-        left: -10px;
-        right: -10px;
-        bottom: -10px;
-        border: 2px solid rgba(255, 71, 87, 0.3);
-        border-radius: 50%;
-        animation: ripple 2.5s ease-out infinite;
-    }
-
-    @keyframes ripple {
-        0% {
-            transform: scale(0.8);
-            opacity: 1;
-        }
-        100% {
-            transform: scale(1.2);
-            opacity: 0;
-        }
-    }
-
-    .title {
-        font-size: 2.25rem;
-        font-weight: 800;
-        text-align: center;
-        margin-bottom: 1.5rem;
-        background: linear-gradient(135deg, #1a1a1a 0%, #333333 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        letter-spacing: -0.02em;
-        position: relative;
-    }
-
-    .message {
-        font-size: 1.2rem;
-        text-align: center;
-        margin-bottom: 3rem;
-        color: #2d2d2d;
-        line-height: 1.8;
-        font-weight: 400;
-        max-width: 480px;
-        margin-left: auto;
-        margin-right: auto;
-        margin-bottom: 3rem;
-    }
-
-    .highlight {
-        color: #1a1a1a;
-        font-weight: 700;
-        background: linear-gradient(135deg, #D3FF61 0%, #b8e84a 100%);
-        padding: 0.2em 0.5em;
-        border-radius: 8px;
-        box-shadow: 
-            0 2px 8px rgba(211, 255, 97, 0.3),
-            inset 0 1px 2px rgba(255, 255, 255, 0.5);
-        border: 1px solid rgba(184, 232, 74, 0.6);
-        white-space: nowrap;
-        position: relative;
-    }
-
-    .highlight::before {
+    .investment-plan-highlight::before {
         content: '';
         position: absolute;
         top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
-        border-radius: 8px;
-        animation: highlightShine 3s ease-in-out infinite;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        animation: shimmer 3s ease-in-out infinite;
     }
 
-    @keyframes highlightShine {
-        0%, 100% { transform: translateX(-100%); }
-        50% { transform: translateX(100%); }
-    }
-
-    .form-actions {
-        display: flex;
-        gap: 1.5rem;
-        justify-content: center;
-        flex-wrap: wrap;
-        align-items: center;
+    .confirmation-container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, rgba(195, 228, 255, 0.1) 0%, rgba(255, 255, 255, 1) 100%);
     }
 
     .btn {
-        padding: 1.2rem 2.5rem;
-        border: none;
-        border-radius: 16px;
-        font-size: 1.05rem;
-        font-weight: 600;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 160px;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        font-family: inherit;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .btn:active {
+        transform: translateY(0);
     }
 
     .btn::before {
@@ -318,295 +152,633 @@
         width: 100%;
         height: 100%;
         background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-        transition: left 0.6s ease;
+        transition: left 0.5s;
     }
 
     .btn:hover::before {
         left: 100%;
     }
 
-    .btn-danger {
-        background: linear-gradient(135deg, #ff4757 0%, #ff3838 100%);
-        color: white;
-        box-shadow: 
-            0 10px 30px rgba(255, 71, 87, 0.4),
-            0 4px 15px rgba(255, 71, 87, 0.2);
-        border: 2px solid rgba(255, 255, 255, 0.1);
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+        animation: spin 1s linear infinite;
     }
 
-    .btn-danger:hover {
-        transform: translateY(-3px);
-        box-shadow: 
-            0 15px 40px rgba(255, 71, 87, 0.5),
-            0 8px 25px rgba(255, 71, 87, 0.3);
-        background: linear-gradient(135deg, #ff3838 0%, #ff2828 100%);
+    .financial-details {
+        background: rgba(25, 135, 84, 0.05);
+        border: 1px solid rgba(25, 135, 84, 0.2);
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        margin: 1rem 0;
     }
 
-    .btn-danger:active {
-        transform: translateY(-1px);
-        transition: transform 0.1s;
+    .client-info {
+        background: rgba(28, 100, 255, 0.05);
+        border: 1px solid rgba(28, 100, 255, 0.2);
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        margin: 1rem 0;
     }
 
-    .btn-secondary {
-        background: linear-gradient(135deg, rgba(26, 26, 26, 0.9) 0%, rgba(51, 51, 51, 0.9) 100%);
-        color: white;
-        border: 2px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 
-            0 10px 30px rgba(0, 0, 0, 0.2),
-            0 4px 15px rgba(0, 0, 0, 0.1);
+    .warning-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        margin: 1.5rem 0;
     }
 
-    .btn-secondary:hover {
-        background: linear-gradient(135deg, rgba(26, 26, 26, 1) 0%, rgba(51, 51, 51, 1) 100%);
-        border-color: rgba(255, 255, 255, 0.3);
-        transform: translateY(-3px);
-        box-shadow: 
-            0 15px 40px rgba(0, 0, 0, 0.3),
-            0 8px 25px rgba(0, 0, 0, 0.2);
-        color: #D3FF61;
+    .warning-item {
+        background: rgba(220, 53, 69, 0.05);
+        border: 1px solid rgba(220, 53, 69, 0.2);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        text-align: center;
+        transition: all 0.3s ease;
     }
 
-    .btn-secondary:active {
-        transform: translateY(-1px);
-        transition: transform 0.1s;
+    .warning-item:hover {
+        background: rgba(220, 53, 69, 0.1);
+        transform: translateY(-2px);
     }
 
-    /* Advanced loading state */
-    .btn.loading {
-        pointer-events: none;
-        opacity: 0.8;
-        position: relative;
+    .financial-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        opacity: 0.7;
     }
 
-    .btn.loading::after {
-        content: '';
-        position: absolute;
-        width: 24px;
-        height: 24px;
-        border: 3px solid rgba(255, 255, 255, 0.3);
-        border-top: 3px solid white;
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-        margin-left: 0.5rem;
+    .kbd-custom {
+        background-color: #f8f9fa;
+        color: var(--bs-secondary);
+        border: 1px solid var(--bs-border-color);
+        border-radius: 0.25rem;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 600;
     }
 
     @keyframes spin {
-        to { transform: rotate(360deg); }
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
     }
 
-    /* Responsive design */
-    @media (max-width: 768px) {
-        .container {
-            padding: 1.5rem 1rem;
+    @keyframes pulse {
+        0%, 100% {
+            transform: scale(1);
         }
-
-        .delete-card {
-            padding: 2.5rem 2rem;
-            border-radius: 24px;
-        }
-
-        .title {
-            font-size: 1.9rem;
-        }
-
-        .message {
-            font-size: 1.1rem;
-            margin-bottom: 2.5rem;
-        }
-
-        .form-actions {
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .btn {
-            width: 100%;
-            max-width: 320px;
-            padding: 1.1rem 2rem;
-        }
-
-        .warning-icon {
-            width: 80px;
-            height: 80px;
-            margin-bottom: 2rem;
-        }
-
-        .warning-icon::before {
-            font-size: 2.5rem;
+        50% {
+            transform: scale(1.05);
         }
     }
 
-    @media (max-width: 480px) {
-        .delete-card {
-            padding: 2rem 1.5rem;
-            margin: 1rem;
-        }
+    @keyframes shimmer {
+        0%, 100% { left: -100%; }
+        50% { left: 100%; }
+    }
 
-        .title {
-            font-size: 1.7rem;
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
         }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 
-        .message {
-            font-size: 1rem;
-        }
-
-        .btn {
-            font-size: 1rem;
-            padding: 1rem 1.5rem;
-        }
+    .fade-in-up {
+        animation: fadeInUp 0.6s ease-out;
     }
 
     /* Focus states for accessibility */
     .btn:focus {
-        outline: 3px solid rgba(211, 255, 97, 0.6);
-        outline-offset: 3px;
+        outline: none;
+        box-shadow: 0 0 0 0.25rem rgba(28, 100, 255, 0.25);
     }
 
     .btn-danger:focus {
-        outline-color: rgba(255, 71, 87, 0.6);
+        box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+    }
+
+    .btn-outline-secondary:focus {
+        box-shadow: 0 0 0 0.25rem rgba(217, 217, 217, 0.5);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 576px) {
+        .card {
+            margin: 1rem;
+        }
+        
+        .btn-lg {
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+        }
+        
+        .warning-icon {
+            width: 100px;
+            height: 100px;
+        }
+        
+        .warning-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .financial-icon {
+            font-size: 2rem;
+        }
     }
 
     /* High contrast mode support */
     @media (prefers-contrast: high) {
-        .delete-card {
-            border: 3px solid #000;
-            background: #fff;
-        }
-
-        .highlight {
+        .card {
             border: 2px solid #000;
+        }
+        
+        .btn {
+            border-width: 2px;
         }
     }
 
     /* Reduced motion support */
     @media (prefers-reduced-motion: reduce) {
-        .delete-card,
-        .warning-icon,
-        .btn,
-        .bg-decoration::before,
-        .bg-decoration::after,
-        body::before {
-            animation: none;
-        }
-
-        .btn::before {
-            display: none;
-        }
-    }
-
-    /* Print styles */
-    @media print {
-        body {
-            background: white !important;
-            color: black !important;
-        }
-
-        .delete-card {
-            box-shadow: none;
-            border: 2px solid #000;
-        }
-
-        .btn {
-            border: 2px solid #000;
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
         }
     }
 </style>
 
-<div class="bg-decoration"></div>
+<div class="confirmation-container d-flex align-items-center justify-content-center py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-sm-10 col-md-8 col-lg-7 col-xl-6">
+                <!-- Main Confirmation Card -->
+                <div class="card border-0 shadow-lg fade-in-up" style="border-radius: 1.5rem;">
+                    <!-- Header with Warning Icon -->
+                    <div class="card-header text-center py-5 border-0 bg-light-custom" style="border-radius: 1.5rem 1.5rem 0 0;">
+                        <div class="mb-4">
+                            <div class="warning-icon rounded-circle d-inline-flex align-items-center justify-content-center">
+                                <i class="bi bi-exclamation-triangle-fill fs-1 text-danger"></i>
+                            </div>
+                        </div>
+                        <h1 class="h2 fw-bold mb-2 text-primary">Confirm Investment Plan Deletion</h1>
+                        <p class="text-secondary mb-0">This action will permanently remove financial data</p>
+                    </div>
 
-<div class="container">
-    <div class="delete-card">
-        <div class="warning-icon"></div>
+                    <!-- Card Body -->
+                    <div class="card-body p-4 p-md-5">
+                        <!-- Investment Plan Details -->
+                        <div class="investment-plan-highlight">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h4 class="fw-bold text-primary mb-3">
+                                        <i class="bi bi-graph-up-arrow me-2"></i>
+                                        Investment Plan Details
+                                    </h4>
+                                    <div class="mb-2">
+                                        <strong class="text-dark">Plan Name:</strong>
+                                        <span class="ms-2 badge bg-primary fs-6">{{ investment_plan.plan_name }}</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong class="text-dark">Client:</strong>
+                                        <span class="ms-2 text-primary fw-semibold">{{ investment_plan.client.name }}</span>
+                                    </div>
+                                    {% if investment_plan.plan_value %}
+                                    <div class="mb-0">
+                                        <strong class="text-dark">Plan Value:</strong>
+                                        <span class="ms-2 text-success fw-bold">${{ investment_plan.plan_value|floatformat:2 }}</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <i class="bi bi-pie-chart-fill text-primary opacity-25 financial-icon"></i>
+                                </div>
+                            </div>
+                        </div>
 
-        <h2 class="title">Confirm Delete</h2>
+                        <!-- Client Information -->
+                        <div class="client-info">
+                            <h6 class="fw-semibold mb-3 text-primary">
+                                <i class="bi bi-person-circle me-2"></i>
+                                Client Information
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <small class="text-secondary d-block">Client Name</small>
+                                    <strong class="text-dark">{{ investment_plan.client.name }}</strong>
+                                </div>
+                                {% if investment_plan.client.email %}
+                                <div class="col-md-6">
+                                    <small class="text-secondary d-block">Email</small>
+                                    <strong class="text-dark">{{ investment_plan.client.email }}</strong>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
 
-        <p class="message">
-            Are you sure you want to delete the investment plan 
-            <span class="highlight">{{ investment_plan.plan_name }}</span> 
-            for client 
-            <span class="highlight">{{ investment_plan.client.name }}</span>?
-        </p>
+                        <!-- Financial Impact Warning -->
+                        <div class="financial-details">
+                            <h6 class="fw-semibold mb-3 text-success">
+                                <i class="bi bi-currency-dollar me-2"></i>
+                                Financial Impact Assessment
+                            </h6>
+                            <div class="row g-3">
+                                {% if investment_plan.plan_value %}
+                                <div class="col-md-6">
+                                    <div class="text-center p-3 rounded-3" style="background-color: rgba(25, 135, 84, 0.1);">
+                                        <i class="bi bi-cash-stack text-success fs-4 mb-2"></i>
+                                        <div>
+                                            <small class="text-secondary d-block">Plan Value</small>
+                                            <strong class="text-success">${{ investment_plan.plan_value|floatformat:2 }}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                <div class="col-md-6">
+                                    <div class="text-center p-3 rounded-3" style="background-color: rgba(28, 100, 255, 0.1);">
+                                        <i class="bi bi-calendar3 text-primary fs-4 mb-2"></i>
+                                        <div>
+                                            <small class="text-secondary d-block">Created</small>
+                                            <strong class="text-primary">{{ investment_plan.created_at|date:"M d, Y" }}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-        <form method="post" id="deleteForm">
-            {% csrf_token %}
-            <div class="form-actions">
-                <button type="submit" class="btn btn-danger" id="deleteBtn">
-                    Yes, Delete
-                </button>
-                <a href="{% url 'investment_plan_review_list' %}" class="btn btn-secondary">
-                    Cancel
-                </a>
+                        <!-- Critical Warning Grid -->
+                        <div class="warning-grid">
+                            <div class="warning-item">
+                                <i class="bi bi-database-x text-danger fs-4 mb-2"></i>
+                                <h6 class="fw-semibold text-danger mb-1">Data Loss</h6>
+                                <small class="text-danger">All investment data will be permanently deleted</small>
+                            </div>
+                            <div class="warning-item">
+                                <i class="bi bi-graph-down text-danger fs-4 mb-2"></i>
+                                <h6 class="fw-semibold text-danger mb-1">Portfolio Impact</h6>
+                                <small class="text-danger">Client portfolio history will be affected</small>
+                            </div>
+                            <div class="warning-item">
+                                <i class="bi bi-file-earmark-text text-danger fs-4 mb-2"></i>
+                                <h6 class="fw-semibold text-danger mb-1">Reports</h6>
+                                <small class="text-danger">Historical reports may become incomplete</small>
+                            </div>
+                            <div class="warning-item">
+                                <i class="bi bi-shield-exclamation text-danger fs-4 mb-2"></i>
+                                <h6 class="fw-semibold text-danger mb-1">Compliance</h6>
+                                <small class="text-danger">May affect regulatory compliance records</small>
+                            </div>
+                        </div>
+
+                        <!-- Final Warning -->
+                        <div class="alert alert-danger border-0 mb-4" role="alert" style="background-color: rgba(220, 53, 69, 0.1); border-left: 4px solid #dc3545 !important;">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="bi bi-exclamation-triangle-fill text-danger fs-4"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h5 class="alert-heading mb-2 fw-bold text-danger">
+                                        <i class="bi bi-shield-fill-exclamation me-2"></i>
+                                        CRITICAL: Irreversible Financial Data Deletion
+                                    </h5>
+                                    <p class="mb-2 text-danger">
+                                        You are about to permanently delete an investment plan containing sensitive financial information. This action:
+                                    </p>
+                                    <ul class="mb-2 text-danger">
+                                        <li><strong>Cannot be undone</strong> - No recovery options available</li>
+                                        <li><strong>Removes all associated data</strong> - Including performance metrics and allocations</li>
+                                        <li><strong>Affects client records</strong> - May impact client relationship history</li>
+                                        <li><strong>Could impact compliance</strong> - Consider regulatory requirements</li>
+                                    </ul>
+                                    <p class="mb-0 small text-danger">
+                                        <i class="bi bi-info-circle-fill me-1"></i>
+                                        <strong>Recommendation:</strong> Consider archiving instead of deleting to preserve audit trails.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Alternative Actions Suggestion -->
+                        <div class="alert alert-info border-0 mb-4" style="background-color: rgba(28, 100, 255, 0.1); border-left: 4px solid #1C64FF !important;">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-lightbulb text-primary me-3 fs-5"></i>
+                                <div>
+                                    <h6 class="mb-1 fw-semibold text-primary">Consider Alternative Actions</h6>
+                                    <p class="mb-0 small text-primary">
+                                        Instead of permanent deletion, consider marking the plan as inactive or archived to preserve historical financial data for compliance and reporting purposes.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Final Confirmation Question -->
+                        <div class="text-center mb-4">
+                            <h5 class="fw-bold text-secondary mb-3">
+                                Do you understand the risks and wish to proceed with permanent deletion?
+                            </h5>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <form method="post" id="deleteForm" novalidate>
+                            {% csrf_token %}
+                            <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
+                                <button type="submit" 
+                                        class="btn btn-danger btn-lg px-4 fw-bold order-2 order-sm-1" 
+                                        id="deleteBtn"
+                                        style="min-width: 200px;"
+                                        aria-describedby="deleteWarning">
+                                    <i class="bi bi-trash3-fill me-2"></i>
+                                    <span class="btn-text">Yes, Delete Permanently</span>
+                                    <span class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+                                </button>
+                                <a href="{% url 'investment_plan_review_list' %}" 
+                                   class="btn btn-outline-secondary btn-lg px-4 fw-semibold order-1 order-sm-2" 
+                                   id="cancelBtn"
+                                   style="min-width: 200px;">
+                                    <i class="bi bi-arrow-left me-2"></i>Cancel & Return
+                                </a>
+                            </div>
+                        </form>
+
+                        <!-- Keyboard Shortcuts -->
+                        <div class="mt-4 pt-4" style="border-top: 1px solid var(--bs-border-color);">
+                            <div class="d-flex justify-content-center gap-4 flex-wrap">
+                                <small class="text-secondary d-flex align-items-center">
+                                    <kbd class="kbd-custom me-2">Esc</kbd>
+                                    Cancel and return safely
+                                </small>
+                                <small class="text-secondary d-flex align-items-center">
+                                    <kbd class="kbd-custom me-2">Ctrl</kbd>
+                                    <span class="mx-1">+</span>
+                                    <kbd class="kbd-custom me-2">Shift</kbd>
+                                    <span class="mx-1">+</span>
+                                    <kbd class="kbd-custom me-2">Del</kbd>
+                                    Confirm deletion
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Security Footer -->
+                    <div class="card-footer text-center py-4 border-0" style="background-color: #f8f9fa; border-radius: 0 0 1.5rem 1.5rem;">
+                        <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
+                            <i class="bi bi-shield-check text-primary"></i>
+                            <small class="text-muted fw-semibold">Financial Data Protection Active</small>
+                        </div>
+                        <small class="text-muted">
+                            This action requires senior authorization and will be logged for compliance audit
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Back Navigation -->
+                <div class="text-center mt-4">
+                    <a href="{% url 'investment_plan_review_list' %}" class="text-decoration-none text-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>
+                        Back to Investment Plans
+                    </a>
+                </div>
             </div>
-        </form>
+        </div>
     </div>
 </div>
 
+<!-- Toast Container for Notifications -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+    <!-- Processing Toast -->
+    <div id="processingToast" class="toast border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header border-0" style="background-color: rgba(220, 53, 69, 0.1);">
+            <i class="bi bi-gear-fill text-danger me-2"></i>
+            <strong class="me-auto text-danger">Processing Deletion</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body bg-white">
+            <div class="d-flex align-items-center">
+                <div class="spinner-border spinner-border-sm text-danger me-2" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <span class="text-secondary">Permanently deleting investment plan...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Toast -->
+    <div id="errorToast" class="toast border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header border-0" style="background-color: rgba(220, 53, 69, 0.1);">
+            <i class="bi bi-exclamation-circle-fill text-danger me-2"></i>
+            <strong class="me-auto text-danger">Error</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body bg-white">
+            <span id="errorMessage" class="text-secondary"></span>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap 5 JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
-    // Enhanced loading state with smooth transitions
-    document.getElementById('deleteForm').addEventListener('submit', function (e) {
-        const btn = document.getElementById('deleteBtn');
-        btn.classList.add('loading');
-        btn.innerHTML = 'Deleting<span style="margin-left: 0.5rem;"></span>';
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteForm = document.getElementById('deleteForm');
+    const deleteBtn = document.getElementById('deleteBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const btnText = deleteBtn.querySelector('.btn-text');
+    const spinner = deleteBtn.querySelector('.spinner-border');
+    const processingToast = document.getElementById('processingToast');
+    const errorToast = document.getElementById('errorToast');
+
+    // Form submission handling with enhanced security
+    deleteForm.addEventListener('submit', function(e) {
+        // Multi-step confirmation for financial data
+        const planName = "{{ investment_plan.plan_name|escapejs }}";
+        const clientName = "{{ investment_plan.client.name|escapejs }}";
+        const planValue = "{{ investment_plan.plan_value|default:'N/A'|escapejs }}";
         
-        // Prevent double submission
-        btn.disabled = true;
+        // First confirmation
+        const firstConfirm = confirm(`⚠️ FINANCIAL DATA DELETION WARNING\n\nYou are about to permanently delete:\n\nPlan: ${planName}\nClient: ${clientName}\nValue: $${planValue}\n\nThis action CANNOT be undone and will affect:\n• Client portfolio history\n• Compliance records\n• Financial reports\n• Audit trails\n\nDo you want to continue?`);
         
-        // Add subtle form validation feedback
-        const card = document.querySelector('.delete-card');
-        card.style.transform = 'scale(0.98)';
-        setTimeout(() => {
-            card.style.transform = 'scale(1)';
-        }, 150);
+        if (!firstConfirm) {
+            e.preventDefault();
+            showToast('Deletion cancelled for safety.', 'info');
+            return false;
+        }
+
+        // Second confirmation with typing requirement
+        const confirmText = prompt(`🔒 FINAL SECURITY CONFIRMATION\n\nTo proceed with permanent deletion of the investment plan "${planName}", please type exactly:\n\nDELETE FINANCIAL DATA\n\n(This confirms you understand the compliance and audit implications)`);
+        
+        if (confirmText !== 'DELETE FINANCIAL DATA') {
+            e.preventDefault();
+            showToast('Deletion cancelled. Exact confirmation text required for financial data deletion.', 'error');
+            return false;
+        }
+
+        // Show loading state
+        deleteBtn.classList.add('loading');
+        deleteBtn.disabled = true;
+        btnText.textContent = 'Deleting Financial Data...';
+        spinner.classList.remove('d-none');
+        
+        // Disable cancel button
+        cancelBtn.style.pointerEvents = 'none';
+        cancelBtn.style.opacity = '0.6';
+        
+        // Show processing toast
+        const toast = new bootstrap.Toast(processingToast, {
+            autohide: false
+        });
+        toast.show();
+        
+        // Add visual feedback
+        const card = document.querySelector('.card');
+        if (card) {
+            card.style.opacity = '0.8';
+            card.style.transform = 'scale(0.98)';
+        }
     });
 
-    // Enhanced keyboard navigation
-    document.addEventListener('keydown', function (e) {
+    // Enhanced button interactions
+    const buttons = document.querySelectorAll('.btn');
+    buttons.forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            if (!this.disabled && !this.classList.contains('loading')) {
+                this.style.willChange = 'transform, box-shadow';
+                
+                if (this.classList.contains('btn-danger')) {
+                    this.style.boxShadow = '0 8px 25px rgba(220, 53, 69, 0.4)';
+                } else if (this.classList.contains('btn-primary')) {
+                    this.style.boxShadow = '0 8px 25px rgba(28, 100, 255, 0.3)';
+                } else {
+                    this.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.1)';
+                }
+            }
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.willChange = 'auto';
+            this.style.boxShadow = '';
+        });
+        
+        // Add ripple effect
+        button.addEventListener('click', function(e) {
+            if (this.disabled || this.classList.contains('loading')) return;
+            
+            const ripple = document.createElement('span');
+            const rect = this.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = e.clientX - rect.left - size / 2;
+            const y = e.clientY - rect.top - size / 2;
+            
+            ripple.style.cssText = `
+                position: absolute;
+                width: ${size}px;
+                height: ${size}px;
+                left: ${x}px;
+                top: ${y}px;
+                background: rgba(255, 255, 255, 0.3);
+                border-radius: 50%;
+                transform: scale(0);
+                animation: ripple 0.6s linear;
+                pointer-events: none;
+                z-index: 1;
+            `;
+            
+            this.style.position = 'relative';
+            this.style.overflow = 'hidden';
+            this.appendChild(ripple);
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
+        });
+    });
+
+    // Enhanced keyboard shortcuts for financial data
+    document.addEventListener('keydown', function(e) {
+        // Escape key to cancel
         if (e.key === 'Escape') {
             e.preventDefault();
-            const cancelBtn = document.querySelector('.btn-secondary');
-            if (cancelBtn) {
-                cancelBtn.style.transform = 'scale(0.95)';
-                setTimeout(() => {
-                    cancelBtn.style.transform = '';
-                    cancelBtn.click();
-                }, 100);
+            if (!deleteBtn.classList.contains('loading')) {
+                window.location.href = cancelBtn.href;
             }
         }
         
-        // Enter key on delete button
-        if (e.key === 'Enter' && e.target.classList.contains('btn-danger')) {
+        // Ctrl + Shift + Delete for financial data deletion
+        if (e.ctrlKey && e.shiftKey && e.key === 'Delete') {
             e.preventDefault();
-            e.target.click();
+            if (!deleteBtn.classList.contains('loading')) {
+                deleteBtn.click();
+            }
         }
     });
 
-    // Add smooth hover effects for mobile
-    if ('ontouchstart' in window) {
-        document.querySelectorAll('.btn').forEach(btn => {
-            btn.addEventListener('touchstart', function() {
-                this.style.transform = 'translateY(-2px) scale(0.98)';
-            });
-            
-            btn.addEventListener('touchend', function() {
-                this.style.transform = '';
-            });
+    // Auto-focus on cancel button for financial safety
+    setTimeout(() => {
+        cancelBtn.focus();
+    }, 500);
+
+    // Prevent accidental submissions
+    let deleteClicked = false;
+    deleteBtn.addEventListener('click', function(e) {
+        if (deleteClicked) {
+            e.preventDefault();
+            return false;
+        }
+        deleteClicked = true;
+    });
+
+    // Toast notification function
+    function showToast(message, type = 'error') {
+        document.getElementById('errorMessage').textContent = message;
+        
+        const toast = new bootstrap.Toast(errorToast, {
+            autohide: true,
+            delay: 5000
         });
+        toast.show();
     }
 
-    // Accessibility: Announce important actions
-    const deleteBtn = document.getElementById('deleteBtn');
-    deleteBtn.setAttribute('aria-describedby', 'delete-description');
+    // Add CSS for ripple animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes ripple {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Add entrance animation
+    const card = document.querySelector('.card');
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(30px)';
     
-    // Create hidden description for screen readers
-    const description = document.createElement('div');
-    description.id = 'delete-description';
-    description.className = 'sr-only';
-    description.textContent = 'This action cannot be undone. The investment plan will be permanently deleted.';
-    description.style.position = 'absolute';
-    description.style.left = '-10000px';
-    description.style.width = '1px';
-    description.style.height = '1px';
-    description.style.overflow = 'hidden';
-    document.body.appendChild(description);
+    setTimeout(() => {
+        card.style.transition = 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
+        card.style.opacity = '1';
+        card.style.transform = 'translateY(0)';
+    }, 100);
+
+    // Enhanced focus management for financial security
+    deleteBtn.addEventListener('focus', function() {
+        if (!this.classList.contains('loading')) {
+            this.style.transform = 'translateY(-1px) scale(1.02)';
+            this.style.boxShadow = '0 0 0 3px rgba(220, 53, 69, 0.3)';
+        }
+    });
+
+    deleteBtn.addEventListener('blur', function() {
+        this.style.transform = '';
+        this.style.boxShadow = '';
+    });
+});
 </script>
 {% endblock %}
