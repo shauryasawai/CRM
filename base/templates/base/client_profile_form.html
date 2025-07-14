@@ -177,7 +177,7 @@ textarea.form-control {
 }
 
 .form-text::before {
-    content: '💡';
+    content: ' ';
     font-size: 0.75rem;
 }
 
@@ -461,7 +461,7 @@ textarea.form-control {
                             {% csrf_token %}
                             
                             <!-- Progress Indicator -->
-                            <div class="progress-indicator slide-in">
+                            <!-- <div class="progress-indicator slide-in">
                                 <div class="progress-step active">
                                     <i class="fas fa-user me-1"></i>
                                     Client Info
@@ -474,7 +474,7 @@ textarea.form-control {
                                     <i class="fas fa-users me-1"></i>
                                     Assignment
                                 </div>
-                            </div>
+                            </div> -->
                             
                             <!-- Client Information Section -->
                             <div class="section-header slide-in">
@@ -522,7 +522,7 @@ textarea.form-control {
                                             Date of Birth
                                         </label>
                                         {{ form.date_of_birth }}
-                                        <i class="fas fa-calendar field-icon"></i>
+                                        <!-- <i class="fas fa-calendar field-icon"></i> -->
                                         {% if form.date_of_birth.errors %}
                                             <div class="invalid-feedback">{{ form.date_of_birth.errors }}</div>
                                         {% endif %}
@@ -637,7 +637,7 @@ textarea.form-control {
                                             First Investment Date
                                         </label>
                                         {{ form.first_investment_date }}
-                                        <i class="fas fa-calendar-check field-icon"></i>
+                                        <!-- <i class="fas fa-calendar-check field-icon"></i> -->
                                         {% if form.first_investment_date.errors %}
                                             <div class="invalid-feedback">{{ form.first_investment_date.errors }}</div>
                                         {% endif %}
