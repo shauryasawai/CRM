@@ -29,104 +29,102 @@
                 </h5>
             </div>
             <div class="card-body">
-                <form method="get" id="clientSelectionForm">
-                    <div class="mb-3">
-                        <label for="clientSelect" class="form-label">Choose Client</label>
-                        <div class="position-relative">
-                            <input type="text" class="form-control mb-2" id="clientSearch" placeholder="🔍 Search clients by name or PAN...">
-                            <select class="form-control select2" id="clientSelect" name="client_id" required>
-                                <option value="">Search and select a client...</option>
-                                {% for client in clients %}
-                                <option value="{{ client.id }}" 
-                                        data-client-name="{{ client.name }}"
-                                        data-pan="{{ client.pan|default:'N/A' }}"
-                                        data-client-type="{{ client.type }}"
-                                        data-aum="{{ client.aum|default:0 }}"
-                                        data-sip-amount="{{ client.sip_amount|default:0 }}"
-                                        data-demat-count="{{ client.demat_count|default:0 }}"
-                                        data-total-aum="{{ client.total_aum|default:0 }}"
-                                        data-scheme-count="{{ client.scheme_count|default:0 }}"
-                                        data-mapped-rm="{{ client.mapped_rm|default:'-' }}"
-                                        data-has-portfolio="{% if client.has_portfolio %}true{% else %}false{% endif %}"
-                                        data-has-profile="{% if client.has_profile %}true{% else %}false{% endif %}"
-                                        data-profile-id="{{ client.profile_id|default:'-' }}"
-                                        data-email="{{ client.email|default:'-' }}"
-                                        data-mobile="{{ client.mobile|default:'-' }}"
-                                        data-contact-info="{{ client.contact_info|default:'-' }}"
-                                        data-created-by="{{ client.created_by|default:'-' }}"
-                                        data-search-text="{{ client.name|lower }} {{ client.pan|lower }}">
-                                    {{ client.name }}
-                                    {% if client.pan and client.pan != 'N/A' %}
-                                        (PAN: {{ client.pan }})
-                                    {% endif %}
-                                    {% if client.aum > 0 %}
-                                        - Client AUM: ₹{{ client.aum|floatformat:0 }}
-                                    {% endif %}
-                                    {% if client.total_aum > 0 %}
-                                        - Portfolio: ₹{{ client.total_aum|floatformat:0 }}
-                                    {% endif %}
-                                    <span class="badge bg-info">Legacy Client</span>
-                                    {% if client.has_profile %}
-                                        <span class="badge bg-success">Has Profile</span>
-                                    {% endif %}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="form-text">
-                            Showing only legacy clients from the Client model. 
-                            {% if user_role == 'rm' %}
-                                You can see clients assigned to you.
-                            {% elif user_role == 'rm_head' %}
-                                You can see clients assigned to your team members.
-                            {% endif %}
-                        </div>
+                <div class="mb-3">
+                    <label for="clientSelect" class="form-label">Choose Client</label>
+                    <div class="position-relative">
+                        <input type="text" class="form-control mb-2" id="clientSearch" placeholder="🔍 Search clients by name or PAN...">
+                        <select class="form-control select2" id="clientSelect" name="client_id" required>
+                            <option value="">Search and select a client...</option>
+                            {% for client in clients %}
+                            <option value="{{ client.id }}" 
+                                    data-client-name="{{ client.name }}"
+                                    data-pan="{{ client.pan|default:'N/A' }}"
+                                    data-client-type="{{ client.type }}"
+                                    data-aum="{{ client.aum|default:0 }}"
+                                    data-sip-amount="{{ client.sip_amount|default:0 }}"
+                                    data-demat-count="{{ client.demat_count|default:0 }}"
+                                    data-total-aum="{{ client.total_aum|default:0 }}"
+                                    data-scheme-count="{{ client.scheme_count|default:0 }}"
+                                    data-mapped-rm="{{ client.mapped_rm|default:'-' }}"
+                                    data-has-portfolio="{% if client.has_portfolio %}true{% else %}false{% endif %}"
+                                    data-has-profile="{% if client.has_profile %}true{% else %}false{% endif %}"
+                                    data-profile-id="{{ client.profile_id|default:'-' }}"
+                                    data-email="{{ client.email|default:'-' }}"
+                                    data-mobile="{{ client.mobile|default:'-' }}"
+                                    data-contact-info="{{ client.contact_info|default:'-' }}"
+                                    data-created-by="{{ client.created_by|default:'-' }}"
+                                    data-search-text="{{ client.name|lower }} {{ client.pan|lower }}">
+                                {{ client.name }}
+                                {% if client.pan and client.pan != 'N/A' %}
+                                    (PAN: {{ client.pan }})
+                                {% endif %}
+                                {% if client.aum > 0 %}
+                                    - Client AUM: ₹{{ client.aum|floatformat:0 }}
+                                {% endif %}
+                                {% if client.total_aum > 0 %}
+                                    - Portfolio: ₹{{ client.total_aum|floatformat:0 }}
+                                {% endif %}
+                                <span class="badge bg-info">Legacy Client</span>
+                                {% if client.has_profile %}
+                                    <span class="badge bg-success">Has Profile</span>
+                                {% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
                     </div>
-                    
-                    <div id="clientInfo" class="mb-3" style="display: none;">
-                        <div class="alert alert-info">
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <h6><i class="fas fa-user-circle me-2"></i>Client Information</h6>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <strong>Name:</strong> <span id="clientNameDisplay" class="text-dark fw-bold">-</span>
-                                            <br><strong>PAN Number:</strong> <span id="clientPAN" class="text-primary font-monospace">-</span>
-                                            <br><strong>Contact Info:</strong> <span id="clientContact" class="text-muted">-</span>
-                                            <br><strong>Email:</strong> <span id="clientEmail" class="text-muted">-</span>
-                                            <br><strong>Mobile:</strong> <span id="clientMobile" class="text-muted">-</span>
-                                            <br><strong>Created By:</strong> <span id="clientCreatedBy" class="text-muted">-</span>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <strong>Assigned RM:</strong> <span id="clientRM">-</span>
-                                            <br><strong>Has Profile:</strong> <span id="profileStatus" class="badge">-</span>
-                                            <br><strong>Has Portfolio:</strong> <span id="portfolioStatus" class="badge">-</span>
-                                        </div>
+                    <div class="form-text">
+                        Showing only legacy clients from the Client model. 
+                        {% if user_role == 'rm' %}
+                            You can see clients assigned to you.
+                        {% elif user_role == 'rm_head' %}
+                            You can see clients assigned to your team members.
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div id="clientInfo" class="mb-3" style="display: none;">
+                    <div class="alert alert-info">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6><i class="fas fa-user-circle me-2"></i>Client Information</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>Name:</strong> <span id="clientNameDisplay" class="text-dark fw-bold">-</span>
+                                        <br><strong>PAN Number:</strong> <span id="clientPAN" class="text-primary font-monospace">-</span>
+                                        <br><strong>Contact Info:</strong> <span id="clientContact" class="text-muted">-</span>
+                                        <br><strong>Email:</strong> <span id="clientEmail" class="text-muted">-</span>
+                                        <br><strong>Mobile:</strong> <span id="clientMobile" class="text-muted">-</span>
+                                        <br><strong>Created By:</strong> <span id="clientCreatedBy" class="text-muted">-</span>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>Assigned RM:</strong> <span id="clientRM">-</span>
+                                        <br><strong>Has Profile:</strong> <span id="profileStatus" class="badge">-</span>
+                                        <br><strong>Has Portfolio:</strong> <span id="portfolioStatus" class="badge">-</span>
                                     </div>
                                 </div>
-                                <div class="col-md-4">
-                                    <h6 class="text-success"><i class="fas fa-chart-line me-2"></i>Portfolio Summary</h6>
-                                    <div class="bg-light p-2 rounded">
-                                        <div><strong>Portfolio AUM:</strong> <span id="portfolioAUM" class="text-success fw-bold">₹0</span></div>
-                                        <div><strong>Total Schemes:</strong> <span id="clientSchemes" class="text-info fw-bold">0</span></div>
-                                        <div><strong>Profile ID:</strong> <span id="clientProfileID" class="text-muted">-</span></div>
-                                        <div><strong>Client ID:</strong> <span id="clientIDDisplay" class="text-muted">-</span></div>
-                                        <div><strong>Combined AUM:</strong> <span id="combinedAUM" class="text-primary fw-bold">₹0</span></div>
-                                    </div>
+                            </div>
+                            <div class="col-md-4">
+                                <h6 class="text-success"><i class="fas fa-chart-line me-2"></i>Portfolio Summary</h6>
+                                <div class="bg-light p-2 rounded">
+                                    <div><strong>Portfolio AUM:</strong> <span id="portfolioAUM" class="text-success fw-bold">₹0</span></div>
+                                    <div><strong>Total Schemes:</strong> <span id="clientSchemes" class="text-info fw-bold">0</span></div>
+                                    <div><strong>Profile ID:</strong> <span id="clientProfileID" class="text-muted">-</span></div>
+                                    <div><strong>Client ID:</strong> <span id="clientIDDisplay" class="text-muted">-</span></div>
+                                    <div><strong>Combined AUM:</strong> <span id="combinedAUM" class="text-primary fw-bold">₹0</span></div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="d-flex justify-content-between">
-                        <a href="{% url 'dashboard' %}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
-                        </a>
-                        <button type="submit" class="btn btn-primary" id="proceedBtn" disabled>
-                            <i class="fas fa-arrow-right me-2"></i>Proceed to Plan Design
-                        </button>
-                    </div>
-                </form>
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                    </a>
+                    <button type="button" class="btn btn-primary" id="proceedBtn" disabled>
+                        <i class="fas fa-arrow-right me-2"></i>Proceed to Plan Design
+                    </button>
+                </div>
             </div>
         </div>
         
@@ -183,26 +181,40 @@
                         </div>
                     </div>
                 </div>
-                <hr>
-                <div class="row text-center">
-                    <div class="col-md-6">
-                    </div>
-                    <div class="col-md-6">
-                    </div>
-                </div>
             </div>
         </div>
     </div>
 </div>
 {% endif %}
+
+<!-- Debug Information (remove in production) -->
+<div class="mt-4" style="display: none;" id="debugInfo">
+    <div class="alert alert-warning">
+        <h6>Debug Information:</h6>
+        <div id="debugContent"></div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+// Store the base URL for create_plan_step2
+const CREATE_PLAN_STEP2_URL = "{% url 'create_plan_step2' 0 %}";
+
 $(document).ready(function() {
+    // Debug: Log the base URL
+    console.log('Base URL from template:', CREATE_PLAN_STEP2_URL);
+    
     $('#clientSelect').on('change', function() {
         const selectedOption = $(this).find('option:selected');
         const clientId = selectedOption.val();
+        
+        // Debug logging
+        console.log('Client selection changed:', {
+            clientId: clientId,
+            clientIdType: typeof clientId,
+            hasValue: !!clientId
+        });
         
         if (clientId) {
             // Extract client data
@@ -237,9 +249,6 @@ $(document).ready(function() {
             $('#clientCreatedBy').text(createdBy);
             
             // Update financial information
-            $('#clientAUM').text('₹' + parseFloat(aum).toLocaleString('en-IN', {minimumFractionDigits: 0}));
-            $('#clientSIP').text('₹' + parseFloat(sipAmount).toLocaleString('en-IN', {minimumFractionDigits: 0}));
-            $('#clientDemat').text(dematCount);
             $('#portfolioAUM').text('₹' + parseFloat(totalAUM).toLocaleString('en-IN', {minimumFractionDigits: 0}));
             $('#clientSchemes').text(schemeCount);
             $('#combinedAUM').text('₹' + combinedAUM.toLocaleString('en-IN', {minimumFractionDigits: 0}));
@@ -265,33 +274,72 @@ $(document).ready(function() {
             // Show client info section
             $('#clientInfo').show();
             $('#proceedBtn').prop('disabled', false);
+            
+            // Show debug info
+            $('#debugContent').html(
+                '<strong>Selected Client ID:</strong> ' + clientId + '<br>' +
+                '<strong>Client Name:</strong> ' + clientName + '<br>' +
+                '<strong>Target URL would be:</strong> ' + CREATE_PLAN_STEP2_URL.replace('0', clientId) + '<br>' +
+                '<strong>Button Status:</strong> Enabled'
+            );
+            $('#debugInfo').show();
         } else {
             $('#clientInfo').hide();
             $('#proceedBtn').prop('disabled', true);
+            $('#debugInfo').hide();
         }
     });
     
-    $('#clientSelectionForm').on('submit', function(e) {
-        const clientId = $('#clientSelect').val();
-        console.log('Selected client ID:', clientId, 'Type:', typeof clientId);
+    // Main button click handler
+    $('#proceedBtn').on('click', function(e) {
+        e.preventDefault();
         
-        if (clientId) {
-            // Ensure client ID is a valid integer
-            const numericClientId = parseInt(clientId);
-            if (isNaN(numericClientId)) {
-                e.preventDefault();
-                alert('Invalid client ID format. Please select a valid client.');
-                return;
-            }
-            
-            // Use the numeric client ID directly
-            this.action = "{% url 'create_plan_step2' 999999 %}".replace('999999', numericClientId);
-            console.log('Form action set to:', this.action);
-        } else {
-            e.preventDefault();
+        const clientId = $('#clientSelect').val();
+        console.log('Proceed button clicked:', {
+            clientId: clientId,
+            clientIdType: typeof clientId,
+            isNumeric: !isNaN(parseInt(clientId))
+        });
+        
+        if (!clientId) {
             alert('Please select a client first.');
+            return false;
         }
+        
+        // Validate client ID
+        const numericClientId = parseInt(clientId);
+        if (isNaN(numericClientId) || numericClientId <= 0) {
+            alert('Invalid client ID. Please select a valid client.');
+            console.error('Invalid client ID:', clientId);
+            return false;
+        }
+        
+        // Construct the target URL
+        const targetUrl = CREATE_PLAN_STEP2_URL.replace('0', numericClientId);
+        console.log('Navigating to:', targetUrl);
+        
+        // Show loading state
+        const $btn = $(this);
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Loading...');
+        
+        // Add a small delay to show the loading state
+        setTimeout(function() {
+            try {
+                window.location.href = targetUrl;
+            } catch (error) {
+                console.error('Navigation error:', error);
+                alert('Navigation failed. Please try again.');
+                $btn.prop('disabled', false).html('<i class="fas fa-arrow-right me-2"></i>Proceed to Plan Design');
+            }
+        }, 100);
     });
+    
+    // Alternative: Try with window.location.replace if href doesn't work
+    window.navigateToStep2 = function(clientId) {
+        const targetUrl = CREATE_PLAN_STEP2_URL.replace('0', clientId);
+        console.log('Alternative navigation to:', targetUrl);
+        window.location.replace(targetUrl);
+    };
     
     // Client search functionality
     $('#clientSearch').on('input', function() {
@@ -318,52 +366,15 @@ $(document).ready(function() {
         $('#clientSelect').select2({
             placeholder: 'Search and select a legacy client...',
             allowClear: true,
-            width: '100%',
-            templateResult: function(client) {
-                if (client.loading) return client.text;
-                
-                const $option = $(client.element);
-                const aum = $option.data('aum') || 0;
-                const totalAUM = $option.data('total-aum') || 0;
-                const dematCount = $option.data('demat-count') || 0;
-                const hasPortfolio = $option.data('has-portfolio');
-                const hasProfile = $option.data('has-profile');
-                const combinedAUM = parseFloat(aum) + parseFloat(totalAUM);
-                
-                // Custom formatting for dropdown options
-                const $container = $(
-                    '<div class="select2-result-client">' +
-                        '<div class="select2-result-client__name fw-bold">' + client.text + '</div>' +
-                        '<div class="select2-result-client__details text-muted small d-flex justify-content-between">' +
-                            '<span>Client: ₹' + parseFloat(aum).toLocaleString('en-IN') + '</span>' +
-                            '<span>Portfolio: ₹' + parseFloat(totalAUM).toLocaleString('en-IN') + '</span>' +
-                            '<span>Combined: ₹' + combinedAUM.toLocaleString('en-IN') + '</span>' +
-                            '<span class="badge badge-sm ' + (hasProfile === 'true' ? 'bg-success' : 'bg-warning') + '">' + 
-                                (hasProfile === 'true' ? 'Has Profile' : 'No Profile') + 
-                            '</span>' +
-                        '</div>' +
-                    '</div>'
-                );
-                
-                return $container;
-            },
-            templateSelection: function(client) {
-                if (client.id === '') return client.text;
-                
-                const $option = $(client.element);
-                const hasProfile = $option.data('has-profile');
-                const hasPortfolio = $option.data('has-portfolio');
-                let typeIcon = 'fas fa-user';
-                
-                if (hasPortfolio === 'true') {
-                    typeIcon = 'fas fa-user-check text-success';
-                } else if (hasProfile === 'true') {
-                    typeIcon = 'fas fa-user-plus text-warning';
-                }
-                
-                return $('<span><i class="' + typeIcon + ' me-1"></i>' + client.text + '</span>');
-            }
+            width: '100%'
         });
+    }
+});
+
+// Add keyboard support for Enter key
+$(document).on('keypress', function(e) {
+    if (e.which === 13 && !$('#proceedBtn').prop('disabled')) { // Enter key
+        $('#proceedBtn').click();
     }
 });
 </script>
@@ -390,15 +401,6 @@ $(document).ready(function() {
 
 .font-monospace {
     font-family: 'Courier New', monospace;
-}
-
-/* Custom styling for legacy client cards */
-.legacy-client-card {
-    border-left: 4px solid #0d6efd;
-}
-
-.legacy-client-card .card-header {
-    background-color: rgba(13, 110, 253, 0.1);
 }
 
 /* Status badges */
