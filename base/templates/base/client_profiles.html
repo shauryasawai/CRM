@@ -197,7 +197,7 @@
 
 .btn-group-vertical {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: 0.5rem;
     width: 100%;
 }
@@ -406,16 +406,29 @@
     transition: all 0.3s ease;
 }
 
+
 .table-container:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+.table-responsive {
+            overflow-x: auto;
+            overflow-y: hidden;
+            width: 100%;
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
+  .min-w-900 {
+            min-width: 900px;
+            width: 100%;
 }
 
 .modern-table {
     width: 100%;
     margin: 0;
     background: transparent;
-    table-layout: fixed;
+    /* table-layout: fixed; */
+    border-collapse: collapse;
+     white-space: nowrap;
 }
 
 .modern-table thead {
@@ -426,6 +439,7 @@
     padding: 1.5rem 1rem;
     color: #333333;
     font-weight: 700;
+    text-align: left;
     border: none;
     text-transform: uppercase;
     font-size: 0.8rem;
@@ -439,7 +453,9 @@
     border: none;
     border-bottom: 1px solid #D9D9D9;
     vertical-align: middle;
-    word-wrap: break-word;
+    /* word-wrap: break-word; */
+    white-space: nowrap;
+
 }
 
 .modern-table tbody tr {
@@ -706,7 +722,7 @@
 
 .feature-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(4, minmax(150px, 1fr));
     gap: 1rem;
     margin: 2rem 0;
 }
@@ -927,87 +943,91 @@
                 <p class="stat-label">Full Clients</p>
             </div>
         </div>
+<!-- Search and Filter Section -->
+<div class="search-section slide-up">
+    <form method="GET">
+        <div class="row align-items-end g-2">
+            <!-- Search Field -->
+            <div class="col-md-2">
+                <label class="form-label">Search</label>
+                <input type="text" class="form-control" name="search"
+                    value="{{ search_query|default:'' }}"
+                    placeholder="Search by name, email, mobile, or PAN">
+            </div>
 
-        <!-- Search and Filter Section -->
-        <div class="search-section slide-up">
-            <form method="GET">
-                <div class="row">
-                    <div class="col-md-2">
-                        <div class="mb-3">
-                            <label class="form-label">Search</label>
-                            <input type="text" class="form-control" name="search" 
-                                   value="{{ search_query|default:'' }}" 
-                                   placeholder="Search by name, email, mobile, or PAN">
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="mb-3">
-                            <label class="form-label">Status</label>
-                            <select class="form-select" name="status">
-                                <option value="">All Status</option>
-                                <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
-                                <option value="muted" {% if status_filter == 'muted' %}selected{% endif %}>Muted</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="mb-3">
-                            <label class="form-label">Interaction Activity</label>
-                            <select class="form-select" name="interaction_filter">
-                                <option value="">All Clients</option>
-                                <option value="no_interactions" {% if interaction_filter == 'no_interactions' %}selected{% endif %}>No Interactions</option>
-                                <option value="recent_interactions" {% if interaction_filter == 'recent_interactions' %}selected{% endif %}>Recent Activity</option>
-                                <option value="overdue_followups" {% if interaction_filter == 'overdue_followups' %}selected{% endif %}>Overdue Follow-ups</option>
-                                <option value="due_today" {% if interaction_filter == 'due_today' %}selected{% endif %}>Follow-ups Due Today</option>
-                            </select>
-                        </div>
-                    </div>
-                    {% if rm_list %}
-                    <div class="col-md-3">
-                        <div class="mb-3">
-                            <label class="form-label">Relationship Manager</label>
-                            <select class="form-select" name="rm">
-                                <option value="">All RMs</option>
-                                {% for rm in rm_list %}
-                                    <option value="{{ rm.id }}" {% if rm_filter == rm.id|stringformat:"s" %}selected{% endif %}>
-                                        {{ rm.get_full_name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-                    {% endif %}
-                    <div class="col-md-1">
-                        <div class="mb-3">
-                            <label class="form-label">&nbsp;</label>
-                            <div class="btn-group-vertical">
-                                <button type="submit" class="btn-uniform btn-primary">
-                                    <i class="fas fa-search"></i> Search
-                                </button>
-                                <a href="{% url 'client_profile_list' %}" class="btn-uniform btn-light">
-                                    <i class="fas fa-times"></i> Clear
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </form>
+            <!-- Status Filter -->
+            <div class="col-md-2">
+                <label class="form-label">Status</label>
+                <select class="form-select" name="status">
+                    <option value="">All Status</option>
+                    <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                    <option value="muted" {% if status_filter == 'muted' %}selected{% endif %}>Muted</option>
+                </select>
+            </div>
+
+            <!-- Interaction Filter -->
+            <div class="col-md-2">
+                <label class="form-label">Interaction Activity</label>
+                <select class="form-select" name="interaction_filter">
+                    <option value="">All Clients</option>
+                    <option value="no_interactions" {% if interaction_filter == 'no_interactions' %}selected{% endif %}>No Interactions</option>
+                    <option value="recent_interactions" {% if interaction_filter == 'recent_interactions' %}selected{% endif %}>Recent Activity</option>
+                    <option value="overdue_followups" {% if interaction_filter == 'overdue_followups' %}selected{% endif %}>Overdue Follow-ups</option>
+                    <option value="due_today" {% if interaction_filter == 'due_today' %}selected{% endif %}>Due Today</option>
+                </select>
+            </div>
+
+            <!-- RM Filter (if available) -->
+            {% if rm_list %}
+            <div class="col-md-2">
+                <label class="form-label">Relationship Manager</label>
+                <select class="form-select" name="rm">
+                    <option value="">All RMs</option>
+                    {% for rm in rm_list %}
+                        <option value="{{ rm.id }}" {% if rm_filter == rm.id|stringformat:"s" %}selected{% endif %}>
+                            {{ rm.get_full_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            <!-- Search Button -->
+            <div class="col-md-2">
+                <label class="form-label"></label>
+                <button type="submit" class="btn-uniform btn-primary w-100">
+                    <i class="fas fa-search"></i>
+                    search
+                </button>
+            </div>
+
+            <!-- Clear Button -->
+            <div class="col-md-1">
+                <label class="form-label"></label>
+                <a href="{% url 'client_profile_list' %}" class="btn-uniform btn-light w-100">
+                    <i class="fas fa-times"></i>
+                        Clear
+                </a>
+            </div>
         </div>
+    </form>
+</div>
 
         <!-- Client Profiles Table -->
         <div class="table-container slide-up">
             <div class="table-responsive">
+            <div class="min-w-900">
                 <table class="modern-table">
                     <thead>
                         <tr>
-                            <th style="width: 15%;">Client Name</th>
-                            <th style="width: 15%;">Contact Info</th>
-                            <th style="width: 12%;">Assigned Personnel</th>
-                            <th style="width: 10%;">Status</th>
-                            <th style="width: 15%;">Interaction Summary</th>
-                            <th style="width: 12%;">Last Contact</th>
-                            <th style="width: 10%;">Follow-ups</th>
-                            <th style="width: 11%;">Actions</th>
+                            <th >Client Name</th>
+                            <th >Contact Info</th>
+                            <th >Assigned Personnel</th>
+                            <th >Status</th>
+                            <th >Interaction Summary</th>
+                            <th >Last Contact</th>
+                            <th >Follow-ups</th>
+                            <th >Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1177,9 +1197,9 @@
                                 {% if not profile.legacy_client and can_convert_to_client %}
                                     <div style="margin-top: 0.5rem;">
                                         <a href="{% url 'convert_to_client' profile.pk %}" 
-                                           class="btn-uniform btn-sm btn-secondary" 
+                                           class="btn-mini btn-secondary" 
                                            title="Convert to Full Client">
-                                            <i class="fas fa-user-check"></i> Convert
+                                            <i class="fas fa-user-check"></i>
                                         </a>
                                     </div>
                                 {% endif %}
@@ -1203,6 +1223,7 @@
                         {% endfor %}
                     </tbody>
                 </table>
+                </div>
             </div>
         </div>
 
@@ -1302,6 +1323,7 @@
                 </div>
             </div>
         </div>
+        
     </div>
 </div>
 {% endblock %}
