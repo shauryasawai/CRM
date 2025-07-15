@@ -1,53 +1,48 @@
-{% extends 'hrm/base.html' %}
-
-{% block content %}
+{% extends 'hrm/base.html' %} {% block content %}
 <div class="container">
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card">
-                <div class="card-header">
-                    <h4>Add Expense</h4>
-                </div>
-                <div class="card-body">
-                    <form method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    {{ form.expense_type.label_tag }}
-                                    {{ form.expense_type }}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    {{ form.expense_date.label_tag }}
-                                    {{ form.expense_date }}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            {{ form.description.label_tag }}
-                            {{ form.description }}
-                        </div>
-                        
-                        <div class="mb-3">
-                            {{ form.amount.label_tag }}
-                            {{ form.amount }}
-                        </div>
-                        
-                        <div class="mb-3">
-                            {{ form.receipt.label_tag }}
-                            {{ form.receipt }}
-                            <div class="form-text">Upload receipt (JPG, PNG or PDF)</div>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-primary">Add Expense</button>
-                        <a href="{% url 'reimbursement_claims' %}" class="btn btn-secondary">Cancel</a>
-                    </form>
-                </div>
-            </div>
+  <div class="row">
+    <div class="col-md-8 offset-md-2">
+      <div class="card">
+        <div class="card-header">
+          <h3>Add Expense</h3>
         </div>
+        <div class="card-body">
+          <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  {{ form.expense_type.label_tag }} {{ form.expense_type }}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  {{ form.expense_date.label_tag }} {{ form.expense_date }}
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              {{ form.description.label_tag }} {{ form.description }}
+            </div>
+
+            <div class="mb-3">
+              {{ form.amount.label_tag }} {{ form.amount }}
+            </div>
+
+            <div class="mb-3">
+              {{ form.receipt.label_tag }} {{ form.receipt }}
+              <div class="form-text">Upload receipt (JPG, PNG or PDF)</div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Add Expense</button>
+            <a href="{% url 'reimbursement_claims' %}" class="btn btn-secondary"
+              >Cancel</a
+            >
+          </form>
+        </div>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}

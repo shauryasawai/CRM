@@ -1,364 +1,467 @@
-{% extends 'hrm/base.html' %}
-
-{% block content %}
+{% extends 'hrm/base.html' %} {% block content %}
 <div class="container-fluid py-4">
-    <div class="row g-4">
-        <!-- Leave Quotas Card -->
-        <div class="col-lg-3">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="fas fa-calendar-check me-2"></i>Leave Balance</h5>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex flex-column h-100">
-                        <ul class="list-group list-group-flush mb-3">
-                            {% for quota in quota_data %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                <div>
-                                    <span class="badge bg-light text-dark me-2">{{ quota.leave_type.name|slice:":3" }}</span>
-                                    {{ quota.leave_type.name }}
-                                </div>
-                                <div>
-                                    <span class="fw-bold">{{ quota.remaining }}</span>
-                                    <small class="text-muted">/{{ quota.total_quota }}</small>
-                                </div>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                        <div class="mt-auto">
-                            <a href="{% url 'apply_leave' %}" class="btn btn-primary w-100 py-2">
-                                <i class="fas fa-plus-circle me-2"></i>Apply Leave
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
+  <div class="row g-4">
+    <!-- Leave Quotas Card -->
+    <div class="col-lg-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">
+            <i class="fas fa-calendar-check me-2"></i>Leave Balance
+          </h5>
         </div>
-        
-        <!-- Main Calendar -->
-        <div class="col-lg-9">
-            <div class="card shadow-sm">
-                <div class="card-header bg-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h4 class="mb-0">
-                            <i class="fas fa-calendar-alt me-2 text-primary"></i>
-                            {{ month_name }} {{ year }}
-                        </h4>
-                        <div class="btn-group">
-                            <a href="?month={{ prev_month }}&year={{ prev_year }}" 
-                               class="btn btn-sm btn-outline-primary" title="Previous month">
-                                <i class="fas fa-chevron-left"></i>
-                            </a>
-                            <a href="?month={{ today_month }}&year={{ today_year }}" 
-                               class="btn btn-sm btn-outline-primary" title="Current month">
-                                Today
-                            </a>
-                            <a href="?month={{ next_month }}&year={{ next_year }}" 
-                               class="btn btn-sm btn-outline-primary" title="Next month">
-                                <i class="fas fa-chevron-right"></i>
-                            </a>
-                        </div>
-                    </div>
+        <div class="card-body">
+          <div class="d-flex flex-column h-100">
+            <ul class="list-group list-group-flush mb-3">
+              {% for quota in quota_data %}
+              <li
+                class="list-group-item d-flex justify-content-between align-items-center px-0"
+              >
+                <div>
+                  <span class="badge bg-light text-dark me-2"
+                    >{{ quota.leave_type.name|slice:":3" }}</span
+                  >
+                  {{ quota.leave_type.name }}
                 </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-bordered mb-0 calendar-table">
-                            <thead class="bg-light">
-                                <tr>
-                                    {% for day in weekdays %}
-                                    <th class="text-center py-3 {% if day == 'Sun' %}text-danger{% endif %}">{{ day }}</th>
-                                    {% endfor %}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for week in calendar_data %}
-                                <tr>
-                                    {% for day in week %}
-                                    <td class="calendar-day {% if not day %}empty{% else %}{% if day.is_today %}today-cell{% elif day.is_past %}past-day{% else %}future-day{% endif %}{% endif %}" 
-                                        data-date="{{ day.date|date:'Y-m-d' }}">
-                                        {% if day %}
-                                        <div class="day-header">
-                                            <span class="day-number {% if day.is_weekend %}text-danger{% endif %}">{{ day.day }}</span>
-                                            {% if day.is_holiday %}
-                                            <span class="holiday-indicator" title="{{ day.holiday_name }}"></span>
-                                            {% endif %}
-                                        </div>
-                                        <div class="day-events">
-                                            {% for leave in day.leave_requests %}
-                                            <div class="leave-event event-badge bg-{% if leave.status == 'A' %}success{% elif leave.status == 'P' %}warning{% else %}danger{% endif %}">
-                                                {{ leave.leave_type.name|slice:":1" }}
-                                            </div>
-                                            {% endfor %}
-                                            {% if day.attendance %}
-                                            <div class="attendance-event event-badge bg-{% if day.attendance.login_time %}info{% else %}secondary{% endif %}">
-                                                {% if day.attendance.login_time %}P{% else %}A{% endif %}
-                                            </div>
-                                            {% endif %}
-                                        </div>
-                                        {% endif %}
-                                    </td>
-                                    {% endfor %}
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+                <div>
+                  <span class="fw-bold">{{ quota.remaining }}</span>
+                  <small class="text-muted">/{{ quota.total_quota }}</small>
                 </div>
-                <div class="card-footer bg-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="legend">
-                            <span class="badge bg-success me-2">L</span> Approved Leave
-                            <span class="badge bg-warning mx-2">L</span> Pending Leave
-                            <span class="badge bg-danger mx-2">L</span> Rejected Leave
-                            <span class="badge bg-info mx-2">P</span> Present
-                            <span class="badge bg-secondary mx-2">A</span> Absent
-                        </div>
-                        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#legendModal">
-                            <i class="fas fa-info-circle"></i> Full Legend
-                        </button>
-                    </div>
-                </div>
+              </li>
+              {% endfor %}
+            </ul>
+            <div class="mt-auto">
+              <a
+                href="{% url 'apply_leave' %}"
+                class="btn btn-primary w-100 py-2"
+              >
+                <i class="fas fa-plus-circle me-2"></i>Apply Leave
+              </a>
             </div>
+          </div>
         </div>
+      </div>
     </div>
+
+    <!-- Main Calendar -->
+    <div class="col-lg-9">
+      <div class="card shadow-sm">
+        <div class="card-header bg-white">
+          <div class="d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">
+              <i class="fas fa-calendar-alt me-2 text-primary"></i>
+              {{ month_name }} {{ year }}
+            </h4>
+            <div class="btn-group">
+              <a
+                href="?month={{ prev_month }}&year={{ prev_year }}"
+                class="btn btn-sm btn-outline-primary"
+                title="Previous month"
+              >
+                <i class="fas fa-chevron-left"></i>
+              </a>
+              <a
+                href="?month={{ today_month }}&year={{ today_year }}"
+                class="btn btn-sm btn-outline-primary"
+                title="Current month"
+              >
+                Today
+              </a>
+              <a
+                href="?month={{ next_month }}&year={{ next_year }}"
+                class="btn btn-sm btn-outline-primary"
+                title="Next month"
+              >
+                <i class="fas fa-chevron-right"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-bordered mb-0 calendar-table">
+              <thead class="bg-light">
+                <tr>
+                  {% for day in weekdays %}
+                  <th
+                    class="text-center py-3 {% if day == 'Sun' %}text-danger{% endif %}"
+                  >
+                    {{ day }}
+                  </th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for week in calendar_data %}
+                <tr>
+                  {% for day in week %}
+                  <td
+                    class="calendar-day {% if not day %}empty{% else %}{% if day.is_today %}today-cell{% elif day.is_past %}past-day{% else %}future-day{% endif %}{% endif %}"
+                    data-date="{{ day.date|date:'Y-m-d' }}"
+                  >
+                    {% if day %}
+                    <div class="day-header">
+                      <span
+                        class="day-number {% if day.is_weekend %}text-danger{% endif %}"
+                        >{{ day.day }}</span
+                      >
+                      {% if day.is_holiday %}
+                      <span
+                        class="holiday-indicator"
+                        title="{{ day.holiday_name }}"
+                      ></span>
+                      {% endif %}
+                    </div>
+                    <div class="day-events">
+                      {% for leave in day.leave_requests %}
+                      <div
+                        class="leave-event event-badge bg-{% if leave.status == 'A' %}success{% elif leave.status == 'P' %}warning{% else %}danger{% endif %}"
+                      >
+                        {{ leave.leave_type.name|slice:":1" }}
+                      </div>
+                      {% endfor %} {% if day.attendance %}
+                      <div
+                        class="attendance-event event-badge bg-{% if day.attendance.login_time %}info{% else %}secondary{% endif %}"
+                      >
+                        {% if day.attendance.login_time %}P{% else %}A{% endif
+                        %}
+                      </div>
+                      {% endif %}
+                    </div>
+                    {% endif %}
+                  </td>
+                  {% endfor %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card-footer bg-white">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="legend">
+              <span class="badge bg-success me-2">L</span> Approved Leave
+              <span class="badge bg-warning mx-2">L</span> Pending Leave
+              <span class="badge bg-danger mx-2">L</span> Rejected Leave
+              <span class="badge bg-info mx-2">P</span> Present
+              <span class="badge bg-secondary mx-2">A</span> Absent
+            </div>
+            <button
+              class="btn btn-sm btn-outline-primary"
+              data-bs-toggle="modal"
+              data-bs-target="#legendModal"
+            >
+              <i class="fas fa-info-circle"></i> Full Legend
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Day Details Modal -->
 <div class="modal fade" id="dayDetailsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="dayDetailsModalLabel">Day Details</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="dayDetailsContent">
-                <div class="text-center py-4">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="dayDetailsModalLabel">Day Details</h5>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body" id="dayDetailsContent">
+        <div class="text-center py-4">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
         </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Close
+        </button>
+      </div>
     </div>
+  </div>
 </div>
 
 <!-- Legend Modal -->
 <div class="modal fade" id="legendModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">Calendar Legend</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>Attendance:</h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2"><span class="badge bg-info me-2">P</span> Present</li>
-                            <li class="mb-2"><span class="badge bg-secondary me-2">A</span> Absent</li>
-                            <li class="mb-2"><span class="badge bg-danger me-2">H</span> Holiday</li>
-                            <li><span class="badge bg-warning me-2">R</span> Remote Work</li>
-                        </ul>
-                    </div>
-                    <div class="col-md-6">
-                        <h6>Leave Types:</h6>
-                        <ul class="list-unstyled">
-                            <li class="mb-2"><span class="badge bg-success me-2">A</span> Annual Leave</li>
-                            <li class="mb-2"><span class="badge bg-success me-2">S</span> Sick Leave</li>
-                            <li class="mb-2"><span class="badge bg-success me-2">C</span> Casual Leave</li>
-                            <li><span class="badge bg-success me-2">O</span> Other Leave</li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="alert alert-info mt-3">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Click on any day to view detailed information.
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it!</button>
-            </div>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">Calendar Legend</h5>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-6">
+            <h6>Attendance:</h6>
+            <ul class="list-unstyled">
+              <li class="mb-2">
+                <span class="badge bg-info me-2">P</span> Present
+              </li>
+              <li class="mb-2">
+                <span class="badge bg-secondary me-2">A</span> Absent
+              </li>
+              <li class="mb-2">
+                <span class="badge bg-danger me-2">H</span> Holiday
+              </li>
+              <li><span class="badge bg-warning me-2">R</span> Remote Work</li>
+            </ul>
+          </div>
+          <div class="col-md-6">
+            <h6>Leave Types:</h6>
+            <ul class="list-unstyled">
+              <li class="mb-2">
+                <span class="badge bg-success me-2">A</span> Annual Leave
+              </li>
+              <li class="mb-2">
+                <span class="badge bg-success me-2">S</span> Sick Leave
+              </li>
+              <li class="mb-2">
+                <span class="badge bg-success me-2">C</span> Casual Leave
+              </li>
+              <li><span class="badge bg-success me-2">O</span> Other Leave</li>
+            </ul>
+          </div>
         </div>
+        <div class="alert alert-info mt-3">
+          <i class="fas fa-info-circle me-2"></i>
+          Click on any day to view detailed information.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+          Got it!
+        </button>
+      </div>
     </div>
+  </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
+{% endblock %} {% block scripts %}
 <script>
-$(document).ready(function() {
+  $(document).ready(function () {
     // Handle day click with hover effects
-    $('.calendar-day').hover(
-        function() {
-            if ($(this).data('date')) {
-                $(this).addClass('day-hover');
-            }
-        },
-        function() {
-            $(this).removeClass('day-hover');
+    $(".calendar-day").hover(
+      function () {
+        if ($(this).data("date")) {
+          $(this).addClass("day-hover");
         }
+      },
+      function () {
+        $(this).removeClass("day-hover");
+      }
     );
 
-    $('.calendar-day').click(function() {
-        const date = $(this).data('date');
-        if (!date) return;
-        
-        // Show loading state
-        $('#dayDetailsContent').html(`
+    $(".calendar-day").click(function () {
+      const date = $(this).data("date");
+      if (!date) return;
+
+      // Show loading state
+      $("#dayDetailsContent").html(`
             <div class="text-center py-4">
                 <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
             </div>
         `);
-        
-        $('#dayDetailsModal').modal('show');
-        
-        // Fetch day details via AJAX
-        $.get(`{% url 'get_calendar_day_details' %}?date=${date}`, function(data) {
-            let html;
-            if (data.error) {
-                html = `<div class="alert alert-danger">${data.error}</div>`;
-            } else {
-                html = `
+
+      $("#dayDetailsModal").modal("show");
+
+      // Fetch day details via AJAX
+      $.get(
+        `{% url 'get_calendar_day_details' %}?date=${date}`,
+        function (data) {
+          let html;
+          if (data.error) {
+            html = `<div class="alert alert-danger">${data.error}</div>`;
+          } else {
+            html = `
                 <div class="day-details">
                     <div class="day-header mb-3">
                         <h4 class="text-primary mb-1">${data.date}</h4>
-                        ${data.is_holiday ? 
-                            `<p class="text-danger fw-bold"><i class="fas fa-umbrella-beach me-2"></i>${data.holiday_name}</p>` : 
-                            data.is_sunday ? 
-                                `<p class="text-danger fw-bold"><i class="fas fa-church me-2"></i>Sunday</p>` : 
-                                `<p class="text-success fw-bold"><i class="fas fa-briefcase me-2"></i>Working Day</p>`}
+                        ${
+                          data.is_holiday
+                            ? `<p class="text-danger fw-bold"><i class="fas fa-umbrella-beach me-2"></i>${data.holiday_name}</p>`
+                            : data.is_sunday
+                            ? `<p class="text-danger fw-bold"><i class="fas fa-church me-2"></i>Sunday</p>`
+                            : `<p class="text-success fw-bold"><i class="fas fa-briefcase me-2"></i>Working Day</p>`
+                        }
                     </div>
                     
                     <div class="attendance-details mb-4">
                         <h5 class="border-bottom pb-2 mb-3"><i class="fas fa-user-clock me-2"></i>Attendance</h5>
-                        ${data.attendance.present ? `
+                        ${
+                          data.attendance.present
+                            ? `
                             <div class="alert alert-success">
                                 <div class="d-flex justify-content-between">
                                     <strong><i class="fas fa-check-circle me-2"></i>Present</strong>
-                                    ${data.attendance.is_remote ? '<span class="badge bg-warning">Remote Work</span>' : ''}
-                                    ${data.attendance.is_late ? '<span class="badge bg-danger">Late Arrival</span>' : ''}
+                                    ${
+                                      data.attendance.is_remote
+                                        ? '<span class="badge bg-warning">Remote Work</span>'
+                                        : ""
+                                    }
+                                    ${
+                                      data.attendance.is_late
+                                        ? '<span class="badge bg-danger">Late Arrival</span>'
+                                        : ""
+                                    }
                                 </div>
                                 <div class="row mt-2">
                                     <div class="col-md-6">
-                                        <p><strong>Login:</strong> ${data.attendance.login_time || '--:--'}</p>
+                                        <p><strong>Login:</strong> ${
+                                          data.attendance.login_time || "--:--"
+                                        }</p>
                                     </div>
                                     <div class="col-md-6">
-                                        <p><strong>Logout:</strong> ${data.attendance.logout_time || '--:--'}</p>
+                                        <p><strong>Logout:</strong> ${
+                                          data.attendance.logout_time || "--:--"
+                                        }</p>
                                     </div>
                                 </div>
-                                ${data.attendance.notes ? `<p class="mt-2"><strong>Notes:</strong> ${data.attendance.notes}</p>` : ''}
+                                ${
+                                  data.attendance.notes
+                                    ? `<p class="mt-2"><strong>Notes:</strong> ${data.attendance.notes}</p>`
+                                    : ""
+                                }
                             </div>
-                        ` : `
+                        `
+                            : `
                             <div class="alert alert-secondary">
                                 <i class="fas fa-user-slash me-2"></i><strong>No attendance recorded</strong>
                             </div>
-                        `}
+                        `
+                        }
                     </div>
                 `;
-                
-                if (data.leaves.length > 0) {
-                    html += `
+
+            if (data.leaves.length > 0) {
+              html += `
                     <div class="leave-details">
                         <h5 class="border-bottom pb-2 mb-3"><i class="fas fa-calendar-minus me-2"></i>Leaves</h5>
                         <div class="list-group">
                     `;
-                    
-                    data.leaves.forEach(leave => {
-                        html += `
-                        <div class="list-group-item ${leave.status === 'Approved' ? 'list-group-item-success' : leave.status === 'Pending' ? 'list-group-item-warning' : 'list-group-item-danger'}">
+
+              data.leaves.forEach((leave) => {
+                html += `
+                        <div class="list-group-item ${
+                          leave.status === "Approved"
+                            ? "list-group-item-success"
+                            : leave.status === "Pending"
+                            ? "list-group-item-warning"
+                            : "list-group-item-danger"
+                        }">
                             <div class="d-flex w-100 justify-content-between">
                                 <h6 class="mb-1">${leave.type}</h6>
-                                <span class="badge ${leave.status === 'Approved' ? 'bg-success' : leave.status === 'Pending' ? 'bg-warning' : 'bg-danger'}">
+                                <span class="badge ${
+                                  leave.status === "Approved"
+                                    ? "bg-success"
+                                    : leave.status === "Pending"
+                                    ? "bg-warning"
+                                    : "bg-danger"
+                                }">
                                     ${leave.status}
                                 </span>
                             </div>
-                            <p class="mb-1">${leave.start_date} to ${leave.end_date}</p>
-                            ${leave.reason ? `<small class="text-muted">Reason: ${leave.reason}</small>` : ''}
+                            <p class="mb-1">${leave.start_date} to ${
+                  leave.end_date
+                }</p>
+                            ${
+                              leave.reason
+                                ? `<small class="text-muted">Reason: ${leave.reason}</small>`
+                                : ""
+                            }
                         </div>
                         `;
-                    });
-                    
-                    html += `</div></div>`;
-                }
-                
-                html += `</div>`;
+              });
+
+              html += `</div></div>`;
             }
-            
-            $('#dayDetailsContent').html(html);
-        }).fail(function() {
-            $('#dayDetailsContent').html(`
+
+            html += `</div>`;
+          }
+
+          $("#dayDetailsContent").html(html);
+        }
+      ).fail(function () {
+        $("#dayDetailsContent").html(`
                 <div class="alert alert-danger">
                     <i class="fas fa-exclamation-triangle me-2"></i>
                     Failed to load day details. Please try again.
                 </div>
             `);
-        });
+      });
     });
-});
+  });
 </script>
 
 <style>
-.calendar-table {
+  .calendar-table {
     border-collapse: separate;
     border-spacing: 2px;
-}
+  }
 
-.calendar-day {
+  .calendar-day {
     height: 100px;
     vertical-align: top;
     cursor: pointer;
     transition: all 0.2s;
     position: relative;
     padding: 5px;
-}
+  }
 
-.calendar-day.empty {
+  .calendar-day.empty {
     background-color: #f9f9f9;
     cursor: default;
-}
+  }
 
-.calendar-day:hover:not(.empty) {
+  .calendar-day:hover:not(.empty) {
     background-color: #f0f7ff;
     transform: scale(1.02);
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     z-index: 1;
-}
+  }
 
-.today-cell {
+  .today-cell {
     background-color: #e3f2fd !important;
-    border: 2px solid #2196F3 !important;
-}
+    border: 2px solid #2196f3 !important;
+  }
 
-.day-header {
+  .day-header {
     margin-bottom: 5px;
-}
+  }
 
-.day-number {
+  .day-number {
     font-weight: bold;
     font-size: 1.1em;
-}
+  }
 
-.holiday-indicator {
+  .holiday-indicator {
     display: inline-block;
     width: 8px;
     height: 8px;
     background-color: #f44336;
     border-radius: 50%;
     margin-left: 3px;
-}
+  }
 
-.day-events {
+  .day-events {
     display: flex;
     flex-wrap: wrap;
     gap: 2px;
-}
+  }
 
-.event-badge {
+  .event-badge {
     width: 20px;
     height: 20px;
     border-radius: 50%;
@@ -368,31 +471,31 @@ $(document).ready(function() {
     font-size: 0.7em;
     font-weight: bold;
     color: white;
-}
+  }
 
-.past-day {
+  .past-day {
     opacity: 0.8;
-}
+  }
 
-.day-details .list-group-item {
+  .day-details .list-group-item {
     margin-bottom: 5px;
     border-radius: 5px;
-}
+  }
 
-@media (max-width: 768px) {
+  @media (max-width: 768px) {
     .calendar-day {
-        height: 70px;
+      height: 70px;
     }
-    
+
     .day-number {
-        font-size: 0.9em;
+      font-size: 0.9em;
     }
-    
+
     .event-badge {
-        width: 16px;
-        height: 16px;
-        font-size: 0.6em;
+      width: 16px;
+      height: 16px;
+      font-size: 0.6em;
     }
-}
+  }
 </style>
 {% endblock %}

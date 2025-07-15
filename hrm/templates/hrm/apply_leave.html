@@ -1,121 +1,127 @@
-{% extends 'hrm/base.html' %}
-
-{% block content %}
+{% extends 'hrm/base.html' %} {% block content %}
 <div class="container">
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card">
-                <div class="card-header">
-                    <h4>Apply Leave</h4>
-                </div>
-                <div class="card-body">
-                    <form method="post" id="leaveForm">
-                        {% csrf_token %}
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    {{ form.leave_type.label_tag }}
-                                    {{ form.leave_type }}
-                                    <div class="form-text">Select leave type</div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label>Available Days</label>
-                                    <div id="leaveQuotaInfo" class="alert alert-info p-2">
-                                        Select a leave type to see available quota
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    {{ form.start_date.label_tag }}
-                                    {{ form.start_date }}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    {{ form.end_date.label_tag }}
-                                    {{ form.end_date }}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-12">
-                                <div class="mb-3">
-                                    <label>Total Days: <span id="totalDays">1</span></label>
-                                    <div id="daysBreakdown" class="form-text"></div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            {{ form.reason.label_tag }}
-                            {{ form.reason }}
-                        </div>
-                        
-                        <button type="submit" class="btn btn-primary">Submit Leave Request</button>
-                        <a href="{% url 'leave_calendar' %}" class="btn btn-secondary">Cancel</a>
-                    </form>
-                </div>
-            </div>
+  <div class="row">
+    <div class="col-md-8 offset-md-2">
+      <div class="card">
+        <div class="card-header">
+          <h3>Apply Leave</h3>
         </div>
-    </div>
-</div>
-{% endblock %}
+        <div class="card-body">
+          <form method="post" id="leaveForm">
+            {% csrf_token %}
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  {{ form.leave_type.label_tag }} {{ form.leave_type }}
+                  <div class="form-text">Select leave type</div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label>Available Days</label>
+                  <div id="leaveQuotaInfo" class="alert alert-info p-2">
+                    Select a leave type to see available quota
+                  </div>
+                </div>
+              </div>
+            </div>
 
-{% block scripts %}
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  {{ form.start_date.label_tag }} {{ form.start_date }}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  {{ form.end_date.label_tag }} {{ form.end_date }}
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-12">
+                <div class="mb-3">
+                  <label>Total Days: <span id="totalDays">1</span></label>
+                  <div id="daysBreakdown" class="form-text"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              {{ form.reason.label_tag }} {{ form.reason }}
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+              Submit Leave Request
+            </button>
+            <a href="{% url 'leave_calendar' %}" class="btn btn-secondary"
+              >Cancel</a
+            >
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
 <script>
-$(document).ready(function() {
+  $(document).ready(function () {
     // Update leave quota info when leave type changes
-    $('#id_leave_type').change(function() {
-        const leaveTypeId = $(this).val();
-        if (!leaveTypeId) return;
-        
-        $.get(`{% url 'get_leave_quota' %}?leave_type_id=${leaveTypeId}`, function(data) {
-            if (data.error) {
-                $('#leaveQuotaInfo').html(`<div class="alert alert-danger">${data.error}</div>`);
-            } else {
-                $('#leaveQuotaInfo').html(`
+    $("#id_leave_type").change(function () {
+      const leaveTypeId = $(this).val();
+      if (!leaveTypeId) return;
+
+      $.get(
+        `{% url 'get_leave_quota' %}?leave_type_id=${leaveTypeId}`,
+        function (data) {
+          if (data.error) {
+            $("#leaveQuotaInfo").html(
+              `<div class="alert alert-danger">${data.error}</div>`
+            );
+          } else {
+            $("#leaveQuotaInfo").html(`
                     <strong>${data.leave_type}</strong><br>
                     Used: ${data.used} days<br>
                     Remaining: ${data.remaining} days<br>
                     Total Quota: ${data.total_quota} days
                 `);
-            }
-        });
+          }
+        }
+      );
     });
-    
+
     // Calculate days when dates change
-    $('#id_start_date, #id_end_date').change(function() {
-        const startDate = $('#id_start_date').val();
-        const endDate = $('#id_end_date').val();
-        
-        if (!startDate || !endDate) return;
-        
-        $.get(`{% url 'calculate_leave_days' %}?start_date=${startDate}&end_date=${endDate}`, function(data) {
-            if (data.error) {
-                $('#totalDays').text('1');
-                $('#daysBreakdown').html(`<div class="alert alert-danger">${data.error}</div>`);
-            } else {
-                $('#totalDays').text(data.working_days);
-                $('#daysBreakdown').html(`
+    $("#id_start_date, #id_end_date").change(function () {
+      const startDate = $("#id_start_date").val();
+      const endDate = $("#id_end_date").val();
+
+      if (!startDate || !endDate) return;
+
+      $.get(
+        `{% url 'calculate_leave_days' %}?start_date=${startDate}&end_date=${endDate}`,
+        function (data) {
+          if (data.error) {
+            $("#totalDays").text("1");
+            $("#daysBreakdown").html(
+              `<div class="alert alert-danger">${data.error}</div>`
+            );
+          } else {
+            $("#totalDays").text(data.working_days);
+            $("#daysBreakdown").html(`
                     Total calendar days: ${data.total_days}<br>
                     Holidays: ${data.holidays}<br>
                     Sundays: ${data.sundays}
                 `);
-            }
-        });
+          }
+        }
+      );
     });
-    
+
     // Trigger initial calculations if dates are pre-filled
-    if ($('#id_start_date').val() && $('#id_end_date').val()) {
-        $('#id_start_date').trigger('change');
+    if ($("#id_start_date").val() && $("#id_end_date").val()) {
+      $("#id_start_date").trigger("change");
     }
-});
+  });
 </script>
 {% endblock %}
