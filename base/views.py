@@ -2307,7 +2307,8 @@ def lead_list(request):
     if search_query:
         leads = leads.filter(
             Q(name__icontains=search_query) | 
-            Q(contact_info__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(mobile__icontains=search_query) |
             Q(source__icontains=search_query) |
             Q(lead_id__icontains=search_query)
         )
