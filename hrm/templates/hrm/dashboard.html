@@ -1,23 +1,22 @@
 {% extends 'hrm/base.html' %} {% block content %}
 <div class="dashboard-container">
   <div class="row g-4">
-    <!-- Main Content -->
     <div class="col-xl-8 col-lg-7">
-      <!-- Welcome Card -->
       <div class="welcome-card mb-4">
         <div class="welcome-content">
           <div class="welcome-info">
             <h2 class="welcome-name">
-              Welcome, {{ employee.user.get_full_name }}
+              Human Resource Management system
             </h2>
-            <p class="welcome-role">
+            <!-- <p class="welcome-role">
               <span class="role-badge">{{ employee.designation }}</span>
               <span class="department-text"
                 >{{ employee.department.name }}</span
               >
-            </p>
+              <span class="role-badge">{{ employee.user.get_full_name }}</span>
+            </p> -->
           </div>
-          <div class="welcome-avatar">
+          <!-- <div class="welcome-avatar">
             <div class="avatar-container">
               <img
                 src="https://via.placeholder.com/80"
@@ -26,7 +25,7 @@
               />
               <div class="avatar-status"></div>
             </div>
-          </div>
+          </div> -->
         </div>
       </div>
 
