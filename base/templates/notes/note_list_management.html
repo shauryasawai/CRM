@@ -815,168 +815,146 @@
             background-color: var(--light-bg) !important;
         }
     </style>
-    {% endblock %}
-    {% block content %}
-    <div class="container-fluid">
-        <!-- Modern Header -->
-        <!-- <div class="row">
-            <div class="col-12">
-                <nav class="navbar navbar-expand-lg modern-navbar">
-                    <div class="container-fluid">
-                        <a class="navbar-brand" href="{% url 'notes_dashboard' %}">
-                            <i class="fas fa-folder-open"></i>
-                            Manage Note Lists
-                        </a>
-                        <div class="navbar-nav ms-auto">
-                            <a class="nav-link" href="{% url 'notes_dashboard' %}">
-                                <i class="fas fa-arrow-left"></i>
-                                Back to Notes
-                            </a>
-                            <a class="nav-link" href="{% url 'dashboard' %}">
-                                <i class="fas fa-home"></i>
-                                Dashboard
-                            </a>
-                        </div>
-                    </div>
-                </nav>
-            </div>
-        </div> -->
+{% endblock %}
 
-        <div class="container list-container">
-            <!-- Page Header -->
-            <div class="row">
-                <div class="col-12">
-                    <div class="page-header">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h2>
-                                    <i class="fas fa-folder-open"></i>
-                                    My Note Lists
-                                </h2>
-                                <p>Organize your notes into custom lists by topic or project</p>
-                            </div>
-                            <div>
-                                <a href="{% url 'note_list_create' %}" class="modern-btn btn-primary">
-                                    <i class="fas fa-plus"></i>
-                                    Create New List
-                                </a>
-                            </div>
+{% block content %}
+<div class="container-fluid">
+    <div class="container list-container">
+        <!-- Page Header -->
+        <div class="row">
+            <div class="col-12">
+                <div class="page-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2>
+                                <i class="fas fa-folder-open"></i>
+                                My Note Lists
+                            </h2>
+                            <p>Organize your notes into custom lists by topic or project</p>
+                        </div>
+                        <div>
+                            <a href="{% url 'note_list_create' %}" class="modern-btn btn-primary">
+                                <i class="fas fa-plus"></i>
+                                Create New List
+                            </a>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Note Lists -->
-            {% if note_lists %}
+        <!-- Note Lists -->
+        {% if note_lists %}
             <div class="row g-4">
                 {% for note_list in note_lists %}
-                <div class="col-md-6 col-lg-4">
-                    <div class="list-card {% if note_list.name == 'General' %}default-list{% elif 'Project' in note_list.name %}project-list{% elif 'Personal' in note_list.name %}personal-list{% endif %}">
-                        <div class="list-header">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div class="flex-grow-1">
-                                    <h5>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="list-card {% if note_list.name == 'General' %}default-list{% elif 'Project' in note_list.name %}project-list{% elif 'Personal' in note_list.name %}personal-list{% endif %}">
+                            <div class="list-header">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h5>
+                                            {% if note_list.name == 'General' %}
+                                                <i class="fas fa-star"></i>
+                                            {% else %}
+                                                <i class="fas fa-folder"></i>
+                                            {% endif %}
+                                            {{ note_list.name }}
+                                        </h5>
                                         {% if note_list.name == 'General' %}
-                                            <i class="fas fa-star"></i>
-                                        {% else %}
-                                            <i class="fas fa-folder"></i>
+                                            <span class="default-badge">Default List</span>
                                         {% endif %}
-                                        {{ note_list.name }}
-                                    </h5>
-                                    {% if note_list.name == 'General' %}
-                                        <span class="default-badge">Default List</span>
-                                    {% endif %}
+                                    </div>
+                                    <span class="note-count">
+                                        {{ note_list.notes.count }} notes
+                                    </span>
                                 </div>
-                                <span class="note-count">
-                                    {{ note_list.notes.count }} notes
-                                </span>
                             </div>
-                        </div>
-                        
-                        <div class="modern-card-body">
-                            {% if note_list.description %}
-                                <p class="card-text">{{ note_list.description|truncatechars:100 }}</p>
-                            {% else %}
-                                <p class="card-text">No description provided</p>
-                            {% endif %}
                             
-                            <!-- List Statistics -->
-                            <div class="stats-row">
-                                <div class="row text-center">
-                                    <div class="col-4">
-                                        <div class="stat-item">
-                                            <div class="stat-label">Total</div>
-                                            <div class="stat-value">{{ note_list.notes.count }}</div>
+                            <div class="modern-card-body">
+                                {% if note_list.description %}
+                                    <p class="card-text">{{ note_list.description|truncatechars:100 }}</p>
+                                {% else %}
+                                    <p class="card-text">No description provided</p>
+                                {% endif %}
+                                
+                                <!-- List Statistics -->
+                                <div class="stats-row">
+                                    <div class="row text-center">
+                                        <div class="col-4">
+                                            <div class="stat-item">
+                                                <div class="stat-label">Total</div>
+                                                <div class="stat-value">{{ note_list.notes.count }}</div>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="col-4">
-                                        <div class="stat-item">
-                                            <div class="stat-label">Pending</div>
-                                            <div class="stat-value text-warning">{{ note_list.pending_count|default:0 }}</div>
+                                        <div class="col-4">
+                                            <div class="stat-item">
+                                                <div class="stat-label">Pending</div>
+                                                <div class="stat-value text-warning">{{ note_list.pending_count|default:0 }}</div>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="col-4">
-                                        <div class="stat-item">
-                                            <div class="stat-label">Done</div>
-                                            <div class="stat-value text-success">{{ note_list.completed_count|default:0 }}</div>
+                                        <div class="col-4">
+                                            <div class="stat-item">
+                                                <div class="stat-label">Done</div>
+                                                <div class="stat-value text-success">{{ note_list.completed_count|default:0 }}</div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- Recent Notes Preview -->
-                            {% if note_list.notes.exists %}
-                            <div class="recent-notes">
-                                <h6>Recent Notes:</h6>
-                                {% for note in note_list.notes.all|slice:":3" %}
-                                <div class="note-preview d-flex align-items-center">
-                                    {% if note.is_completed %}
-                                        <i class="fas fa-check-circle me-3"></i>
-                                    {% else %}
-                                        <i class="fas fa-circle me-3" style="font-size: 0.5rem;"></i>
-                                    {% endif %}
-                                    <small class="text-truncate flex-grow-1">
-                                        <a href="{% url 'note_detail' note.pk %}">
-                                            {{ note.heading|truncatechars:30 }}
-                                        </a>
-                                    </small>
-                                </div>
-                                {% endfor %}
-                                {% if note_list.notes.count > 3 %}
-                                    <small class="text-muted" style="margin-left: 2rem;">
-                                        and {{ note_list.notes.count|add:"-3" }} more...
-                                    </small>
+                                <!-- Recent Notes Preview -->
+                                {% if note_list.notes.exists %}
+                                    <div class="recent-notes">
+                                        <h6>Recent Notes:</h6>
+                                        {% for note in note_list.notes.all|slice:":3" %}
+                                            <div class="note-preview d-flex align-items-center">
+                                                {% if note.is_completed %}
+                                                    <i class="fas fa-check-circle me-3"></i>
+                                                {% else %}
+                                                    <i class="fas fa-circle me-3" style="font-size: 0.5rem;"></i>
+                                                {% endif %}
+                                                <small class="text-truncate flex-grow-1">
+                                                    <a href="{% url 'note_detail' note.pk %}">
+                                                        {{ note.heading|truncatechars:30 }}
+                                                    </a>
+                                                </small>
+                                            </div>
+                                        {% endfor %}
+                                        {% if note_list.notes.count > 3 %}
+                                            <small class="text-muted" style="margin-left: 2rem;">
+                                                and {{ note_list.notes.count|add:"-3" }} more...
+                                            </small>
+                                        {% endif %}
+                                    </div>
                                 {% endif %}
                             </div>
-                        </div>
-                        
-                        <div class="modern-card-footer">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-muted">
-                                    <i class="fas fa-clock"></i>
-                                    Updated {{ note_list.updated_at|timesince }} ago
-                                </small>
-                                <div class="action-buttons">
-                                    <a href="{% url 'note_list' %}?list={{ note_list.id }}" 
-                                       class="action-btn btn-view" title="View Notes">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    <a href="{% url 'note_list_update' note_list.pk %}" 
-                                       class="action-btn btn-edit" title="Edit List">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    {% if note_list.name != 'General' %}
-                                    <button type="button" class="action-btn btn-delete" 
-                                            onclick="confirmDelete('{{ note_list.pk }}', '{{ note_list.name }}')" 
-                                            title="Delete List">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                    {% endif %}
+                            
+                            <div class="modern-card-footer">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock"></i>
+                                        Updated {{ note_list.updated_at|timesince }} ago
+                                    </small>
+                                    <div class="action-buttons">
+                                        <a href="{% url 'note_list' %}?list={{ note_list.id }}" 
+                                           class="action-btn btn-view" title="View Notes">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'note_list_update' note_list.pk %}" 
+                                           class="action-btn btn-edit" title="Edit List">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        {% if note_list.name != 'General' %}
+                                            <button type="button" class="action-btn btn-delete" 
+                                                    onclick="confirmDelete('{{ note_list.pk }}', '{{ note_list.name }}')" 
+                                                    title="Delete List">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
                 {% endfor %}
             </div>
             
@@ -1020,7 +998,7 @@
                 </div>
             </div>
 
-            {% else %}
+        {% else %}
             <!-- Empty State -->
             <div class="row">
                 <div class="col-12">
@@ -1041,53 +1019,52 @@
                     </div>
                 </div>
             </div>
-            {% endif %}
+        {% endif %}
 
-            <!-- Tips Section -->
-            <div class="row">
-                <div class="col-12">
-                    <div class="tips-card">
-                        <div class="tips-header">
-                            <i class="fas fa-lightbulb"></i>
-                            Pro Tips for Organizing Notes
-                        </div>
-                        <div class="p-4">
-                            <div class="row g-3">
-                                <div class="col-md-3">
-                                    <div class="tip-item">
-                                        <h6>
-                                            <i class="fas fa-project-diagram"></i>
-                                            Project-Based
-                                        </h6>
-                                        <p>Create lists for different projects or clients you're working on to keep everything organized.</p>
-                                    </div>
+        <!-- Tips Section -->
+        <div class="row">
+            <div class="col-12">
+                <div class="tips-card">
+                    <div class="tips-header">
+                        <i class="fas fa-lightbulb"></i>
+                        Pro Tips for Organizing Notes
+                    </div>
+                    <div class="p-4">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <div class="tip-item">
+                                    <h6>
+                                        <i class="fas fa-project-diagram"></i>
+                                        Project-Based
+                                    </h6>
+                                    <p>Create lists for different projects or clients you're working on to keep everything organized.</p>
                                 </div>
-                                <div class="col-md-3">
-                                    <div class="tip-item">
-                                        <h6>
-                                            <i class="fas fa-tags"></i>
-                                            Topic-Based
-                                        </h6>
-                                        <p>Organize by topics like "Meeting Notes", "Ideas", "To-Do Items" for quick reference.</p>
-                                    </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="tip-item">
+                                    <h6>
+                                        <i class="fas fa-tags"></i>
+                                        Topic-Based
+                                    </h6>
+                                    <p>Organize by topics like "Meeting Notes", "Ideas", "To-Do Items" for quick reference.</p>
                                 </div>
-                                <div class="col-md-3">
-                                    <div class="tip-item">
-                                        <h6>
-                                            <i class="fas fa-calendar"></i>
-                                            Time-Based
-                                        </h6>
-                                        <p>Create monthly or quarterly lists to track time-sensitive notes and deadlines.</p>
-                                    </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="tip-item">
+                                    <h6>
+                                        <i class="fas fa-calendar"></i>
+                                        Time-Based
+                                    </h6>
+                                    <p>Create monthly or quarterly lists to track time-sensitive notes and deadlines.</p>
                                 </div>
-                                <div class="col-md-3">
-                                    <div class="tip-item">
-                                        <h6>
-                                            <i class="fas fa-star"></i>
-                                            Priority-Based
-                                        </h6>
-                                        <p>Use lists like "Urgent", "Important", "Later" for effective priority management.</p>
-                                    </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="tip-item">
+                                    <h6>
+                                        <i class="fas fa-star"></i>
+                                        Priority-Based
+                                    </h6>
+                                    <p>Use lists like "Urgent", "Important", "Later" for effective priority management.</p>
                                 </div>
                             </div>
                         </div>
@@ -1096,41 +1073,43 @@
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Delete Confirmation Modal -->
-    <div class="modal-overlay" id="deleteModalOverlay">
-        <div class="modal-container">
-            <div class="modal-header">
-                <div class="modal-icon">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <h3>Delete List</h3>
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="deleteModalOverlay">
+    <div class="modal-container">
+        <div class="modal-header">
+            <div class="modal-icon">
+                <i class="fas fa-exclamation-triangle"></i>
             </div>
-            
-            <div class="modal-body">
-                <p class="modal-text">
-                    Are you sure you want to delete the list 
-                    <strong id="listNameToDelete"></strong>?
-                </p>
-                <div class="modal-warning">
-                    <i class="fas fa-info-circle"></i>
-                    <span>All notes in this list will also be permanently deleted. This action cannot be undone.</span>
-                </div>
-            </div>
-            
-            <div class="modal-footer">
-                <button type="button" class="modal-btn cancel-btn" onclick="closeDeleteModal()">
-                    <i class="fas fa-times"></i>
-                    Cancel
-                </button>
-                <a href="#" id="confirmDeleteBtn" class="modal-btn delete-btn">
-                    <i class="fas fa-trash"></i>
-                    Delete List
-                </a>
+            <h3>Delete List</h3>
+        </div>
+        
+        <div class="modal-body">
+            <p class="modal-text">
+                Are you sure you want to delete the list 
+                <strong id="listNameToDelete"></strong>?
+            </p>
+            <div class="modal-warning">
+                <i class="fas fa-info-circle"></i>
+                <span>All notes in this list will also be permanently deleted. This action cannot be undone.</span>
             </div>
         </div>
+        
+        <div class="modal-footer">
+            <button type="button" class="modal-btn cancel-btn" onclick="closeDeleteModal()">
+                <i class="fas fa-times"></i>
+                Cancel
+            </button>
+            <a href="#" id="confirmDeleteBtn" class="modal-btn delete-btn">
+                <i class="fas fa-trash"></i>
+                Delete List
+            </a>
+        </div>
     </div>
+</div>
 {% endblock %}
+
 {% block extra_js %}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>

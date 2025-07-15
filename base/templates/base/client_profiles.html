@@ -54,29 +54,203 @@
     z-index: 1;
 }
 
-.btn-add-client {
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: #FFFFFF;
-    font-weight: 600;
+/* Uniform Button System */
+.btn-uniform {
     padding: 0.75rem 1.5rem;
     border-radius: 8px;
-    backdrop-filter: blur(10px);
+    font-weight: 600;
+    font-size: 0.875rem;
+    border: none;
+    cursor: pointer;
     transition: all 0.3s ease;
-    display: flex;
+    display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.5rem;
     text-decoration: none;
+    white-space: nowrap;
+    min-width: 120px;
+    height: 42px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     position: relative;
-    z-index: 1;
+    overflow: hidden;
 }
 
-.btn-add-client:hover {
+.btn-uniform::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.btn-uniform:hover::before {
+    left: 100%;
+}
+
+.btn-uniform:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.btn-uniform:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Button Variants */
+.btn-primary {
+    background: linear-gradient(135deg, #1C64FF, #1557e6);
+    color: #FFFFFF;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #1557e6, #1348d1);
+    color: #FFFFFF;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #198754, #157347);
+    color: #FFFFFF;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #157347, #0f5132);
+    color: #FFFFFF;
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #ffc107, #ffb300);
+    color: #000000;
+}
+
+.btn-warning:hover {
+    background: linear-gradient(135deg, #ffb300, #ffa000);
+    color: #000000;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #dc3545, #bb2d3b);
+    color: #FFFFFF;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #bb2d3b, #a02834);
+    color: #FFFFFF;
+}
+
+.btn-info {
+    background: linear-gradient(135deg, #0dcaf0, #0bb5d6);
+    color: #FFFFFF;
+}
+
+.btn-info:hover {
+    background: linear-gradient(135deg, #0bb5d6, #0a9bb8);
+    color: #FFFFFF;
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #6c757d, #5a6268);
+    color: #FFFFFF;
+}
+
+.btn-secondary:hover {
+    background: linear-gradient(135deg, #5a6268, #545b62);
+    color: #FFFFFF;
+}
+
+.btn-outline {
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: #FFFFFF;
+    backdrop-filter: blur(10px);
+}
+
+.btn-outline:hover {
     background: rgba(255, 255, 255, 0.3);
     border-color: rgba(255, 255, 255, 0.5);
     color: #FFFFFF;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+}
+
+.btn-light {
+    background: #FFFFFF;
+    border: 2px solid #D9D9D9;
+    color: #333333;
+}
+
+.btn-light:hover {
+    background: #f8f9fa;
+    border-color: #1C64FF;
+    color: #1C64FF;
+}
+
+/* Button Groups */
+.btn-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.btn-group-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+/* Action Button Grid */
+.action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.5rem;
+    align-items: center;
+    width: 100%;
+}
+
+/* Mini Action Buttons */
+.btn-mini {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    padding: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-mini:hover {
+    transform: translateY(-2px) scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.btn-mini i {
+    color: inherit;
+}
+
+/* Responsive Button Sizes */
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
+    min-width: 100px;
+    height: 36px;
+}
+
+.btn-lg {
+    padding: 1rem 2rem;
+    font-size: 1rem;
+    min-width: 140px;
+    height: 48px;
 }
 
 .stats-grid {
@@ -204,6 +378,7 @@
     border-radius: 8px;
     font-size: 0.95rem;
     transition: all 0.3s ease;
+    height: 42px;
 }
 
 .form-control:focus, .form-select:focus {
@@ -222,49 +397,6 @@
     color: #696969;
 }
 
-.btn-search {
-    background: linear-gradient(135deg, #1C64FF, #1557e6);
-    border: none;
-    color: #FFFFFF;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    box-shadow: 0 4px 12px rgba(28, 100, 255, 0.3);
-}
-
-.btn-search:hover {
-    background: linear-gradient(135deg, #1557e6, #1348d1);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(28, 100, 255, 0.4);
-    color: #FFFFFF;
-}
-
-.btn-clear {
-    background: #FFFFFF;
-    border: 2px solid #696969;
-    color: #696969;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    text-decoration: none;
-}
-
-.btn-clear:hover {
-    background: #696969;
-    border-color: #696969;
-    color: #FFFFFF;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(105, 105, 105, 0.3);
-}
-
 .table-container {
     background: #FFFFFF;
     border: 1px solid #D9D9D9;
@@ -280,9 +412,10 @@
 }
 
 .modern-table {
-    width: 50%;
+    width: 100%;
     margin: 0;
     background: transparent;
+    table-layout: fixed;
 }
 
 .modern-table thead {
@@ -306,6 +439,7 @@
     border: none;
     border-bottom: 1px solid #D9D9D9;
     vertical-align: middle;
+    word-wrap: break-word;
 }
 
 .modern-table tbody tr {
@@ -492,77 +626,6 @@
     100% { transform: scale(1); }
 }
 
-.action-group {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    align-items: center;
-}
-
-.action-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-    text-decoration: none;
-}
-
-.action-btn:hover {
-    transform: translateY(-2px) scale(1.1);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-}
-
-.action-btn i {
-    color: #FFFFFF;
-    font-size: 0.9rem;
-}
-
-.btn-view {
-    background: linear-gradient(135deg, #0dcaf0, #0bb5d6);
-}
-
-.btn-edit {
-    background: linear-gradient(135deg, #ffc107, #ffb300);
-}
-
-.btn-interactions {
-    background: linear-gradient(135deg, #dc3545, #bb2d3b);
-}
-
-.btn-add-interaction {
-    background: linear-gradient(135deg, #198754, #157347);
-}
-
-.btn-convert {
-    background: linear-gradient(135deg, #6f42c1, #5a2d91);
-    color: #FFFFFF;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-weight: 600;
-    font-size: 0.8rem;
-    transition: all 0.3s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-    width: auto;
-    height: auto;
-    text-decoration: none;
-}
-
-.btn-convert:hover {
-    background: linear-gradient(135deg, #5a2d91, #4a2577);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(111, 66, 193, 0.3);
-    color: #FFFFFF;
-}
-
 .empty-state {
     text-align: center;
     padding: 4rem 2rem;
@@ -722,6 +785,23 @@
     }
 }
 
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .action-grid {
+        grid-template-columns: 1fr;
+        gap: 0.25rem;
+    }
+    
+    .btn-group {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn-group .btn-uniform {
+        width: 100%;
+    }
+}
+
 @media (max-width: 768px) {
     .profiles-container {
         padding: 1rem 0;
@@ -749,10 +829,6 @@
         overflow-x: auto;
     }
     
-    .action-group {
-        justify-content: center;
-    }
-    
     .interaction-stats {
         flex-direction: column;
         align-items: flex-start;
@@ -765,11 +841,41 @@
         font-size: 0.85rem;
     }
     
-    .btn-search,
-    .btn-clear {
+    .btn-group {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .btn-uniform {
         width: 100%;
-        justify-content: center;
-        margin-bottom: 0.5rem;
+        min-width: auto;
+    }
+    
+    .action-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .btn-mini {
+        width: 100%;
+        height: 36px;
+        border-radius: 8px;
+        min-width: 100px;
+    }
+}
+
+@media (max-width: 480px) {
+    .btn-uniform {
+        padding: 0.5rem 1rem;
+        font-size: 0.75rem;
+        min-width: 100px;
+        height: 36px;
+    }
+    
+    .btn-mini {
+        width: 100%;
+        height: 32px;
+        border-radius: 6px;
+        font-size: 0.75rem;
     }
 }
 </style>
@@ -783,7 +889,7 @@
             <div class="d-flex justify-content-between align-items-center">
                 <h1 class="profiles-title">Client Profiles & Interactions</h1>
                 {% if can_create %}
-                    <a href="{% url 'client_profile_create' %}" class="btn-add-client">
+                    <a href="{% url 'client_profile_create' %}" class="btn-uniform btn-outline">
                         <i class="fas fa-plus"></i> Add New Client
                     </a>
                 {% endif %}
@@ -871,14 +977,14 @@
                         </div>
                     </div>
                     {% endif %}
-                    <div class="col-md-2">
+                    <div class="col-md-1">
                         <div class="mb-3">
                             <label class="form-label">&nbsp;</label>
-                            <div class="d-flex gap-2">
-                                <button type="submit" class="btn-search">
+                            <div class="btn-group-vertical">
+                                <button type="submit" class="btn-uniform btn-primary">
                                     <i class="fas fa-search"></i> Search
                                 </button>
-                                <a href="{% url 'client_profile_list' %}" class="btn-clear">
+                                <a href="{% url 'client_profile_list' %}" class="btn-uniform btn-light">
                                     <i class="fas fa-times"></i> Clear
                                 </a>
                             </div>
@@ -889,76 +995,74 @@
         </div>
 
         <!-- Client Profiles Table -->
-        <div class="table-container slide-up overflow-x-auto">
-            <div class="min-w-[1200px] w-full">
-                <table class="modern-table w-full table-auto">
-
-                <thead>
-                    <tr>
-                        <th class="min-w-[160px] md:w-[200px] whitespace-nowrap">Client Name</th>
-                        <th class="min-w-[160px] md:w-[200px] whitespace-nowrap">Contact Info</th>
-                        <th class="min-w-[160px] md:w-[200px] whitespace-nowrap">Assigned Personnel</th>
-                        <th class="min-w-[160px] md:w-[200px] whitespace-nowrap">Status</th>
-                        <th class="min-w-[160px] md:w-[200px] whitespace-nowrap">Interaction Summary</th>
-                        <th class="min-w-[160px] md:w-[200px] whitespace-nowrap">Last Contact</th>
-                        <th class="min-w-[160px] md:w-[200px] whitespace-nowrap">Follow-ups</th>
-                        <th class="min-w-[160px] md:w-[200px] whitespace-nowrap">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for profile in client_profiles %}
-                    <tr>
-                        <td class="min-w-[160px] md:w-[200px]">
-                            <div>
-                                <div class="client-name">{{ profile.client_full_name }}</div>
-                                <div class="client-id">ID: {{ profile.client_id }}</div>
-                                {% if profile.family_head_name %}
-                                    <div class="client-id">Family Head: {{ profile.family_head_name }}</div>
-                                {% endif %}
-                            </div>
-                        </td>
-                        <td class="min-w-[160px] md:w-[200px]">
-                            <div class="contact-info">
-                                <div><strong>Email:</strong> {{ profile.email|default:'-' }}</div>
-                                <div><strong>Mobile:</strong> {{ profile.mobile_number|default:'-' }}</div>
-                                <div><strong>PAN:</strong> {{ profile.pan_number|default:'-' }}</div>
-                            </div>
-                        </td>
-                        <td class="min-w-[160px] md:w-[200px]">
-                            <div>
+        <div class="table-container slide-up">
+            <div class="table-responsive">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 15%;">Client Name</th>
+                            <th style="width: 15%;">Contact Info</th>
+                            <th style="width: 12%;">Assigned Personnel</th>
+                            <th style="width: 10%;">Status</th>
+                            <th style="width: 15%;">Interaction Summary</th>
+                            <th style="width: 12%;">Last Contact</th>
+                            <th style="width: 10%;">Follow-ups</th>
+                            <th style="width: 11%;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for profile in client_profiles %}
+                        <tr>
+                            <td>
                                 <div>
-                                    <strong>RM:</strong> 
-                                    {% if profile.mapped_rm %}
-                                        {{ profile.mapped_rm.get_full_name }}
-                                    {% else %}
-                                        <span style="color: #696969;">Not Assigned</span>
+                                    <div class="client-name">{{ profile.client_full_name }}</div>
+                                    <div class="client-id">ID: {{ profile.client_id }}</div>
+                                    {% if profile.family_head_name %}
+                                        <div class="client-id">Family Head: {{ profile.family_head_name }}</div>
                                     {% endif %}
                                 </div>
-                                <div>
-                                    <strong>Ops:</strong>
-                                    {% if profile.mapped_ops_exec %}
-                                        {{ profile.mapped_ops_exec.get_full_name }}
-                                    {% else %}
-                                        <span style="color: #696969;">Not Assigned</span>
-                                    {% endif %}
+                            </td>
+                            <td>
+                                <div class="contact-info">
+                                    <div><strong>Email:</strong> {{ profile.email|default:'-' }}</div>
+                                    <div><strong>Mobile:</strong> {{ profile.mobile_number|default:'-' }}</div>
+                                    <div><strong>PAN:</strong> {{ profile.pan_number|default:'-' }}</div>
                                 </div>
-                            </div>
-                        </td>
-                        <td class="min-w-[160px] md:w-[200px]">
-                            <div>
-                                {% if profile.status == 'active' %}
-                                    <span class="status-badge badge-success">
-                                        <i class="fas fa-check"></i> Active
-                                    </span>
-                                {% elif profile.status == 'muted' %}
-                                    <span class="status-badge badge-warning">
-                                        <i class="fas fa-volume-mute"></i> Muted
-                                    </span>
-                                {% else %}
-                                    <span class="status-badge badge-secondary">{{ profile.status|title }}</span>
-                                {% endif %}
-                                
+                            </td>
+                            <td>
                                 <div>
+                                    <div>
+                                        <strong>RM:</strong> 
+                                        {% if profile.mapped_rm %}
+                                            {{ profile.mapped_rm.get_full_name }}
+                                        {% else %}
+                                            <span style="color: #696969;">Not Assigned</span>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <strong>Ops:</strong>
+                                        {% if profile.mapped_ops_exec %}
+                                            {{ profile.mapped_ops_exec.get_full_name }}
+                                        {% else %}
+                                            <span style="color: #696969;">Not Assigned</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="btn-group-vertical">
+                                    {% if profile.status == 'active' %}
+                                        <span class="status-badge badge-success">
+                                            <i class="fas fa-check"></i> Active
+                                        </span>
+                                    {% elif profile.status == 'muted' %}
+                                        <span class="status-badge badge-warning">
+                                            <i class="fas fa-volume-mute"></i> Muted
+                                        </span>
+                                    {% else %}
+                                        <span class="status-badge badge-secondary">{{ profile.status|title }}</span>
+                                    {% endif %}
+                                    
                                     {% if profile.legacy_client %}
                                         <span class="status-badge badge-primary">
                                             <i class="fas fa-check-circle"></i> Full Client
@@ -969,135 +1073,136 @@
                                         </span>
                                     {% endif %}
                                 </div>
-                            </div>
-                        </td>
-                        <td class="min-w-[160px] md:w-[200px]">
-                            {% if profile.interaction_count %}
-                                <div class="interaction-summary {% if profile.interaction_count > 10 %}good{% elif profile.interaction_count > 3 %}warning{% else %}danger{% endif %}">
-                                    <div class="interaction-stats">
-                                        <div class="interaction-stat">
-                                            <i class="fas fa-comments"></i>
-                                            <span>{{ profile.interaction_count }} total</span>
+                            </td>
+                            <td>
+                                {% if profile.interaction_count %}
+                                    <div class="interaction-summary {% if profile.interaction_count > 10 %}good{% elif profile.interaction_count > 3 %}warning{% else %}danger{% endif %}">
+                                        <div class="interaction-stats">
+                                            <div class="interaction-stat">
+                                                <i class="fas fa-comments"></i>
+                                                <span>{{ profile.interaction_count }} total</span>
+                                            </div>
+                                            {% if profile.recent_interactions_count %}
+                                                <div class="interaction-stat">
+                                                    <i class="fas fa-calendar-week"></i>
+                                                    <span>{{ profile.recent_interactions_count }} this month</span>
+                                                </div>
+                                            {% endif %}
+                                            {% if profile.high_priority_count %}
+                                                <div class="interaction-stat">
+                                                    <i class="fas fa-exclamation-triangle"></i>
+                                                    <span>{{ profile.high_priority_count }} high priority</span>
+                                                </div>
+                                            {% endif %}
                                         </div>
-                                        {% if profile.recent_interactions_count %}
-                                            <div class="interaction-stat">
-                                                <i class="fas fa-calendar-week"></i>
-                                                <span>{{ profile.recent_interactions_count }} this month</span>
-                                            </div>
-                                        {% endif %}
-                                        {% if profile.high_priority_count %}
-                                            <div class="interaction-stat">
-                                                <i class="fas fa-exclamation-triangle"></i>
-                                                <span>{{ profile.high_priority_count }} high priority</span>
-                                            </div>
-                                        {% endif %}
                                     </div>
-                                </div>
-                            {% else %}
-                                <div class="interaction-summary danger">
-                                    <div style="text-align: center; color: #696969;">
-                                        <i class="fas fa-comment-slash" style="margin-bottom: 0.5rem; display: block;"></i>
-                                        No interactions recorded
+                                {% else %}
+                                    <div class="interaction-summary danger">
+                                        <div style="text-align: center; color: #696969;">
+                                            <i class="fas fa-comment-slash" style="margin-bottom: 0.5rem; display: block;"></i>
+                                            No interactions recorded
+                                        </div>
                                     </div>
-                                </div>
-                            {% endif %}
-                        </td>
-                        <td class="min-w-[160px] md:w-[200px]">
-                            {% if profile.last_interaction_date %}
-                                {% with days_since=profile.days_since_last_interaction %}
-                                    {% if days_since == 0 %}
-                                        <span class="contact-indicator contact-recent">Today</span>
-                                    {% elif days_since <= 7 %}
-                                        <span class="contact-indicator contact-recent">{{ days_since }} day{{ days_since|pluralize }} ago</span>
-                                    {% elif days_since <= 30 %}
-                                        <span class="contact-indicator contact-moderate">{{ days_since }} day{{ days_since|pluralize }} ago</span>
-                                    {% else %}
-                                        <span class="contact-indicator contact-old">{{ days_since }} day{{ days_since|pluralize }} ago</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if profile.last_interaction_date %}
+                                    {% with days_since=profile.days_since_last_interaction %}
+                                        {% if days_since == 0 %}
+                                            <span class="contact-indicator contact-recent">Today</span>
+                                        {% elif days_since <= 7 %}
+                                            <span class="contact-indicator contact-recent">{{ days_since }} day{{ days_since|pluralize }} ago</span>
+                                        {% elif days_since <= 30 %}
+                                            <span class="contact-indicator contact-moderate">{{ days_since }} day{{ days_since|pluralize }} ago</span>
+                                        {% else %}
+                                            <span class="contact-indicator contact-old">{{ days_since }} day{{ days_since|pluralize }} ago</span>
+                                        {% endif %}
+                                    {% endwith %}
+                                    <div style="font-size: 0.75rem; color: #696969; margin-top: 0.25rem;">
+                                        {{ profile.last_interaction_type|default:"Contact" }} - {{ profile.last_interaction_date|date:"M d, Y" }}
+                                    </div>
+                                {% else %}
+                                    <span class="contact-indicator contact-never">Never contacted</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if profile.overdue_followups %}
+                                    <span class="followup-badge badge-danger">
+                                        <i class="fas fa-exclamation-triangle"></i> 
+                                        {{ profile.overdue_followups }} overdue
+                                    </span>
+                                {% elif profile.due_today_followups %}
+                                    <span class="followup-badge badge-warning">
+                                        <i class="fas fa-clock"></i> 
+                                        {{ profile.due_today_followups }} due today
+                                    </span>
+                                {% elif profile.upcoming_followups %}
+                                    <span class="followup-badge badge-info">
+                                        <i class="fas fa-calendar-check"></i> 
+                                        {{ profile.upcoming_followups }} upcoming
+                                    </span>
+                                {% else %}
+                                    <span class="followup-badge badge-success">
+                                        <i class="fas fa-check"></i> Up to date
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="action-grid">
+                                    <a href="{% url 'client_profile_detail' profile.pk %}" 
+                                       class="btn-mini btn-info" title="View Profile">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    
+                                    <a href="{% url 'client_interaction_list' profile.pk %}" 
+                                       class="btn-mini btn-danger" title="View Interactions">
+                                        <i class="fas fa-comments"></i>
+                                    </a>
+                                    
+                                    {% if user.role == 'rm' and profile.mapped_rm == user %}
+                                        <a href="{% url 'client_interaction_create' profile.pk %}" 
+                                           class="btn-mini btn-success" title="Add Interaction">
+                                            <i class="fas fa-plus"></i>
+                                        </a>
                                     {% endif %}
-                                {% endwith %}
-                                <div style="font-size: 0.75rem; color: #696969; margin-top: 0.25rem;">
-                                    {{ profile.last_interaction_type|default:"Contact" }} - {{ profile.last_interaction_date|date:"M d, Y" }}
+                                    
+                                    {% if can_modify %}
+                                        <a href="{% url 'client_profile_update' profile.pk %}" 
+                                           class="btn-mini btn-warning" title="Edit Profile">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    {% endif %}
                                 </div>
-                            {% else %}
-                                <span class="contact-indicator contact-never">Never contacted</span>
-                            {% endif %}
-                        </td>
-                        <td class="min-w-[160px] md:w-[200px]">
-                            {% if profile.overdue_followups %}
-                                <span class="followup-badge badge-danger">
-                                    <i class="fas fa-exclamation-triangle"></i> 
-                                    {{ profile.overdue_followups }} overdue
-                                </span>
-                            {% elif profile.due_today_followups %}
-                                <span class="followup-badge badge-warning">
-                                    <i class="fas fa-clock"></i> 
-                                    {{ profile.due_today_followups }} due today
-                                </span>
-                            {% elif profile.upcoming_followups %}
-                                <span class="followup-badge badge-info">
-                                    <i class="fas fa-calendar-check"></i> 
-                                    {{ profile.upcoming_followups }} upcoming
-                                </span>
-                            {% else %}
-                                <span class="followup-badge badge-success">
-                                    <i class="fas fa-check"></i> Up to date
-                                </span>
-                            {% endif %}
-                        </td>
-                        <td class="min-w-[160px] md:w-[200px]">
-                            <div class="action-group">
-                                <a href="{% url 'client_profile_detail' profile.pk %}" 
-                                   class="action-btn btn-view" title="View Profile">
-                                    <i class="fas fa-eye"></i>
-                                </a>
                                 
-                                <a href="{% url 'client_interaction_list' profile.pk %}" 
-                                   class="action-btn btn-interactions" title="View Interactions">
-                                    <i class="fas fa-comments"></i>
-                                </a>
-                                
-                                {% if user.role == 'rm' and profile.mapped_rm == user %}
-                                    <a href="{% url 'client_interaction_create' profile.pk %}" 
-                                       class="action-btn btn-add-interaction" title="Add Interaction">
-                                        <i class="fas fa-plus"></i>
-                                    </a>
+                                {% if not profile.legacy_client and can_convert_to_client %}
+                                    <div style="margin-top: 0.5rem;">
+                                        <a href="{% url 'convert_to_client' profile.pk %}" 
+                                           class="btn-uniform btn-sm btn-secondary" 
+                                           title="Convert to Full Client">
+                                            <i class="fas fa-user-check"></i> Convert
+                                        </a>
+                                    </div>
                                 {% endif %}
-                                
-                                {% if can_modify %}
-                                    <a href="{% url 'client_profile_update' profile.pk %}" 
-                                       class="action-btn btn-edit" title="Edit Profile">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                {% endif %}
-                            </div>
-                            
-                            {% if not profile.legacy_client and can_convert_to_client %}
-                                <a href="{% url 'convert_to_client' profile.pk %}" 
-                                   class="btn-convert" 
-                                   title="Convert to Full Client">
-                                    <i class="fas fa-user-check"></i> Convert to Client
-                                </a>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="8">
-                            <div class="empty-state">
-                                <i class="fas fa-users"></i>
-                                <h4>No client profiles found</h4>
-                                <p>Get started by creating your first client profile</p>
-                                {% if can_create %}
-                                    <a href="{% url 'client_profile_create' %}" class="btn-add-client" style="margin-top: 1rem;">
-                                        <i class="fas fa-plus"></i> Create First Client Profile
-                                    </a>
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8">
+                                <div class="empty-state">
+                                    <i class="fas fa-users"></i>
+                                    <h4>No client profiles found</h4>
+                                    <p>Get started by creating your first client profile</p>
+                                    {% if can_create %}
+                                        <a href="{% url 'client_profile_create' %}" class="btn-uniform btn-primary" style="margin-top: 1rem;">
+                                            <i class="fas fa-plus"></i> Create First Client Profile
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -1187,12 +1292,14 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn-clear" data-bs-dismiss="modal">
-                    <i class="fas fa-times"></i>Cancel
-                </button>
-                <a href="#" id="confirmConvert" class="btn-search">
-                    <i class="fas fa-user-check"></i>Convert to Client
-                </a>
+                <div class="btn-group">
+                    <button type="button" class="btn-uniform btn-light" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i>Cancel
+                    </button>
+                    <a href="#" id="confirmConvert" class="btn-uniform btn-primary">
+                        <i class="fas fa-user-check"></i>Convert to Client
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -1224,29 +1331,35 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Enhanced hover effects for action buttons
-    const actionButtons = document.querySelectorAll('.action-btn');
+    const actionButtons = document.querySelectorAll('.btn-mini, .btn-uniform');
     actionButtons.forEach(button => {
         button.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-2px) scale(1.1)';
-            this.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+            if (this.classList.contains('btn-mini')) {
+                this.style.transform = 'translateY(-2px) scale(1.1)';
+            } else {
+                this.style.transform = 'translateY(-2px)';
+            }
         });
         
         button.addEventListener('mouseleave', function() {
             this.style.transform = 'translateY(0) scale(1)';
-            this.style.boxShadow = 'none';
         });
     });
 
     // Add loading state to search button
-    const searchButton = document.querySelector('.btn-search');
+    const searchButton = document.querySelector('.btn-primary[type="submit"]');
     if (searchButton) {
         searchButton.addEventListener('click', function() {
             const icon = this.querySelector('i');
             const originalIcon = icon.className;
+            const originalText = this.childNodes[this.childNodes.length - 1].textContent;
+            
             icon.className = 'fas fa-spinner fa-spin';
+            this.childNodes[this.childNodes.length - 1].textContent = ' Searching...';
             
             setTimeout(() => {
                 icon.className = originalIcon;
+                this.childNodes[this.childNodes.length - 1].textContent = originalText;
             }, 1000);
         });
     }
@@ -1353,7 +1466,7 @@ document.addEventListener('DOMContentLoaded', function() {
             case 'Enter':
                 e.preventDefault();
                 if (selectedRow >= 0) {
-                    const viewButton = rows[selectedRow].querySelector('.btn-view');
+                    const viewButton = rows[selectedRow].querySelector('.btn-info');
                     if (viewButton) viewButton.click();
                 }
                 break;
@@ -1370,6 +1483,89 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Dynamic button sizing based on content
+    function adjustButtonSizes() {
+        const buttonGroups = document.querySelectorAll('.btn-group, .action-grid');
+        buttonGroups.forEach(group => {
+            const buttons = group.querySelectorAll('.btn-uniform, .btn-mini');
+            if (buttons.length > 0) {
+                // Find the button with the longest text
+                let maxWidth = 0;
+                buttons.forEach(btn => {
+                    const tempBtn = btn.cloneNode(true);
+                    tempBtn.style.visibility = 'hidden';
+                    tempBtn.style.position = 'absolute';
+                    tempBtn.style.width = 'auto';
+                    document.body.appendChild(tempBtn);
+                    maxWidth = Math.max(maxWidth, tempBtn.offsetWidth);
+                    document.body.removeChild(tempBtn);
+                });
+                
+                // Apply uniform width to all buttons in the group
+                buttons.forEach(btn => {
+                    if (btn.classList.contains('btn-uniform')) {
+                        btn.style.minWidth = Math.max(maxWidth, 120) + 'px';
+                    }
+                });
+            }
+        });
+    }
+
+    // Apply dynamic sizing on load and resize
+    adjustButtonSizes();
+    window.addEventListener('resize', adjustButtonSizes);
+
+    // Add ripple effect to buttons
+    function createRipple(event) {
+        const button = event.currentTarget;
+        const circle = document.createElement('span');
+        const diameter = Math.max(button.clientWidth, button.clientHeight);
+        const radius = diameter / 2;
+
+        circle.style.width = circle.style.height = `${diameter}px`;
+        circle.style.left = `${event.clientX - button.offsetLeft - radius}px`;
+        circle.style.top = `${event.clientY - button.offsetTop - radius}px`;
+        circle.classList.add('ripple');
+
+        const ripple = button.getElementsByClassName('ripple')[0];
+        if (ripple) {
+            ripple.remove();
+        }
+
+        button.appendChild(circle);
+    }
+
+    // Add ripple effect styles
+    const style = document.createElement('style');
+    style.textContent = `
+        .btn-uniform, .btn-mini {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.6);
+            transform: scale(0);
+            animation: ripple-animation 0.6s linear;
+            pointer-events: none;
+        }
+        
+        @keyframes ripple-animation {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Apply ripple effect to all buttons
+    document.querySelectorAll('.btn-uniform, .btn-mini').forEach(button => {
+        button.addEventListener('click', createRipple);
+    });
 });
 </script>
 {% endblock %}
