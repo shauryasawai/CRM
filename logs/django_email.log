@@ -52,3 +52,19 @@ ERROR 2025-07-13 16:33:27,069 views 2984 2472 Failed to send password reset emai
 INFO 2025-07-13 16:34:05,937 views 12236 20680 Password reset email sent successfully to sawaisushil@gmail.com
 INFO 2025-07-13 16:35:33,142 views 12236 7840 Enhanced client email sent successfully for plan EP202507070006 to sawaisushil@gmail.com
 INFO 2025-07-13 16:35:38,376 views 12236 21716 Enhanced client email sent successfully for plan EP202507070006 to sawaisushil@gmail.com
+INFO 2025-07-15 21:49:51,677 views 12248 25716 create_plan_step2 called with client_id: 19 (type: <class 'str'>)
+INFO 2025-07-15 21:49:51,754 views 12248 25716 Found legacy client: Meera Reddy (ID: 19)
+INFO 2025-07-15 21:49:52,068 views 12248 25716 Found linked profile for client 19
+INFO 2025-07-15 21:49:52,275 views 12248 25716 Found 8 portfolio holdings for client 19
+INFO 2025-07-15 21:50:40,912 views 12248 25716 create_plan_step2 called with client_id: 19 (type: <class 'str'>)
+INFO 2025-07-15 21:50:41,023 views 12248 25716 Found legacy client: Meera Reddy (ID: 19)
+INFO 2025-07-15 21:50:41,503 views 12248 25716 Found linked profile for client 19
+INFO 2025-07-15 21:50:41,750 views 12248 25716 Found 8 portfolio holdings for client 19
+INFO 2025-07-15 21:50:54,933 views 12248 25716 create_plan_step2 called with client_id: 19 (type: <class 'str'>)
+INFO 2025-07-15 21:50:54,977 views 12248 25716 Found legacy client: Meera Reddy (ID: 19)
+INFO 2025-07-15 21:50:55,205 views 12248 25716 Found linked profile for client 19
+INFO 2025-07-15 21:50:55,308 views 12248 25716 Found 8 portfolio holdings for client 19
+INFO 2025-07-15 21:51:39,268 views 12248 25716 create_plan_step2 called with client_id: 19 (type: <class 'str'>)
+INFO 2025-07-15 21:51:39,324 views 12248 25716 Found legacy client: Meera Reddy (ID: 19)
+INFO 2025-07-15 21:51:39,630 views 12248 25716 Found linked profile for client 19
+INFO 2025-07-15 21:51:39,735 views 12248 25716 Found 8 portfolio holdings for client 19
