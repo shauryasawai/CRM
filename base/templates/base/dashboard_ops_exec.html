@@ -12,7 +12,110 @@
     --bs-border-color: #D9D9D9;
     --bs-info: #C3E4FF;
 }
+/* Header Section */
+    .header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 3rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
 
+    .welcome-content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .welcome-text {
+        font-size: 2.0rem;
+        font-weight: 400;
+        color: #333;
+        margin: 0;
+    }
+
+    .user-name {
+        color: var(--primary-color);
+        font-weight: 600;
+    }
+
+    .user-name-display {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--secondary-text);
+        margin: 0;
+    }
+
+    .header-info {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.5rem;
+    }
+
+    .command-badge {
+        background: var(--highlight-color);
+        border-radius: 20px;
+        padding: 1rem 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        border: none;
+        box-shadow: 0 2px 8px rgba(28, 100, 255, 0.1);
+    }
+
+    .command-badge-content {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .command-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #333;
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .command-subtitle {
+        font-size: 0.9rem;
+        color: var(--secondary-text);
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .user-icon {
+        width: 40px;
+        height: 40px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.2rem;
+    }
+
+    .datetime-info {
+        text-align: left;
+        color: #333;
+    }
+
+    .date-text {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .time-text {
+        font-size: 1rem;
+        color: var(--primary-color);
+        margin: 0;
+        line-height: 1.2;
+    }
 .dashboard-container {
     background: #f8f9fa;
     min-height: 100vh;
@@ -97,7 +200,7 @@
 
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(2, minmax(250px, 1fr));
     gap: 1.5rem;
     margin-bottom: 2rem;
 }
@@ -612,15 +715,59 @@
 <div class="dashboard-container">
     <div class="container-fluid">
         <!-- Header Section -->
+         <!-- Header Section -->
+    <div class="header-section">
+        <div class="welcome-content">
+            <h1 class="welcome-text">Welcome back, <span class="user-name">{{ request.user.get_full_name }}</span></h1>
+            <!-- <p class="welcome-text user-name">{{ request.user.get_full_name }}</p> -->
+        </div>
+        
+         
+        <div class="header-info">
+            <div class="command-badge">
+                <div class="command-badge-content">
+                    <div class="command-title">Command Center</div>
+                    <div class="command-subtitle">
+                        {% if request.user.role == 'top_management' %}
+                            Executive Leadership
+                        {% elif request.user.role == 'business_head' %}
+                            Business Head
+                        {% elif request.user.role == 'rm_head' %}
+                            Relationship Manager Head
+                        {% elif request.user.role == 'ops_exec' %}
+                            Operations Executive
+                        {% elif request.user.role == 'ops_team_lead' %}
+                            Operations Team Lead
+                        {% elif request.user.role == 'bussiness_head_ops' %}
+                            Bussiness Head Operational
+                        {% elif request.user.role == 'rm' %}
+                            Relationship Manager
+                        {% else %}
+                            Relationship Manager
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="user-icon">
+                    <i class="fas fa-user"></i>
+                </div>
+            </div>
+            
+        </div>
+           <!-- <div class="datetime-info">
+                <div class="date-text" id="current-date"></div>
+                <div class="time-text" id="current-time"></div>
+            </div> -->
+        
+    </div>
         <div class="dashboard-header fade-in">
             <h1 class="dashboard-title">Operations Hub</h1>
-            <p class="dashboard-subtitle">CRM - Operations Executive Dashboard</p>
+            <!-- <p class="dashboard-subtitle">CRM - Operations Executive Dashboard</p> -->
             <div class="header-actions">
                 <a href="{% url 'notes_dashboard' %}" class="btn-nav">
                     <i class="fas fa-sticky-note"></i> Notes
                 </a>
-                <a href="{% url 'logout' %}" class="btn-nav">
-                    <i class="fas fa-sign-out-alt"></i> Logout
+                <a href="{% url 'hrm_dashboard' %}" class="btn-nav">
+                    <i class="fas fa-sign-out-alt"></i> HRMS
                 </a>
             </div>
         </div>
