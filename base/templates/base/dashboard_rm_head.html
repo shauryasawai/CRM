@@ -47,7 +47,7 @@
     }
 
     .welcome-text {
-        font-size: 2.5rem;
+        font-size: 2.0rem;
         font-weight: 400;
         color: #333;
         margin: 0;
@@ -336,6 +336,98 @@
         font-weight: 600;
         color: var(--secondary-text);
         border: 1px solid var(--border-color);
+    }
+    /* Total AUM Section */
+    .aum-section {
+        background: linear-gradient(135deg, var(--primary-color) 0%, #0d47a1 100%);
+        border-radius: 20px;
+        padding: 3rem 2rem;
+        margin-bottom: 3rem;
+        color: white;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 8px 32px rgba(28, 100, 255, 0.2);
+    }
+
+    .aum-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+        opacity: 0.3;
+    }
+
+    .aum-content {
+        position: relative;
+        z-index: 2;
+        text-align: center;
+    }
+
+    .aum-icon {
+        width: 80px;
+        height: 80px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        margin: 0 auto 1.5rem;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .aum-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        opacity: 0.9;
+    }
+
+    .aum-value {
+        font-size: 4rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .aum-description {
+        font-size: 1.1rem;
+        opacity: 0.8;
+        margin-bottom: 2rem;
+    }
+
+    .aum-actions {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .aum-btn {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 0.875rem 2rem;
+        border-radius: 50px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .aum-btn:hover {
+        background: white;
+        color: var(--primary-color);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
     }
 
     /* Team Cards */
@@ -739,6 +831,10 @@
             max-width: 300px;
             justify-content: center;
         }
+         .aum-section {
+            padding: 2rem 1.5rem;
+        }
+
 
         .header-actions {
             flex-direction: column;
@@ -818,7 +914,7 @@
     </div>
 
     <!-- Header Actions -->
-    <div class="header-actions">
+    <!-- <div class="header-actions">
         <a href="{% url 'hrm_dashboard' %}" class="header-btn mb-3">
             <i class="fas fa-users"></i>
             <span>HRMS Portal</span>
@@ -827,6 +923,26 @@
             <i class="fas fa-cogs"></i>
             <span>Team Management</span>
         </a>
+    </div> -->
+     <!-- Total AUM Section -->
+    <div class="aum-section">
+        <div class="aum-content">
+            <!-- <div class="aum-icon">
+                <i class="fas fa-chart-line"></i>
+            </div> -->
+            <h2 class="aum-title">Trust. Connect. Grow.</h2>
+            <!-- <p class="aum-description">Comprehensive portfolio value across all clients and investment vehicles</p> -->
+            <div class="aum-actions">
+                <a href="{% url 'hrm_dashboard' %}" class="aum-btn">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>HRMS Portal</span>
+                </a>
+                <a href="{% url 'team_management' %}" class="aum-btn">
+                    <i class="fas fa-cogs"></i>
+                    <span>Team Management</span>
+                </a>
+            </div>
+        </div>
     </div>
 
     <!-- Metrics Overview -->
@@ -1433,7 +1549,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }, observerOptions);
 
     // Observe elements for scroll animations
-    const animateOnScroll = document.querySelectorAll('.metric-card, .team-card, .section-header, .table-container, .action-panel');
+    const animateOnScroll = document.querySelectorAll('.metric-card, .team-card, .section-header, .table-container, .action-panel,.aum-section');
     animateOnScroll.forEach((el, index) => {
         el.style.opacity = '0';
         el.style.transform = 'translateY(30px)';
