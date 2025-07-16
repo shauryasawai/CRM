@@ -42,7 +42,7 @@
     }
 
     .welcome-text {
-        font-size: 2.5rem;
+        font-size: 2.0rem;
         font-weight: 400;
         color: #333;
         margin: 0;
@@ -428,8 +428,8 @@
                             Executive Leadership
                         {% elif request.user.role == 'business_head' %}
                             Business Head
-                        {% elif request.user.role == 'rm_head' %}
-                            Regional Manager Head
+                        {% elif request.user.role == 'ops_team_lead' %}
+                            operational Team Lead
                         {% else %}
                             Relationship Manager
                         {% endif %}
