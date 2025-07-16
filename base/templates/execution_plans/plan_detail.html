@@ -1477,7 +1477,7 @@ function updateLoadingMessage(message) {
     $('#loadingMessage').text(message);
 }
 
-// Auto-send email when plan status changes to specific states
+// Auto-send e when plan status changes to specific states
 $(document).ready(function() {
     // Monitor for status changes that should trigger emails
     const currentStatus = '{{ execution_plan.status }}';

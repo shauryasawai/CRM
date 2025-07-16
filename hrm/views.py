@@ -129,7 +129,7 @@ def hrm_dashboard(request):
 
 @login_required
 def leave_calendar(request):
-    """Enhanced leave calendar with CRM integration"""
+    """Optimized leave calendar with improved performance"""
     try:
         employee = Employee.objects.get(user=request.user)
     except Employee.DoesNotExist:
@@ -141,27 +141,49 @@ def leave_calendar(request):
     year = int(request.GET.get('year', today.year))
     month = int(request.GET.get('month', today.month))
     
-    # Get holidays for the month
-    holidays = Holiday.objects.filter(
-        date__year=year,
-        date__month=month
-    )
+    # Calculate month boundaries
+    month_start = date(year, month, 1)
+    if month == 12:
+        month_end = date(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        month_end = date(year, month + 1, 1) - timedelta(days=1)
     
-    # Get leave requests for the month
+    # Single query for all month data with select_related/prefetch_related
+    holidays = Holiday.objects.filter(
+        date__range=[month_start, month_end]
+    ).values('date', 'name')
+    
     leave_requests = LeaveRequest.objects.filter(
         employee=employee,
-        start_date__year=year,
-        start_date__month=month
-    ).select_related('leave_type')
-    
-    # Get attendance for the month
-    attendance_records = Attendance.objects.filter(
-        employee=employee,
-        date__year=year,
-        date__month=month
+        start_date__lte=month_end,
+        end_date__gte=month_start
+    ).select_related('leave_type').values(
+        'start_date', 'end_date', 'status', 'leave_type__name'
     )
     
-    # Create calendar data
+    attendance_records = Attendance.objects.filter(
+        employee=employee,
+        date__range=[month_start, month_end]
+    ).values('date', 'login_time', 'logout_time', 'is_remote', 'notes')
+    
+    # Convert to dictionaries for O(1) lookup
+    holidays_dict = {h['date']: h['name'] for h in holidays}
+    attendance_dict = {a['date']: a for a in attendance_records}
+    
+    # Process leave requests into date ranges
+    leave_dict = {}
+    for leave in leave_requests:
+        current_date = leave['start_date']
+        while current_date <= leave['end_date']:
+            if current_date not in leave_dict:
+                leave_dict[current_date] = []
+            leave_dict[current_date].append({
+                'status': leave['status'],
+                'leave_type_name': leave['leave_type__name']
+            })
+            current_date += timedelta(days=1)
+    
+    # Generate calendar data efficiently
     cal = calendar.monthcalendar(year, month)
     calendar_data = []
     
@@ -176,44 +198,60 @@ def leave_calendar(request):
             day_info = {
                 'day': day,
                 'date': day_date,
-                'is_holiday': holidays.filter(date=day_date).exists(),
-                'holiday_name': holidays.filter(date=day_date).first().name if holidays.filter(date=day_date).exists() else None,
-                'is_sunday': day_date.weekday() == 6,
-                'leave_requests': leave_requests.filter(
-                    start_date__lte=day_date,
-                    end_date__gte=day_date
-                ),
-                'attendance': attendance_records.filter(date=day_date).first(),
+                'is_holiday': day_date in holidays_dict,
+                'holiday_name': holidays_dict.get(day_date),
+                'is_weekend': day_date.weekday() >= 5,  # Saturday=5, Sunday=6
+                'leave_requests': leave_dict.get(day_date, []),
+                'attendance': attendance_dict.get(day_date),
                 'is_today': day_date == today,
                 'is_past': day_date < today,
             }
             week_data.append(day_info)
         calendar_data.append(week_data)
     
-    # Get leave quotas for the employee using CRM role
+    # Get leave quotas efficiently
     leave_quotas = LeaveQuota.objects.filter(
-        hierarchy_level=employee.user.role  # Use CRM role directly
-    ).select_related('leave_type')
-    
-    # Calculate used leaves
-    current_year_leaves = LeaveRequest.objects.filter(
-        employee=employee,
-        start_date__year=year,
-        status__in=['A', 'P']  # Approved or Pending
+        hierarchy_level=employee.user.role
+    ).select_related('leave_type').values(
+        'leave_type__id', 'leave_type__name', 'quota'
     )
     
+    # Calculate used leaves for current year in single query
+    year_start = date(year, 1, 1)
+    year_end = date(year, 12, 31)
+    
+    used_leaves = LeaveRequest.objects.filter(
+        employee=employee,
+        start_date__year=year,
+        status__in=['A', 'P']
+    ).values('leave_type__id').annotate(
+        total_used=Sum('total_days')
+    )
+    
+    # Convert to dict for O(1) lookup
+    used_dict = {item['leave_type__id']: item['total_used'] for item in used_leaves}
+    
+    # Build quota data
     quota_data = []
     for quota in leave_quotas:
-        used = current_year_leaves.filter(leave_type=quota.leave_type).aggregate(
-            total=Sum('total_days')
-        )['total'] or 0
-        
+        used = used_dict.get(quota['leave_type__id'], 0)
         quota_data.append({
-            'leave_type': quota.leave_type,
-            'total_quota': quota.quota,
+            'leave_type': {'name': quota['leave_type__name']},
+            'total_quota': quota['quota'],
             'used': used,
-            'remaining': quota.quota - used
+            'remaining': quota['quota'] - used
         })
+    
+    # Calculate navigation dates
+    if month == 1:
+        prev_month, prev_year = 12, year - 1
+    else:
+        prev_month, prev_year = month - 1, year
+        
+    if month == 12:
+        next_month, next_year = 1, year + 1
+    else:
+        next_month, next_year = month + 1, year
     
     context = {
         'employee': employee,
@@ -221,13 +259,16 @@ def leave_calendar(request):
         'year': year,
         'month': month,
         'month_name': calendar.month_name[month],
-        'holidays': holidays,
         'quota_data': quota_data,
-        'prev_month': month - 1 if month > 1 else 12,
-        'next_month': month + 1 if month < 12 else 1,
-        'prev_year': year if month > 1 else year - 1,
-        'next_year': year if month < 12 else year + 1,
+        'prev_month': prev_month,
+        'next_month': next_month,
+        'prev_year': prev_year,
+        'next_year': next_year,
+        'today_month': today.month,
+        'today_year': today.year,
+        'weekdays': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
     }
+    
     return render(request, 'hrm/leave_calendar.html', context)
 
 @login_required
@@ -630,7 +671,7 @@ def reimbursement_claims(request):
         month=today.month,
         year=today.year,
         defaults={
-            'status': 'draft',
+            'status': 'D',  # ✅ Use 'D' for Draft (matches STATUS_CHOICES)
             'submitted_on': None
         }
     )
@@ -934,57 +975,57 @@ def monthly_attendance_report(request):
     }
     return render(request, 'hrm/monthly_attendance_report.html', context)
 
-# AJAX Views
 @login_required
 def get_calendar_day_details(request):
-    """Get details for a specific calendar day"""
+    """Optimized day details for calendar"""
     date_str = request.GET.get('date')
     if not date_str:
-        return JsonResponse({'error': 'Date not provided'})
+        return JsonResponse({'error': 'Date not provided'}, status=400)
     
     try:
-        day_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-    except ValueError:
-        return JsonResponse({'error': 'Invalid date format'})
-    
-    try:
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         employee = Employee.objects.get(user=request.user)
-    except Employee.DoesNotExist:
-        return JsonResponse({'error': 'Employee profile not found'})
+    except (ValueError, Employee.DoesNotExist):
+        return JsonResponse({'error': 'Invalid date or employee not found'}, status=400)
     
-    # Get day details
-    holiday = Holiday.objects.filter(date=day_date).first()
-    attendance = Attendance.objects.filter(employee=employee, date=day_date).first()
-    leave_requests = LeaveRequest.objects.filter(
+    # Get all data in single queries
+    holiday = Holiday.objects.filter(date=selected_date).first()
+    attendance = Attendance.objects.filter(employee=employee, date=selected_date).first()
+    leaves = LeaveRequest.objects.filter(
         employee=employee,
-        start_date__lte=day_date,
-        end_date__gte=day_date
+        start_date__lte=selected_date,
+        end_date__gte=selected_date
+    ).select_related('leave_type').values(
+        'leave_type__name', 'status', 'start_date', 'end_date', 'reason'
     )
     
-    data = {
-        'date': day_date.strftime('%Y-%m-%d'),
+    # Build response
+    response_data = {
+        'date': selected_date.strftime('%B %d, %Y'),
         'is_holiday': bool(holiday),
         'holiday_name': holiday.name if holiday else None,
-        'is_sunday': day_date.weekday() == 6,
+        'is_sunday': selected_date.weekday() == 6,
         'attendance': {
             'present': bool(attendance and attendance.login_time),
             'login_time': attendance.login_time.strftime('%H:%M') if attendance and attendance.login_time else None,
             'logout_time': attendance.logout_time.strftime('%H:%M') if attendance and attendance.logout_time else None,
-            'work_mode': attendance.work_mode if attendance else None,
+            'is_remote': attendance.is_remote if attendance else False,
             'is_late': attendance.is_late if attendance else False,
-            'total_hours': round(attendance.total_hours, 2) if attendance else 0,
+            'notes': attendance.notes if attendance else None
         },
         'leaves': [
             {
-                'type': lr.leave_type.name,
-                'status': lr.get_status_display(),
-                'start_date': lr.start_date.strftime('%Y-%m-%d'),
-                'end_date': lr.end_date.strftime('%Y-%m-%d'),
-            } for lr in leave_requests
+                'type': leave['leave_type__name'],
+                'status': dict(LeaveRequest.STATUS_CHOICES)[leave['status']],
+                'start_date': leave['start_date'].strftime('%Y-%m-%d'),
+                'end_date': leave['end_date'].strftime('%Y-%m-%d'),
+                'reason': leave['reason']
+            }
+            for leave in leaves
         ]
     }
     
-    return JsonResponse(data)
+    return JsonResponse(response_data)
 
 @require_POST
 @login_required
