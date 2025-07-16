@@ -46,7 +46,7 @@
     }
 
     .welcome-text {
-        font-size: 2.5rem;
+        font-size: 2.0rem;
         font-weight: 400;
         color: #333;
         margin: 0;
@@ -1035,10 +1035,9 @@
 <div class="main-container">
     <!-- Header Section -->
     <div class="header-section">
-        <div class="welcome-content">
-            <h1 class="welcome-text">Welcome back !</h1>
-            <p class="user-name-display">{{ user.get_full_name|default:user.username }}</p>
-           
+         <div class="welcome-content">
+            <h1 class="welcome-text">Welcome back, <span class="user-name">{{ request.user.get_full_name }}</span></h1>
+            <!-- <p class="welcome-text user-name">{{ request.user.get_full_name }}</p> -->
         </div>
         
         <div class="header-info">
@@ -1052,22 +1051,21 @@
                 </div>
             </div>
             
-            <div class="datetime-info mt-3">
+            <!-- <div class="datetime-info mt-3">
                 <div class="date-text" id="current-date"></div>
                 <div class="time-text" id="current-time"></div>
-            </div>
+            </div> -->
         </div>
     </div>
-
    
 
-    <!-- Business Intelligence Section -->
+     <!-- Business Intelligence Section -->
     <div class="bi-section">
         <div class="bi-content">
             <!-- <div class="bi-icon">
                 <i class="fas fa-chart-bar"></i>
             </div> -->
-            <h2 class="bi-title">Business Intelligence Hub</h2>
+            <h2 class="bi-title">Decisions. Direction. Delivery.</h2>
             <!-- <p class="bi-subtitle">Comprehensive overview of system performance and team analytics</p> -->
         </div>
          <!-- Header Actions -->
