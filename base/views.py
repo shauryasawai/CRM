@@ -176,6 +176,12 @@ def dashboard(request):
     user = request.user
     context = {}
 
+    # Add debug logging
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    print(f"DEBUG: User role is {user.role}")
+
     # Check if execution plans models are available
     try:
         from .models import ExecutionPlan, PlanAction, ExecutionMetrics
@@ -183,551 +189,620 @@ def dashboard(request):
     except ImportError:
         EXECUTION_PLANS_AVAILABLE = False
 
-    if user.role == 'top_management':
-        # Aggregate KPIs across entire system
-        total_aum = Client.objects.aggregate(total=Sum('aum'))['total'] or 0
-        total_sip = Client.objects.aggregate(total=Sum('sip_amount'))['total'] or 0
-        total_clients = Client.objects.count()
-        total_leads = Lead.objects.count()
-        total_tasks = Task.objects.filter(completed=False).count()
-        open_service_requests = ServiceRequest.objects.filter(status='open').count()
-
-        # Team metrics
-        business_heads_count = User.objects.filter(role='business_head').count()
-        business_heads_ops_count = User.objects.filter(role='business_head_ops').count()
-        rm_heads_count = User.objects.filter(role='rm_head').count()
-        rms_count = User.objects.filter(role='rm').count()
-        ops_team_leads_count = User.objects.filter(role='ops_team_lead').count()
-        ops_execs_count = User.objects.filter(role='ops_exec').count()
-
-        # Recent activities
-        recent_leads = Lead.objects.order_by('-created_at')[:5]
-        recent_service_requests = ServiceRequest.objects.order_by('-created_at')[:5]
-        recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
-
-        # Execution Plans metrics (if available)
-        execution_plans_stats = {}
-        if EXECUTION_PLANS_AVAILABLE:
-            current_month_start = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-            monthly_plans = ExecutionPlan.objects.filter(created_at__gte=current_month_start)
-            completed_monthly = monthly_plans.filter(status='completed')
+    try:
+        if user.role == 'top_management':
+            print("DEBUG: Processing top_management")
+            # Aggregate KPIs across entire system
+            total_aum = Client.objects.aggregate(total=Sum('aum'))['total'] or 0
+            total_sip = Client.objects.aggregate(total=Sum('sip_amount'))['total'] or 0
+            total_clients = Client.objects.count()
+            total_leads = Lead.objects.count()
             
-            execution_plans_stats = {
-                'total_plans': ExecutionPlan.objects.count(),
-                'pending_approval': ExecutionPlan.objects.filter(status='pending_approval').count(),
-                'in_execution': ExecutionPlan.objects.filter(status='in_execution').count(),
-                'completed_plans': ExecutionPlan.objects.filter(status='completed').count(),
-                'recent_plans': ExecutionPlan.objects.order_by('-created_at')[:5],
-                'monthly_completion_rate': round((completed_monthly.count() / monthly_plans.count()) * 100, 2) if monthly_plans.count() > 0 else 0,
-                'plans_this_month': monthly_plans.count(),
-            }
-
-        context.update({
-            'total_aum': total_aum,
-            'total_sip': total_sip,
-            'total_clients': total_clients,
-            'total_leads': total_leads,
-            'total_tasks': total_tasks,
-            'open_service_requests': open_service_requests,
-            'business_heads_count': business_heads_count,
-            'business_heads_ops_count': business_heads_ops_count,
-            'rm_heads_count': rm_heads_count,
-            'rms_count': rms_count,
-            'ops_team_leads_count': ops_team_leads_count,
-            'ops_execs_count': ops_execs_count,
-            'recent_leads': recent_leads,
-            'recent_service_requests': recent_service_requests,
-            'recent_notes': recent_notes,
-            'execution_plans_stats': execution_plans_stats,
-        })
-        template_name = 'base/dashboard_top_management.html'
-
-    elif user.role == 'business_head':
-        # Monitor all RM Heads and their performance
-        rm_heads = User.objects.filter(role='rm_head')
-        all_rms = User.objects.filter(role='rm')
-        
-        # System-wide metrics
-        total_leads = Lead.objects.count()
-        converted_leads = Lead.objects.filter(status='converted').count()
-        open_service_requests = ServiceRequest.objects.filter(status='open')
-        
-        # Performance metrics
-        lead_conversion_rate = (converted_leads / total_leads * 100) if total_leads > 0 else 0
-        
-        # Calculate average response time using Python datetime operations
-        resolved_requests = ServiceRequest.objects.filter(
-            status__in=['resolved', 'closed'],
-            resolved_at__isnull=False
-        ).values('created_at', 'resolved_at')
-        
-        if resolved_requests.exists():
-            total_response_seconds = 0
-            request_count = 0
+            print("DEBUG: About to query tasks")
+            total_tasks = Task.objects.filter(completed=False).count()
+            print("DEBUG: Tasks query completed")
             
-            for request in resolved_requests:
-                response_time = request['resolved_at'] - request['created_at']
-                total_response_seconds += response_time.total_seconds()
-                request_count += 1
-            
-            avg_response_time_days = (total_response_seconds / request_count) / (24 * 60 * 60) if request_count > 0 else 0
-        else:
-            avg_response_time_days = 0
+            open_service_requests = ServiceRequest.objects.filter(status='open').count()
 
-        recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
+            # Team metrics
+            business_heads_count = User.objects.filter(role='business_head').count()
+            business_heads_ops_count = User.objects.filter(role='business_head_ops').count()
+            rm_heads_count = User.objects.filter(role='rm_head').count()
+            rms_count = User.objects.filter(role='rm').count()
+            ops_team_leads_count = User.objects.filter(role='ops_team_lead').count()
+            ops_execs_count = User.objects.filter(role='ops_exec').count()
 
-        # Execution Plans for business head
-        execution_plans_stats = {}
-        if EXECUTION_PLANS_AVAILABLE:
-            current_month = timezone.now().month
-            current_year = timezone.now().year
-            
-            execution_plans_stats = {
-                'pending_approval': ExecutionPlan.objects.filter(status='pending_approval').count(),
-                'approved_plans': ExecutionPlan.objects.filter(status='approved').count(),
-                'recent_approvals': ExecutionPlan.objects.filter(
-                    approved_by=user
-                ).order_by('-approved_at')[:5],
-                'plans_this_month': ExecutionPlan.objects.filter(
-                    created_at__month=current_month,
-                    created_at__year=current_year
-                ).count(),
-                'approval_pending_count': ExecutionPlan.objects.filter(
-                    status='pending_approval'
-                ).count(),
-                'completed_this_month': ExecutionPlan.objects.filter(
-                    status='completed',
-                    completed_at__month=current_month,
-                    completed_at__year=current_year
-                ).count(),
-            }
+            # Recent activities
+            recent_leads = Lead.objects.order_by('-created_at')[:5]
+            recent_service_requests = ServiceRequest.objects.order_by('-created_at')[:5]
+            recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
 
-        context.update({
-            'rm_heads': rm_heads,
-            'all_rms': all_rms,
-            'total_leads': total_leads,
-            'converted_leads': converted_leads,
-            'lead_conversion_rate': round(lead_conversion_rate, 2),
-            'open_service_requests': open_service_requests,
-            'avg_response_time': round(avg_response_time_days, 2),
-            'recent_notes': recent_notes,
-            'execution_plans_stats': execution_plans_stats,
-        })
-        template_name = 'base/dashboard_business_head.html'
-
-    elif user.role == 'business_head_ops':
-        # Operations oversight dashboard
-        ops_team_leads = User.objects.filter(role='ops_team_lead')
-        ops_execs = User.objects.filter(role='ops_exec')
-        
-        # Operations metrics
-        total_client_profiles = ClientProfile.objects.count()
-        active_profiles = ClientProfile.objects.filter(status='active').count()
-        muted_profiles = ClientProfile.objects.filter(status='muted').count()
-        
-        # Service requests related to operations
-        ops_service_requests = ServiceRequest.objects.filter(
-            Q(assigned_to__role__in=['ops_team_lead', 'ops_exec']) |
-            Q(raised_by__role__in=['ops_team_lead', 'ops_exec'])
-        )
-        
-        # Task metrics for operations team
-        ops_tasks = Task.objects.filter(assigned_to__role__in=['ops_team_lead', 'ops_exec'])
-        pending_ops_tasks = ops_tasks.filter(completed=False).count()
-        overdue_ops_tasks = ops_tasks.filter(
-            completed=False, 
-            due_date__lt=timezone.now()
-        ).count()
-
-        # Team performance data
-        team_performance = []
-        for lead in ops_team_leads:
-            team_members = lead.get_team_members()
-            team_tasks = Task.objects.filter(assigned_to__in=team_members)
-            team_service_requests = ServiceRequest.objects.filter(
-                Q(assigned_to__in=team_members) | Q(raised_by__in=team_members)
-            )
-            
-            team_performance.append({
-                'lead': lead,
-                'team_size': team_members.count(),
-                'pending_tasks': team_tasks.filter(completed=False).count(),
-                'total_service_requests': team_service_requests.count(),
-                'open_service_requests': team_service_requests.filter(status='open').count(),
-            })
-
-        recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
-
-        # Execution Plans for operations head
-        execution_plans_stats = {}
-        if EXECUTION_PLANS_AVAILABLE:
-            today = timezone.now().date()
-            
-            execution_plans_stats = {
-                'ready_for_execution': ExecutionPlan.objects.filter(status='client_approved').count(),
-                'in_execution': ExecutionPlan.objects.filter(status='in_execution').count(),
-                'completed_today': ExecutionPlan.objects.filter(
-                    status='completed',
-                    completed_at__date=today
-                ).count(),
-                'pending_actions': PlanAction.objects.filter(
-                    execution_plan__status='in_execution',
-                    status='pending'
-                ).count(),
-                'total_value_in_execution': PlanAction.objects.filter(
-                    execution_plan__status='in_execution',
-                    status='pending'
-                ).aggregate(total=Sum('amount'))['total'] or 0,
-            }
-
-        context.update({
-            'ops_team_leads': ops_team_leads,
-            'ops_execs': ops_execs,
-            'total_client_profiles': total_client_profiles,
-            'active_profiles': active_profiles,
-            'muted_profiles': muted_profiles,
-            'ops_service_requests': ops_service_requests,
-            'pending_ops_tasks': pending_ops_tasks,
-            'overdue_ops_tasks': overdue_ops_tasks,
-            'team_performance': team_performance,
-            'recent_notes': recent_notes,
-            'execution_plans_stats': execution_plans_stats,
-        })
-        template_name = 'base/dashboard_business_head_ops.html'
-
-    elif user.role == 'rm_head':
-        team_members = user.get_team_members()
-        accessible_users = user.get_accessible_users()
-        
-        # Team metrics
-        team_leads = Lead.objects.filter(assigned_to__in=accessible_users)
-        team_clients = Client.objects.filter(user__in=accessible_users)
-        team_tasks = Task.objects.filter(assigned_to__in=accessible_users)
-        team_service_requests = ServiceRequest.objects.filter(
-            Q(raised_by__in=accessible_users) | Q(client__user__in=accessible_users)
-        )
-        
-        # Performance metrics
-        pending_tasks = team_tasks.filter(completed=False).count()
-        overdue_tasks = team_tasks.filter(
-            completed=False, 
-            due_date__lt=timezone.now()
-        ).count()
-        
-        team_aum = team_clients.aggregate(total=Sum('aum'))['total'] or 0
-        team_sip = team_clients.aggregate(total=Sum('sip_amount'))['total'] or 0
-        
-        # Prepare detailed member statistics
-        team_members_data = []
-        for member in team_members:
-            member_leads = team_leads.filter(assigned_to=member)
-            member_clients = team_clients.filter(user=member)
-            member_tasks = team_tasks.filter(assigned_to=member)
-            
-            # Add execution plans data for each member
-            member_execution_stats = {}
+            # Execution Plans metrics (if available)
+            execution_plans_stats = {}
             if EXECUTION_PLANS_AVAILABLE:
-                member_plans = ExecutionPlan.objects.filter(created_by=member)
-                member_execution_stats = {
-                    'total_plans': member_plans.count(),
-                    'pending_approval': member_plans.filter(status='pending_approval').count(),
-                    'approved_plans': member_plans.filter(status='approved').count(),
-                    'completed_plans': member_plans.filter(status='completed').count(),
+                current_month_start = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+                monthly_plans = ExecutionPlan.objects.filter(created_at__gte=current_month_start)
+                completed_monthly = monthly_plans.filter(status='completed')
+                
+                execution_plans_stats = {
+                    'total_plans': ExecutionPlan.objects.count(),
+                    'pending_approval': ExecutionPlan.objects.filter(status='pending_approval').count(),
+                    'in_execution': ExecutionPlan.objects.filter(status='in_execution').count(),
+                    'completed_plans': ExecutionPlan.objects.filter(status='completed').count(),
+                    'recent_plans': ExecutionPlan.objects.order_by('-created_at')[:5],
+                    'monthly_completion_rate': round((completed_monthly.count() / monthly_plans.count()) * 100, 2) if monthly_plans.count() > 0 else 0,
+                    'plans_this_month': monthly_plans.count(),
                 }
-            
-            team_members_data.append({
-                'member': member,
-                'lead_count': member_leads.count(),
-                'client_count': member_clients.count(),
-                'aum': member_clients.aggregate(total=Sum('aum'))['total'] or 0,
-                'sip': member_clients.aggregate(total=Sum('sip_amount'))['total'] or 0,
-                'pending_tasks': member_tasks.filter(completed=False).count(),
-                'overdue_tasks': member_tasks.filter(completed=False, due_date__lt=timezone.now()).count(),
-                'performance_score': getattr(member, 'performance_score', 0),
-                'execution_plans': member_execution_stats,
+
+            context.update({
+                'total_aum': total_aum,
+                'total_sip': total_sip,
+                'total_clients': total_clients,
+                'total_leads': total_leads,
+                'total_tasks': total_tasks,
+                'open_service_requests': open_service_requests,
+                'business_heads_count': business_heads_count,
+                'business_heads_ops_count': business_heads_ops_count,
+                'rm_heads_count': rm_heads_count,
+                'rms_count': rms_count,
+                'ops_team_leads_count': ops_team_leads_count,
+                'ops_execs_count': ops_execs_count,
+                'recent_leads': recent_leads,
+                'recent_service_requests': recent_service_requests,
+                'recent_notes': recent_notes,
+                'execution_plans_stats': execution_plans_stats,
             })
+            template_name = 'base/dashboard_top_management.html'
 
-        recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
-
-        # Execution Plans for RM Head
-        execution_plans_stats = {}
-        if EXECUTION_PLANS_AVAILABLE:
-            # Plans created by team members that need approval
-            team_plans = ExecutionPlan.objects.filter(created_by__in=accessible_users)
-            my_approvals_pending = team_plans.filter(
-                status='pending_approval',
-                created_by__manager=user
-            )
+        elif user.role == 'business_head':
+            print("DEBUG: Processing business_head")
+            # Monitor all RM Heads and their performance
+            rm_heads = User.objects.filter(role='rm_head')
+            all_rms = User.objects.filter(role='rm')
             
-            execution_plans_stats = {
-                'team_plans': team_plans.count(),
-                'pending_approval': team_plans.filter(status='pending_approval').count(),
-                'approved_plans': team_plans.filter(status='approved').count(),
-                'recent_team_plans': team_plans.order_by('-created_at')[:5],
-                'my_approvals_pending': my_approvals_pending.count(),
-                'team_completion_rate': round((team_plans.filter(status='completed').count() / team_plans.count()) * 100, 2) if team_plans.count() > 0 else 0,
-            }
-
-        context.update({
-            'team_members': team_members,
-            'team_leads': team_leads,
-            'team_clients': team_clients,
-            'team_tasks': team_tasks,
-            'team_service_requests': team_service_requests,
-            'pending_tasks': pending_tasks,
-            'overdue_tasks': overdue_tasks,
-            'team_aum': team_aum,
-            'team_sip': team_sip,
-            'leads_count': team_leads.count(),
-            'clients_count': team_clients.count(),
-            'team_members_data': team_members_data,
-            'recent_notes': recent_notes,
-            'execution_plans_stats': execution_plans_stats,
-        })
-        template_name = 'base/dashboard_rm_head.html'
-
-    elif user.role == 'ops_team_lead':
-        # Operations Team Lead dashboard
-        team_members = user.get_team_members()  # Ops Executives under this lead
-        
-        # Team metrics
-        team_tasks = Task.objects.filter(assigned_to__in=team_members.union(User.objects.filter(id=user.id)))
-        team_service_requests = ServiceRequest.objects.filter(
-            Q(assigned_to__in=team_members.union(User.objects.filter(id=user.id))) |
-            Q(raised_by__in=team_members.union(User.objects.filter(id=user.id)))
-        )
-        
-        # Client profiles managed by team
-        team_client_profiles = ClientProfile.objects.filter(
-            Q(mapped_ops_exec__in=team_members) | Q(created_by__in=team_members.union(User.objects.filter(id=user.id)))
-        )
-        
-        # Performance metrics
-        pending_tasks = team_tasks.filter(completed=False).count()
-        overdue_tasks = team_tasks.filter(
-            completed=False, 
-            due_date__lt=timezone.now()
-        ).count()
-        
-        # Service request metrics
-        open_requests = team_service_requests.filter(status='open').count()
-        in_progress_requests = team_service_requests.filter(status='in_progress').count()
-        
-        # Team member performance
-        team_members_data = []
-        for member in team_members:
-            member_tasks = team_tasks.filter(assigned_to=member)
-            member_service_requests = team_service_requests.filter(
-                Q(assigned_to=member) | Q(raised_by=member)
-            )
-            member_client_profiles = team_client_profiles.filter(mapped_ops_exec=member)
+            # System-wide metrics
+            total_leads = Lead.objects.count()
+            converted_leads = Lead.objects.filter(status='converted').count()
+            open_service_requests = ServiceRequest.objects.filter(status='open')
             
-            # Add execution plans data for ops members
-            member_execution_stats = {}
+            # Performance metrics
+            lead_conversion_rate = (converted_leads / total_leads * 100) if total_leads > 0 else 0
+            
+            # Calculate average response time using Python datetime operations
+            resolved_requests = ServiceRequest.objects.filter(
+                status__in=['resolved', 'closed'],
+                resolved_at__isnull=False
+            ).values('created_at', 'resolved_at')
+            
+            if resolved_requests.exists():
+                total_response_seconds = 0
+                request_count = 0
+                
+                for request in resolved_requests:
+                    response_time = request['resolved_at'] - request['created_at']
+                    total_response_seconds += response_time.total_seconds()
+                    request_count += 1
+                
+                avg_response_time_days = (total_response_seconds / request_count) / (24 * 60 * 60) if request_count > 0 else 0
+            else:
+                avg_response_time_days = 0
+
+            recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
+
+            # Execution Plans for business head
+            execution_plans_stats = {}
+            if EXECUTION_PLANS_AVAILABLE:
+                current_month = timezone.now().month
+                current_year = timezone.now().year
+                
+                execution_plans_stats = {
+                    'pending_approval': ExecutionPlan.objects.filter(status='pending_approval').count(),
+                    'approved_plans': ExecutionPlan.objects.filter(status='approved').count(),
+                    'recent_approvals': ExecutionPlan.objects.filter(
+                        approved_by=user
+                    ).order_by('-approved_at')[:5],
+                    'plans_this_month': ExecutionPlan.objects.filter(
+                        created_at__month=current_month,
+                        created_at__year=current_year
+                    ).count(),
+                    'approval_pending_count': ExecutionPlan.objects.filter(
+                        status='pending_approval'
+                    ).count(),
+                    'completed_this_month': ExecutionPlan.objects.filter(
+                        status='completed',
+                        completed_at__month=current_month,
+                        completed_at__year=current_year
+                    ).count(),
+                }
+
+            context.update({
+                'rm_heads': rm_heads,
+                'all_rms': all_rms,
+                'total_leads': total_leads,
+                'converted_leads': converted_leads,
+                'lead_conversion_rate': round(lead_conversion_rate, 2),
+                'open_service_requests': open_service_requests,
+                'avg_response_time': round(avg_response_time_days, 2),
+                'recent_notes': recent_notes,
+                'execution_plans_stats': execution_plans_stats,
+            })
+            template_name = 'base/dashboard_business_head.html'
+
+        elif user.role == 'business_head_ops':
+            print("DEBUG: Processing business_head_ops")
+            # Operations oversight dashboard
+            ops_team_leads = User.objects.filter(role='ops_team_lead')
+            ops_execs = User.objects.filter(role='ops_exec')
+            
+            # Operations metrics
+            total_client_profiles = ClientProfile.objects.count()
+            active_profiles = ClientProfile.objects.filter(status='active').count()
+            muted_profiles = ClientProfile.objects.filter(status='muted').count()
+            
+            # Service requests related to operations
+            print("DEBUG: About to query ops_service_requests")
+            ops_service_requests = ServiceRequest.objects.filter(
+                Q(assigned_to__role__in=['ops_team_lead', 'ops_exec']) |
+                Q(raised_by__role__in=['ops_team_lead', 'ops_exec'])
+            )
+            print("DEBUG: ops_service_requests query completed")
+            
+            # Task metrics for operations team
+            print("DEBUG: About to query ops_tasks")
+            ops_tasks = Task.objects.filter(assigned_to__role__in=['ops_team_lead', 'ops_exec'])
+            print("DEBUG: ops_tasks query completed")
+            
+            pending_ops_tasks = ops_tasks.filter(completed=False).count()
+            overdue_ops_tasks = ops_tasks.filter(
+                completed=False, 
+                due_date__lt=timezone.now()
+            ).count()
+
+            # Team performance data
+            print("DEBUG: About to process team performance")
+            team_performance = []
+            for lead in ops_team_leads:
+                print(f"DEBUG: Processing lead {lead.id}")
+                team_members = lead.get_team_members()
+                print(f"DEBUG: Got team members: {team_members}")
+                
+                # Convert to list of IDs to avoid subquery issues
+                team_member_ids = list(team_members.values_list('id', flat=True))
+                print(f"DEBUG: Team member IDs: {team_member_ids}")
+                
+                print("DEBUG: About to query team_tasks")
+                team_tasks = Task.objects.filter(assigned_to_id__in=team_member_ids)
+                print("DEBUG: team_tasks query completed")
+                
+                print("DEBUG: About to query team_service_requests")
+                team_service_requests = ServiceRequest.objects.filter(
+                    Q(assigned_to_id__in=team_member_ids) | Q(raised_by_id__in=team_member_ids)
+                )
+                print("DEBUG: team_service_requests query completed")
+                
+                team_performance.append({
+                    'lead': lead,
+                    'team_size': len(team_member_ids),
+                    'pending_tasks': team_tasks.filter(completed=False).count(),
+                    'total_service_requests': team_service_requests.count(),
+                    'open_service_requests': team_service_requests.filter(status='open').count(),
+                })
+
+            recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
+
+            # Execution Plans for operations head
+            execution_plans_stats = {}
             if EXECUTION_PLANS_AVAILABLE:
                 today = timezone.now().date()
-                member_actions = PlanAction.objects.filter(
-                    execution_plan__status__in=['client_approved', 'in_execution']
-                )
-                member_execution_stats = {
-                    'pending_actions': member_actions.filter(status='pending').count(),
-                    'completed_actions': PlanAction.objects.filter(
-                        executed_by=member,
-                        status='completed'
+                
+                execution_plans_stats = {
+                    'ready_for_execution': ExecutionPlan.objects.filter(status='client_approved').count(),
+                    'in_execution': ExecutionPlan.objects.filter(status='in_execution').count(),
+                    'completed_today': ExecutionPlan.objects.filter(
+                        status='completed',
+                        completed_at__date=today
                     ).count(),
-                    'actions_today': PlanAction.objects.filter(
-                        executed_by=member,
+                    'pending_actions': PlanAction.objects.filter(
+                        execution_plan__status='in_execution',
+                        status='pending'
+                    ).count(),
+                    'total_value_in_execution': PlanAction.objects.filter(
+                        execution_plan__status='in_execution',
+                        status='pending'
+                    ).aggregate(total=Sum('amount'))['total'] or 0,
+                }
+
+            context.update({
+                'ops_team_leads': ops_team_leads,
+                'ops_execs': ops_execs,
+                'total_client_profiles': total_client_profiles,
+                'active_profiles': active_profiles,
+                'muted_profiles': muted_profiles,
+                'ops_service_requests': ops_service_requests,
+                'pending_ops_tasks': pending_ops_tasks,
+                'overdue_ops_tasks': overdue_ops_tasks,
+                'team_performance': team_performance,
+                'recent_notes': recent_notes,
+                'execution_plans_stats': execution_plans_stats,
+            })
+            template_name = 'base/dashboard_business_head_ops.html'
+
+        elif user.role == 'rm_head':
+            print("DEBUG: Processing rm_head")
+            print("DEBUG: About to get team members")
+            team_members = user.get_team_members()
+            print(f"DEBUG: Team members: {team_members}")
+            
+            print("DEBUG: About to get accessible users")
+            accessible_users = user.get_accessible_users()
+            print(f"DEBUG: Accessible users: {accessible_users}")
+            
+            # Convert querysets to lists of IDs to avoid subquery issues
+            accessible_user_ids = list(accessible_users.values_list('id', flat=True))
+            print(f"DEBUG: Accessible user IDs: {accessible_user_ids}")
+            
+            # Team metrics
+            print("DEBUG: About to query team_leads")
+            team_leads = Lead.objects.filter(assigned_to_id__in=accessible_user_ids)
+            print("DEBUG: team_leads query completed")
+            
+            print("DEBUG: About to query team_clients")
+            team_clients = Client.objects.filter(user_id__in=accessible_user_ids)
+            print("DEBUG: team_clients query completed")
+            
+            print("DEBUG: About to query team_tasks")
+            team_tasks = Task.objects.filter(assigned_to_id__in=accessible_user_ids)
+            print("DEBUG: team_tasks query completed")
+            
+            print("DEBUG: About to query team_service_requests")
+            team_service_requests = ServiceRequest.objects.filter(
+                Q(raised_by_id__in=accessible_user_ids) | Q(client__user_id__in=accessible_user_ids)
+            )
+            print("DEBUG: team_service_requests query completed")
+            
+            # Performance metrics
+            pending_tasks = team_tasks.filter(completed=False).count()
+            overdue_tasks = team_tasks.filter(
+                completed=False, 
+                due_date__lt=timezone.now()
+            ).count()
+            
+            team_aum = team_clients.aggregate(total=Sum('aum'))['total'] or 0
+            team_sip = team_clients.aggregate(total=Sum('sip_amount'))['total'] or 0
+            
+            # Prepare detailed member statistics
+            team_members_data = []
+            for member in team_members:
+                member_leads = team_leads.filter(assigned_to=member)
+                member_clients = team_clients.filter(user=member)
+                member_tasks = team_tasks.filter(assigned_to=member)
+                
+                # Add execution plans data for each member
+                member_execution_stats = {}
+                if EXECUTION_PLANS_AVAILABLE:
+                    member_plans = ExecutionPlan.objects.filter(created_by=member)
+                    member_execution_stats = {
+                        'total_plans': member_plans.count(),
+                        'pending_approval': member_plans.filter(status='pending_approval').count(),
+                        'approved_plans': member_plans.filter(status='approved').count(),
+                        'completed_plans': member_plans.filter(status='completed').count(),
+                    }
+                
+                team_members_data.append({
+                    'member': member,
+                    'lead_count': member_leads.count(),
+                    'client_count': member_clients.count(),
+                    'aum': member_clients.aggregate(total=Sum('aum'))['total'] or 0,
+                    'sip': member_clients.aggregate(total=Sum('sip_amount'))['total'] or 0,
+                    'pending_tasks': member_tasks.filter(completed=False).count(),
+                    'overdue_tasks': member_tasks.filter(completed=False, due_date__lt=timezone.now()).count(),
+                    'performance_score': getattr(member, 'performance_score', 0),
+                    'execution_plans': member_execution_stats,
+                })
+
+            recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
+
+            # Execution Plans for RM Head
+            execution_plans_stats = {}
+            if EXECUTION_PLANS_AVAILABLE:
+                # Plans created by team members that need approval
+                team_plans = ExecutionPlan.objects.filter(created_by_id__in=accessible_user_ids)
+                my_approvals_pending = team_plans.filter(
+                    status='pending_approval',
+                    created_by__manager=user
+                )
+                
+                execution_plans_stats = {
+                    'team_plans': team_plans.count(),
+                    'pending_approval': team_plans.filter(status='pending_approval').count(),
+                    'approved_plans': team_plans.filter(status='approved').count(),
+                    'recent_team_plans': team_plans.order_by('-created_at')[:5],
+                    'my_approvals_pending': my_approvals_pending.count(),
+                    'team_completion_rate': round((team_plans.filter(status='completed').count() / team_plans.count()) * 100, 2) if team_plans.count() > 0 else 0,
+                }
+
+            context.update({
+                'team_members': team_members,
+                'team_leads': team_leads,
+                'team_clients': team_clients,
+                'team_tasks': team_tasks,
+                'team_service_requests': team_service_requests,
+                'pending_tasks': pending_tasks,
+                'overdue_tasks': overdue_tasks,
+                'team_aum': team_aum,
+                'team_sip': team_sip,
+                'leads_count': team_leads.count(),
+                'clients_count': team_clients.count(),
+                'team_members_data': team_members_data,
+                'recent_notes': recent_notes,
+                'execution_plans_stats': execution_plans_stats,
+            })
+            template_name = 'base/dashboard_rm_head.html'
+
+        elif user.role == 'ops_team_lead':
+            print("DEBUG: Processing ops_team_lead")
+            # Operations Team Lead dashboard
+            team_members = user.get_team_members()  # Ops Executives under this lead
+            team_member_ids = list(team_members.values_list('id', flat=True))
+            team_with_lead_ids = team_member_ids + [user.id]
+            
+            # Team metrics
+            team_tasks = Task.objects.filter(assigned_to_id__in=team_with_lead_ids)
+            team_service_requests = ServiceRequest.objects.filter(
+                Q(assigned_to_id__in=team_with_lead_ids) |
+                Q(raised_by_id__in=team_with_lead_ids)
+            )
+            
+            # Client profiles managed by team
+            team_client_profiles = ClientProfile.objects.filter(
+                Q(mapped_ops_exec_id__in=team_member_ids) | Q(created_by_id__in=team_with_lead_ids)
+            )
+            
+            # Performance metrics
+            pending_tasks = team_tasks.filter(completed=False).count()
+            overdue_tasks = team_tasks.filter(
+                completed=False, 
+                due_date__lt=timezone.now()
+            ).count()
+            
+            # Service request metrics
+            open_requests = team_service_requests.filter(status='open').count()
+            in_progress_requests = team_service_requests.filter(status='in_progress').count()
+            
+            # Team member performance
+            team_members_data = []
+            for member in team_members:
+                member_tasks = team_tasks.filter(assigned_to=member)
+                member_service_requests = team_service_requests.filter(
+                    Q(assigned_to=member) | Q(raised_by=member)
+                )
+                member_client_profiles = team_client_profiles.filter(mapped_ops_exec=member)
+                
+                # Add execution plans data for ops members
+                member_execution_stats = {}
+                if EXECUTION_PLANS_AVAILABLE:
+                    today = timezone.now().date()
+                    member_actions = PlanAction.objects.filter(
+                        execution_plan__status__in=['client_approved', 'in_execution']
+                    )
+                    member_execution_stats = {
+                        'pending_actions': member_actions.filter(status='pending').count(),
+                        'completed_actions': PlanAction.objects.filter(
+                            executed_by=member,
+                            status='completed'
+                        ).count(),
+                        'actions_today': PlanAction.objects.filter(
+                            executed_by=member,
+                            executed_at__date=today,
+                            status='completed'
+                        ).count(),
+                    }
+                
+                team_members_data.append({
+                    'member': member,
+                    'task_count': member_tasks.count(),
+                    'pending_tasks': member_tasks.filter(completed=False).count(),
+                    'service_requests': member_service_requests.count(),
+                    'open_requests': member_service_requests.filter(status='open').count(),
+                    'client_profiles': member_client_profiles.count(),
+                    'execution_stats': member_execution_stats,
+                })
+
+            recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
+
+            # Execution Plans for Ops Team Lead
+            execution_plans_stats = {}
+            if EXECUTION_PLANS_AVAILABLE:
+                today = timezone.now().date()
+                
+                execution_plans_stats = {
+                    'ready_for_execution': ExecutionPlan.objects.filter(status='client_approved').count(),
+                    'in_execution': ExecutionPlan.objects.filter(status='in_execution').count(),
+                    'pending_actions': PlanAction.objects.filter(
+                        execution_plan__status='in_execution',
+                        status='pending'
+                    ).count(),
+                    'team_actions_today': PlanAction.objects.filter(
+                        executed_by_id__in=team_member_ids,
                         executed_at__date=today,
                         status='completed'
                     ).count(),
+                    'team_efficiency': 0,  # Can calculate based on completion rate
                 }
-            
-            team_members_data.append({
-                'member': member,
-                'task_count': member_tasks.count(),
-                'pending_tasks': member_tasks.filter(completed=False).count(),
-                'service_requests': member_service_requests.count(),
-                'open_requests': member_service_requests.filter(status='open').count(),
-                'client_profiles': member_client_profiles.count(),
-                'execution_stats': member_execution_stats,
+
+            context.update({
+                'team_members': team_members,
+                'team_tasks': team_tasks,
+                'team_service_requests': team_service_requests,
+                'team_client_profiles': team_client_profiles,
+                'pending_tasks': pending_tasks,
+                'overdue_tasks': overdue_tasks,
+                'open_requests': open_requests,
+                'in_progress_requests': in_progress_requests,
+                'team_members_data': team_members_data,
+                'recent_notes': recent_notes,
+                'execution_plans_stats': execution_plans_stats,
             })
+            template_name = 'base/dashboard_ops_team_lead.html'
 
-        recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
-
-        # Execution Plans for Ops Team Lead
-        execution_plans_stats = {}
-        if EXECUTION_PLANS_AVAILABLE:
-            today = timezone.now().date()
-            
-            execution_plans_stats = {
-                'ready_for_execution': ExecutionPlan.objects.filter(status='client_approved').count(),
-                'in_execution': ExecutionPlan.objects.filter(status='in_execution').count(),
-                'pending_actions': PlanAction.objects.filter(
-                    execution_plan__status='in_execution',
-                    status='pending'
-                ).count(),
-                'team_actions_today': PlanAction.objects.filter(
-                    executed_by__in=team_members,
-                    executed_at__date=today,
-                    status='completed'
-                ).count(),
-                'team_efficiency': 0,  # Can calculate based on completion rate
-            }
-
-        context.update({
-            'team_members': team_members,
-            'team_tasks': team_tasks,
-            'team_service_requests': team_service_requests,
-            'team_client_profiles': team_client_profiles,
-            'pending_tasks': pending_tasks,
-            'overdue_tasks': overdue_tasks,
-            'open_requests': open_requests,
-            'in_progress_requests': in_progress_requests,
-            'team_members_data': team_members_data,
-            'recent_notes': recent_notes,
-            'execution_plans_stats': execution_plans_stats,
-        })
-        template_name = 'base/dashboard_ops_team_lead.html'
-
-    elif user.role == 'ops_exec':
-        # Operations Executive dashboard
-        my_tasks = Task.objects.filter(assigned_to=user)
-        my_service_requests = ServiceRequest.objects.filter(
-            Q(assigned_to=user) | Q(raised_by=user)
-        )
-        my_client_profiles = ClientProfile.objects.filter(mapped_ops_exec=user)
-        
-        # Personal metrics
-        pending_tasks = my_tasks.filter(completed=False).count()
-        overdue_tasks = my_tasks.filter(completed=False, due_date__lt=timezone.now()).count()
-        open_requests = my_service_requests.filter(status='open').count()
-        
-        # Recent activities
-        recent_tasks = my_tasks.order_by('-created_at')[:5]
-        recent_service_requests = my_service_requests.order_by('-created_at')[:5]
-        recent_client_profiles = my_client_profiles.order_by('-updated_at')[:5]
-        recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
-
-        # Execution Plans for Ops Exec
-        execution_plans_stats = {}
-        if EXECUTION_PLANS_AVAILABLE:
-            today = timezone.now().date()
-            last_30_days = timezone.now() - timedelta(days=30)
-            
-            my_actions = PlanAction.objects.filter(
-                execution_plan__status__in=['client_approved', 'in_execution']
+        elif user.role == 'ops_exec':
+            print("DEBUG: Processing ops_exec")
+            # Operations Executive dashboard
+            my_tasks = Task.objects.filter(assigned_to=user)
+            my_service_requests = ServiceRequest.objects.filter(
+                Q(assigned_to=user) | Q(raised_by=user)
             )
+            my_client_profiles = ClientProfile.objects.filter(mapped_ops_exec=user)
             
-            execution_plans_stats = {
-                'pending_actions': my_actions.filter(status='pending').count(),
-                'completed_today': PlanAction.objects.filter(
-                    executed_by=user,
-                    executed_at__date=today,
-                    status='completed'
-                ).count(),
-                'total_completed': PlanAction.objects.filter(
-                    executed_by=user,
-                    status='completed'
-                ).count(),
-                'recent_actions': PlanAction.objects.filter(
-                    executed_by=user
-                ).order_by('-executed_at')[:5],
-                'monthly_performance': PlanAction.objects.filter(
-                    executed_by=user,
-                    executed_at__gte=last_30_days,
-                    status='completed'
-                ).count(),
-            }
+            # Personal metrics
+            pending_tasks = my_tasks.filter(completed=False).count()
+            overdue_tasks = my_tasks.filter(completed=False, due_date__lt=timezone.now()).count()
+            open_requests = my_service_requests.filter(status='open').count()
+            
+            # Recent activities
+            recent_tasks = my_tasks.order_by('-created_at')[:5]
+            recent_service_requests = my_service_requests.order_by('-created_at')[:5]
+            recent_client_profiles = my_client_profiles.order_by('-updated_at')[:5]
+            recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
 
-        context.update({
-            'my_tasks': my_tasks,
-            'my_service_requests': my_service_requests,
-            'my_client_profiles': my_client_profiles,
-            'pending_tasks': pending_tasks,
-            'overdue_tasks': overdue_tasks,
-            'open_requests': open_requests,
-            'recent_tasks': recent_tasks,
-            'recent_service_requests': recent_service_requests,
-            'recent_client_profiles': recent_client_profiles,
-            'recent_notes': recent_notes,
-            'execution_plans_stats': execution_plans_stats,
-        })
-        template_name = 'base/dashboard_ops_exec.html'
+            # Execution Plans for Ops Exec
+            execution_plans_stats = {}
+            if EXECUTION_PLANS_AVAILABLE:
+                today = timezone.now().date()
+                last_30_days = timezone.now() - timedelta(days=30)
+                
+                my_actions = PlanAction.objects.filter(
+                    execution_plan__status__in=['client_approved', 'in_execution']
+                )
+                
+                execution_plans_stats = {
+                    'pending_actions': my_actions.filter(status='pending').count(),
+                    'completed_today': PlanAction.objects.filter(
+                        executed_by=user,
+                        executed_at__date=today,
+                        status='completed'
+                    ).count(),
+                    'total_completed': PlanAction.objects.filter(
+                        executed_by=user,
+                        status='completed'
+                    ).count(),
+                    'recent_actions': PlanAction.objects.filter(
+                        executed_by=user
+                    ).order_by('-executed_at')[:5],
+                    'monthly_performance': PlanAction.objects.filter(
+                        executed_by=user,
+                        executed_at__gte=last_30_days,
+                        status='completed'
+                    ).count(),
+                }
 
-    else:  # Relationship Manager
-        # Personal dashboard
-        leads = Lead.objects.filter(assigned_to=user)
-        clients = Client.objects.filter(user=user)
-        tasks = Task.objects.filter(assigned_to=user)
-        reminders = user.reminders.filter(is_done=False, remind_at__gte=timezone.now()) if hasattr(user, 'reminders') else []
-        service_requests = ServiceRequest.objects.filter(raised_by=user)
-        
-        # Personal metrics
-        pending_tasks = tasks.filter(completed=False).count()
-        overdue_tasks = tasks.filter(completed=False, due_date__lt=timezone.now()).count()
-        my_aum = clients.aggregate(total=Sum('aum'))['total'] or 0
-        my_sip = clients.aggregate(total=Sum('sip_amount'))['total'] or 0
-        
-        # Recent activities
-        recent_clients = clients.order_by('-created_at')[:3]
-        recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
+            context.update({
+                'my_tasks': my_tasks,
+                'my_service_requests': my_service_requests,
+                'my_client_profiles': my_client_profiles,
+                'pending_tasks': pending_tasks,
+                'overdue_tasks': overdue_tasks,
+                'open_requests': open_requests,
+                'recent_tasks': recent_tasks,
+                'recent_service_requests': recent_service_requests,
+                'recent_client_profiles': recent_client_profiles,
+                'recent_notes': recent_notes,
+                'execution_plans_stats': execution_plans_stats,
+            })
+            template_name = 'base/dashboard_ops_exec.html'
 
-        # Execution Plans for RM
-        execution_plans_stats = {}
-        if EXECUTION_PLANS_AVAILABLE:
-            current_month = timezone.now().month
-            current_year = timezone.now().year
-            last_90_days = timezone.now() - timedelta(days=90)
+        else:  # Relationship Manager
+            print("DEBUG: Processing relationship manager")
+            # Personal dashboard
+            leads = Lead.objects.filter(assigned_to=user)
+            clients = Client.objects.filter(user=user)
             
-            my_plans = ExecutionPlan.objects.filter(created_by=user)
+            print("DEBUG: About to query tasks for RM")
+            tasks = Task.objects.filter(assigned_to=user)
+            print("DEBUG: RM tasks query completed")
             
-            # Calculate approval success rate
-            submitted_plans = my_plans.filter(created_at__gte=last_90_days)
-            approved_plans = submitted_plans.filter(status__in=['approved', 'client_approved', 'in_execution', 'completed'])
-            approval_success_rate = round((approved_plans.count() / submitted_plans.count()) * 100, 2) if submitted_plans.count() > 0 else 0
+            reminders = user.reminders.filter(is_done=False, remind_at__gte=timezone.now()) if hasattr(user, 'reminders') else []
+            service_requests = ServiceRequest.objects.filter(raised_by=user)
             
-            execution_plans_stats = {
-                'my_plans': my_plans.count(),
-                'draft_plans': my_plans.filter(status='draft').count(),
-                'pending_approval': my_plans.filter(status='pending_approval').count(),
-                'approved_plans': my_plans.filter(status='approved').count(),
-                'in_execution': my_plans.filter(status='in_execution').count(),
-                'completed_plans': my_plans.filter(status='completed').count(),
-                'recent_plans': my_plans.order_by('-created_at')[:5],
-                'plans_this_month': my_plans.filter(
-                    created_at__month=current_month,
-                    created_at__year=current_year
-                ).count(),
-                'approval_success_rate': approval_success_rate,
-                'total_plan_value': my_plans.filter(
+            # Personal metrics
+            pending_tasks = tasks.filter(completed=False).count()
+            overdue_tasks = tasks.filter(completed=False, due_date__lt=timezone.now()).count()
+            my_aum = clients.aggregate(total=Sum('aum'))['total'] or 0
+            my_sip = clients.aggregate(total=Sum('sip_amount'))['total'] or 0
+            
+            # Recent activities
+            recent_clients = clients.order_by('-created_at')[:3]
+            recent_notes = Note.objects.filter(user=user).order_by('-updated_at')[:3]
+
+            # Execution Plans for RM
+            execution_plans_stats = {}
+            if EXECUTION_PLANS_AVAILABLE:
+                current_month = timezone.now().month
+                current_year = timezone.now().year
+                last_90_days = timezone.now() - timedelta(days=90)
+                
+                my_plans = ExecutionPlan.objects.filter(created_by=user)
+                
+                # Calculate approval success rate
+                submitted_plans = my_plans.filter(created_at__gte=last_90_days)
+                approved_plans = submitted_plans.filter(status__in=['approved', 'client_approved', 'in_execution', 'completed'])
+                approval_success_rate = round((approved_plans.count() / submitted_plans.count()) * 100, 2) if submitted_plans.count() > 0 else 0
+                
+                # FIX: Calculate total plan value using PlanAction model directly
+                # Instead of using Sum('actions__amount') which causes the subquery error
+                plan_ids = my_plans.filter(
                     status__in=['approved', 'client_approved', 'in_execution', 'completed']
-                ).aggregate(
-                    total=Sum('actions__amount')
-                )['total'] or 0,
-            }
+                ).values_list('id', flat=True)
+                
+                total_plan_value = PlanAction.objects.filter(
+                    execution_plan_id__in=plan_ids
+                ).aggregate(total=Sum('amount'))['total'] or 0
+                
+                execution_plans_stats = {
+                    'my_plans': my_plans.count(),
+                    'draft_plans': my_plans.filter(status='draft').count(),
+                    'pending_approval': my_plans.filter(status='pending_approval').count(),
+                    'approved_plans': my_plans.filter(status='approved').count(),
+                    'in_execution': my_plans.filter(status='in_execution').count(),
+                    'completed_plans': my_plans.filter(status='completed').count(),
+                    'recent_plans': my_plans.order_by('-created_at')[:5],
+                    'plans_this_month': my_plans.filter(
+                        created_at__month=current_month,
+                        created_at__year=current_year
+                    ).count(),
+                    'approval_success_rate': approval_success_rate,
+                    'total_plan_value': total_plan_value,
+                }
 
-        context.update({
-            'leads': leads,
-            'clients': clients,
-            'tasks': tasks,
-            'reminders': reminders,
-            'service_requests': service_requests,
-            'pending_tasks': pending_tasks,
-            'overdue_tasks': overdue_tasks,
-            'my_aum': my_aum,
-            'my_sip': my_sip,
-            'recent_clients': recent_clients,
-            'recent_notes': recent_notes,
-            'leads_count': leads.count(),
-            'clients_count': clients.count(),
-            'execution_plans_stats': execution_plans_stats,
-        })
-        template_name = 'base/dashboard_rm.html'
+            context.update({
+                'leads': leads,
+                'clients': clients,
+                'tasks': tasks,
+                'reminders': reminders,
+                'service_requests': service_requests,
+                'pending_tasks': pending_tasks,
+                'overdue_tasks': overdue_tasks,
+                'my_aum': my_aum,
+                'my_sip': my_sip,
+                'recent_clients': recent_clients,
+                'recent_notes': recent_notes,
+                'leads_count': leads.count(),
+                'clients_count': clients.count(),
+                'execution_plans_stats': execution_plans_stats,
+            })
+            template_name = 'base/dashboard_rm.html'
 
-    # Add global execution plans availability flag
-    context['execution_plans_available'] = EXECUTION_PLANS_AVAILABLE
-    
-    return render(request, template_name, context)
+        # Add global execution plans availability flag
+        context['execution_plans_available'] = EXECUTION_PLANS_AVAILABLE
+        
+        print(f"DEBUG: About to render template {template_name}")
+        return render(request, template_name, context)
+        
+    except Exception as e:
+        print(f"DEBUG: Error occurred: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
 
 # Notes System Views
 @login_required
