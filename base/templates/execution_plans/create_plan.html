@@ -83,6 +83,7 @@
                 </div>
                 
                 <div id="clientInfo" class="mb-3" style="display: none;">
+                    <form method="get" id="clientSelectionForm">
                     <div class="alert alert-info">
                         <div class="row">
                             <div class="col-md-8">
@@ -115,6 +116,16 @@
                             </div>
                         </div>
                     </div>
+                     
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="proceedBtn">
+                            <i class="fas fa-arrow-right me-2"></i>Proceed to Plan Design
+                        </button>
+                    </div>
+                    </form>
             </div>
         </div>
         
