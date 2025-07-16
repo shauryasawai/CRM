@@ -1,6 +1,4 @@
-{% extends 'hrm/base.html' %}
-
-{% block content %}
+{% extends 'hrm/base.html' %} {% block content %}
 <div class="container-fluid">
   <div class="card">
     <div class="card-header">
@@ -23,11 +21,7 @@
                   <span class="badge bg-success">Present</span>
                   {% if today_attendance.is_remote %}
                   <span class="badge bg-warning">Remote</span>
-                  {% endif %}
-                  {% if today_attendance.is_late %}
-                  <span class="badge bg-danger">Late</span>
-                  {% endif %}
-                  {% else %}
+
                   <span class="badge bg-secondary">Absent</span>
                   {% endif %}
                 </div>
@@ -38,28 +32,14 @@
               <div class="row">
                 <div class="col-md-6">
                   <p>
-                    <strong>Login Time:</strong> {{ today_attendance.login_time|time:"H:i" }}
-                  </p>
-                  <p>
-                    <strong>Location:</strong>
-                    {% if today_attendance.login_location %}
-                    {{ today_attendance.login_location }}
-                    {% else %}
-                    Not recorded
+
                     {% endif %}
                   </p>
                 </div>
                 <div class="col-md-6">
                   {% if today_attendance.logout_time %}
                   <p>
-                    <strong>Logout Time:</strong> {{ today_attendance.logout_time|time:"H:i" }}
-                  </p>
-                  <p>
-                    <strong>Location:</strong>
-                    {% if today_attendance.logout_location %}
-                    {{ today_attendance.logout_location }}
-                    {% else %}
-                    Not recorded
+
                     {% endif %}
                   </p>
                   {% else %}
@@ -111,16 +91,7 @@
                 </button>
               </form>
               {% endif %}
-            </div>
-          </div>
-        </div>
 
-        <!-- Monthly Summary -->
-        <div class="col-md-6">
-          <div class="card">
-            <div class="card-header">
-              <h5>Monthly Summary</h5>
-            </div>
             <div class="card-body">
               <div class="row text-center">
                 <div class="col-md-4">
@@ -130,122 +101,11 @@
                       <h3>{{ total_days }}</h3>
                     </div>
                   </div>
-                </div>
-                <div class="col-md-4">
-                  <div class="card bg-success text-white mb-3">
-                    <div class="card-body">
-                      <h6>Present Days</h6>
-                      <h3>{{ present_days }}</h3>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-4">
-                  <div class="card bg-info text-white mb-3">
-                    <div class="card-body">
-                      <h6>Total Hours</h6>
-                      <h3>{{ total_hours }}</h3>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="row text-center">
-                <div class="col-md-6">
-                  <div class="card bg-warning text-white mb-3">
-                    <div class="card-body">
-                      <h6>Remote Days</h6>
-                      <h3>{{ remote_days }}</h3>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="card bg-danger text-white mb-3">
-                    <div class="card-body">
-                      <h6>Late Days</h6>
-                      <h3>{{ late_days }}</h3>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Monthly Attendance Records -->
-      <div class="card">
-        <div class="card-header">
-          <h5>Monthly Attendance Records</h5>
-        </div>
-        <div class="card-body">
-          <div class="table-responsive">
-            <table class="table table-striped">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Status</th>
-                  <th>Login Time</th>
-                  <th>Logout Time</th>
-                  <th>Duration</th>
-                  <th>Location</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for record in monthly_attendance %}
-                <tr>
-                  <td>{{ record.date|date:"M d, Y" }}</td>
-                  <td>
-                    {% if record.login_time %}
-                    <span class="badge bg-success">Present</span>
-                    {% if record.is_remote %}
-                    <span class="badge bg-warning">Remote</span>
-                    {% endif %}
-                    {% if record.is_late %}
-                    <span class="badge bg-danger">Late</span>
-                    {% endif %}
-                    {% else %}
-                    <span class="badge bg-secondary">Absent</span>
-                    {% endif %}
-                  </td>
-                  <td>{{ record.login_time|time:"H:i"|default:"-" }}</td>
-                  <td>{{ record.logout_time|time:"H:i"|default:"-" }}</td>
-                  <td>
-                    {% if record.login_time and record.logout_time %}
-                    {% load humanize %}
-                    {% with duration=record.logout_time|timesince:record.login_time %}
-                    {{ duration }}
-                    {% endwith %}
-                    {% else %}
-                    -
-                    {% endif %}
-                  </td>
-                  <td>
-                    {% if record.is_remote %}
-                    Remote
-                    {% elif record.login_location %}
-                    Office
-                    {% else %}
-                    -
-                    {% endif %}
-                  </td>
-                </tr>
-                {% empty %}
-                <tr>
-                  <td colspan="6" class="text-center">
-                    No attendance records found
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
+{% endblock %} {% block scripts %}
 <script>
   function recordAttendance(action) {
     // Get location first
