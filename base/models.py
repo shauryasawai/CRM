@@ -1,5 +1,5 @@
 # models.py - Fixed version with single ServiceRequest model
-
+import re
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group
 from django.conf import settings
@@ -4001,5 +4001,513 @@ class ActionPlanWorkflow(models.Model):
     def __str__(self):
         return f"{self.action_plan.plan_id}: {self.from_status} → {self.to_status}"
     
+# models.py - Add these models to your existing models.py file
+
+class ClientUpload(models.Model):
+    """Model to track client profile file uploads"""
+    UPLOAD_STATUS_CHOICES = [
+        ('pending', 'Pending Processing'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('partial', 'Partially Processed'),
+        ('archived', 'Archived'),
+    ]
     
+    upload_id = models.CharField(max_length=20, unique=True, editable=False)
+    file = models.FileField(
+        upload_to='client_uploads/',
+        validators=[FileExtensionValidator(allowed_extensions=['xlsx', 'xls'])]
+    )
+    uploaded_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='client_uploads'
+    )
+    uploaded_at = models.DateTimeField(default=timezone.now)
+    processed_at = models.DateTimeField(null=True, blank=True)
+    
+    # Processing Status
+    status = models.CharField(max_length=15, choices=UPLOAD_STATUS_CHOICES, default='pending')
+    total_rows = models.PositiveIntegerField(default=0)
+    processed_rows = models.PositiveIntegerField(default=0)
+    successful_rows = models.PositiveIntegerField(default=0)
+    failed_rows = models.PositiveIntegerField(default=0)
+    updated_rows = models.PositiveIntegerField(default=0)
+    
+    # Processing Details
+    processing_log = models.TextField(blank=True)
+    error_details = models.JSONField(default=dict, blank=True)
+    processing_summary = models.JSONField(default=dict, blank=True)
+    
+    # Options
+    update_existing = models.BooleanField(
+        default=True,
+        help_text="Update existing client profiles if found"
+    )
+    
+    # Archive fields
+    is_archived = models.BooleanField(default=False)
+    archived_at = models.DateTimeField(null=True, blank=True)
+    archived_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='archived_client_uploads'
+    )
+    
+    class Meta:
+        ordering = ['-uploaded_at']
+        verbose_name = 'Client Upload'
+        verbose_name_plural = 'Client Uploads'
+    
+    def save(self, *args, **kwargs):
+        if not self.upload_id:
+            self.upload_id = self.generate_upload_id()
+        super().save(*args, **kwargs)
+    
+    def generate_upload_id(self):
+        """Generate unique upload ID"""
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        return f"CU{timestamp}"
+    
+    def __str__(self):
+        return f"{self.upload_id} - {self.file.name} ({self.get_status_display()})"
+    
+    def create_log(self, row_number, status, message, client_name='', pan_number='', client_profile=None):
+        """Create a log entry for this upload"""
+        return ClientUploadLog.objects.create(
+            upload=self,
+            row_number=row_number,
+            client_name=client_name,
+            pan_number=pan_number,
+            status=status,
+            message=message,
+            client_profile=client_profile
+        )
+    
+    def process_upload_with_logging(self):
+        """Main method to process the uploaded client file"""
+        import os
+        import pandas as pd
+        from django.db import transaction
+        from decimal import Decimal
+        import re
+        
+        try:
+            self.status = 'processing'
+            self.save()
+            
+            # Log start
+            self.create_log(0, 'success', f"Started processing upload {self.upload_id}")
+            
+            # Check if file exists
+            if not self.file or not os.path.exists(self.file.path):
+                raise Exception(f"File not found: {self.file.path if self.file else 'No file attached'}")
+            
+            # Read Excel file
+            try:
+                df = pd.read_excel(self.file.path, engine='openpyxl')
+                self.create_log(0, 'success', f"Successfully read Excel file with {len(df)} rows")
+            except Exception as e:
+                self.create_log(0, 'error', f"Failed to read Excel file: {str(e)}")
+                raise
+            
+            # Remove any completely empty rows
+            df = df.dropna(how='all')
+            
+            # Check if we have data
+            if df.empty:
+                raise Exception("Excel file contains no data rows")
+            
+            self.total_rows = len(df)
+            self.save()
+            
+            self.create_log(0, 'success', f"Found {self.total_rows} rows to process")
+            
+            # Log column information
+            columns_found = list(df.columns)
+            self.create_log(0, 'success', f"Columns found: {', '.join(columns_found)}")
+            
+            # Expected columns
+            required_columns = ['NAME', 'PAN']
+            optional_columns = ['EMAIL', 'MOBILE', 'DATE OF BIRTH', 'ADDRESS1', 'AUM']
+            
+            # Check if required columns exist
+            missing_columns = []
+            for col in required_columns:
+                if col not in df.columns:
+                    missing_columns.append(col)
+            
+            if missing_columns:
+                error_msg = f"Missing required columns: {', '.join(missing_columns)}"
+                self.create_log(0, 'error', error_msg)
+                raise Exception(error_msg)
+            
+            self.create_log(0, 'success', f"Column validation successful")
+            
+            # Process each row
+            for index, row in df.iterrows():
+                try:
+                    self._process_single_client_row(row, index + 1)
+                    self.processed_rows += 1
+                    
+                    # Save progress every 100 rows
+                    if self.processed_rows % 100 == 0:
+                        self.save()
+                        self.create_log(0, 'success', f"Progress: {self.processed_rows}/{self.total_rows} rows processed")
+                        
+                except Exception as row_error:
+                    self.create_log(index + 1, 'error', f"Row processing failed: {str(row_error)}")
+                    self.failed_rows += 1
+                    continue
+            
+            # Complete processing
+            if self.failed_rows == 0:
+                self.status = 'completed'
+            else:
+                self.status = 'partial'
+            
+            self.processed_at = timezone.now()
+            self.save()
+            
+            success_msg = f"Processing completed. Success: {self.successful_rows}, Failed: {self.failed_rows}, Updated: {self.updated_rows}"
+            self.create_log(0, 'success', success_msg)
+            
+            return True
+            
+        except Exception as e:
+            error_msg = f"Processing failed: {str(e)}"
+            
+            self.status = 'failed'
+            self.processed_at = timezone.now()
+            self.error_details = {'error': str(e)}
+            self.save()
+            
+            self.create_log(0, 'error', error_msg)
+            return False
+    
+    def _process_single_client_row(self, row, row_number):
+        """Process a single client row"""
+        try:
+            # Helper functions
+            def safe_string_convert(value):
+                if value is None or pd.isna(value):
+                    return ''
+                result = str(value).strip()
+                return '' if result.lower() == 'nan' else result
+            
+            def safe_decimal_convert(value, default=0):
+                if value is None or pd.isna(value):
+                    return Decimal(str(default))
+                if isinstance(value, str):
+                    value = value.replace(',', '').replace('₹', '').replace('$', '').strip()
+                    if not value:
+                        return Decimal(str(default))
+                try:
+                    return Decimal(str(float(value)))
+                except (ValueError, TypeError):
+                    return Decimal(str(default))
+            
+            def parse_date(date_value):
+                if pd.isna(date_value) or not date_value:
+                    return None
+                
+                # Import datetime module with alias to avoid conflict
+                from datetime import datetime as dt
+                
+                if isinstance(date_value, dt):
+                    return date_value.date()
+                
+                date_str = str(date_value).strip()
+                date_formats = [
+                    '%d-%m-%Y', '%d/%m/%Y', '%Y-%m-%d', '%Y/%m/%d',
+                    '%d-%m-%y', '%d/%m/%y', '%Y-%m-%dT%H:%M:%S.%fZ',
+                    '%Y-%m-%dT%H:%M:%SZ'
+                ]
+                
+                for format_str in date_formats:
+                    try:
+                        return dt.strptime(date_str, format_str).date()
+                    except ValueError:
+                        continue
+                
+                # If no format matches, log warning and return None
+                self.create_log(row_number, 'warning', f"Could not parse date: {date_value}")
+                return None
+            
+            def validate_pan(pan):
+                if not pan:
+                    return False, "PAN number is required"
+                pan = pan.upper().strip()
+                pan_pattern = r'^[A-Z]{5}[0-9]{4}[A-Z]{1}$'
+                if not re.match(pan_pattern, pan) or len(pan) != 10:
+                    return False, f"Invalid PAN format: {pan}"
+                return True, pan
+            
+            def combine_address(row):
+                address_parts = []
+                for field in ['ADDRESS1', 'ADDRESS2', 'ADDRESS3', 'CITY', 'STATE', 'PIN']:
+                    if field in row and not pd.isna(row[field]) and str(row[field]).strip():
+                        address_parts.append(str(row[field]).strip())
+                return ', '.join(address_parts) if address_parts else ''
+            
+            # Extract data with error handling
+            client_name = safe_string_convert(row.get('NAME', ''))
+            pan_number = safe_string_convert(row.get('PAN', ''))
+            email = safe_string_convert(row.get('EMAIL', ''))
+            mobile_number = safe_string_convert(row.get('MOBILE', ''))
+            
+            # Validate required fields
+            if not client_name:
+                self.failed_rows += 1
+                self.create_log(row_number, 'error', "Client name is required", client_name, pan_number)
+                return
+            
+            # Validate PAN
+            pan_valid, pan_result = validate_pan(pan_number)
+            if not pan_valid:
+                self.failed_rows += 1
+                self.create_log(row_number, 'error', pan_result, client_name, pan_number)
+                return
+            
+            pan_number = pan_result
+            
+            # Parse dates
+            date_of_birth = parse_date(row.get('DATE OF BIRTH'))
+            first_investment_date = parse_date(row.get('First Investment Date'))
+            
+            # Combine address
+            address_kyc = combine_address(row)
+            
+            # Get other fields
+            family_head_name = safe_string_convert(row.get('FAMILY HEAD', ''))
+            aum_value = safe_decimal_convert(row.get('AUM', 0))
+            
+            # Personnel information
+            rm_name = safe_string_convert(row.get('RELATIONSHIP  MANAGER', ''))
+            ops_name = safe_string_convert(row.get('OPERATIONS', ''))
+            
+            # Try to find existing users
+            mapped_rm = None
+            mapped_ops = None
+            
+            if rm_name:
+                try:
+                    name_parts = rm_name.split()
+                    if len(name_parts) >= 1:
+                        rm_users = User.objects.filter(
+                            role='rm',
+                            first_name__icontains=name_parts[0]
+                        )
+                        if len(name_parts) > 1:
+                            rm_users = rm_users.filter(last_name__icontains=name_parts[-1])
+                        mapped_rm = rm_users.first()
+                except Exception:
+                    pass
+            
+            if ops_name:
+                try:
+                    name_parts = ops_name.split()
+                    if len(name_parts) >= 1:
+                        ops_users = User.objects.filter(
+                            role__in=['ops_exec', 'ops_team_lead'],
+                            first_name__icontains=name_parts[0]
+                        )
+                        if len(name_parts) > 1:
+                            ops_users = ops_users.filter(last_name__icontains=name_parts[-1])
+                        mapped_ops = ops_users.first()
+                except Exception:
+                    pass
+            
+            # Check if ClientProfile already exists
+            existing_profile = None
+            update_existing = False
+            
+            try:
+                existing_profile = ClientProfile.objects.get(pan_number=pan_number)
+                update_existing = True
+                self.create_log(row_number, 'info', 
+                    f"Found existing profile for PAN {pan_number}", client_name, pan_number)
+            except ClientProfile.DoesNotExist:
+                pass
+            except ClientProfile.MultipleObjectsReturned:
+                self.failed_rows += 1
+                self.create_log(row_number, 'error',
+                    f"Multiple profiles found with PAN {pan_number}", client_name, pan_number)
+                return
+            
+            # Prepare ClientProfile data
+            profile_data = {
+                'client_full_name': client_name,
+                'pan_number': pan_number,
+                'email': email,
+                'mobile_number': mobile_number,
+                'address_kyc': address_kyc or 'Address not provided',
+                'family_head_name': family_head_name,
+                'mapped_rm': mapped_rm,
+                'mapped_ops_exec': mapped_ops,
+                'created_by': self.uploaded_by,
+                'status': 'active'
+            }
+            
+            # Add date fields if available
+            if date_of_birth:
+                profile_data['date_of_birth'] = date_of_birth
+            if first_investment_date:
+                profile_data['first_investment_date'] = first_investment_date
+            
+            with transaction.atomic():
+                if update_existing and self.update_existing:
+                    # Update existing profile
+                    for field, value in profile_data.items():
+                        if field not in ['created_by']:  # Don't change creator
+                            setattr(existing_profile, field, value)
+                    existing_profile.save()
+                    
+                    client_profile = existing_profile
+                    self.updated_rows += 1
+                    self.create_log(row_number, 'success',
+                        f"Updated existing profile for {client_name}", client_name, pan_number, client_profile)
+                        
+                elif update_existing and not self.update_existing:
+                    # Skip existing profile
+                    self.create_log(row_number, 'warning',
+                        f"Skipped existing profile for {client_name} - update disabled", client_name, pan_number)
+                    return
+                    
+                else:
+                    # Create new profile - set a default date_of_birth if missing
+                    if 'date_of_birth' not in profile_data:
+                        # Set a default date or handle as per your business logic
+                        from datetime import date
+                        profile_data['date_of_birth'] = date(1900, 1, 1)  # Default date
+                        self.create_log(row_number, 'warning',
+                            f"Using default date of birth for {client_name}", client_name, pan_number)
+                    
+                    client_profile = ClientProfile.objects.create(**profile_data)
+                    self.successful_rows += 1
+                    self.create_log(row_number, 'success',
+                        f"Created new profile for {client_name}", client_name, pan_number, client_profile)
+                
+                # Handle Client model
+                try:
+                    existing_client = Client.objects.get(client_profile=client_profile)
+                    # Update existing client
+                    existing_client.name = client_name
+                    existing_client.contact_info = mobile_number or email or 'N/A'
+                    existing_client.aum = aum_value
+                    existing_client.user = mapped_rm
+                    existing_client.save()
+                    
+                    self.create_log(row_number, 'success',
+                        f"Updated existing client record for {client_name}", client_name, pan_number)
+                        
+                except Client.DoesNotExist:
+                    # Create new client
+                    Client.objects.create(
+                        client_profile=client_profile,
+                        name=client_name,
+                        contact_info=mobile_number or email or 'N/A',
+                        aum=aum_value,
+                        user=mapped_rm,
+                        created_by=self.uploaded_by
+                    )
+                    
+                    self.create_log(row_number, 'success',
+                        f"Created new client record for {client_name}", client_name, pan_number)
+                
+                # Log personnel mapping results
+                mapping_msgs = []
+                if mapped_rm:
+                    mapping_msgs.append(f"RM: {mapped_rm.get_full_name()}")
+                if mapped_ops:
+                    mapping_msgs.append(f"Ops: {mapped_ops.get_full_name()}")
+                
+                if mapping_msgs:
+                    self.create_log(row_number, 'success',
+                        f"Personnel mapped - {'; '.join(mapping_msgs)}", client_name, pan_number)
+            
+        except Exception as e:
+            self.failed_rows += 1
+            error_message = f"Row processing error: {str(e)}"
+            
+            self.create_log(row_number, 'error', error_message,
+                client_name if 'client_name' in locals() else '',
+                pan_number if 'pan_number' in locals() else '')
+            
+            logger.error(f"Error processing client row {row_number}: {e}")
+
+
+class ClientUploadLog(models.Model):
+    """Log entries for client upload processing"""
+    upload = models.ForeignKey(
+        ClientUpload,
+        on_delete=models.CASCADE,
+        related_name='processing_logs'
+    )
+    row_number = models.PositiveIntegerField(
+        help_text="Row number in the uploaded file (0 for system messages)"
+    )
+    client_name = models.CharField(max_length=255, blank=True)
+    pan_number = models.CharField(max_length=10, blank=True)
+    
+    STATUS_CHOICES = [
+        ('success', 'Success'),
+        ('error', 'Error'),
+        ('warning', 'Warning'),
+    ]
+    
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
+    message = models.TextField()
+    client_profile = models.ForeignKey(
+        'ClientProfile',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='upload_logs'
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+    
+    class Meta:
+        ordering = ['upload', 'row_number', 'created_at']
+        verbose_name = 'Client Upload Log'
+        verbose_name_plural = 'Client Upload Logs'
+    
+    def __str__(self):
+        if self.row_number == 0:
+            return f"{self.upload.upload_id} - System Log ({self.get_status_display()})"
+        return f"{self.upload.upload_id} - Row {self.row_number} ({self.get_status_display()})"
+
+
+# Signal to auto-process uploads
+@receiver(post_save, sender=ClientUpload)
+def auto_process_client_upload(sender, instance, created, **kwargs):
+    """Automatically process client uploads when created"""
+    if created and instance.status == 'pending':
+        try:
+            transaction.on_commit(lambda: process_client_upload_deferred(instance.id))
+        except Exception as e:
+            logger.error(f"Error scheduling client upload processing for {instance.upload_id}: {e}")
+
+def process_client_upload_deferred(upload_id):
+    """Process client upload after transaction commit"""
+    try:
+        upload = ClientUpload.objects.get(id=upload_id)
+        if upload.status == 'pending':
+            upload.create_log(0, 'success', f"Upload {upload.upload_id} starting deferred processing")
+            upload.process_upload_with_logging()
+    except ClientUpload.DoesNotExist:
+        logger.error(f"Client upload with id {upload_id} not found for deferred processing")
+    except Exception as e:
+        logger.error(f"Deferred processing failed for client upload id {upload_id}: {e}")
+        try:
+            upload = ClientUpload.objects.get(id=upload_id)
+            upload.status = 'failed'
+            upload.error_details = {'error': str(e)}
+            upload.save()
+        except:
+            pass
     

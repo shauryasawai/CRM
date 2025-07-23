@@ -84,3 +84,7 @@ INFO 2025-07-16 10:52:40,467 views 3760 28580 create_plan_step2 called with clie
 INFO 2025-07-16 10:52:40,554 views 3760 28580 Found legacy client: Shauryaman (ID: 21)
 INFO 2025-07-16 10:52:40,863 views 3760 28580 Found linked profile for client 21
 INFO 2025-07-16 10:52:40,969 views 3760 28580 Found 8 portfolio holdings for client 21
+INFO 2025-07-19 16:51:10,693 views 47672 32604 create_plan_step2 called with client_id: 19 (type: <class 'str'>)
+INFO 2025-07-19 16:51:10,776 views 47672 32604 Found legacy client: Meera Reddy (ID: 19)
+INFO 2025-07-19 16:51:11,109 views 47672 32604 Found linked profile for client 19
+INFO 2025-07-19 16:51:11,213 views 47672 32604 Found 8 portfolio holdings for client 19

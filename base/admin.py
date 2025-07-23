@@ -3542,6 +3542,203 @@ class SchemeUploadLogAdmin(admin.ModelAdmin):
         return obj.scheme_name
     scheme_name_short.short_description = 'Scheme Name'
     
+from django.urls import path
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.http import HttpResponse
+from django.core.paginator import Paginator
+from django.db.models import Q
+from .models import ClientUpload, ClientUploadLog, ClientProfile, Client
+
+@admin.register(ClientUpload)
+class ClientUploadAdmin(admin.ModelAdmin):
+    list_display = [
+        'upload_id', 'file', 'uploaded_by', 'status', 'uploaded_at',
+        'total_rows', 'successful_rows', 'updated_rows', 'failed_rows',
+        'processed_at'
+    ]
+    list_filter = ['status', 'uploaded_at', 'processed_at']
+    search_fields = ['upload_id', 'file', 'uploaded_by__username']
+    readonly_fields = [
+        'upload_id', 'uploaded_at', 'processed_at', 'status',
+        'total_rows', 'processed_rows', 'successful_rows', 
+        'failed_rows', 'updated_rows', 'processing_log',
+        'error_details', 'processing_summary'
+    ]
+    
+    fieldsets = (
+        ('Upload Information', {
+            'fields': ('upload_id', 'file', 'uploaded_by', 'uploaded_at')
+        }),
+        ('Processing Status', {
+            'fields': ('status', 'processed_at', 'total_rows', 'processed_rows',
+                      'successful_rows', 'updated_rows', 'failed_rows')
+        }),
+        ('Options', {
+            'fields': ('update_existing',)
+        }),
+        ('Processing Details', {
+            'fields': ('processing_log', 'error_details', 'processing_summary'),
+            'classes': ('collapse',)
+        }),
+        ('Archive', {
+            'fields': ('is_archived', 'archived_at', 'archived_by'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    actions = ['reprocess_uploads', 'archive_uploads']
+    
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('<int:upload_id>/logs/', self.admin_site.admin_view(self.view_logs), 
+                 name='client_upload_logs'),
+            path('<int:upload_id>/reprocess/', self.admin_site.admin_view(self.reprocess_upload), 
+                 name='client_upload_reprocess'),
+            path('upload/', self.admin_site.admin_view(self.upload_file), 
+                 name='client_upload_file'),
+        ]
+        return custom_urls + urls
+    
+    def view_logs(self, request, upload_id):
+        """View detailed logs for an upload"""
+        upload = get_object_or_404(ClientUpload, id=upload_id)
+        logs = upload.processing_logs.all().order_by('row_number', 'created_at')
+        
+        # Filter logs if requested
+        status_filter = request.GET.get('status')
+        if status_filter:
+            logs = logs.filter(status=status_filter)
+        
+        search_query = request.GET.get('search')
+        if search_query:
+            logs = logs.filter(
+                Q(client_name__icontains=search_query) |
+                Q(pan_number__icontains=search_query) |
+                Q(message__icontains=search_query)
+            )
+        
+        # Paginate logs
+        paginator = Paginator(logs, 50)
+        page = request.GET.get('page', 1)
+        logs_page = paginator.get_page(page)
+        
+        context = {
+            'title': f'Upload Logs - {upload.upload_id}',
+            'upload': upload,
+            'logs': logs_page,
+            'status_choices': ClientUploadLog.STATUS_CHOICES,
+            'current_status': status_filter,
+            'search_query': search_query,
+        }
+        
+        return render(request, 'admin/client_upload_logs.html', context)
+    
+    def reprocess_upload(self, request, upload_id):
+        """Reprocess a failed or partial upload"""
+        upload = get_object_or_404(ClientUpload, id=upload_id)
+        
+        if request.method == 'POST':
+            if upload.status in ['failed', 'partial', 'completed']:
+                # Reset counters
+                upload.status = 'pending'
+                upload.processed_at = None
+                upload.processed_rows = 0
+                upload.successful_rows = 0
+                upload.failed_rows = 0
+                upload.updated_rows = 0
+                upload.processing_log = ''
+                upload.error_details = {}
+                upload.save()
+                
+                # Clear old logs
+                upload.processing_logs.all().delete()
+                
+                # Start reprocessing
+                from .models import process_client_upload_deferred
+                process_client_upload_deferred(upload.id)
+                
+                messages.success(request, f'Upload {upload.upload_id} has been queued for reprocessing.')
+                return redirect('admin:myapp_clientupload_change', upload.id)
+            else:
+                messages.error(request, 'Upload cannot be reprocessed in current status.')
+        
+        context = {
+            'title': f'Reprocess Upload - {upload.upload_id}',
+            'upload': upload,
+        }
+        
+        return render(request, 'admin/client_upload_reprocess.html', context)
+    
+    def upload_file(self, request):
+        """Custom upload interface"""
+        if request.method == 'POST':
+            if 'file' in request.FILES:
+                upload = ClientUpload.objects.create(
+                    file=request.FILES['file'],
+                    uploaded_by=request.user,
+                    update_existing=request.POST.get('update_existing') == 'on'
+                )
+                
+                messages.success(request, 
+                    f'File uploaded successfully as {upload.upload_id}. Processing will start automatically.')
+                return redirect('admin:myapp_clientupload_change', upload.id)
+            else:
+                messages.error(request, 'Please select a file to upload.')
+        
+        context = {
+            'title': 'Upload Client Data File',
+        }
+        
+        return render(request, 'admin/client_upload_file.html', context)
+    
+    def reprocess_uploads(self, request, queryset):
+        """Action to reprocess selected uploads"""
+        count = 0
+        for upload in queryset.filter(status__in=['failed', 'partial']):
+            upload.status = 'pending'
+            upload.processed_at = None
+            upload.save()
+            
+            from .models import process_client_upload_deferred
+            process_client_upload_deferred(upload.id)
+            count += 1
+        
+        self.message_user(request, f'{count} uploads queued for reprocessing.')
+    
+    reprocess_uploads.short_description = "Reprocess selected uploads"
+    
+    def archive_uploads(self, request, queryset):
+        """Action to archive selected uploads"""
+        count = queryset.filter(is_archived=False).update(
+            is_archived=True,
+            archived_at=timezone.now(),
+            archived_by=request.user
+        )
+        self.message_user(request, f'{count} uploads archived.')
+    
+    archive_uploads.short_description = "Archive selected uploads"
+
+
+@admin.register(ClientUploadLog)
+class ClientUploadLogAdmin(admin.ModelAdmin):
+    list_display = [
+        'upload', 'row_number', 'client_name', 'pan_number', 
+        'status', 'message_preview', 'created_at'
+    ]
+    list_filter = ['status', 'upload', 'created_at']
+    search_fields = ['client_name', 'pan_number', 'message']
+    readonly_fields = ['upload', 'row_number', 'client_name', 'pan_number', 
+                      'status', 'message', 'client_profile', 'created_at']
+    
+    def message_preview(self, obj):
+        return obj.message[:100] + "..." if len(obj.message) > 100 else obj.message
+    message_preview.short_description = "Message Preview"
+    
+    def has_add_permission(self, request):
+        return False
+    
 # Business Analytics
 admin.site.register(BusinessTracker, BusinessTrackerAdmin)
 
