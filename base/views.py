@@ -504,22 +504,7 @@ def dashboard(request):
 
             # Execution Plans for RM Head
             execution_plans_stats = {}
-            if EXECUTION_PLANS_AVAILABLE:
-                # Plans created by team members that need approval
-                team_plans = ExecutionPlan.objects.filter(created_by_id__in=accessible_user_ids)
-                my_approvals_pending = team_plans.filter(
-                    status='pending_approval',
-                    created_by__manager=user
-                )
-                
-                execution_plans_stats = {
-                    'team_plans': team_plans.count(),
-                    'pending_approval': team_plans.filter(status='pending_approval').count(),
-                    'approved_plans': team_plans.filter(status='approved').count(),
-                    'recent_team_plans': team_plans.order_by('-created_at')[:5],
-                    'my_approvals_pending': my_approvals_pending.count(),
-                    'team_completion_rate': round((team_plans.filter(status='completed').count() / team_plans.count()) * 100, 2) if team_plans.count() > 0 else 0,
-                }
+            
 
             context.update({
                 'team_members': team_members,
@@ -8723,6 +8708,7 @@ def plan_analytics(request, plan_id):
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import update_session_auth_hash
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
@@ -9736,6 +9722,7 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.contrib.auth.forms import PasswordChangeForm
 from django.utils.encoding import force_bytes, force_str
 from django.urls import reverse
 from django.contrib.sites.shortcuts import get_current_site
@@ -11327,3 +11314,98 @@ def send_completion_email(request, plan_id):
     except Exception as e:
         logger.error(f"Error sending completion email: {str(e)}")
         return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def change_password(request):
+    """
+    Simple and secure password change view
+    """
+    if request.method == 'POST':
+        # Handle AJAX requests
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            try:
+                data = json.loads(request.body)
+                old_password = data.get('old_password')
+                new_password1 = data.get('new_password1')
+                new_password2 = data.get('new_password2')
+                
+                # Validate old password
+                if not request.user.check_password(old_password):
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Current password is incorrect.'
+                    })
+                
+                # Validate new passwords
+                if not new_password1 or not new_password2:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Both new password fields are required.'
+                    })
+                
+                if new_password1 != new_password2:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'New passwords do not match.'
+                    })
+                
+                if len(new_password1) < 8:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Password must be at least 8 characters long.'
+                    })
+                
+                # Check if new password is same as old password
+                if old_password == new_password1:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'New password must be different from current password.'
+                    })
+                
+                # Change password
+                request.user.set_password(new_password1)
+                request.user.save()
+                
+                # Keep user logged in after password change
+                update_session_auth_hash(request, request.user)
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Password changed successfully!'
+                })
+                
+            except json.JSONDecodeError:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Invalid request format.'
+                })
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'An error occurred while changing password.'
+                })
+        
+        # Handle regular form submission
+        else:
+            form = PasswordChangeForm(request.user, request.POST)
+            if form.is_valid():
+                user = form.save()
+                # Keep user logged in after password change
+                update_session_auth_hash(request, user)
+                messages.success(request, 'Your password was successfully updated!')
+                return redirect('change_password')
+            else:
+                # Extract error messages
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, error)
+    else:
+        form = PasswordChangeForm(request.user)
+    
+    context = {
+        'form': form,
+        'user': request.user,
+    }
+    
+    return render(request, 'registration/change_password.html', context)

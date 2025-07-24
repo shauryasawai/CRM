@@ -4,6 +4,7 @@ from django.urls import path, include
 from . import views
 
 urlpatterns = [
+    path('change-password/', views.change_password, name='change_password'),
     # Authentication
     path('', views.user_login, name='login'),
     path('logout/', views.user_logout, name='logout'),
@@ -267,4 +268,5 @@ urlpatterns = [
     
     # Analytics
     path('analytics/', views.analytics_dashboard, name='analytics_dashboard'),
+    
 ]
