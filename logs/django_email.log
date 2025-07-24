@@ -158,3 +158,8 @@ INFO 2025-07-25 00:05:27,130 views 29376 32424 Found legacy client: UTSAVI RAJES
 INFO 2025-07-25 00:05:27,571 views 29376 32424 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
 INFO 2025-07-25 00:05:27,579 views 29376 32424 Found linked profile for client 1116
 INFO 2025-07-25 00:05:27,685 views 29376 32424 Found 8 portfolio holdings for client 1116
+INFO 2025-07-25 00:11:02,143 views 11676 24268 create_plan_step2 called with client_id: 926 (type: <class 'str'>)
+INFO 2025-07-25 00:11:02,233 views 11676 24268 Found legacy client: PRASHANT KASHYAP (ID: 926)
+INFO 2025-07-25 00:11:02,607 views 11676 24268 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-07-25 00:11:02,630 views 11676 24268 Found linked profile for client 926
+INFO 2025-07-25 00:11:02,717 views 11676 24268 Found 22 portfolio holdings for client 926
