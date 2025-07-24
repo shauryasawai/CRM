@@ -6009,7 +6009,7 @@ def client_portfolio_ajax(request, client_id):
 
 @login_required
 def create_plan_step2(request, client_id):
-    """Create execution plan - Step 2: Design plan with Portfolio Actions (Legacy Clients Only)"""
+    """Create execution plan - Step 2: Design plan with Portfolio Actions (Legacy Clients Only) - FIXED VERSION"""
     
     # Debug logging
     logger.info(f"create_plan_step2 called with client_id: {client_id} (type: {type(client_id)})")
@@ -6034,19 +6034,46 @@ def create_plan_step2(request, client_id):
         client = get_object_or_404(Client, id=client_id)
         logger.info(f"Found legacy client: {client.name} (ID: {client.id})")
         
-        # Check access permissions for legacy client
-        if request.user.role == 'rm' and client.user != request.user:
-            messages.error(request, "Access denied - You can only create plans for your own clients")
-            return redirect('create_plan')
+        # FIXED ACCESS CHECK - Same logic as create_plan view
+        user_can_access = False
+        
+        if request.user.role == 'rm':
+            # Check BOTH direct assignment AND profile mapping (like create_plan)
+            directly_assigned = (client.user == request.user)
+            profile_mapped = (hasattr(client, 'client_profile') and 
+                            client.client_profile and 
+                            client.client_profile.mapped_rm == request.user)
+            
+            user_can_access = directly_assigned or profile_mapped
+            
+            logger.info(f"RM {request.user.username} access check: Direct={directly_assigned}, Profile={profile_mapped}, CanAccess={user_can_access}")
+            
         elif request.user.role == 'rm_head':
-            # Check if client belongs to team member
+            # Check if client belongs to team member (both direct and profile)
             team_rms = User.objects.filter(manager=request.user, role='rm')
-            if client.user not in team_rms and client.user != request.user:
-                messages.error(request, "Access denied - Client not in your team")
-                return redirect('create_plan')
-        elif request.user.role not in ['business_head', 'business_head_ops', 'top_management']:
-            messages.error(request, "Access denied")
+            
+            team_direct = (client.user in team_rms) or (client.user == request.user)
+            team_profile = (hasattr(client, 'client_profile') and 
+                          client.client_profile and 
+                          client.client_profile.mapped_rm in team_rms) or \
+                         (hasattr(client, 'client_profile') and 
+                          client.client_profile and 
+                          client.client_profile.mapped_rm == request.user)
+            
+            user_can_access = team_direct or team_profile
+            
+            logger.info(f"RM Head {request.user.username} access check: TeamDirect={team_direct}, TeamProfile={team_profile}, CanAccess={user_can_access}")
+            
+        elif request.user.role in ['business_head', 'business_head_ops', 'top_management']:
+            user_can_access = True
+        
+        # Deny access if user cannot access this client
+        if not user_can_access:
+            logger.warning(f"Access denied for {request.user.username} to client {client_id} ({client.name})")
+            messages.error(request, f"Access denied - You don't have permission to create execution plans for {client.name}")
             return redirect('create_plan')
+        
+        logger.info(f"✅ Access granted for {request.user.username} to client {client.name}")
         
         # Get linked client profile if exists
         client_profile = None
@@ -6336,11 +6363,6 @@ def create_plan_step2(request, client_id):
                 messages.error(request, f"Error creating execution plan: {str(e)}")
         
         return render(request, 'execution_plans/create_plan_step2.html', context)
-        
-    except Client.DoesNotExist:
-        logger.error(f"Client with ID {client_id} does not exist")
-        messages.error(request, f"Client with ID {client_id} not found.")
-        return redirect('create_plan')
         
     except Exception as e:
         logger.error(f"Unexpected error in create_plan_step2 for client {client_id}: {e}")

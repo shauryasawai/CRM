@@ -97,3 +97,54 @@ INFO 2025-07-24 16:45:06,404 views 30820 9512 create_plan_step2 called with clie
 INFO 2025-07-24 16:45:06,495 views 30820 9512 Found legacy client: APRAMI KAMLESH MOTA (ID: 646)
 INFO 2025-07-24 16:45:06,780 views 30820 9512 Found linked profile for client 646
 INFO 2025-07-24 16:45:06,882 views 30820 9512 Found 12 portfolio holdings for client 646
+INFO 2025-07-24 17:37:18,621 views 13072 19104 create_plan_step2 called with client_id: 786 (type: <class 'str'>)
+INFO 2025-07-24 17:37:18,729 views 13072 19104 Found legacy client: KETAN SUHAS BHAGWAT (ID: 786)
+INFO 2025-07-24 17:38:20,800 views 13072 31504 create_plan_step2 called with client_id: 599 (type: <class 'str'>)
+INFO 2025-07-24 17:38:20,909 views 13072 31504 Found legacy client: ADISHREE ADITYA PATIL (ID: 599)
+INFO 2025-07-24 17:44:35,349 views 13072 12580 create_plan_step2 called with client_id: 786 (type: <class 'str'>)
+INFO 2025-07-24 17:44:35,448 views 13072 12580 Found legacy client: KETAN SUHAS BHAGWAT (ID: 786)
+INFO 2025-07-24 18:55:47,798 views 32220 1096 create_plan_step2 called with client_id: 906 (type: <class 'str'>)
+INFO 2025-07-24 18:55:47,876 views 32220 1096 Found legacy client: POOJA KUMARI (ID: 906)
+INFO 2025-07-24 19:03:57,948 views 23040 35648 User kruthi (role: rm) accessing create_plan
+INFO 2025-07-24 19:03:58,086 views 23040 35648 Found 71 legacy clients
+INFO 2025-07-24 19:04:29,578 views 23040 35648 create_plan_step2 called with client_id: 921 (type: <class 'str'>)
+INFO 2025-07-24 19:04:29,639 views 23040 35648 Found legacy client: PRAKHAR SHARMA (ID: 921)
+INFO 2025-07-24 19:04:30,001 views 23040 35648 User kruthi (role: rm) accessing create_plan
+INFO 2025-07-24 19:04:30,099 views 23040 35648 Found 71 legacy clients
+INFO 2025-07-24 19:05:55,299 views 29076 32444 create_plan_step2 called with client_id: 678 (type: <class 'str'>)
+INFO 2025-07-24 19:05:55,395 views 29076 32444 Found legacy client: BHAVNA SANJAY GILITWALA (ID: 678)
+INFO 2025-07-24 19:05:55,967 views 29076 32444 User kruthi (role: rm) accessing create_plan
+INFO 2025-07-24 19:05:56,109 views 29076 32444 Found 71 legacy clients
+INFO 2025-07-24 19:19:53,248 views 20524 18380 User narayan (role: rm_head) accessing create_plan
+INFO 2025-07-24 19:19:53,649 views 20524 18380 Final client count for narayan: 304
+INFO 2025-07-24 19:19:54,387 views 20524 14256 User narayan (role: rm_head) accessing create_plan
+INFO 2025-07-24 19:19:54,706 views 20524 14256 Final client count for narayan: 304
+WARNING 2025-07-24 19:26:59,791 views 20524 14256 Error getting portfolio data for client 1034: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
+INFO 2025-07-24 19:58:15,320 views 36204 35564 User narayan (role: rm_head) accessing create_plan
+INFO 2025-07-24 19:58:17,013 views 36204 37536 User narayan (role: rm_head) accessing create_plan
+INFO 2025-07-24 19:58:18,944 views 36204 35564 Final client count for narayan: 304
+INFO 2025-07-24 19:58:21,416 views 36204 37536 Final client count for narayan: 304
+INFO 2025-07-24 20:08:18,137 views 34036 37108 User akshat (role: rm) accessing create_plan
+INFO 2025-07-24 20:08:18,394 views 34036 37108 RM akshat: Direct=72, Profile=72, Total=72
+INFO 2025-07-24 20:08:18,505 views 34036 37108 Final client count for akshat: 72
+INFO 2025-07-24 20:09:03,546 views 34036 37108 create_plan_step2 called with client_id: 630 (type: <class 'str'>)
+INFO 2025-07-24 20:09:05,878 views 34036 37108 Found legacy client: AMRUTA INDRANEEL NANDOSKAR (ID: 630)
+INFO 2025-07-24 20:09:18,547 views 34036 37108 User akshat (role: rm) accessing create_plan
+INFO 2025-07-24 20:09:22,092 views 34036 37108 RM akshat: Direct=72, Profile=72, Total=72
+INFO 2025-07-24 20:09:23,979 views 34036 37108 Final client count for akshat: 72
+INFO 2025-07-24 20:12:15,511 views 34036 13200 create_plan_step2 called with client_id: 1018 (type: <class 'str'>)
+INFO 2025-07-24 20:12:15,621 views 34036 13200 Found legacy client: SARVESH SUNIL BANODKAR (ID: 1018)
+INFO 2025-07-24 20:12:15,873 views 34036 13200 User akshat (role: rm) accessing create_plan
+INFO 2025-07-24 20:12:16,038 views 34036 13200 RM akshat: Direct=72, Profile=72, Total=72
+INFO 2025-07-24 20:12:16,117 views 34036 13200 Final client count for akshat: 72
+INFO 2025-07-24 20:45:23,942 views 22400 34400 create_plan_step2 called with client_id: 1088 (type: <class 'str'>)
+INFO 2025-07-24 20:45:24,069 views 22400 34400 Found legacy client: SURAJ KUMAR PATIL (ID: 1088)
+INFO 2025-07-24 20:45:24,423 views 22400 34400 RM akshat access check: Direct=True, Profile=True, CanAccess=True
+INFO 2025-07-24 20:45:24,452 views 22400 34400 Found linked profile for client 1088
+INFO 2025-07-24 20:45:24,551 views 22400 34400 Found 15 portfolio holdings for client 1088
