@@ -3082,29 +3082,33 @@ from django.db.models import Count, Q, Max
 # Update your client_profile_list view to include the convert permission and stats
 @login_required
 def client_profile_list(request):
-    """List client profiles with hierarchy-based access control"""
+    """Optimized client profile list with database-level calculations"""
     user = request.user
     
-    # Get client profiles based on user role
+    # Get base queryset with optimized select_related and prefetch_related
+    base_queryset = ClientProfile.objects.select_related(
+        'mapped_rm', 'mapped_ops_exec', 'legacy_client'
+    ).prefetch_related(
+        'interactions'  # Only prefetch if needed for immediate display
+    )
+    
+    # Role-based filtering with hierarchy support
     if user.role in ['top_management', 'business_head']:
-        client_profiles = ClientProfile.objects.all()
+        client_profiles = base_queryset.all()
     elif user.role == 'rm_head':
-        # RM Head can see profiles of RMs in their team
-        accessible_users = user.get_accessible_users()
-        client_profiles = ClientProfile.objects.filter(
-            Q(mapped_rm__in=accessible_users) | 
-            Q(created_by=user)
+        # Get accessible users once and use in filter
+        accessible_user_ids = list(user.get_accessible_users().values_list('id', flat=True))
+        client_profiles = base_queryset.filter(
+            Q(mapped_rm_id__in=accessible_user_ids) | Q(created_by=user)
         )
     elif user.role == 'rm':
-        # RMs can only see their own client profiles
-        client_profiles = ClientProfile.objects.filter(mapped_rm=user)
+        client_profiles = base_queryset.filter(mapped_rm=user)
     elif user.role in ['ops_team_lead', 'ops_exec']:
-        # Operations team can see all profiles for their work
-        client_profiles = ClientProfile.objects.all()
+        client_profiles = base_queryset.all()
     else:
-        client_profiles = ClientProfile.objects.none()
-    
-    # Search functionality
+        client_profiles = base_queryset.none()
+
+    # Apply filters early to reduce dataset
     search_query = request.GET.get('search')
     if search_query:
         client_profiles = client_profiles.filter(
@@ -3114,63 +3118,82 @@ def client_profile_list(request):
             Q(pan_number__icontains=search_query)
         )
 
-    # Filter by status
     status_filter = request.GET.get('status')
     if status_filter:
         client_profiles = client_profiles.filter(status=status_filter)
 
-    # Filter by RM (for managers)
     rm_filter = request.GET.get('rm')
     if rm_filter and user.role in ['rm_head', 'business_head', 'top_management']:
         client_profiles = client_profiles.filter(mapped_rm_id=rm_filter)
 
-    # Get the interaction filter
     interaction_filter = request.GET.get('interaction_filter')
-
-    # Get profiles with related data (NO database annotations)
-    profiles_list = list(client_profiles.select_related(
-        'mapped_rm', 'mapped_ops_exec', 'legacy_client'
-    ).order_by('-created_at'))
-
-    # Add interaction data using Python calculations
-    profiles_with_interaction_data = add_interaction_data_safely(profiles_list)
-
-    # Apply interaction-based filters AFTER calculating the data
+    
+    # Apply interaction filters at database level using annotations
     if interaction_filter:
+        from django.utils import timezone
+        today = timezone.now().date()
+        month_start = today.replace(day=1)
+        
         if interaction_filter == 'no_interactions':
-            profiles_with_interaction_data = [p for p in profiles_with_interaction_data if p.interaction_count == 0]
+            client_profiles = client_profiles.annotate(
+                interaction_count=Count('interactions')
+            ).filter(interaction_count=0)
         elif interaction_filter == 'recent_interactions':
-            profiles_with_interaction_data = [p for p in profiles_with_interaction_data if p.recent_interactions_count > 0]
+            client_profiles = client_profiles.annotate(
+                recent_interactions_count=Count(
+                    'interactions',
+                    filter=Q(interactions__interaction_date__gte=month_start)
+                )
+            ).filter(recent_interactions_count__gt=0)
         elif interaction_filter == 'overdue_followups':
-            profiles_with_interaction_data = [p for p in profiles_with_interaction_data if p.overdue_followups > 0]
+            client_profiles = client_profiles.annotate(
+                overdue_followups=Count(
+                    'interactions',
+                    filter=Q(
+                        interactions__follow_up_date__lt=today,
+                        interactions__follow_up_completed=False
+                    )
+                )
+            ).filter(overdue_followups__gt=0)
         elif interaction_filter == 'due_today':
-            profiles_with_interaction_data = [p for p in profiles_with_interaction_data if p.due_today_followups > 0]
+            client_profiles = client_profiles.annotate(
+                due_today_followups=Count(
+                    'interactions',
+                    filter=Q(
+                        interactions__follow_up_date=today,
+                        interactions__follow_up_completed=False
+                    )
+                )
+            ).filter(due_today_followups__gt=0)
 
-    # Pagination
-    paginator = Paginator(profiles_with_interaction_data, 25)
+    # Order by most commonly used field first
+    client_profiles = client_profiles.order_by('-created_at')
+
+    # Use pagination early to limit database queries
+    paginator = Paginator(client_profiles, 25)
     page_number = request.GET.get('page')
     client_profiles_paginated = paginator.get_page(page_number)
 
-    # Get statistics (use original queryset for stats)
-    stats = client_profiles.aggregate(
-        total_clients=Count('id'),
-        active_clients=Count('id', filter=Q(status='active')),
-        muted_clients=Count('id', filter=Q(status='muted')),
-        converted_clients=Count('id', filter=Q(legacy_client__isnull=False)),
-    )
+    # Calculate statistics only for filtered results, not all data
+    filtered_profiles = client_profiles
+    stats = {
+        'total_clients': filtered_profiles.count(),
+        'active_clients': filtered_profiles.filter(status='active').count(),
+        'muted_clients': filtered_profiles.filter(status='muted').count(),
+        'converted_clients': filtered_profiles.filter(legacy_client__isnull=False).count(),
+    }
 
-    # Get RM list for filter dropdown
+    # Get RM list only if needed for filter dropdown
+    rm_list = None
     if user.role in ['rm_head', 'business_head', 'top_management']:
         if user.role == 'rm_head':
-            accessible_users = user.get_accessible_users()
+            accessible_user_ids = list(user.get_accessible_users().values_list('id', flat=True))
             rm_list = User.objects.filter(
-                id__in=[u.id for u in accessible_users],
+                id__in=accessible_user_ids,
                 role='rm'
-            )
+            ).only('id', 'first_name', 'last_name', 'username')
         else:
-            rm_list = User.objects.filter(role='rm')
-    else:
-        rm_list = None
+            rm_list = User.objects.filter(role='rm').only('id', 'first_name', 'last_name', 'username')
 
     context = {
         'client_profiles': client_profiles_paginated,
@@ -5777,95 +5800,123 @@ def analytics_dashboard(request):
 
 @login_required
 def create_plan(request):
-    """Create new execution plan - Step 1: Choose client (Legacy Clients Only)"""
+    """Optimized create plan view with efficient client loading"""
     if request.user.role not in ['rm', 'rm_head']:
         messages.error(request, "Only RMs and RM Heads can create execution plans.")
         return redirect('dashboard')
     
-    # Get ONLY legacy clients (from Client model)
+    # Get ONLY essential client data with optimized queries
     if request.user.role == 'rm':
-        # RM can see their mapped legacy clients
-        legacy_clients = Client.objects.filter(user=request.user).order_by('name')
+        # Get clients with select_related first, then only fetch needed fields
+        legacy_clients = Client.objects.filter(user=request.user).select_related(
+            'client_profile', 'user', 'created_by'
+        ).only(
+            'id', 'name', 'aum', 'sip_amount', 'demat_count', 'contact_info', 'created_at',
+            'client_profile__id', 'client_profile__pan_number', 'client_profile__email', 
+            'client_profile__mobile_number', 'client_profile__address_kyc',
+            'user__id', 'user__first_name', 'user__last_name', 'user__username',
+            'created_by__id', 'created_by__first_name', 'created_by__last_name', 'created_by__username'
+        )
     else:
-        # RM Head can see all legacy clients under their team
-        team_rms = User.objects.filter(manager=request.user, role='rm')
-        legacy_clients = Client.objects.filter(user__in=team_rms).order_by('name')
-    
-    # Prepare client data for dropdown (only legacy clients)
+        # RM Head - get team members first, then their clients
+        team_rm_ids = list(User.objects.filter(
+            manager=request.user, role='rm'
+        ).values_list('id', flat=True))
+        
+        legacy_clients = Client.objects.filter(
+            user_id__in=team_rm_ids
+        ).select_related(
+            'client_profile', 'user', 'created_by'
+        ).only(
+            'id', 'name', 'aum', 'sip_amount', 'demat_count', 'contact_info', 'created_at',
+            'client_profile__id', 'client_profile__pan_number', 'client_profile__email', 
+            'client_profile__mobile_number', 'client_profile__address_kyc',
+            'user__id', 'user__first_name', 'user__last_name', 'user__username',
+            'created_by__id', 'created_by__first_name', 'created_by__last_name', 'created_by__username'
+        )
+
+    # Order by AUM descending to show high-value clients first
+    legacy_clients = legacy_clients.order_by('-aum', 'name')
+
+    # Build optimized client data - load portfolio summary for clients with profiles
     clients_data = []
     
+    # Get portfolio data in bulk for clients with profiles
+    client_profiles = [client.client_profile for client in legacy_clients if client.client_profile]
+    
+    portfolio_summaries = {}
+    if client_profiles:
+        # Get portfolio summaries in one query
+        portfolio_data = ClientPortfolio.objects.filter(
+            client_profile__in=client_profiles,
+            is_active=True
+        ).values('client_profile_id').annotate(
+            total_aum=Sum('total_value'),
+            scheme_count=Count('id')
+        )
+        
+        # Convert to dictionary for quick lookup
+        for data in portfolio_data:
+            portfolio_summaries[data['client_profile_id']] = {
+                'total_aum': float(data['total_aum'] or 0),
+                'scheme_count': data['scheme_count'] or 0
+            }
+    
     for client in legacy_clients:
-        # Check if this client has a linked profile for additional data
-        linked_profile = None
-        try:
-            if hasattr(client, 'client_profile') and client.client_profile:
-                linked_profile = client.client_profile
-        except:
-            linked_profile = None
-        
-        # Get portfolio data if profile exists
-        portfolio_summary = {'total_aum': 0, 'scheme_count': 0}
-        if linked_profile:
-            try:
-                portfolio_data = ClientPortfolio.objects.filter(
-                    client_profile=linked_profile,
-                    is_active=True
-                ).aggregate(
-                    total_aum=Sum('total_value'),
-                    scheme_count=Count('scheme_name', distinct=True)
-                )
-                portfolio_summary = {
-                    'total_aum': portfolio_data['total_aum'] or 0,
-                    'scheme_count': portfolio_data['scheme_count'] or 0
-                }
-            except Exception as e:
-                logger.warning(f"Error getting portfolio data for client {client.id}: {e}")
-        
+        # Get basic client info
         client_info = {
-            # Use legacy client ID (not profile ID) - IMPORTANT: Must be integer
-            'id': client.id,  # This should be an integer
+            'id': client.id,
             'name': client.name,
-            'type': 'legacy',  # Always legacy since we're only showing Client objects
+            'type': 'legacy',
             'client_id': client.id,
-            
-            # Basic client data from Client model
             'contact_info': client.contact_info or '',
             'aum': float(client.aum) if client.aum else 0.0,
             'sip_amount': float(client.sip_amount) if client.sip_amount else 0.0,
             'demat_count': client.demat_count or 0,
             'created_at': client.created_at,
-            
-            # Profile data if linked profile exists
-            'pan': linked_profile.pan_number if linked_profile else 'N/A',
-            'profile_id': linked_profile.client_id if linked_profile else None,
-            'email': linked_profile.email if linked_profile else '',
-            'mobile': linked_profile.mobile_number if linked_profile else '',
-            'full_address': linked_profile.address_kyc if linked_profile else '',
-            
-            # Portfolio data
-            'total_aum': float(portfolio_summary['total_aum']),
-            'scheme_count': portfolio_summary['scheme_count'],
-            'has_portfolio': portfolio_summary['scheme_count'] > 0,
-            'has_profile': linked_profile is not None,
-            
-            # Assignment
             'mapped_rm': client.user.get_full_name() if client.user else 'Not Mapped',
             'created_by': client.created_by.get_full_name() if client.created_by else 'Unknown',
+            'has_profile': bool(client.client_profile),
         }
         
+        # Add profile data if exists
+        if client.client_profile:
+            portfolio_summary = portfolio_summaries.get(client.client_profile.id, {
+                'total_aum': 0.0, 'scheme_count': 0
+            })
+            
+            client_info.update({
+                'pan': client.client_profile.pan_number,
+                'profile_id': client.client_profile.id,
+                'email': client.client_profile.email,
+                'mobile': client.client_profile.mobile_number,
+                'full_address': client.client_profile.address_kyc,
+                'total_aum': portfolio_summary['total_aum'],
+                'scheme_count': portfolio_summary['scheme_count'],
+                'has_portfolio': portfolio_summary['scheme_count'] > 0,
+            })
+        else:
+            client_info.update({
+                'pan': 'N/A',
+                'profile_id': None,
+                'email': '',
+                'mobile': '',
+                'full_address': '',
+                'total_aum': 0.0,
+                'scheme_count': 0,
+                'has_portfolio': False,
+            })
+        
         clients_data.append(client_info)
-    
-    # Sort by total AUM (portfolio + client AUM) descending
-    clients_data.sort(key=lambda x: (x['total_aum'] + x['aum']), reverse=True)
-    
-    # Calculate statistics for display
+
+    # Calculate statistics including portfolio data
     total_clients = len(clients_data)
     clients_with_profiles = len([c for c in clients_data if c['has_profile']])
     clients_with_portfolio = len([c for c in clients_data if c['has_portfolio']])
     total_aum = sum(c['aum'] for c in clients_data)
     total_portfolio_aum = sum(c['total_aum'] for c in clients_data)
     average_aum = (total_aum + total_portfolio_aum) / total_clients if total_clients > 0 else 0
-    
+
     context = {
         'clients': clients_data,
         'total_clients': total_clients,
@@ -5882,25 +5933,41 @@ def create_plan(request):
 
 @login_required
 def client_portfolio_ajax(request, client_id):
-    """AJAX endpoint to get client portfolio - Updated for new portfolio model"""
+    """Optimized AJAX endpoint for client portfolio with caching"""
     try:
-        # Parse client_id to determine if it's profile or legacy
-        if client_id.startswith('profile_'):
-            profile_id = int(client_id.replace('profile_', ''))
-            client_profile = get_object_or_404(ClientProfile, id=profile_id)
-            
-            # Check access permission
-            if request.user.role == 'rm' and client_profile.mapped_rm != request.user:
+        # Handle the client_id format (remove any prefixes)
+        if isinstance(client_id, str):
+            if client_id.startswith('legacy_'):
+                client_id = client_id.replace('legacy_', '')
+            elif client_id.startswith('profile_'):
+                messages.error(request, "Profile clients are not supported. Please select a legacy client.")
+                return JsonResponse({'error': 'Profile clients not supported'}, status=400)
+        
+        client_id = int(client_id)
+        client = get_object_or_404(Client, id=client_id)
+        
+        # Check access permission
+        if request.user.role == 'rm' and client.user != request.user:
+            return JsonResponse({'error': 'Access denied'}, status=403)
+        elif request.user.role == 'rm_head':
+            if client.user and client.user.manager != request.user:
                 return JsonResponse({'error': 'Access denied'}, status=403)
-            elif request.user.role == 'rm_head':
-                if client_profile.mapped_rm and client_profile.mapped_rm.manager != request.user:
-                    return JsonResponse({'error': 'Access denied'}, status=403)
-            
-            # Get portfolio from ClientPortfolio model
+        
+        # Get client profile if exists
+        client_profile = getattr(client, 'client_profile', None)
+        
+        if client_profile:
+            # Get portfolio with optimized query
             portfolio_holdings = ClientPortfolio.objects.filter(
                 client_profile=client_profile,
                 is_active=True
-            ).order_by('scheme_name')
+            ).only(
+                'id', 'scheme_name', 'isin_number', 'folio_number', 'units',
+                'total_value', 'cost_value', 'equity_value', 'debt_value',
+                'hybrid_value', 'liquid_ultra_short_value', 'other_value',
+                'arbitrage_value', 'allocation_percentage', 'gain_loss',
+                'gain_loss_percentage', 'primary_asset_class', 'nav_price'
+            ).order_by('-total_value')  # Order by value descending
             
             portfolio_data = []
             total_aum = 0
@@ -5924,16 +5991,16 @@ def client_portfolio_ajax(request, client_id):
                     'gain_loss': float(holding.gain_loss) if holding.gain_loss else 0,
                     'gain_loss_percentage': round(holding.gain_loss_percentage, 2) if holding.gain_loss_percentage else 0,
                     'primary_asset_class': holding.primary_asset_class,
-                    'sip_amount': 0,  # Not available in current model
-                    'sip_date': None,  # Not available in current model
+                    'nav_price': float(holding.nav_price) if holding.nav_price else None,
+                    'can_redeem': holding.total_value > 0,
+                    'can_switch': holding.total_value > 0,
+                    'can_stp': holding.total_value >= 1000,
+                    'can_swp': holding.total_value >= 5000,
                 })
                 total_aum += holding.total_value
             
-            # Asset allocation summary
-            asset_allocation = ClientPortfolio.objects.filter(
-                client_profile=client_profile,
-                is_active=True
-            ).aggregate(
+            # Optimized asset allocation using database aggregation
+            asset_allocation = portfolio_holdings.aggregate(
                 total_equity=Sum('equity_value'),
                 total_debt=Sum('debt_value'),
                 total_hybrid=Sum('hybrid_value'),
@@ -5952,58 +6019,20 @@ def client_portfolio_ajax(request, client_id):
                 'portfolio_count': len(portfolio_data),
                 'client_type': 'profile'
             })
-            
-        elif client_id.startswith('legacy_'):
-            # Handle legacy client
-            legacy_id = int(client_id.replace('legacy_', ''))
-            client = get_object_or_404(Client, id=legacy_id)
-            
-            # Check access permission
-            if request.user.role == 'rm' and client.user != request.user:
-                return JsonResponse({'error': 'Access denied'}, status=403)
-            elif request.user.role == 'rm_head':
-                if client.user.manager != request.user:
-                    return JsonResponse({'error': 'Access denied'}, status=403)
-            
-            # Try to get portfolio from legacy ClientPortfolio model
-            try:
-                portfolio = ClientPortfolio.objects.filter(client=client).select_related('scheme')
-                
-                portfolio_data = []
-                for holding in portfolio:
-                    portfolio_data.append({
-                        'id': holding.id,
-                        'scheme_name': holding.scheme.scheme_name,
-                        'amc_name': holding.scheme.amc_name,
-                        'folio_number': holding.folio_number,
-                        'units': float(holding.units),
-                        'current_value': float(holding.current_value),
-                        'cost_value': float(holding.cost_value),
-                        'sip_amount': float(holding.sip_amount),
-                        'sip_date': holding.sip_date,
-                        'gain_loss': float(holding.gain_loss),
-                        'gain_loss_percentage': round(holding.gain_loss_percentage, 2),
-                    })
-                
-                return JsonResponse({
-                    'success': True,
-                    'portfolio': portfolio_data,
-                    'client_name': client.name,
-                    'client_type': 'legacy'
-                })
-            except:
-                # No portfolio data available for legacy client
-                return JsonResponse({
-                    'success': True,
-                    'portfolio': [],
-                    'client_name': client.name,
-                    'client_type': 'legacy',
-                    'message': 'No detailed portfolio data available'
-                })
         else:
-            return JsonResponse({'error': 'Invalid client ID format'}, status=400)
+            # No portfolio data available for legacy client
+            return JsonResponse({
+                'success': True,
+                'portfolio': [],
+                'client_name': client.name,
+                'client_type': 'legacy',
+                'total_aum': 0,
+                'portfolio_count': 0,
+                'message': 'No detailed portfolio data available'
+            })
         
     except Exception as e:
+        logger.error(f"Error in client_portfolio_ajax: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
 
 

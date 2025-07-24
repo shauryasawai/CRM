@@ -148,3 +148,13 @@ INFO 2025-07-24 20:45:24,069 views 22400 34400 Found legacy client: SURAJ KUMAR 
 INFO 2025-07-24 20:45:24,423 views 22400 34400 RM akshat access check: Direct=True, Profile=True, CanAccess=True
 INFO 2025-07-24 20:45:24,452 views 22400 34400 Found linked profile for client 1088
 INFO 2025-07-24 20:45:24,551 views 22400 34400 Found 15 portfolio holdings for client 1088
+INFO 2025-07-25 00:04:53,061 views 29376 26452 create_plan_step2 called with client_id: 944 (type: <class 'str'>)
+INFO 2025-07-25 00:04:53,165 views 29376 26452 Found legacy client: PRIYANKA KUMARI (ID: 944)
+INFO 2025-07-25 00:04:53,625 views 29376 26452 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-07-25 00:04:53,652 views 29376 26452 Found linked profile for client 944
+INFO 2025-07-25 00:04:53,767 views 29376 26452 Found 14 portfolio holdings for client 944
+INFO 2025-07-25 00:05:27,001 views 29376 32424 create_plan_step2 called with client_id: 1116 (type: <class 'str'>)
+INFO 2025-07-25 00:05:27,130 views 29376 32424 Found legacy client: UTSAVI RAJESH JHAVERI (ID: 1116)
+INFO 2025-07-25 00:05:27,571 views 29376 32424 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-07-25 00:05:27,579 views 29376 32424 Found linked profile for client 1116
+INFO 2025-07-25 00:05:27,685 views 29376 32424 Found 8 portfolio holdings for client 1116
