@@ -2,3 +2,6 @@
 .env
 portfolio_uploads/
 scheme_uploads/
+media/notes/
+media/client_uploads/
+media/execution_plans/

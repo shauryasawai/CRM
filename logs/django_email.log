@@ -88,3 +88,12 @@ INFO 2025-07-19 16:51:10,693 views 47672 32604 create_plan_step2 called with cli
 INFO 2025-07-19 16:51:10,776 views 47672 32604 Found legacy client: Meera Reddy (ID: 19)
 INFO 2025-07-19 16:51:11,109 views 47672 32604 Found linked profile for client 19
 INFO 2025-07-19 16:51:11,213 views 47672 32604 Found 8 portfolio holdings for client 19
+INFO 2025-07-24 10:28:38,161 views 30952 33416 create_plan_step2 called with client_id: 773 (type: <class 'str'>)
+INFO 2025-07-24 10:28:38,283 views 30952 33416 Found legacy client: JENIL KIRAN SHAH (ID: 773)
+INFO 2025-07-24 10:28:38,561 views 30952 33416 Found linked profile for client 773
+INFO 2025-07-24 10:28:38,665 views 30952 33416 Found 0 portfolio holdings for client 773
+INFO 2025-07-24 10:28:38,769 views 30952 33416 No portfolio data from profile, checking for any legacy data for client 773
+INFO 2025-07-24 16:45:06,404 views 30820 9512 create_plan_step2 called with client_id: 646 (type: <class 'str'>)
+INFO 2025-07-24 16:45:06,495 views 30820 9512 Found legacy client: APRAMI KAMLESH MOTA (ID: 646)
+INFO 2025-07-24 16:45:06,780 views 30820 9512 Found linked profile for client 646
+INFO 2025-07-24 16:45:06,882 views 30820 9512 Found 12 portfolio holdings for client 646
