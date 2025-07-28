@@ -1,6 +1,6 @@
 # CRM & HRM Portal
 
-A comprehensive web-based Customer Relationship Management (CRM) and Human Resource Management (HRM) system built using Django. This portal empowers organizations to efficiently manage their customers, employees, projects, and HR-related operations through a unified platform.
+A comprehensive web-based Customer Relationship Management (CRM) and Human Resource Management (HRM) system built using Django. This portal empowers organizations to efficiently manage their customers, employees, projects, and HR-related operations through a unified platform. The system provides complete lead-to-client conversion workflows, detailed interaction tracking, service request management, and comprehensive HR functionalities including attendance, leave management, and reimbursement claims.
 
 ## 📋 Table of Contents
 
@@ -16,17 +16,74 @@ A comprehensive web-based Customer Relationship Management (CRM) and Human Resou
 ## ✨ Features
 
 ### 🏢 CRM Module
-- **Customer Management**: Complete customer registration and profile management
-- **Lead Tracking**: Monitor lead progress and conversion rates
-- **Communication Logs**: Track all customer interactions and communications
-- **Project Assignment**: Assign and manage client projects and tasks
+
+#### Lead Management System
+- **Comprehensive Lead Tracking**: Complete lead registration with auto-generated Lead IDs, capturing lead source (existing client, own circle, social media, or other sources)
+- **Lead Status Management**: Automatic status progression from "New Lead" to "Cold/Warm/Hot Lead" based on interactions
+- **Hierarchical Lead Assignment**: Multi-level lead allocation system with proper hierarchy maintenance
+- **First Interaction Tracking**: Mandatory next interaction date setting with detailed product discussion tracking
+- **Lead Conversion**: Streamlined lead-to-client conversion process with manager approval workflow
+
+#### Client Relationship Management
+- **Detailed Interaction Logging**: Comprehensive interaction tracking with multiple communication modes (Email, Call, Video Meet, WhatsApp, Face-to-Face)
+- **Product Discussion Tracking**: Support for 11 different product categories including Mutual Funds, Equity Portfolios, Bonds, Insurance, PMS, AIF, and Structures
+- **AI-Powered Summaries**: Integrated Gemini/ChatGPT API for automatic interaction summarization
+- **Business Pipeline Management**: Track discussion stages (Cold/Warm/Hot) with expected business values and closure dates
+- **Service Request Integration**: Seamless service request creation directly from client interactions
+
+#### Service Request Management
+- **Comprehensive Service Types**: Support for Personal Details Modification, Account Creation/Closure, Adhoc Requests for MF & Demat, and Report Requests
+- **Multi-Stage Workflow**: Complete request lifecycle from submission to resolution with document management
+- **Hierarchical Assignment**: Proper mapping between sales team and operations team with escalation mechanisms
+- **Real-time Status Tracking**: Live updates on service request progress with automated notifications
+
+#### Client Profile Management
+- **Centralized Client Database**: Complete client profile management with KYC details, investment history, and account mappings
+- **Multiple Account Support**: Integration with MFU, Motilal Demat, and Prabhudas Lilladher systems
+- **Secure Modification Process**: Controlled client data modification with proper approval workflows
+- **Client Lifecycle Management**: Complete client journey from lead conversion to account maintenance
+
+#### Execution Plans
+- **Portfolio Review Tool**: Excel-based execution planning for client portfolio optimization
+- **Interactive Plan Creation**: Dynamic scheme selection with market value display and operation planning
+- **Approval Workflow**: Multi-level approval system for execution plans before client communication
+- **Progress Tracking**: Real-time execution tracking with operations team collaboration
+- **Plan History**: Complete audit trail of all execution plans and their outcomes
 
 ### 👥 HRM Module
-- **Employee Management**: Comprehensive employee registration and profile management
-- **Attendance System**: Real-time attendance tracking and monitoring
-- **Leave Management**: Streamlined leave application and approval workflow
-- **Organizational Structure**: Department and role management system
-- **Payroll Integration**: Basic payroll structure and management
+
+#### Leave Management System
+- **Interactive Calendar**: Visual holiday calendar with leave planning capabilities
+- **Multiple Leave Types**: Support for Privilege, Sick, Special, Maternity, and Paternity leave
+- **Automated Approval**: Smart approval routing with auto-approval for delayed requests
+- **Leave Cancellation**: Flexible leave cancellation system even post-leave dates
+- **Quota Management**: Hierarchy-based leave quota system with real-time balance tracking
+
+#### Attendance Management
+- **Location-Based Marking**: GPS-enabled attendance with 500-meter office radius verification
+- **Work From Home Support**: Dedicated WFH attendance marking option
+- **Monthly Summaries**: Comprehensive attendance reports with red-flag identification
+- **Real-time Monitoring**: Live attendance tracking for management oversight
+
+#### Reimbursement System
+- **Expense Categorization**: Multiple expense types including Client Meet, Daily Travel, and custom categories
+- **Monthly Submission**: Structured monthly expense reporting with real-time entry capability
+- **Approval Workflow**: Two-tier approval system through line manager to top management
+- **Audit Trail**: Complete expense tracking with remarks and justification requirements
+
+### 📝 Notes Section
+- **Personal Productivity Tool**: Private note-taking system with complete confidentiality
+- **Organized Lists**: Category-based note organization with custom list creation
+- **Reminder System**: Built-in reminder and due date functionality
+- **File Attachments**: Support for document attachments up to 500KB
+- **Task Management**: Microsoft To-Do inspired interface for personal task tracking
+
+### 📊 Advanced Reporting & Analytics
+- **Lead Analytics**: Comprehensive lead conversion ratios, pipeline analysis, and performance metrics
+- **Time-to-Conversion Tracking**: Detailed analytics on lead conversion timelines
+- **Product-wise Analysis**: Performance tracking across all 11 product categories
+- **Hierarchical Reporting**: Role-based reporting with appropriate data visibility
+- **Quarterly & Annual Insights**: Time-based performance analysis with trend identification
 
 ## 🛠 Tech Stack
 
@@ -35,8 +92,10 @@ A comprehensive web-based Customer Relationship Management (CRM) and Human Resou
 | **Backend** | Django (Python) |
 | **Frontend** | Django Templates, HTML5, CSS3, Bootstrap |
 | **Database** | PostgreSQL |
-| **Authentication** | Django built-in user authentication |
-| **Admin Panel** | Customized Django Admin |
+| **Authentication** | Django built-in user authentication with role-based access |
+| **AI Integration** | Gemini/ChatGPT API for interaction summaries |
+| **Admin Panel** | Customized Django Admin with hierarchical permissions |
+| **File Management** | Excel generation and document attachment support |
 
 ## 📁 Project Structure
 
@@ -171,6 +230,15 @@ python manage.py runserver
 
 After creating a superuser, use those credentials to access the admin panel and manage the system.
 
+### Key User Roles & Permissions
+
+The system supports multiple hierarchical user roles:
+- **Top Management**: Full system access with delete permissions and final approvals
+- **Business Head**: Department-level management with approval authorities
+- **Team Lead**: Team management with lead allocation and service oversight
+- **Relationship Manager (RM)**: Client interaction and lead management
+- **Operations Executive**: Service request handling and client profile management
+
 ## 🔌 Deactivating Virtual Environment
 
 When you're done working on the project:
@@ -205,6 +273,8 @@ python manage.py runserver 8001
 - The virtual environment (`my_env/`) should not be committed to version control
 - Check error messages carefully and ensure all prerequisites are met
 - For production deployment, configure proper database settings and security measures
+- The system maintains comprehensive audit trails and deletion logs for compliance
+- AI-powered features require valid API keys for Gemini/ChatGPT integration
 
 ## 🤝 Contributing
 
