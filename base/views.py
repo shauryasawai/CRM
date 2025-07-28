@@ -74,58 +74,185 @@ def is_ops_team_lead(user):
 def is_ops_exec(user):
     return user.role == 'ops_exec'
 
+from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.cache import never_cache
+from django.core.cache import cache
+from functools import lru_cache
+
+# Role constants for faster comparisons
+MANAGEMENT_ROLES = {'top_management', 'business_head'}
+RM_HEAD_ROLE = 'rm_head'
+
+@never_cache  # Prevent caching of login page
 @ensure_csrf_cookie
 def user_login(request):
-    """Enhanced login view with CSRF token"""
+    """Optimized login view for faster authentication"""
+    # Fast check for already authenticated users
     if request.user.is_authenticated:
         return redirect('dashboard')
 
     if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
+        # Extract credentials with minimal processing
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '')
+        
+        # Quick validation to avoid database hit
+        if not username or not password:
+            return render(request, 'base/login.html', {'error': 'Please enter both username and password'})
+        
+        # Single database query for authentication
         user = authenticate(request, username=username, password=password)
-        if user:
+        
+        if user and user.is_active:
+            # Login user immediately
             login(request, user)
+            
+            # Cache user role data for subsequent requests
+            _cache_user_role_data(user)
+            
+            # Direct redirect without additional processing
             return redirect('dashboard')
         else:
-            messages.error(request, 'Invalid credentials')
+            # Return error without messages framework overhead
             return render(request, 'base/login.html', {'error': 'Invalid credentials'})
     
-    # Ensure CSRF token is available in template
-    context = {
-        'csrf_token': get_token(request)
+    # GET request - minimal template context (CSRF token auto-included by decorator)
+    return render(request, 'base/login.html')
+
+def _cache_user_role_data(user):
+    """Cache user role data to speed up subsequent requests"""
+    cache_key = f"user_role_{user.id}"
+    role_data = {
+        'role': user.role,
+        'is_management': user.role in MANAGEMENT_ROLES,
+        'is_rm_head': user.role == RM_HEAD_ROLE,
     }
-    return render(request, 'base/login.html', context)
+    # Cache for 30 minutes
+    cache.set(cache_key, role_data, 1800)
 
-
-# Logout View
 @login_required
 def user_logout(request):
+    """Fast logout with cache cleanup"""
+    # Clear cached user data
+    cache.delete(f"user_role_{request.user.id}")
+    cache.delete(f"accessible_users_{request.user.id}")
+    
     logout(request)
     return redirect('login')
 
+@lru_cache(maxsize=200)
+def _get_cached_user_role(user_id, role):
+    """LRU cache for user role checks"""
+    return {
+        'is_management': role in MANAGEMENT_ROLES,
+        'is_rm_head': role == RM_HEAD_ROLE,
+        'role': role
+    }
+
 def can_manage_user(manager, target_user):
-    """Check if manager can manage target_user based on hierarchy"""
-    if manager.role == 'top_management':
+    """Optimized permission check with caching"""
+    # Self-management is always allowed
+    if manager.id == target_user.id:
         return True
-    elif manager.role == 'business_head':
+    
+    # Use cached role data
+    manager_role_data = _get_cached_user_role(manager.id, manager.role)
+    
+    # Fast role-based checks
+    if manager_role_data['is_management']:
         return True
-    elif manager.role == 'rm_head':
-        return target_user in manager.get_team_members() or target_user == manager
-    else:
-        return target_user == manager
+    elif manager_role_data['is_rm_head']:
+        # Cache team members check
+        return _is_team_member(manager, target_user)
+    
+    return False
+
+@lru_cache(maxsize=100)
+def _is_team_member(manager, target_user):
+    """Cached team membership check"""
+    try:
+        team_members = manager.get_team_members()
+        return target_user in team_members
+    except AttributeError:
+        return False
 
 def get_user_accessible_data(user, model_class, user_field='assigned_to'):
-    """Generic method to get accessible data based on user role and hierarchy"""
-    if user.role in ['top_management', 'business_head']:
-        return model_class.objects.all()
-    elif user.role == 'rm_head':
-        accessible_users = user.get_accessible_users()
-        filter_kwargs = {f"{user_field}__in": accessible_users}
-        return model_class.objects.filter(**filter_kwargs)
-    else:  # RM
-        filter_kwargs = {user_field: user}
-        return model_class.objects.filter(**filter_kwargs)
+    """Optimized data access with intelligent caching"""
+    # Create cache key based on user, model, and field
+    cache_key = f"accessible_data_{user.id}_{model_class._meta.label}_{user_field}"
+    
+    # Try to get from cache first
+    cached_ids = cache.get(cache_key)
+    if cached_ids is not None:
+        return model_class.objects.filter(id__in=cached_ids)
+    
+    # Get user role data from cache
+    role_data = _get_cached_user_role(user.id, user.role)
+    
+    # Efficient query based on role
+    if role_data['is_management']:
+        # Management sees everything
+        queryset = model_class.objects.all()
+    elif role_data['is_rm_head']:
+        # RM Head sees team data
+        accessible_users = _get_cached_accessible_users(user)
+        queryset = model_class.objects.filter(**{f"{user_field}__in": accessible_users})
+    else:
+        # Regular users see only their data
+        queryset = model_class.objects.filter(**{user_field: user})
+    
+    # Cache the result IDs (limit to prevent memory issues)
+    result_ids = list(queryset.values_list('id', flat=True)[:500])
+    cache.set(cache_key, result_ids, 600)  # 10 minutes cache
+    
+    return queryset
+
+def _get_cached_accessible_users(user):
+    """Cache accessible users for RM heads"""
+    cache_key = f"accessible_users_{user.id}"
+    cached_users = cache.get(cache_key)
+    
+    if cached_users is None:
+        try:
+            # Get accessible users and cache their IDs
+            accessible_users = user.get_accessible_users()
+            cached_users = list(accessible_users.values_list('id', flat=True))
+            cache.set(cache_key, cached_users, 900)  # 15 minutes cache
+        except AttributeError:
+            cached_users = [user.id]
+            cache.set(cache_key, cached_users, 900)
+    
+    return cached_users
+
+# Utility function to clear user caches when roles change
+def clear_user_cache(user_id):
+    """Clear all cached data for a user (call when user roles change)"""
+    cache.delete(f"user_role_{user_id}")
+    cache.delete(f"accessible_users_{user_id}")
+    # Clear LRU cache
+    _get_cached_user_role.cache_clear()
+    _is_team_member.cache_clear()
+
+# Performance monitoring decorator (optional)
+def monitor_performance(func):
+    """Decorator to monitor login performance"""
+    import time
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        # Log slow operations (>100ms)
+        if end_time - start_time > 0.1:
+            print(f"Slow operation: {func.__name__} took {end_time - start_time:.3f}s")
+        return result
+    return wrapper
+
+# Apply performance monitoring to login (optional)
+# user_login = monitor_performance(user_login)
 
 
 # Quick fix - Add this at the top of your views.py file
