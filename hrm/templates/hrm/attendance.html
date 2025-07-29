@@ -69,7 +69,7 @@
               </div>
               {% endif %}
 
-              <form method="post" class="mt-3" id="attendanceForm">
+              <form method="post" action="" class="mt-3" id="attendanceForm">
                 {% csrf_token %}
                 <input type="hidden" name="action" id="actionInput" />
                 <input type="hidden" name="latitude" id="latitudeInput" />
@@ -96,7 +96,7 @@
                 {% endif %}
               </form>
               {% else %}
-              <form method="post" id="attendanceForm">
+              <form method="post" action="" id="attendanceForm">
                 {% csrf_token %}
                 <input type="hidden" name="action" id="actionInput" />
                 <input type="hidden" name="latitude" id="latitudeInput" />
@@ -248,45 +248,53 @@
 {% block scripts %}
 <script>
   function recordAttendance(action) {
-    // Get location first
+    // Set the action first
+    document.getElementById("actionInput").value = action;
+    
+    // Get location
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         function (position) {
           // Successfully got location
-          document.getElementById("latitudeInput").value =
-            position.coords.latitude;
-          document.getElementById("longitudeInput").value =
-            position.coords.longitude;
-          document.getElementById("actionInput").value = action;
-          document.getElementById("attendanceForm").submit();
+          document.getElementById("latitudeInput").value = position.coords.latitude;
+          document.getElementById("longitudeInput").value = position.coords.longitude;
+          // Submit the form
+          submitForm();
         },
         function (error) {
-          // Error getting location - submit without location
-          if (
-            confirm("Could not get your location. Submit without location?")
-          ) {
-            document.getElementById("actionInput").value = action;
-            document.getElementById("attendanceForm").submit();
+          // Error getting location - ask user if they want to submit without location
+          if (confirm("Could not get your location. Submit without location?")) {
+            submitForm();
           }
         },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        { 
+          enableHighAccuracy: true, 
+          timeout: 10000, 
+          maximumAge: 60000 
+        }
       );
     } else {
-      // Geolocation not supported - submit without location
-      if (
-        confirm(
-          "Geolocation is not supported by your browser. Submit without location?"
-        )
-      ) {
-        document.getElementById("actionInput").value = action;
-        document.getElementById("attendanceForm").submit();
+      // Geolocation not supported - ask user if they want to submit without location
+      if (confirm("Geolocation is not supported by your browser. Submit without location?")) {
+        submitForm();
       }
     }
   }
 
+  function submitForm() {
+    var form = document.getElementById("attendanceForm");
+    if (form) {
+      form.submit();
+    } else {
+      console.error("Form not found");
+      alert("Error: Could not find the attendance form");
+    }
+  }
+
   // Initialize any other needed scripts
-  $(document).ready(function () {
+  document.addEventListener('DOMContentLoaded', function() {
     // Add any additional initialization code here
+    console.log("Attendance form initialized");
   });
 </script>
 {% endblock %}
