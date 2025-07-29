@@ -247,21 +247,36 @@
 
 {% block scripts %}
 <script>
-  function recordAttendance(action) {
+  // Define functions in global scope
+  window.recordAttendance = function(action) {
+    console.log("Recording attendance:", action);
+    
     // Set the action first
-    document.getElementById("actionInput").value = action;
+    var actionInput = document.getElementById("actionInput");
+    if (actionInput) {
+      actionInput.value = action;
+    } else {
+      console.error("Action input not found");
+      return;
+    }
     
     // Get location
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         function (position) {
+          console.log("Location obtained:", position.coords.latitude, position.coords.longitude);
           // Successfully got location
-          document.getElementById("latitudeInput").value = position.coords.latitude;
-          document.getElementById("longitudeInput").value = position.coords.longitude;
+          var latInput = document.getElementById("latitudeInput");
+          var lngInput = document.getElementById("longitudeInput");
+          
+          if (latInput) latInput.value = position.coords.latitude;
+          if (lngInput) lngInput.value = position.coords.longitude;
+          
           // Submit the form
           submitForm();
         },
         function (error) {
+          console.log("Location error:", error);
           // Error getting location - ask user if they want to submit without location
           if (confirm("Could not get your location. Submit without location?")) {
             submitForm();
@@ -279,22 +294,33 @@
         submitForm();
       }
     }
-  }
+  };
 
-  function submitForm() {
+  window.submitForm = function() {
     var form = document.getElementById("attendanceForm");
     if (form) {
+      console.log("Submitting form...");
       form.submit();
     } else {
       console.error("Form not found");
       alert("Error: Could not find the attendance form");
     }
-  }
+  };
 
-  // Initialize any other needed scripts
+  // Initialize when DOM is ready
   document.addEventListener('DOMContentLoaded', function() {
-    // Add any additional initialization code here
     console.log("Attendance form initialized");
+    
+    // Verify elements exist
+    var form = document.getElementById("attendanceForm");
+    var actionInput = document.getElementById("actionInput");
+    
+    if (!form) {
+      console.error("Attendance form not found!");
+    }
+    if (!actionInput) {
+      console.error("Action input not found!");
+    }
   });
 </script>
 {% endblock %}
