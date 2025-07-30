@@ -750,7 +750,7 @@
 
         <!-- Right Side - Form Section -->
         <div class="form-section">
-            <div class="login-container">
+            <div class="login-container" style="animation: none; transform: none; opacity: 1;"> <!-- Removed animation -->
                 <!-- Header Section -->
                 <div class="login-header">
                     <h1 class="login-title">Finployee</h1>
@@ -801,7 +801,8 @@
                                placeholder="Enter your username" 
                                required 
                                autofocus
-                               autocomplete="username">
+                               autocomplete="username"
+                               value="{{ request.COOKIES.username|default:'' }}">
                         <div class="invalid-feedback">
                             Please enter your username.
                         </div>
@@ -912,379 +913,189 @@
         </div>
     </div>
 
-    <!-- Bootstrap 5 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Load scripts asynchronously -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" async></script>
     
     <script>
+        // Immediately focus on username field if empty
         document.addEventListener('DOMContentLoaded', function() {
-            const loginForm = document.getElementById('loginForm');
-            const loginBtn = document.getElementById('loginBtn');
-            const btnText = loginBtn.querySelector('.btn-text');
-            const togglePassword = document.getElementById('togglePassword');
-            const passwordInput = document.getElementById('password');
-            const toggleIcon = document.getElementById('toggleIcon');
             const usernameInput = document.getElementById('username');
+            if (usernameInput && usernameInput.value === '') {
+                usernameInput.focus();
+            }
             
-            // Forgot password elements
-            const forgotPasswordForm = document.getElementById('forgotPasswordForm');
-            const resetPasswordBtn = document.getElementById('resetPasswordBtn');
-            const resetBtnText = resetPasswordBtn.querySelector('.btn-text');
-            const modalMessages = document.getElementById('modalMessages');
+            // Try to get username from local storage
+            const savedUsername = localStorage.getItem('lastUsername');
+            if (savedUsername && usernameInput && !usernameInput.value) {
+                usernameInput.value = savedUsername;
+                document.getElementById('password').focus();
+            }
+        });
 
-            // Form validation
-            loginForm.addEventListener('submit', function(event) {
+        // Simplified login form handler
+        const loginForm = document.getElementById('loginForm');
+        if (loginForm) {
+            loginForm.addEventListener('submit', function(e) {
                 if (!loginForm.checkValidity()) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                } else {
-                    // Show loading state
+                    e.preventDefault();
+                    e.stopPropagation();
+                    loginForm.classList.add('was-validated');
+                    return;
+                }
+
+                // Store username in local storage for future visits
+                const usernameInput = document.getElementById('username');
+                if (usernameInput && usernameInput.value) {
+                    localStorage.setItem('lastUsername', usernameInput.value);
+                }
+
+                // Show loading state
+                const loginBtn = document.getElementById('loginBtn');
+                if (loginBtn) {
                     loginBtn.classList.add('loading');
                     loginBtn.disabled = true;
-                    btnText.textContent = 'Signing In...';
+                    const btnText = loginBtn.querySelector('.btn-text');
+                    if (btnText) btnText.textContent = 'Signing In...';
                 }
-                
-                loginForm.classList.add('was-validated');
             });
+        }
 
-            // Forgot password form submission
-            forgotPasswordForm.addEventListener('submit', function(event) {
-                event.preventDefault();
+        // Password visibility toggle (simplified)
+        const togglePassword = document.getElementById('togglePassword');
+        if (togglePassword) {
+            togglePassword.addEventListener('click', function() {
+                const passwordInput = document.getElementById('password');
+                const toggleIcon = document.getElementById('toggleIcon');
+                if (passwordInput && toggleIcon) {
+                    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordInput.setAttribute('type', type);
+                    toggleIcon.classList.toggle('fa-eye');
+                    toggleIcon.classList.toggle('fa-eye-slash');
+                }
+            });
+        }
+
+        // Support link (simplified)
+        const supportLink = document.getElementById('supportLink');
+        if (supportLink) {
+            supportLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                alert('Support contact: support@financialcrm.com\nPhone: +1 (555) 123-4567');
+            });
+        }
+
+        // Simplified forgot password form handler
+        const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+        if (forgotPasswordForm) {
+            forgotPasswordForm.addEventListener('submit', function(e) {
+                e.preventDefault();
                 
                 if (!forgotPasswordForm.checkValidity()) {
                     forgotPasswordForm.classList.add('was-validated');
                     return;
                 }
 
-                // Show loading state
-                resetPasswordBtn.classList.add('loading');
-                resetPasswordBtn.disabled = true;
-                resetBtnText.textContent = 'Sending...';
+                const resetPasswordBtn = document.getElementById('resetPasswordBtn');
+                if (resetPasswordBtn) {
+                    resetPasswordBtn.classList.add('loading');
+                    resetPasswordBtn.disabled = true;
+                    const resetBtnText = resetPasswordBtn.querySelector('.btn-text');
+                    if (resetBtnText) resetBtnText.textContent = 'Sending...';
+                }
 
-                // Get form data
-                const formData = new FormData(forgotPasswordForm);
-                const usernameOrEmail = formData.get('username_or_email');
-
-                // Simulate API call (replace with actual endpoint)
-                fetch('/password-reset/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                    },
-                    body: JSON.stringify({
-                        username_or_email: usernameOrEmail
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showModalMessage('success', 'Password reset instructions have been sent to your email address.');
-                        forgotPasswordForm.reset();
-                        forgotPasswordForm.classList.remove('was-validated');
-                    } else {
-                        showModalMessage('error', data.message || 'An error occurred. Please try again.');
+                // Simulate API call (simplified)
+                setTimeout(() => {
+                    const modalMessages = document.getElementById('modalMessages');
+                    if (modalMessages) {
+                        modalMessages.innerHTML = `
+                            <div class="alert alert-success" role="alert">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Password reset instructions have been sent to your email address.</span>
+                            </div>
+                        `;
+                        modalMessages.style.display = 'block';
                     }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showModalMessage('error', 'Network error. Please check your connection and try again.');
-                })
-                .finally(() => {
-                    // Reset button state
-                    resetPasswordBtn.classList.remove('loading');
-                    resetPasswordBtn.disabled = false;
-                    resetBtnText.textContent = 'Send Reset Link';
-                });
-            });
 
-            // Function to show messages in modal
-            function showModalMessage(type, message) {
-                const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
-                const iconClass = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
-                
-                modalMessages.innerHTML = `
-                    <div class="alert ${alertClass}" role="alert">
-                        <i class="fas ${iconClass}"></i>
-                        <span>${message}</span>
-                    </div>
-                `;
-                modalMessages.style.display = 'block';
+                    if (resetPasswordBtn) {
+                        resetPasswordBtn.classList.remove('loading');
+                        resetPasswordBtn.disabled = false;
+                        const resetBtnText = resetPasswordBtn.querySelector('.btn-text');
+                        if (resetBtnText) resetBtnText.textContent = 'Send Reset Link';
+                    }
 
-                // Auto-hide success messages after 5 seconds
-                if (type === 'success') {
+                    // Auto-close modal after 3 seconds
                     setTimeout(() => {
                         const modal = bootstrap.Modal.getInstance(document.getElementById('forgotPasswordModal'));
-                        modal.hide();
+                        if (modal) modal.hide();
                     }, 3000);
+                }, 1000);
+            });
+        }
+
+        // Clear modal messages when modal is closed
+        const forgotPasswordModal = document.getElementById('forgotPasswordModal');
+        if (forgotPasswordModal) {
+            forgotPasswordModal.addEventListener('hidden.bs.modal', function() {
+                const modalMessages = document.getElementById('modalMessages');
+                if (modalMessages) {
+                    modalMessages.style.display = 'none';
+                    modalMessages.innerHTML = '';
                 }
+                
+                const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+                if (forgotPasswordForm) {
+                    forgotPasswordForm.reset();
+                    forgotPasswordForm.classList.remove('was-validated');
+                }
+                
+                const resetPasswordBtn = document.getElementById('resetPasswordBtn');
+                if (resetPasswordBtn) {
+                    resetPasswordBtn.classList.remove('loading');
+                    resetPasswordBtn.disabled = false;
+                    const resetBtnText = resetPasswordBtn.querySelector('.btn-text');
+                    if (resetBtnText) resetBtnText.textContent = 'Send Reset Link';
+                }
+            });
+        }
+
+        // Keyboard shortcuts for faster navigation
+        document.addEventListener('keydown', function(e) {
+            // Alt + L to focus username
+            if (e.altKey && e.key === 'l') {
+                e.preventDefault();
+                const usernameInput = document.getElementById('username');
+                if (usernameInput) usernameInput.focus();
             }
-
-            // Clear modal messages when modal is closed
-            document.getElementById('forgotPasswordModal').addEventListener('hidden.bs.modal', function() {
-                modalMessages.style.display = 'none';
-                forgotPasswordForm.reset();
-                forgotPasswordForm.classList.remove('was-validated');
-                resetPasswordBtn.classList.remove('loading');
-                resetPasswordBtn.disabled = false;
-                resetBtnText.textContent = 'Send Reset Link';
-            });
-
-            // Password visibility toggle
-            togglePassword.addEventListener('click', function() {
-                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-                passwordInput.setAttribute('type', type);
-                
-                if (type === 'text') {
-                    toggleIcon.classList.remove('fa-eye');
-                    toggleIcon.classList.add('fa-eye-slash');
-                } else {
-                    toggleIcon.classList.remove('fa-eye-slash');
-                    toggleIcon.classList.add('fa-eye');
-                }
-            });
-
-            // Enhanced input interactions
-            const inputs = document.querySelectorAll('.form-control');
-            inputs.forEach(input => {
-                input.addEventListener('focus', function() {
-                    this.parentElement.style.transform = 'translateY(-2px)';
-                    this.parentElement.style.transition = 'transform 0.3s ease';
-                });
-                
-                input.addEventListener('blur', function() {
-                    this.parentElement.style.transform = 'translateY(0)';
-                });
-
-                // Clear validation on input
-                input.addEventListener('input', function() {
-                    if (this.classList.contains('is-invalid')) {
-                        this.classList.remove('is-invalid');
-                    }
-                });
-            });
-
-            // Keyboard shortcuts
-            document.addEventListener('keydown', function(e) {
-                // Alt + L to focus username
-                if (e.altKey && e.key === 'l') {
-                    e.preventDefault();
-                    usernameInput.focus();
-                }
-                
-                // Enter to submit form when focused on inputs
-                if (e.key === 'Enter' && (e.target === usernameInput || e.target === passwordInput)) {
-                    e.preventDefault();
-                    loginForm.dispatchEvent(new Event('submit'));
-                }
-
-                // Escape key to close modal
-                if (e.key === 'Escape') {
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('forgotPasswordModal'));
-                    if (modal) {
-                        modal.hide();
-                    }
-                }
-            });
-
-            // Enhanced button interactions
-            loginBtn.addEventListener('mouseenter', function() {
-                if (!this.disabled) {
-                    this.style.willChange = 'transform, box-shadow';
-                }
-            });
             
-            loginBtn.addEventListener('mouseleave', function() {
-                this.style.willChange = 'auto';
-            });
-
-            // Support link interaction
-            const supportLink = document.getElementById('supportLink');
-            supportLink.addEventListener('click', function(e) {
-                e.preventDefault();
-                // You can replace this with actual support functionality
-                alert('Support contact: support@financialcrm.com\nPhone: +1 (555) 123-4567');
-            });
-
-            // Auto-dismiss alerts after 5 seconds
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(alert => {
-                setTimeout(() => {
-                    alert.style.opacity = '0';
-                    alert.style.transform = 'translateY(-20px)';
-                    setTimeout(() => {
-                        alert.remove();
-                    }, 300);
-                }, 5000);
-            });
-
-            // Add ripple effect to button
-            loginBtn.addEventListener('click', function(e) {
-                if (this.disabled) return;
-                
-                const ripple = document.createElement('span');
-                const rect = this.getBoundingClientRect();
-                const size = Math.max(rect.width, rect.height);
-                const x = e.clientX - rect.left - size / 2;
-                const y = e.clientY - rect.top - size / 2;
-                
-                ripple.style.cssText = `
-                    position: absolute;
-                    width: ${size}px;
-                    height: ${size}px;
-                    left: ${x}px;
-                    top: ${y}px;
-                    background: rgba(255, 255, 255, 0.3);
-                    border-radius: 50%;
-                    transform: scale(0);
-                    animation: ripple 0.6s linear;
-                    pointer-events: none;
-                `;
-                
-                this.style.position = 'relative';
-                this.style.overflow = 'hidden';
-                this.appendChild(ripple);
-                
-                setTimeout(() => {
-                    ripple.remove();
-                }, 600);
-            });
-
-            // Add CSS for ripple animation
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes ripple {
-                    to {
-                        transform: scale(4);
-                        opacity: 0;
-                    }
-                }
-            `;
-            document.head.appendChild(style);
-
-            // Focus management for accessibility
-            usernameInput.addEventListener('keydown', function(e) {
-                if (e.key === 'Tab' && !e.shiftKey) {
-                    // Tab from username to password
+            // Enter to submit form when focused on inputs
+            if (e.key === 'Enter') {
+                const activeElement = document.activeElement;
+                if (activeElement && (activeElement.id === 'username' || activeElement.id === 'password')) {
                     e.preventDefault();
-                    passwordInput.focus();
+                    const loginForm = document.getElementById('loginForm');
+                    if (loginForm) loginForm.dispatchEvent(new Event('submit'));
                 }
-            });
-
-            passwordInput.addEventListener('keydown', function(e) {
-                if (e.key === 'Tab' && e.shiftKey) {
-                    // Shift+Tab from password to username
-                    e.preventDefault();
-                    usernameInput.focus();
-                } else if (e.key === 'Tab' && !e.shiftKey) {
-                    // Tab from password to login button
-                    e.preventDefault();
-                    loginBtn.focus();
-                }
-            });
-
-            // Enhanced admin panel link interactions
-            const adminPanelLink = document.querySelector('.admin-panel-link');
-            if (adminPanelLink) {
-                adminPanelLink.addEventListener('mouseenter', function() {
-                    this.style.willChange = 'transform, box-shadow';
-                });
-                
-                adminPanelLink.addEventListener('mouseleave', function() {
-                    this.style.willChange = 'auto';
-                });
-
-                // Add click tracking for analytics (optional)
-                adminPanelLink.addEventListener('click', function() {
-                    console.log('Admin panel accessed from login page');
-                    // You can add analytics tracking here
-                });
             }
 
-            // Enhanced forgot password link interactions
-            const forgotPasswordLink = document.querySelector('.forgot-password-link');
-            forgotPasswordLink.addEventListener('click', function(e) {
-                e.preventDefault();
-                const modal = new bootstrap.Modal(document.getElementById('forgotPasswordModal'));
-                modal.show();
-                
-                // Focus on the input field when modal opens
+            // Escape key to close modal
+            if (e.key === 'Escape') {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('forgotPasswordModal'));
+                if (modal) {
+                    modal.hide();
+                }
+            }
+        });
+
+        // Auto-dismiss alerts after 5 seconds
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(alert => {
+            setTimeout(() => {
+                alert.style.opacity = '0';
+                alert.style.transform = 'translateY(-20px)';
                 setTimeout(() => {
-                    document.getElementById('resetUsername').focus();
+                    alert.remove();
                 }, 300);
-            });
-
-            // Form validation for reset password
-            const resetUsernameInput = document.getElementById('resetUsername');
-            resetUsernameInput.addEventListener('input', function() {
-                if (this.value.trim() === '') {
-                    this.classList.add('is-invalid');
-                } else {
-                    this.classList.remove('is-invalid');
-                }
-            });
-
-            // Email validation for reset form
-            resetUsernameInput.addEventListener('blur', function() {
-                const value = this.value.trim();
-                const isEmail = value.includes('@');
-                const isValid = value.length > 0;
-                
-                if (!isValid) {
-                    this.classList.add('is-invalid');
-                    this.nextElementSibling.textContent = 'Please enter your username or email address.';
-                } else if (isEmail && !isValidEmail(value)) {
-                    this.classList.add('is-invalid');
-                    this.nextElementSibling.textContent = 'Please enter a valid email address.';
-                } else {
-                    this.classList.remove('is-invalid');
-                }
-            });
-
-            // Email validation helper function
-            function isValidEmail(email) {
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                return emailRegex.test(email);
-            }
-
-            // Prevent multiple form submissions
-            let isSubmitting = false;
-            forgotPasswordForm.addEventListener('submit', function(e) {
-                if (isSubmitting) {
-                    e.preventDefault();
-                    return;
-                }
-                isSubmitting = true;
-                
-                // Reset flag after a delay
-                setTimeout(() => {
-                    isSubmitting = false;
-                }, 3000);
-            });
-
-            // Add loading animation for better UX
-            function addLoadingAnimation(button) {
-                button.classList.add('loading');
-                button.disabled = true;
-            }
-
-            function removeLoadingAnimation(button) {
-                button.classList.remove('loading');
-                button.disabled = false;
-            }
-
-            // Initialize tooltips if Bootstrap tooltips are available
-            if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
-                const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-                tooltipTriggerList.map(function (tooltipTriggerEl) {
-                    return new bootstrap.Tooltip(tooltipTriggerEl);
-                });
-            }
-
-            // Print debug info for development
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                console.log('Login page loaded successfully');
-                console.log('Forgot password functionality initialized');
-            }
+            }, 5000);
         });
     </script>
 </body>
