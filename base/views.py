@@ -87,40 +87,45 @@ from functools import lru_cache
 MANAGEMENT_ROLES = {'top_management', 'business_head'}
 RM_HEAD_ROLE = 'rm_head'
 
-@never_cache  # Prevent caching of login page
+@never_cache
 @ensure_csrf_cookie
 def user_login(request):
-    """Optimized login view for faster authentication"""
+    """Optimized login view for Vercel deployment"""
     # Fast check for already authenticated users
     if request.user.is_authenticated:
         return redirect('dashboard')
 
     if request.method == 'POST':
-        # Extract credentials with minimal processing
-        username = request.POST.get('username', '').strip()
-        password = request.POST.get('password', '')
+        # Minimal input processing
+        username = request.POST.get('username', '')[:150]  # Limit to max username length
+        password = request.POST.get('password', '')[:128]  # Reasonable password length limit
         
-        # Quick validation to avoid database hit
+        # Fast validation without strip() to save cycles
         if not username or not password:
             return render(request, 'base/login.html', {'error': 'Please enter both username and password'})
         
-        # Single database query for authentication
-        user = authenticate(request, username=username, password=password)
-        
-        if user and user.is_active:
-            # Login user immediately
-            login(request, user)
+        try:
+            # Authenticate with minimal database queries
+            user = authenticate(request, username=username, password=password)
             
-            # Cache user role data for subsequent requests
-            _cache_user_role_data(user)
+            if user is not None and user.is_active:
+                # Login without session processing if not needed
+                login(request, user)
+                
+                # Cache only essential user data
+                cache.set(f"user_{user.id}_role", user.role, 300)  # 5 minutes cache
+                
+                # Immediate redirect without additional processing
+                return redirect('dashboard')
             
-            # Direct redirect without additional processing
-            return redirect('dashboard')
-        else:
-            # Return error without messages framework overhead
+            # Generic error message to prevent username enumeration
             return render(request, 'base/login.html', {'error': 'Invalid credentials'})
+            
+        except Exception as e:
+            logger.error(f"Login error for {username}: {str(e)}")
+            return render(request, 'base/login.html', {'error': 'Login service unavailable'})
     
-    # GET request - minimal template context (CSRF token auto-included by decorator)
+    # GET request - minimal context
     return render(request, 'base/login.html')
 
 def _cache_user_role_data(user):
@@ -136,11 +141,9 @@ def _cache_user_role_data(user):
 
 @login_required
 def user_logout(request):
-    """Fast logout with cache cleanup"""
-    # Clear cached user data
-    cache.delete(f"user_role_{request.user.id}")
-    cache.delete(f"accessible_users_{request.user.id}")
-    
+    """Fast logout with minimal cache clearing"""
+    # Only clear essential cached data
+    cache.delete(f"user_{request.user.id}_role")
     logout(request)
     return redirect('login')
 
