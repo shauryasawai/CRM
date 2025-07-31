@@ -1,4 +1,5 @@
 # models.py - Fixed version with single ServiceRequest model
+import decimal
 import re
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group
@@ -2215,7 +2216,7 @@ class BusinessTracker(models.Model):
 # Portfolio and Execution Plan Models
 
 class PortfolioUpload(models.Model):
-    """Model to track portfolio file uploads"""
+    """Model to track portfolio file uploads - OPTIMIZED"""
     UPLOAD_STATUS_CHOICES = [
         ('pending', 'Pending Processing'),
         ('processing', 'Processing'),
@@ -2269,9 +2270,7 @@ class PortfolioUpload(models.Model):
         return f"{self.upload_id} - {self.file.name} ({self.get_status_display()})"
     
     def create_log(self, row_number, status, message, client_name='', client_pan='', scheme_name='', portfolio_entry=None):
-        """
-        Create a log entry for this upload
-        """
+        """Create a log entry for this upload"""
         return PortfolioUploadLog.objects.create(
             upload=self,
             row_number=row_number,
@@ -2283,13 +2282,32 @@ class PortfolioUpload(models.Model):
             portfolio_entry=portfolio_entry
         )
     
+    def create_bulk_logs(self, log_entries):
+        """Create multiple log entries in bulk for better performance"""
+        if not log_entries:
+            return
+            
+        log_objects = [
+            PortfolioUploadLog(
+                upload=self,
+                row_number=entry.get('row_number', 0),
+                client_name=entry.get('client_name', '')[:255],  # Truncate to avoid overflow
+                client_pan=entry.get('client_pan', '')[:50],
+                scheme_name=entry.get('scheme_name', '')[:300],
+                status=entry.get('status', 'success'),
+                message=entry.get('message', '')[:2000],  # Truncate long messages
+                portfolio_entry=entry.get('portfolio_entry', None)
+            ) for entry in log_entries
+        ]
+        
+        # Use ignore_conflicts=True for better performance
+        PortfolioUploadLog.objects.bulk_create(log_objects, batch_size=2000, ignore_conflicts=True)
+    
     def process_upload_with_logging(self):
-        """
-        Main method to process the uploaded portfolio file with comprehensive logging
-        """
+        """Main method to process the uploaded portfolio file with comprehensive logging - OPTIMIZED"""
         try:
             self.status = 'processing'
-            self.save()
+            self.save(update_fields=['status'])  # Only update status field
             
             # Log start of processing
             self.create_log(
@@ -2309,7 +2327,7 @@ class PortfolioUpload(models.Model):
                 final_message = f"Processing failed. Check error logs for details."
             
             self.processed_at = timezone.now()
-            self.save()
+            self.save(update_fields=['status', 'processed_at'])
             
             # Log completion
             self.create_log(
@@ -2324,7 +2342,7 @@ class PortfolioUpload(models.Model):
             self.status = 'failed'
             self.error_details = {'error': str(e)}
             self.processed_at = timezone.now()
-            self.save()
+            self.save(update_fields=['status', 'error_details', 'processed_at'])
             
             # Log the error
             self.create_log(
@@ -2335,9 +2353,7 @@ class PortfolioUpload(models.Model):
             return False
     
     def _process_file_with_logging(self):
-        """
-        Process the uploaded CSV/Excel file with detailed logging
-        """
+        """Process the uploaded Excel file with detailed logging - HIGHLY OPTIMIZED"""
         import os
         
         try:
@@ -2345,14 +2361,32 @@ class PortfolioUpload(models.Model):
             file_ext = os.path.splitext(self.file.name)[1].lower()
             
             if file_ext == '.csv':
-                df = pd.read_csv(self.file.path)
+                # Optimized CSV reading
+                df = pd.read_csv(
+                    self.file.path,
+                    dtype=str,
+                    na_filter=False,
+                    low_memory=False,
+                    engine='c'  # Use C engine for better performance
+                )
             elif file_ext in ['.xlsx', '.xls']:
-                df = pd.read_excel(self.file.path, engine='openpyxl')
+                # Highly optimized Excel reading
+                df = pd.read_excel(
+                    self.file.path, 
+                    engine='openpyxl' if file_ext == '.xlsx' else 'xlrd',
+                    dtype=str,
+                    na_filter=False,
+                    keep_default_na=False,  # Don't convert to NaN
+                    sheet_name=0  # Read only first sheet
+                )
             else:
                 raise ValueError(f"Unsupported file format: {file_ext}")
             
+            # Drop completely empty rows
+            df = df.dropna(how='all').reset_index(drop=True)
+            
             self.total_rows = len(df)
-            self.save()
+            self.save(update_fields=['total_rows'])
             
             # Log file validation success
             self.create_log(
@@ -2361,36 +2395,32 @@ class PortfolioUpload(models.Model):
                 message=f"File validation successful. Found {self.total_rows} rows to process"
             )
             
-            # Clean column names
-            df.columns = df.columns.str.strip()
+            # Clean column names - vectorized operation
+            df.columns = df.columns.str.strip().str.upper()
             
-            # Log column structure
-            column_info = f"Columns found: {', '.join(df.columns.tolist())}"
-            self.create_log(
-                row_number=0,
-                status='success',
-                message=column_info
-            )
-            
-            # Process each row with individual logging
+            # MAJOR OPTIMIZATION: Process entire DataFrame at once instead of batches
             with transaction.atomic():
-                for index, row in df.iterrows():
-                    row_number = index + 1
-                    self._process_single_row_with_logging(row, row_number)
+                # Use savepoint for rollback capability
+                sid = transaction.savepoint()
+                
+                try:
+                    result = self._process_entire_dataframe(df)
                     
-                    self.processed_rows += 1
+                    # Update counters
+                    self.processed_rows = len(df)
+                    self.successful_rows = result['successful']
+                    self.failed_rows = result['failed']
+                    self.save(update_fields=['processed_rows', 'successful_rows', 'failed_rows'])
                     
-                    # Update progress every 50 rows
-                    if self.processed_rows % 50 == 0:
-                        self.save()
-                        self.create_log(
-                            row_number=0,
-                            status='success',
-                            message=f"Progress update: {self.processed_rows}/{self.total_rows} rows processed"
-                        )
-            
-            # Final save
-            self.save()
+                    # Bulk create logs
+                    if result['logs']:
+                        self.create_bulk_logs(result['logs'])
+                    
+                    transaction.savepoint_commit(sid)
+                    
+                except Exception as e:
+                    transaction.savepoint_rollback(sid)
+                    raise e
             
             return True
             
@@ -2403,153 +2433,291 @@ class PortfolioUpload(models.Model):
             )
             raise Exception(error_msg)
     
-    def _process_single_row_with_logging(self, row, row_number):
-        """
-        Process a single row and create detailed logs
-        """
-        try:
-            # Extract basic info for logging
-            client_name = ClientPortfolio.safe_string_convert(row.get('CLIENT', ''))
-            client_pan = ClientPortfolio.safe_string_convert(row.get('CLIENT PAN', ''))
-            scheme_name = ClientPortfolio.safe_string_convert(row.get('SCHEME', ''))
-            
-            # Validate required fields
-            if not client_name or not scheme_name:
-                self.failed_rows += 1
-                self.create_log(
-                    row_number=row_number,
-                    client_name=client_name,
-                    client_pan=client_pan,
-                    scheme_name=scheme_name,
-                    status='error',
-                    message="Missing required fields: client name or scheme name"
-                )
-                return
-            
-            if not client_pan or len(client_pan) != 10:
-                self.create_log(
-                    row_number=row_number,
-                    client_name=client_name,
-                    client_pan=client_pan,
-                    scheme_name=scheme_name,
-                    status='warning',
-                    message=f"Invalid PAN format: '{client_pan}' (should be 10 characters)"
-                )
-            
-            # Column mapping for portfolio data
-            column_mapping = {
-                'CLIENT': 'client_name',
-                'CLIENT PAN': 'client_pan',
-                'SCHEME': 'scheme_name',
-                'DEBT': 'debt_value',
-                'EQUITY': 'equity_value',
-                'HYBRID': 'hybrid_value',
-                'LIQUID AND ULTRA SHORT': 'liquid_ultra_short_value',
-                'OTHER': 'other_value',
-                'ARBITRAGE': 'arbitrage_value',
-                'TOTAL': 'total_value',
-                'ALLOCATION': 'allocation_percentage',
-                'UNITS': 'units',
-                'FAMILY HEAD': 'family_head',
-                'APP CODE': 'app_code',
-                'EQUITY CODE': 'equity_code',
-                'OPERATIONS': 'operations_personnel',
-                'OPERATIONS CODE': 'operations_code',
-                'RELATIONSHIP MANAGER': 'relationship_manager',
-                'RELATIONSHIP MANAGER CODE': 'rm_code',
-                'SUB BROKER': 'sub_broker',
-                'SUB BROKER CODE': 'sub_broker_code',
-                'ISIN NO': 'isin_number',
-                'CLIENT IWELL CODE': 'client_iwell_code',
-                'FAMILY HEAD IWELL CODE': 'family_head_iwell_code'
-            }
-            
-            # Prepare portfolio data
-            portfolio_data = {
-                'upload_batch': self,
-                'data_as_of_date': timezone.now().date(),
-                'is_active': True,
-                'is_mapped': False
-            }
-            
-            # Map columns with safe conversion
-            for excel_col, model_field in column_mapping.items():
-                if excel_col in row.index and pd.notna(row[excel_col]):
-                    value = row[excel_col]
-                    
-                    if model_field in [
-                        'debt_value', 'equity_value', 'hybrid_value', 
-                        'liquid_ultra_short_value', 'other_value', 'arbitrage_value',
-                        'total_value', 'allocation_percentage', 'units'
-                    ]:
-                        portfolio_data[model_field] = ClientPortfolio.safe_decimal_convert(value)
-                    else:
-                        portfolio_data[model_field] = ClientPortfolio.safe_string_convert(value)
-            
-            # Create portfolio entry
-            portfolio_entry = ClientPortfolio.objects.create(**portfolio_data)
-            
-            # Log successful creation
-            total_value = portfolio_data.get('total_value', 0)
-            self.create_log(
-                row_number=row_number,
-                client_name=client_name,
-                client_pan=client_pan,
-                scheme_name=scheme_name,
-                status='success',
-                message=f"Portfolio entry created successfully. Total value: ₹{total_value}",
-                portfolio_entry=portfolio_entry
-            )
-            
-            # Try to map to client profile
-            mapping_logs = []
+    def _process_entire_dataframe(self, df):
+        """Process entire DataFrame at once using vectorized operations - MAXIMUM OPTIMIZATION"""
+        
+        # Column mapping for portfolio data
+        column_mapping = {
+            'CLIENT': 'client_name',
+            'CLIENT PAN': 'client_pan',
+            'SCHEME': 'scheme_name',
+            'DEBT': 'debt_value',
+            'EQUITY': 'equity_value',
+            'HYBRID': 'hybrid_value',
+            'LIQUID AND ULTRA SHORT': 'liquid_ultra_short_value',
+            'OTHER': 'other_value',
+            'ARBITRAGE': 'arbitrage_value',
+            'TOTAL': 'total_value',
+            'ALLOCATION': 'allocation_percentage',
+            'UNITS': 'units',
+            'FAMILY HEAD': 'family_head',
+            'APP CODE': 'app_code',
+            'EQUITY CODE': 'equity_code',
+            'OPERATIONS': 'operations_personnel',
+            'OPERATIONS CODE': 'operations_code',
+            'RELATIONSHIP MANAGER': 'relationship_manager',
+            'RELATIONSHIP MANAGER CODE': 'rm_code',
+            'SUB BROKER': 'sub_broker',
+            'SUB BROKER CODE': 'sub_broker_code',
+            'ISIN NO': 'isin_number',
+            'CLIENT IWELL CODE': 'client_iwell_code',
+            'FAMILY HEAD IWELL CODE': 'family_head_iwell_code'
+        }
+        
+        result = {
+            'successful': 0,
+            'failed': 0,
+            'logs': []
+        }
+        
+        # VECTORIZED DATA CLEANING AND VALIDATION
+        # Clean and validate required fields using pandas vectorized operations
+        df['CLIENT'] = df.get('CLIENT', '').astype(str).str.strip()
+        df['CLIENT PAN'] = df.get('CLIENT PAN', '').astype(str).str.strip()
+        df['SCHEME'] = df.get('SCHEME', '').astype(str).str.strip()
+        
+        # Create mask for valid rows (vectorized operation)
+        valid_mask = (df['CLIENT'] != '') & (df['SCHEME'] != '') & (df['CLIENT'] != 'nan') & (df['SCHEME'] != 'nan')
+        
+        # Separate valid and invalid rows
+        valid_df = df[valid_mask].copy()
+        invalid_df = df[~valid_mask].copy()
+        
+        # Process invalid rows for logging
+        for idx in invalid_df.index:
+            row = invalid_df.loc[idx]
+            result['logs'].append({
+                'row_number': idx + 1,
+                'client_name': str(row.get('CLIENT', ''))[:255],
+                'client_pan': str(row.get('CLIENT PAN', ''))[:50],
+                'scheme_name': str(row.get('SCHEME', ''))[:300],
+                'status': 'error',
+                'message': "Missing required fields: client name or scheme name"
+            })
+            result['failed'] += 1
+        
+        if len(valid_df) == 0:
+            return result
+        
+        # VECTORIZED DATA PREPARATION for valid rows
+        portfolio_objects = []
+        success_logs = []
+        
+        # Prepare common fields for all rows
+        current_date = timezone.now().date()
+        
+        # Process valid rows efficiently
+        for idx, row in valid_df.iterrows():
             try:
-                mapped, message = portfolio_entry.map_to_client_profile()
-                if mapped:
-                    mapping_logs.append(f"Client mapping: {message}")
-                else:
-                    mapping_logs.append(f"Client mapping failed: {message}")
-                    
-                # Try to map personnel
-                personnel_mapped = portfolio_entry.map_personnel()
-                if personnel_mapped > 0:
-                    mapping_logs.append(f"Personnel mapped: {personnel_mapped} users")
-                    
-            except Exception as mapping_error:
-                mapping_logs.append(f"Mapping error: {str(mapping_error)}")
+                # Extract basic info
+                client_name = str(row.get('CLIENT', ''))[:255]
+                client_pan = str(row.get('CLIENT PAN', ''))[:50]
+                scheme_name = str(row.get('SCHEME', ''))[:300]
+                
+                # Prepare portfolio data
+                portfolio_data = {
+                    'upload_batch': self,
+                    'data_as_of_date': current_date,
+                    'is_active': True,
+                    'is_mapped': False,
+                    'client_name': client_name,
+                    'client_pan': client_pan,
+                    'scheme_name': scheme_name
+                }
+                
+                # Process numeric fields with optimized conversion
+                numeric_fields = [
+                    'debt_value', 'equity_value', 'hybrid_value', 
+                    'liquid_ultra_short_value', 'other_value', 'arbitrage_value',
+                    'total_value', 'allocation_percentage', 'units'
+                ]
+                
+                for excel_col, model_field in column_mapping.items():
+                    if excel_col in row.index and str(row[excel_col]).strip():
+                        value = row[excel_col]
+                        
+                        if model_field in numeric_fields:
+                            portfolio_data[model_field] = ClientPortfolio.safe_decimal_convert(value)
+                        else:
+                            # Truncate string fields to avoid database errors
+                            max_lengths = {
+                                'client_name': 255, 'client_pan': 50, 'scheme_name': 300,
+                                'family_head': 255, 'app_code': 50, 'equity_code': 50,
+                                'operations_personnel': 255, 'operations_code': 50,
+                                'relationship_manager': 255, 'rm_code': 50,
+                                'sub_broker': 255, 'sub_broker_code': 50,
+                                'isin_number': 20, 'client_iwell_code': 50,
+                                'family_head_iwell_code': 50
+                            }
+                            max_len = max_lengths.get(model_field, 255)
+                            portfolio_data[model_field] = str(value)[:max_len]
+                
+                # Create portfolio object
+                portfolio_obj = ClientPortfolio(**portfolio_data)
+                portfolio_objects.append(portfolio_obj)
+                
+                # Prepare success log
+                total_value = portfolio_data.get('total_value', 0)
+                success_logs.append({
+                    'row_number': idx + 1,
+                    'client_name': client_name,
+                    'client_pan': client_pan,
+                    'scheme_name': scheme_name,
+                    'status': 'success',
+                    'message': f"Portfolio entry created successfully. Total value: ₹{total_value}"
+                })
+                
+            except Exception as e:
+                result['failed'] += 1
+                result['logs'].append({
+                    'row_number': idx + 1,
+                    'client_name': client_name if 'client_name' in locals() else '',
+                    'client_pan': client_pan if 'client_pan' in locals() else '',
+                    'scheme_name': scheme_name if 'scheme_name' in locals() else '',
+                    'status': 'error',
+                    'message': f"Row processing error: {str(e)}"
+                })
+        
+        # BULK CREATE all portfolio objects at once (MAXIMUM PERFORMANCE)
+        if portfolio_objects:
+            try:
+                # Use bulk_create with large batch size and ignore_conflicts for maximum speed
+                created_objects = ClientPortfolio.objects.bulk_create(
+                    portfolio_objects, 
+                    batch_size=5000,  # Larger batch size
+                    ignore_conflicts=False
+                )
+                
+                result['successful'] = len(created_objects)
+                result['logs'].extend(success_logs)
+                
+                # OPTIMIZED MAPPING: Use bulk operations
+                self._bulk_process_all_mappings(created_objects, result)
+                
+            except Exception as e:
+                # If bulk create fails
+                result['failed'] += len(portfolio_objects)
+                result['logs'].extend([
+                    {
+                        'row_number': i + 1,
+                        'client_name': obj.client_name,
+                        'client_pan': obj.client_pan,
+                        'scheme_name': obj.scheme_name,
+                        'status': 'error',
+                        'message': f"Bulk creation failed: {str(e)}"
+                    } for i, obj in enumerate(portfolio_objects)
+                ])
+                
+                logger.error(f"Bulk create failed: {e}")
+        
+        return result
+    
+    def _bulk_process_all_mappings(self, portfolio_entries, result):
+        """Process all mappings using bulk operations for maximum performance"""
+        if not portfolio_entries:
+            return
+        
+        try:
+            # BULK CLIENT PROFILE MAPPING
+            # Get all unique PANs
+            pan_list = [entry.client_pan for entry in portfolio_entries if entry.client_pan]
             
-            # Log mapping results if any
-            if mapping_logs:
-                self.create_log(
-                    row_number=row_number,
-                    client_name=client_name,
-                    client_pan=client_pan,
-                    scheme_name=scheme_name,
-                    status='success',
-                    message=f"Mapping results: {'; '.join(mapping_logs)}",
-                    portfolio_entry=portfolio_entry
+            if pan_list:
+                # Bulk fetch client profiles
+                client_profiles = {
+                    cp.pan_number: cp 
+                    for cp in ClientProfile.objects.filter(pan_number__in=pan_list)
+                }
+                
+                # Bulk update client mappings
+                updates = []
+                for entry in portfolio_entries:
+                    if entry.client_pan in client_profiles:
+                        entry.client_profile = client_profiles[entry.client_pan]
+                        entry.is_mapped = True
+                        entry.mapping_notes = f"Auto-mapped on {timezone.now().strftime('%Y-%m-%d %H:%M')}"
+                        updates.append(entry)
+                
+                if updates:
+                    ClientPortfolio.objects.bulk_update(
+                        updates, 
+                        ['client_profile', 'is_mapped', 'mapping_notes'],
+                        batch_size=2000
+                    )
+            
+            # BULK PERSONNEL MAPPING
+            # Get all unique RM and Ops names
+            rm_names = [entry.relationship_manager for entry in portfolio_entries if entry.relationship_manager]
+            ops_names = [entry.operations_personnel for entry in portfolio_entries if entry.operations_personnel]
+            
+            # Bulk fetch users
+            all_users = {}
+            if rm_names or ops_names:
+                users = User.objects.filter(
+                    models.Q(role='rm') | models.Q(role__in=['ops_exec', 'ops_team_lead'])
+                ).values('id', 'first_name', 'last_name', 'role')
+                
+                for user in users:
+                    full_name = f"{user['first_name']} {user['last_name']}".strip()
+                    all_users[full_name.lower()] = user
+            
+            # Map personnel
+            personnel_updates = []
+            for entry in portfolio_entries:
+                updated = False
+                
+                # Map RM
+                if entry.relationship_manager:
+                    rm_key = entry.relationship_manager.lower().strip()
+                    if rm_key in all_users and all_users[rm_key]['role'] == 'rm':
+                        entry.mapped_rm_id = all_users[rm_key]['id']
+                        updated = True
+                
+                # Map Operations
+                if entry.operations_personnel:
+                    ops_key = entry.operations_personnel.lower().strip()
+                    if ops_key in all_users and all_users[ops_key]['role'] in ['ops_exec', 'ops_team_lead']:
+                        entry.mapped_ops_id = all_users[ops_key]['id']
+                        updated = True
+                
+                if updated:
+                    personnel_updates.append(entry)
+            
+            if personnel_updates:
+                ClientPortfolio.objects.bulk_update(
+                    personnel_updates,
+                    ['mapped_rm', 'mapped_ops'],
+                    batch_size=2000
                 )
             
-            self.successful_rows += 1
+            # Add mapping summary to logs
+            mapped_clients = sum(1 for entry in portfolio_entries if entry.is_mapped)
+            mapped_personnel = len(personnel_updates)
             
+            if mapped_clients > 0 or mapped_personnel > 0:
+                result['logs'].append({
+                    'row_number': 0,
+                    'client_name': '',
+                    'client_pan': '',
+                    'scheme_name': '',
+                    'status': 'success',
+                    'message': f"Bulk mapping completed: {mapped_clients} clients mapped, {mapped_personnel} personnel mapped"
+                })
+                
         except Exception as e:
-            self.failed_rows += 1
-            error_message = f"Row processing error: {str(e)}"
-            
-            # Log the specific error
-            self.create_log(
-                row_number=row_number,
-                client_name=client_name if 'client_name' in locals() else '',
-                client_pan=client_pan if 'client_pan' in locals() else '',
-                scheme_name=scheme_name if 'scheme_name' in locals() else '',
-                status='error',
-                message=error_message
-            )
-            
-            logger.error(f"Error processing row {row_number}: {e}")
+            logger.error(f"Error in bulk mapping: {e}")
+            result['logs'].append({
+                'row_number': 0,
+                'client_name': '',
+                'client_pan': '',
+                'scheme_name': '',
+                'status': 'warning',
+                'message': f"Bulk mapping partially failed: {str(e)}"
+            })
+
 
 class ClientPortfolio(models.Model):
-    """Enhanced client portfolio model with Excel upload support"""
+    """Enhanced client portfolio model with Excel upload support - OPTIMIZED"""
     # Link to client profile
     client_profile = models.ForeignKey(
         ClientProfile,
@@ -2560,9 +2728,9 @@ class ClientPortfolio(models.Model):
     )
     
     # Excel Data Fields (matching the uploaded structure)
-    client_name = models.CharField(max_length=255, help_text="Client name from Excel")
+    client_name = models.CharField(max_length=255, help_text="Client name from Excel", db_index=True)
     client_pan = models.CharField(max_length=50, help_text="Client PAN from Excel", db_index=True)
-    scheme_name = models.CharField(max_length=300, help_text="Mutual fund scheme name")
+    scheme_name = models.CharField(max_length=300, help_text="Mutual fund scheme name", db_index=True)
     
     # Asset Allocation Values
     debt_value = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text="Debt allocation value")
@@ -2647,6 +2815,8 @@ class ClientPortfolio(models.Model):
             models.Index(fields=['client_name']),
             models.Index(fields=['is_mapped', 'client_pan']),
             models.Index(fields=['upload_batch', 'is_mapped']),
+            models.Index(fields=['client_pan', 'is_mapped']),  # Combined index for faster lookups
+            models.Index(fields=['upload_batch', 'created_at']),  # For upload tracking
         ]
     
     def __str__(self):
@@ -2680,17 +2850,17 @@ class ClientPortfolio(models.Model):
                 self.client_profile = client_profile
                 self.is_mapped = True
                 self.mapping_notes = f"Auto-mapped to {client_profile.client_full_name} on {timezone.now().strftime('%Y-%m-%d %H:%M')}"
-                self.save()
+                self.save(update_fields=['client_profile', 'is_mapped', 'mapping_notes'])
                 
                 return True, f"Successfully mapped to {client_profile.client_full_name}"
                 
             except ClientProfile.DoesNotExist:
                 self.mapping_notes = f"No client profile found with PAN {self.client_pan}"
-                self.save()
+                self.save(update_fields=['mapping_notes'])
                 return False, f"No client profile found with PAN {self.client_pan}"
             except ClientProfile.MultipleObjectsReturned:
                 self.mapping_notes = f"Multiple client profiles found with PAN {self.client_pan}"
-                self.save()
+                self.save(update_fields=['mapping_notes'])
                 return False, f"Multiple client profiles found with PAN {self.client_pan}"
             except Exception as e:
                 logger.error(f"Error mapping client profile: {e}")
@@ -2701,6 +2871,7 @@ class ClientPortfolio(models.Model):
     def map_personnel(self):
         """Map RM and Operations personnel based on names"""
         mapped_count = 0
+        update_fields = []
         
         # Map RM
         if self.relationship_manager:
@@ -2717,6 +2888,7 @@ class ClientPortfolio(models.Model):
                     rm_user = rm_user.first()
                     if rm_user:
                         self.mapped_rm = rm_user
+                        update_fields.append('mapped_rm')
                         mapped_count += 1
             except Exception as e:
                 logger.warning(f"Error mapping RM {self.relationship_manager}: {e}")
@@ -2726,22 +2898,16 @@ class ClientPortfolio(models.Model):
             try:
                 name_parts = self.operations_personnel.strip().split()
                 if len(name_parts) >= 1:
-                    ops_user = User.objects.filter(
-                        role__in=['ops_exec', 'ops_team_lead'],
-                        first_name__icontains=name_parts[0]
-                    )
-                    if len(name_parts) > 1:
-                        ops_user = ops_user.filter(last_name__icontains=name_parts[-1])
-                    
                     ops_user = ops_user.first()
                     if ops_user:
                         self.mapped_ops = ops_user
+                        update_fields.append('mapped_ops')
                         mapped_count += 1
             except Exception as e:
                 logger.warning(f"Error mapping operations personnel {self.operations_personnel}: {e}")
         
-        if mapped_count > 0:
-            self.save()
+        if update_fields:
+            self.save(update_fields=update_fields)
         
         return mapped_count
     
@@ -2777,27 +2943,31 @@ class ClientPortfolio(models.Model):
     
     @classmethod
     def safe_decimal_convert(cls, value, default=0):
-        """Safely convert values to Decimal for Django DecimalField"""
-        if value is None or pd.isna(value):
+        """Safely convert values to Decimal for Django DecimalField - OPTIMIZED"""
+        if value is None or pd.isna(value) or value == '' or value == 'nan':
             return Decimal(str(default))
         
-        # Handle string values
+         # Handle string values
         if isinstance(value, str):
             # Remove common formatting characters
-            value = value.replace(',', '').replace('₹', '').replace('$', '').strip()
-            if not value:
+            value = value.replace(',', '').replace('₹', '').replace(' ', '')
+            if not value or value == 'nan':
                 return Decimal(str(default))
-        
+       
         try:
-            return Decimal(str(float(value)))
-        except (ValueError, TypeError):
+            # Direct conversion for better performance
+            if isinstance(value, (int, float)) and not pd.isna(value):
+                return Decimal(str(value))
+            else:
+                return Decimal(str(float(value)))
+        except (ValueError, TypeError, decimal.InvalidOperation):
             logger.warning(f"Could not convert decimal value: {value} (type: {type(value)})")
             return Decimal(str(default))
     
     @classmethod
     def safe_string_convert(cls, value):
-        """Safely convert values to string, handling NaN and None"""
-        if value is None or pd.isna(value):
+        """Safely convert values to string, handling NaN and None - OPTIMIZED"""
+        if value is None or pd.isna(value) or value == 'nan':
             return ''
         
         if isinstance(value, (int, float)):
@@ -2807,18 +2977,20 @@ class ClientPortfolio(models.Model):
         
         return str(value).strip()
 
+
 class PortfolioUploadLog(models.Model):
-    """Enhanced log model with auto row number generation"""
+    """Enhanced log model with auto row number generation - OPTIMIZED"""
     upload = models.ForeignKey(
         PortfolioUpload,
         on_delete=models.CASCADE,
         related_name='processing_logs'
     )
     row_number = models.PositiveIntegerField(
-        help_text="Row number in the uploaded file (0 for system messages)"
+        help_text="Row number in the uploaded file (0 for system messages)",
+        db_index=True  # Index for faster queries
     )
-    client_name = models.CharField(max_length=255, blank=True)
-    client_pan = models.CharField(max_length=50, blank=True)
+    client_name = models.CharField(max_length=255, blank=True, db_index=True)
+    client_pan = models.CharField(max_length=50, blank=True, db_index=True)
     scheme_name = models.CharField(max_length=300, blank=True)
     
     STATUS_CHOICES = [
@@ -2827,7 +2999,7 @@ class PortfolioUploadLog(models.Model):
         ('warning', 'Warning'),
     ]
     
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, db_index=True)
     message = models.TextField()
     portfolio_entry = models.ForeignKey(
         ClientPortfolio,
@@ -2836,17 +3008,47 @@ class PortfolioUploadLog(models.Model):
         blank=True,
         related_name='upload_logs'
     )
-    created_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
     
     class Meta:
         ordering = ['upload', 'row_number', 'created_at']
         verbose_name = 'Portfolio Upload Log'
         verbose_name_plural = 'Portfolio Upload Logs'
+        indexes = [
+            models.Index(fields=['upload', 'status']),
+            models.Index(fields=['upload', 'row_number']),
+            models.Index(fields=['upload', 'created_at']),
+        ]
     
     def __str__(self):
         if self.row_number == 0:
             return f"{self.upload.upload_id} - System Log ({self.get_status_display()})"
         return f"{self.upload.upload_id} - Row {self.row_number} ({self.get_status_display()})"
+
+
+@receiver(post_save, sender=PortfolioUpload)
+def auto_process_portfolio_upload(sender, instance, created, **kwargs):
+    """
+    Automatically start processing when a new portfolio upload is created - OPTIMIZED
+    """
+    if created and instance.status == 'pending':
+        # Log the trigger
+        instance.create_log(
+            row_number=0,
+            status='success',
+            message=f"Upload {instance.upload_id} queued for automatic processing"
+        )
+        
+        # Always use thread fallback
+        def process_in_background():
+            try:
+                instance.process_upload_with_logging()
+            except Exception as e:
+                logger.error(f"Auto-processing failed for {instance.upload_id}: {e}")
+        
+        thread = Thread(target=process_in_background)
+        thread.daemon = True
+        thread.start()
 
 class MutualFundScheme(models.Model):
     """Enhanced mutual fund scheme model with upload support"""
@@ -3556,31 +3758,6 @@ from django.dispatch import receiver
 from django.core.management import call_command
 from threading import Thread
 
-@receiver(post_save, sender=PortfolioUpload)
-def auto_process_portfolio_upload(sender, instance, created, **kwargs):
-    """
-    Automatically start processing when a new portfolio upload is created
-    """
-    if created and instance.status == 'pending':
-        # Log the trigger
-        instance.create_log(
-            row_number=0,
-            status='success',
-            message=f"Upload {instance.upload_id} queued for automatic processing"
-        )
-        
-        # Process in background thread to avoid blocking the request
-        def process_in_background():
-            try:
-                instance.process_upload_with_logging()
-            except Exception as e:
-                logger.error(f"Auto-processing failed for {instance.upload_id}: {e}")
-        
-        # Start background processing
-        thread = Thread(target=process_in_background)
-        thread.daemon = True
-        thread.start()
-
 class PortfolioActionPlan(models.Model):
     """Action plan for portfolio operations"""
     
@@ -4002,7 +4179,6 @@ class ActionPlanWorkflow(models.Model):
         return f"{self.action_plan.plan_id}: {self.from_status} → {self.to_status}"
     
 # models.py - Add these models to your existing models.py file
-
 class ClientUpload(models.Model):
     """Model to track client profile file uploads"""
     UPLOAD_STATUS_CHOICES = [
@@ -4089,19 +4265,23 @@ class ClientUpload(models.Model):
         )
     
     def process_upload_with_logging(self):
-        """Main method to process the uploaded client file"""
+        """Main method to process the uploaded client file - OPTIMIZED VERSION"""
         import os
         import pandas as pd
         from django.db import transaction
         from decimal import Decimal
         import re
+        from collections import defaultdict
         
         try:
             self.status = 'processing'
             self.save()
             
+            # Batch for log entries
+            log_entries = []
+            
             # Log start
-            self.create_log(0, 'success', f"Started processing upload {self.upload_id}")
+            log_entries.append(self._create_log_entry(0, 'success', f"Started processing upload {self.upload_id}"))
             
             # Check if file exists
             if not self.file or not os.path.exists(self.file.path):
@@ -4110,9 +4290,9 @@ class ClientUpload(models.Model):
             # Read Excel file
             try:
                 df = pd.read_excel(self.file.path, engine='openpyxl')
-                self.create_log(0, 'success', f"Successfully read Excel file with {len(df)} rows")
+                log_entries.append(self._create_log_entry(0, 'success', f"Successfully read Excel file with {len(df)} rows"))
             except Exception as e:
-                self.create_log(0, 'error', f"Failed to read Excel file: {str(e)}")
+                log_entries.append(self._create_log_entry(0, 'error', f"Failed to read Excel file: {str(e)}"))
                 raise
             
             # Remove any completely empty rows
@@ -4125,44 +4305,153 @@ class ClientUpload(models.Model):
             self.total_rows = len(df)
             self.save()
             
-            self.create_log(0, 'success', f"Found {self.total_rows} rows to process")
+            log_entries.append(self._create_log_entry(0, 'success', f"Found {self.total_rows} rows to process"))
             
             # Log column information
             columns_found = list(df.columns)
-            self.create_log(0, 'success', f"Columns found: {', '.join(columns_found)}")
+            log_entries.append(self._create_log_entry(0, 'success', f"Columns found: {', '.join(columns_found)}"))
             
-            # Expected columns
+            # Expected columns validation
             required_columns = ['NAME', 'PAN']
-            optional_columns = ['EMAIL', 'MOBILE', 'DATE OF BIRTH', 'ADDRESS1', 'AUM']
-            
-            # Check if required columns exist
-            missing_columns = []
-            for col in required_columns:
-                if col not in df.columns:
-                    missing_columns.append(col)
+            missing_columns = [col for col in required_columns if col not in df.columns]
             
             if missing_columns:
                 error_msg = f"Missing required columns: {', '.join(missing_columns)}"
-                self.create_log(0, 'error', error_msg)
+                log_entries.append(self._create_log_entry(0, 'error', error_msg))
                 raise Exception(error_msg)
             
-            self.create_log(0, 'success', f"Column validation successful")
+            log_entries.append(self._create_log_entry(0, 'success', f"Column validation successful"))
+            
+            # OPTIMIZATION 1: Pre-load all existing data to avoid repeated queries
+            existing_profiles_map = self._preload_existing_profiles(df)
+            users_map = self._preload_users()
+            existing_clients_map = self._preload_existing_clients()
+            
+            # OPTIMIZATION 2: Prepare batch data structures
+            profiles_to_create = []
+            profiles_to_update = []
+            clients_to_create = []
+            clients_to_update = []
             
             # Process each row
             for index, row in df.iterrows():
                 try:
-                    self._process_single_client_row(row, index + 1)
+                    result = self._process_single_client_row_optimized(
+                        row, index + 1, existing_profiles_map, users_map, existing_clients_map, log_entries
+                    )
+                    
+                    if result:
+                        profile_data, client_data, operation_type = result
+                        
+                        if operation_type == 'create_profile':
+                            profiles_to_create.append(profile_data)
+                        elif operation_type == 'update_profile':
+                            profiles_to_update.append(profile_data)
+                        
+                        if client_data:
+                            if client_data.get('operation') == 'create':
+                                clients_to_create.append(client_data)
+                            elif client_data.get('operation') == 'update':
+                                clients_to_update.append(client_data)
+                    
                     self.processed_rows += 1
                     
-                    # Save progress every 100 rows
-                    if self.processed_rows % 100 == 0:
+                    # Save progress and logs every 500 rows
+                    if self.processed_rows % 500 == 0:
+                        self._bulk_save_logs(log_entries)
+                        log_entries = []
                         self.save()
-                        self.create_log(0, 'success', f"Progress: {self.processed_rows}/{self.total_rows} rows processed")
+                        log_entries.append(self._create_log_entry(0, 'success', f"Progress: {self.processed_rows}/{self.total_rows} rows processed"))
                         
                 except Exception as row_error:
-                    self.create_log(index + 1, 'error', f"Row processing failed: {str(row_error)}")
+                    log_entries.append(self._create_log_entry(index + 1, 'error', f"Row processing failed: {str(row_error)}"))
                     self.failed_rows += 1
                     continue
+            
+            # OPTIMIZATION 3: Bulk database operations - FIXED VERSION
+            with transaction.atomic():
+                # Bulk create new profiles
+                if profiles_to_create:
+                    # Convert dictionaries to ClientProfile objects
+                    profile_objects = []
+                    for profile_data in profiles_to_create:
+                        profile_objects.append(ClientProfile(**profile_data))
+                    
+                    created_profiles = ClientProfile.objects.bulk_create(profile_objects, batch_size=1000)
+                    self.successful_rows += len(created_profiles)
+                    
+                    # Update existing_profiles_map with new profiles
+                    for profile in created_profiles:
+                        existing_profiles_map[profile.pan_number] = profile
+                
+                # Bulk update existing profiles
+                if profiles_to_update:
+                    update_batch = []
+                    for profile_data in profiles_to_update:
+                        pan_number = profile_data.pop('pan_number')
+                        profile = existing_profiles_map[pan_number]
+                        
+                        # Update profile attributes
+                        for field, value in profile_data.items():
+                            if field not in ['created_by']:  # Skip fields that shouldn't be updated
+                                setattr(profile, field, value)
+                        
+                        update_batch.append(profile)
+                        
+                        if len(update_batch) >= 1000:
+                            ClientProfile.objects.bulk_update(update_batch, [
+                                'client_full_name', 'email', 'mobile_number', 'address_kyc',
+                                'family_head_name', 'mapped_rm', 'mapped_ops_exec', 'date_of_birth',
+                                'first_investment_date', 'status'
+                            ])
+                            self.updated_rows += len(update_batch)
+                            update_batch = []
+                    
+                    if update_batch:
+                        ClientProfile.objects.bulk_update(update_batch, [
+                            'client_full_name', 'email', 'mobile_number', 'address_kyc',
+                            'family_head_name', 'mapped_rm', 'mapped_ops_exec', 'date_of_birth',
+                            'first_investment_date', 'status'
+                        ])
+                        self.updated_rows += len(update_batch)
+                
+                # Bulk create/update clients
+                if clients_to_create:
+                    client_objects = []
+                    for client_data in clients_to_create:
+                        pan_number = client_data.pop('pan_number')
+                        client_data.pop('operation')  # Remove the operation flag
+                        
+                        client_objects.append(Client(
+                            client_profile=existing_profiles_map[pan_number],
+                            name=client_data['name'],
+                            contact_info=client_data['contact_info'],
+                            aum=client_data['aum'],
+                            user=client_data.get('user'),
+                            created_by=self.uploaded_by
+                        ))
+                    
+                    Client.objects.bulk_create(client_objects, batch_size=1000)
+                
+                if clients_to_update:
+                    client_update_batch = []
+                    for client_data in clients_to_update:
+                        pan_number = client_data.pop('pan_number')
+                        client_data.pop('operation')  # Remove the operation flag
+                        
+                        client = existing_clients_map[pan_number]
+                        client.name = client_data['name']
+                        client.contact_info = client_data['contact_info']
+                        client.aum = client_data['aum']
+                        client.user = client_data.get('user')
+                        client_update_batch.append(client)
+                        
+                        if len(client_update_batch) >= 1000:
+                            Client.objects.bulk_update(client_update_batch, ['name', 'contact_info', 'aum', 'user'])
+                            client_update_batch = []
+                    
+                    if client_update_batch:
+                        Client.objects.bulk_update(client_update_batch, ['name', 'contact_info', 'aum', 'user'])
             
             # Complete processing
             if self.failed_rows == 0:
@@ -4174,7 +4463,10 @@ class ClientUpload(models.Model):
             self.save()
             
             success_msg = f"Processing completed. Success: {self.successful_rows}, Failed: {self.failed_rows}, Updated: {self.updated_rows}"
-            self.create_log(0, 'success', success_msg)
+            log_entries.append(self._create_log_entry(0, 'success', success_msg))
+            
+            # Save remaining logs
+            self._bulk_save_logs(log_entries)
             
             return True
             
@@ -4186,12 +4478,75 @@ class ClientUpload(models.Model):
             self.error_details = {'error': str(e)}
             self.save()
             
-            self.create_log(0, 'error', error_msg)
+            log_entries.append(self._create_log_entry(0, 'error', error_msg))
+            self._bulk_save_logs(log_entries)
             return False
-    
-    def _process_single_client_row(self, row, row_number):
-        """Process a single client row"""
+
+    def _create_log_entry(self, row_number, status, message, client_name='', pan_number='', client_profile=None):
+        """Helper to create log entry dict"""
+        return {
+            'upload': self,
+            'row_number': row_number,
+            'client_name': client_name,
+            'pan_number': pan_number,
+            'status': status,
+            'message': message,
+            'client_profile': client_profile,
+            'created_at': timezone.now()
+        }
+
+    def _bulk_save_logs(self, log_entries):
+        """Bulk save log entries"""
+        if log_entries:
+            log_objects = [ClientUploadLog(**entry) for entry in log_entries]
+            ClientUploadLog.objects.bulk_create(log_objects, batch_size=1000)
+
+    def _preload_existing_profiles(self, df):
+        """Pre-load all existing profiles to avoid repeated queries"""
+        pan_numbers = df['PAN'].dropna().str.upper().str.strip().unique()
+        existing_profiles = ClientProfile.objects.filter(pan_number__in=pan_numbers).select_related()
+        return {profile.pan_number: profile for profile in existing_profiles}
+
+    def _preload_users(self):
+        """Pre-load all users for mapping"""
+        users = User.objects.filter(role__in=['rm', 'ops_exec', 'ops_team_lead']).only(
+            'id', 'first_name', 'last_name', 'role'
+        )
+        users_map = {
+            'rm': {},
+            'ops': {}
+        }
+        
+        for user in users:
+            full_name = f"{user.first_name} {user.last_name}".strip().lower()
+            first_name = user.first_name.lower() if user.first_name else ''
+            last_name = user.last_name.lower() if user.last_name else ''
+            
+            if user.role == 'rm':
+                users_map['rm'][full_name] = user
+                users_map['rm'][first_name] = user
+                if last_name:
+                    users_map['rm'][last_name] = user
+            elif user.role in ['ops_exec', 'ops_team_lead']:
+                users_map['ops'][full_name] = user
+                users_map['ops'][first_name] = user
+                if last_name:
+                    users_map['ops'][last_name] = user
+        
+        return users_map
+
+    def _preload_existing_clients(self):
+        """Pre-load existing clients"""
+        clients = Client.objects.select_related('client_profile').all()
+        return {client.client_profile.pan_number: client for client in clients}
+
+    def _process_single_client_row_optimized(self, row, row_number, existing_profiles_map, users_map, existing_clients_map, log_entries):
+        """Optimized version of single row processing"""
         try:
+            import pandas as pd
+            from decimal import Decimal
+            import re
+            
             # Helper functions
             def safe_string_convert(value):
                 if value is None or pd.isna(value):
@@ -4215,7 +4570,6 @@ class ClientUpload(models.Model):
                 if pd.isna(date_value) or not date_value:
                     return None
                 
-                # Import datetime module with alias to avoid conflict
                 from datetime import datetime as dt
                 
                 if isinstance(date_value, dt):
@@ -4234,14 +4588,15 @@ class ClientUpload(models.Model):
                     except ValueError:
                         continue
                 
-                # If no format matches, log warning and return None
-                self.create_log(row_number, 'warning', f"Could not parse date: {date_value}")
+                log_entries.append(self._create_log_entry(row_number, 'warning', f"Could not parse date: {date_value}"))
                 return None
             
             def validate_pan(pan):
                 if not pan:
                     return False, "PAN number is required"
                 pan = pan.upper().strip()
+                if len(pan) != 10:
+                    return False, f"PAN must be exactly 10 characters long: {pan}"
                 pan_pattern = r'^[A-Z]{5}[0-9]{4}[A-Z]{1}$'
                 if not re.match(pan_pattern, pan) or len(pan) != 10:
                     return False, f"Invalid PAN format: {pan}"
@@ -4254,24 +4609,46 @@ class ClientUpload(models.Model):
                         address_parts.append(str(row[field]).strip())
                 return ', '.join(address_parts) if address_parts else ''
             
-            # Extract data with error handling
+            def find_user_optimized(name, user_type):
+                """Optimized user lookup using pre-loaded data"""
+                if not name:
+                    return None
+                
+                name_lower = name.lower().strip()
+                name_parts = name_lower.split()
+                
+                # Try exact match first
+                if name_lower in users_map[user_type]:
+                    return users_map[user_type][name_lower]
+                
+                # Try first name
+                if name_parts and name_parts[0] in users_map[user_type]:
+                    return users_map[user_type][name_parts[0]]
+                
+                # Try last name
+                if len(name_parts) > 1 and name_parts[-1] in users_map[user_type]:
+                    return users_map[user_type][name_parts[-1]]
+                
+                return None
+            
+            # Extract data
             client_name = safe_string_convert(row.get('NAME', ''))
-            pan_number = safe_string_convert(row.get('PAN', ''))
+            pan_number = safe_string_convert(row.get('PAN', ''))[:10]
             email = safe_string_convert(row.get('EMAIL', ''))
             mobile_number = safe_string_convert(row.get('MOBILE', ''))
             
             # Validate required fields
             if not client_name:
                 self.failed_rows += 1
-                self.create_log(row_number, 'error', "Client name is required", client_name, pan_number)
-                return
+                log_entries.append(self._create_log_entry(row_number, 'error', "Client name is required", client_name, pan_number))
+                return None
             
             # Validate PAN
             pan_valid, pan_result = validate_pan(pan_number)
             if not pan_valid:
                 self.failed_rows += 1
-                self.create_log(row_number, 'error', pan_result, client_name, pan_number)
-                return
+                log_entries.append(self._create_log_entry(row_number, 'error', pan_result, client_name, pan_number))
+                return None
             
             pan_number = pan_result
             
@@ -4286,60 +4663,23 @@ class ClientUpload(models.Model):
             family_head_name = safe_string_convert(row.get('FAMILY HEAD', ''))
             aum_value = safe_decimal_convert(row.get('AUM', 0))
             
-            # Personnel information
+            # Personnel information - optimized lookup
             rm_name = safe_string_convert(row.get('RELATIONSHIP  MANAGER', ''))
             ops_name = safe_string_convert(row.get('OPERATIONS', ''))
             
-            # Try to find existing users
-            mapped_rm = None
-            mapped_ops = None
+            mapped_rm = find_user_optimized(rm_name, 'rm')
+            mapped_ops = find_user_optimized(ops_name, 'ops')
             
-            if rm_name:
-                try:
-                    name_parts = rm_name.split()
-                    if len(name_parts) >= 1:
-                        rm_users = User.objects.filter(
-                            role='rm',
-                            first_name__icontains=name_parts[0]
-                        )
-                        if len(name_parts) > 1:
-                            rm_users = rm_users.filter(last_name__icontains=name_parts[-1])
-                        mapped_rm = rm_users.first()
-                except Exception:
-                    pass
+            # Check existing profile using pre-loaded data
+            existing_profile = existing_profiles_map.get(pan_number)
+            update_existing = existing_profile is not None
             
-            if ops_name:
-                try:
-                    name_parts = ops_name.split()
-                    if len(name_parts) >= 1:
-                        ops_users = User.objects.filter(
-                            role__in=['ops_exec', 'ops_team_lead'],
-                            first_name__icontains=name_parts[0]
-                        )
-                        if len(name_parts) > 1:
-                            ops_users = ops_users.filter(last_name__icontains=name_parts[-1])
-                        mapped_ops = ops_users.first()
-                except Exception:
-                    pass
+            if existing_profile and not self.update_existing:
+                log_entries.append(self._create_log_entry(row_number, 'warning',
+                    f"Skipped existing profile for {client_name} - update disabled", client_name, pan_number))
+                return None
             
-            # Check if ClientProfile already exists
-            existing_profile = None
-            update_existing = False
-            
-            try:
-                existing_profile = ClientProfile.objects.get(pan_number=pan_number)
-                update_existing = True
-                self.create_log(row_number, 'info', 
-                    f"Found existing profile for PAN {pan_number}", client_name, pan_number)
-            except ClientProfile.DoesNotExist:
-                pass
-            except ClientProfile.MultipleObjectsReturned:
-                self.failed_rows += 1
-                self.create_log(row_number, 'error',
-                    f"Multiple profiles found with PAN {pan_number}", client_name, pan_number)
-                return
-            
-            # Prepare ClientProfile data
+            # Prepare profile data
             profile_data = {
                 'client_full_name': client_name,
                 'pan_number': pan_number,
@@ -4353,92 +4693,57 @@ class ClientUpload(models.Model):
                 'status': 'active'
             }
             
-            # Add date fields if available
+            # Add date fields
             if date_of_birth:
                 profile_data['date_of_birth'] = date_of_birth
+            else:
+                from datetime import date
+                profile_data['date_of_birth'] = date(1900, 1, 1)
+                log_entries.append(self._create_log_entry(row_number, 'warning',
+                    f"Using default date of birth for {client_name}", client_name, pan_number))
+            
             if first_investment_date:
                 profile_data['first_investment_date'] = first_investment_date
             
-            with transaction.atomic():
-                if update_existing and self.update_existing:
-                    # Update existing profile
-                    for field, value in profile_data.items():
-                        if field not in ['created_by']:  # Don't change creator
-                            setattr(existing_profile, field, value)
-                    existing_profile.save()
-                    
-                    client_profile = existing_profile
-                    self.updated_rows += 1
-                    self.create_log(row_number, 'success',
-                        f"Updated existing profile for {client_name}", client_name, pan_number, client_profile)
-                        
-                elif update_existing and not self.update_existing:
-                    # Skip existing profile
-                    self.create_log(row_number, 'warning',
-                        f"Skipped existing profile for {client_name} - update disabled", client_name, pan_number)
-                    return
-                    
-                else:
-                    # Create new profile - set a default date_of_birth if missing
-                    if 'date_of_birth' not in profile_data:
-                        # Set a default date or handle as per your business logic
-                        from datetime import date
-                        profile_data['date_of_birth'] = date(1900, 1, 1)  # Default date
-                        self.create_log(row_number, 'warning',
-                            f"Using default date of birth for {client_name}", client_name, pan_number)
-                    
-                    client_profile = ClientProfile.objects.create(**profile_data)
-                    self.successful_rows += 1
-                    self.create_log(row_number, 'success',
-                        f"Created new profile for {client_name}", client_name, pan_number, client_profile)
-                
-                # Handle Client model
-                try:
-                    existing_client = Client.objects.get(client_profile=client_profile)
-                    # Update existing client
-                    existing_client.name = client_name
-                    existing_client.contact_info = mobile_number or email or 'N/A'
-                    existing_client.aum = aum_value
-                    existing_client.user = mapped_rm
-                    existing_client.save()
-                    
-                    self.create_log(row_number, 'success',
-                        f"Updated existing client record for {client_name}", client_name, pan_number)
-                        
-                except Client.DoesNotExist:
-                    # Create new client
-                    Client.objects.create(
-                        client_profile=client_profile,
-                        name=client_name,
-                        contact_info=mobile_number or email or 'N/A',
-                        aum=aum_value,
-                        user=mapped_rm,
-                        created_by=self.uploaded_by
-                    )
-                    
-                    self.create_log(row_number, 'success',
-                        f"Created new client record for {client_name}", client_name, pan_number)
-                
-                # Log personnel mapping results
-                mapping_msgs = []
-                if mapped_rm:
-                    mapping_msgs.append(f"RM: {mapped_rm.get_full_name()}")
-                if mapped_ops:
-                    mapping_msgs.append(f"Ops: {mapped_ops.get_full_name()}")
-                
-                if mapping_msgs:
-                    self.create_log(row_number, 'success',
-                        f"Personnel mapped - {'; '.join(mapping_msgs)}", client_name, pan_number)
+            # Prepare client data
+            client_data = {
+                'pan_number': pan_number,
+                'name': client_name,
+                'contact_info': mobile_number or email or 'N/A',
+                'aum': aum_value,
+                'user': mapped_rm,
+            }
             
+            if update_existing:
+                log_entries.append(self._create_log_entry(row_number, 'success',
+                    f"Prepared update for existing profile: {client_name}", client_name, pan_number))
+                
+                # Check if client exists
+                existing_client = existing_clients_map.get(pan_number)
+                if existing_client:
+                    client_data['operation'] = 'update'
+                else:
+                    client_data['operation'] = 'create'
+                
+                return profile_data, client_data, 'update_profile'
+            else:
+                log_entries.append(self._create_log_entry(row_number, 'success',
+                    f"Prepared creation for new profile: {client_name}", client_name, pan_number))
+                
+                # Create new profile object for mapping (but don't save yet)
+                profile_obj = ClientProfile(**profile_data)
+                existing_profiles_map[pan_number] = profile_obj
+                
+                client_data['operation'] = 'create'
+                return profile_data, client_data, 'create_profile'
+                
         except Exception as e:
             self.failed_rows += 1
             error_message = f"Row processing error: {str(e)}"
-            
-            self.create_log(row_number, 'error', error_message,
+            log_entries.append(self._create_log_entry(row_number, 'error', error_message,
                 client_name if 'client_name' in locals() else '',
-                pan_number if 'pan_number' in locals() else '')
-            
-            logger.error(f"Error processing client row {row_number}: {e}")
+                pan_number if 'pan_number' in locals() else ''))
+            return None
 
 
 class ClientUploadLog(models.Model):
@@ -4475,6 +4780,10 @@ class ClientUploadLog(models.Model):
         ordering = ['upload', 'row_number', 'created_at']
         verbose_name = 'Client Upload Log'
         verbose_name_plural = 'Client Upload Logs'
+        indexes = [
+            models.Index(fields=['upload', 'status']),
+            models.Index(fields=['upload', 'row_number']),
+        ]
     
     def __str__(self):
         if self.row_number == 0:
@@ -4491,6 +4800,7 @@ def auto_process_client_upload(sender, instance, created, **kwargs):
             transaction.on_commit(lambda: process_client_upload_deferred(instance.id))
         except Exception as e:
             logger.error(f"Error scheduling client upload processing for {instance.upload_id}: {e}")
+
 
 def process_client_upload_deferred(upload_id):
     """Process client upload after transaction commit"""
@@ -4510,4 +4820,3 @@ def process_client_upload_deferred(upload_id):
             upload.save()
         except:
             pass
-    
