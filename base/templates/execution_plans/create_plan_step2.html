@@ -107,13 +107,6 @@
                         <h2 class="mb-0">Step 2 : Create Execution Plan</h2>
                         <p class="text-muted mb-0">Design portfolio actions for {{ client.name }}</p>
                     </div>
-                    <!-- <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb mb-0">
-                            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
-                            <li class="breadcrumb-item"><a href="{% url 'create_plan' %}">Select Client</a></li>
-                            <li class="breadcrumb-item active">Design Plan</li>
-                        </ol>
-                    </nav> -->
                 </div>
             </div>
         </div>
@@ -206,39 +199,29 @@
                                         <td class="text-end">{{ holding.units|floatformat:4 }}</td>
                                         <td class="text-center">
                                             <div class="btn-group" role="group">
-                                               <button type="button" class="btn btn-sm btn-outline-success"
-        onclick="openActionModal('purchase', '{{ holding.scheme_name|escapejs }}', {{ holding.current_value|floatformat:2 }}, {{ holding.units|floatformat:4 }}, {{ holding.id }})">
-    <i class="fas fa-shopping-cart"></i> Purchase
-</button>
-
-{% if holding.can_redeem %}
-<button type="button" class="btn btn-sm btn-outline-danger"
-        onclick="openActionModal('redeem', '{{ holding.scheme_name|escapejs }}', {{ holding.current_value|floatformat:2 }}, {{ holding.units|floatformat:4 }}, {{ holding.id }})">
-    <i class="fas fa-minus-circle"></i> Redeem
-</button>
-{% endif %}
-
-{% if holding.can_switch %}
-<button type="button" class="btn btn-sm btn-outline-primary"
-        onclick="openActionModal('switch', '{{ holding.scheme_name|escapejs }}', {{ holding.current_value|floatformat:2 }}, {{ holding.units|floatformat:4 }}, {{ holding.id }})">
-    <i class="fas fa-exchange-alt"></i> Switch
-</button>
-{% endif %}
-
-{% if holding.can_stp %}
-<button type="button" class="btn btn-sm btn-outline-info"
-        onclick="openActionModal('stp', '{{ holding.scheme_name|escapejs }}', {{ holding.current_value|floatformat:2 }}, {{ holding.units|floatformat:4 }}, {{ holding.id }})">
-    <i class="fas fa-arrow-right"></i> STP
-</button>
-{% endif %}
-
-{% if holding.can_swp %}
-<button type="button" class="btn btn-sm btn-outline-warning"
-        onclick="openActionModal('swp', '{{ holding.scheme_name|escapejs }}', {{ holding.current_value|floatformat:2 }}, {{ holding.units|floatformat:4 }}, {{ holding.id }})">
-    <i class="fas fa-arrow-down"></i> SWP
-</button>
-{% endif %}
-
+                                                <button type="button" class="btn btn-sm btn-outline-success" onclick="openActionModal('purchase', '{{ holding.scheme_name|escapejs }}', '{{ holding.current_value }}', '{{ holding.units }}', '{{ holding.id }}')">
+                                                    <i class="fas fa-shopping-cart"></i> Purchase
+                                                </button>
+                                                {% if holding.can_redeem %}
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="openActionModal('redeem', '{{ holding.scheme_name|escapejs }}', '{{ holding.current_value }}', '{{ holding.units }}', '{{ holding.id }}')">
+                                                    <i class="fas fa-minus-circle"></i> Redeem
+                                                </button>
+                                                {% endif %}
+                                                {% if holding.can_switch %}
+                                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="openActionModal('switch', '{{ holding.scheme_name|escapejs }}', '{{ holding.current_value }}', '{{ holding.units }}', '{{ holding.id }}')">
+                                                    <i class="fas fa-exchange-alt"></i> Switch
+                                                </button>
+                                                {% endif %}
+                                                {% if holding.can_stp %}
+                                                <button type="button" class="btn btn-sm btn-outline-info" onclick="openActionModal('stp', '{{ holding.scheme_name|escapejs }}', '{{ holding.current_value }}', '{{ holding.units }}', '{{ holding.id }}')">
+                                                    <i class="fas fa-arrow-right"></i> STP
+                                                </button>
+                                                {% endif %}
+                                                {% if holding.can_swp %}
+                                                <button type="button" class="btn btn-sm btn-outline-warning" onclick="openActionModal('swp', '{{ holding.scheme_name|escapejs }}', '{{ holding.current_value }}', '{{ holding.units }}', '{{ holding.id }}')">
+                                                    <i class="fas fa-arrow-down"></i> SWP
+                                                </button>
+                                                {% endif %}
                                             </div>
                                         </td>
                                     </tr>
@@ -263,14 +246,14 @@
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-6 col-lg-3">
-                                <button type="button" class="btn btn-outline-success w-100 action-type-btn" onclick="openActionModal('purchase', '', 0, 0, null)">
+                                <button type="button" class="btn btn-outline-success w-100 action-type-btn" data-action-type="purchase">
                                     <i class="fas fa-shopping-cart fa-2x d-block mb-2"></i>
                                     <strong>Purchase</strong>
                                     <br><small>Buy Investment</small>
                                 </button>
                             </div>
                             <div class="col-md-6 col-lg-3">
-                                <button type="button" class="btn btn-outline-success w-100 action-type-btn" onclick="openActionModal('sip', '', 0, 0, null)">
+                                <button type="button" class="btn btn-outline-success w-100 action-type-btn" data-action-type="sip">
                                     <i class="fas fa-plus-circle fa-2x d-block mb-2"></i>
                                     <strong>New SIP</strong>
                                     <br><small>Regular Investment</small>
@@ -725,7 +708,7 @@
             </div>
         </div>
     </div>
-    {% endblock %}
+{% endblock %}
 
 {% block extra_js %}
     <!-- Scripts -->
@@ -735,2075 +718,1850 @@
 
     <script>
         // Global variables
-let plannedActions = [];
-let currentTargetField = null;
+        let plannedActions = [];
+        let currentTargetField = null;
 
-// Initialize when page loads
-$(document).ready(function() {
-    updateActionsSummary();
-    initializeAssetAllocation();
-    
-    // Set up search URL from template data
-    setupSearchConfiguration();
-    
-    // Setup scheme search on enter key
-    $('#scheme-search-input').on('keypress', function(e) {
-        if (e.which === 13) {
-            searchSchemes();
+        // Initialize when page loads
+        $(document).ready(function() {
+            updateActionsSummary();
+            initializeAssetAllocation();
+            
+            // Set up search URL from template data
+            setupSearchConfiguration();
+            
+            // Setup scheme search on enter key
+            $('#scheme-search-input').on('keypress', function(e) {
+                if (e.which === 13) {
+                    searchSchemes();
+                }
+            });
+            
+            // Setup real-time search with debounce
+            let searchTimeout;
+            $('#scheme-search-input').on('input', function() {
+                clearTimeout(searchTimeout);
+                const query = $(this).val().trim();
+                
+                if (query.length >= 2) {
+                    searchTimeout = setTimeout(() => {
+                        searchSchemes();
+                    }, 300); // 300ms debounce
+                } else if (query.length === 0) {
+                    resetSearchResults();
+                }
+            });
+            
+            // FIXED: Setup action type selection with proper event handling
+            $('.action-type-selector').off('click').on('click', function() {
+                const actionType = $(this).data('action');
+                console.log('Modal action type selected:', actionType);
+                selectActionType(actionType);
+            });
+
+            // FIXED: Setup quick action buttons with proper event handling
+            $('button[data-action-type]').off('click').on('click', function() {
+                const actionType = $(this).data('action-type');
+                console.log('Quick action button clicked:', actionType);
+                openActionModal(actionType, '', 0, 0, null);
+            });
+            
+            // Setup source scheme change handler
+            $('#source-scheme').on('change', function() {
+                const selectedScheme = $(this).val();
+                if (selectedScheme) {
+                    updatePortfolioData(selectedScheme);
+                }
+            });
+            
+            // Setup purchase type change handler
+            $('#purchase-type').on('change', function() {
+                togglePurchaseFields();
+            });
+            
+            // Setup redeem/switch by change handlers
+            $('#redeem-by').on('change', function() {
+                toggleAmountField('redeem');
+            });
+            
+            $('#switch-by').on('change', function() {
+                toggleAmountField('switch');
+            });
+            
+            // Load draft if available
+            loadDraftFromStorage();
+            
+            // Setup CSRF token for AJAX requests
+            setupCSRFToken();
+            
+            // Setup keyboard shortcuts
+            setupKeyboardShortcuts();
+            
+            // Set client ID from template
+            if (typeof window.templateClientId !== 'undefined') {
+                window.clientId = window.templateClientId;
+            }
+            
+            // Update unsaved changes status periodically
+            setInterval(updateUnsavedChangesStatus, 1000);
+            
+            // Cache portfolio schemes for offline search
+            cachePortfolioSchemes();
+        });
+
+        function setupSearchConfiguration() {
+            // Try to get the search URL from different possible sources
+            window.schemeSearchUrl = window.schemeSearchUrl || 
+                                     $('#scheme-search-input').data('search-url') ||
+                                     '/execution-plans/api/schemes/search/' ||
+                                     '{% url "search_schemes_ajax" %}'; // Django template fallback
+            
+            // Log for debugging
+            console.log('Search URL configured:', window.schemeSearchUrl);
         }
-    });
-    
-    // Setup real-time search with debounce
-    let searchTimeout;
-    $('#scheme-search-input').on('input', function() {
-        clearTimeout(searchTimeout);
-        const query = $(this).val().trim();
-        
-        if (query.length >= 2) {
-            searchTimeout = setTimeout(() => {
-                searchSchemes();
-            }, 300); // 300ms debounce
-        } else if (query.length === 0) {
+
+        function cachePortfolioSchemes() {
+            // Extract schemes from the portfolio data already loaded on the page
+            window.portfolioSchemes = [];
+            
+            // Try to extract from portfolio table
+            $('#planned-actions table tbody tr').each(function() {
+                const schemeName = $(this).data('scheme-name');
+                if (schemeName) {
+                    window.portfolioSchemes.push({
+                        scheme_name: schemeName,
+                        id: $(this).data('portfolio-id'),
+                        current_value: $(this).data('current-value'),
+                        units: $(this).data('units')
+                    });
+                }
+            });
+            
+            // Try to extract from source scheme dropdown
+            $('#source-scheme option').each(function() {
+                const schemeName = $(this).val();
+                if (schemeName && schemeName !== '') {
+                    window.portfolioSchemes.push({
+                        scheme_name: schemeName,
+                        id: $(this).data('portfolio-id'),
+                        current_value: $(this).data('current-value'),
+                        units: $(this).data('units'),
+                        amc_name: 'From Portfolio' // Placeholder since we don't have AMC data
+                    });
+                }
+            });
+            
+            // Remove duplicates
+            window.portfolioSchemes = window.portfolioSchemes.filter((scheme, index, self) =>
+                index === self.findIndex(s => s.scheme_name === scheme.scheme_name)
+            );
+            
+            console.log('Cached portfolio schemes:', window.portfolioSchemes.length);
+        }
+
+        // Initialize asset allocation visualization
+        function initializeAssetAllocation() {
+            // This function remains the same as in original code
+            const allocation = {
+                total_aum: parseFloat($('#asset-allocation-bar').attr('data-total-aum') || 0),
+                total_equity: parseFloat($('#asset-allocation-bar').attr('data-total-equity') || 0),
+                total_debt: parseFloat($('#asset-allocation-bar').attr('data-total-debt') || 0),
+                total_hybrid: parseFloat($('#asset-allocation-bar').attr('data-total-hybrid') || 0),
+                total_liquid: parseFloat($('#asset-allocation-bar').attr('data-total-liquid') || 0),
+                total_other: parseFloat($('#asset-allocation-bar').attr('data-total-other') || 0),
+                total_arbitrage: parseFloat($('#asset-allocation-bar').attr('data-total-arbitrage') || 0)
+            };
+            
+            if (allocation.total_aum > 0) {
+                displayAssetAllocation(allocation);
+            }
+        }
+
+        function displayAssetAllocation(allocation) {
+            const barContainer = $('#asset-allocation-bar');
+            const legendContainer = $('#asset-allocation-legend');
+            
+            let barHtml = '';
+            let legendHtml = '';
+            
+            const segments = [
+                { name: 'Equity', value: allocation.total_equity, class: 'equity-segment' },
+                { name: 'Debt', value: allocation.total_debt, class: 'debt-segment' },
+                { name: 'Hybrid', value: allocation.total_hybrid, class: 'hybrid-segment' },
+                { name: 'Liquid', value: allocation.total_liquid, class: 'liquid-segment' },
+                { name: 'Other', value: allocation.total_other, class: 'other-segment' },
+                { name: 'Arbitrage', value: allocation.total_arbitrage, class: 'arbitrage-segment' }
+            ];
+            
+            segments.forEach(segment => {
+                if (segment.value > 0) {
+                    const percentage = (segment.value / allocation.total_aum) * 100;
+                    
+                    // Add to bar
+                    barHtml += `<div class="allocation-segment ${segment.class}" style="width: ${percentage}%"></div>`;
+                    
+                    // Add to legend
+                    legendHtml += `
+                        <div class="col-2">
+                            <span class="${segment.class} d-inline-block" style="width: 12px; height: 12px; border-radius: 2px;"></span> 
+                            ${segment.name}: ₹${segment.value.toLocaleString()}
+                        </div>
+                    `;
+                }
+            });
+            
+            barContainer.html(barHtml);
+            legendContainer.html(legendHtml);
+        }
+
+        // FIXED: Action Modal Functions with proper field visibility
+        function openActionModal(actionType, schemeName = '', currentValue = 0, currentUnits = 0, portfolioId = null) {
+            console.log('Opening action modal for:', actionType);
+            
+            resetActionForm();
+            
+            // Set initial values
+            $('#action-type').val(actionType);
+            $('#current-value').val(currentValue);
+            $('#current-units').val(currentUnits);
+            $('#portfolio-id').val(portfolioId);
+            
+            // Set source scheme if provided (for existing portfolio schemes)
+            if (schemeName && actionType !== 'sip' && actionType !== 'purchase') {
+                $('#source-scheme').val(schemeName);
+                updatePortfolioData(schemeName);
+            }
+            
+            // For purchase actions with existing scheme, set the scheme in the source field
+            if (actionType === 'purchase' && schemeName) {
+                $('#source-scheme').val(schemeName);
+                updatePortfolioData(schemeName);
+                $('#purchase-type').val('existing_scheme');
+                togglePurchaseFields();
+            }
+            
+            // CRITICAL FIX: Always call selectActionType to ensure proper field visibility
+            selectActionType(actionType);
+            
+            // Set modal title
+            const actionTitles = {
+                'purchase': 'Purchase Investment',
+                'redeem': 'Redeem Investment',
+                'switch': 'Switch Investment', 
+                'stp': 'Systematic Transfer Plan',
+                'sip': 'Systematic Investment Plan',
+                'swp': 'Systematic Withdrawal Plan'
+            };
+            $('#actionModalLabel').text(actionTitles[actionType] || 'Add Action');
+            
+            // Show modal
+            $('#actionModal').modal('show');
+        }
+
+        function updatePortfolioData(schemeName) {
+            // Find the selected option and update hidden fields
+            const selectedOption = $(`#source-scheme option[value="${schemeName}"]`);
+            if (selectedOption.length > 0) {
+                $('#portfolio-id').val(selectedOption.data('portfolio-id'));
+                $('#current-value').val(selectedOption.data('current-value'));
+                $('#current-units').val(selectedOption.data('units'));
+            }
+        }
+
+        // FIXED: Enhanced selectActionType function to ensure proper field visibility
+        function selectActionType(actionType) {
+            console.log('Selecting action type:', actionType);
+            
+            // Reset all buttons
+            $('.action-type-selector').removeClass('active btn-danger btn-primary btn-info btn-success btn-warning')
+                .addClass('btn-outline-danger btn-outline-primary btn-outline-info btn-outline-success btn-outline-warning');
+            
+            // Activate selected button
+            $(`.action-type-selector[data-action="${actionType}"]`)
+                .removeClass('btn-outline-danger btn-outline-primary btn-outline-info btn-outline-success btn-outline-warning')
+                .addClass('active');
+            
+            // Apply appropriate color
+            const colorMap = {
+                'purchase': 'btn-success',
+                'redeem': 'btn-danger',
+                'switch': 'btn-primary',
+                'stp': 'btn-info',
+                'sip': 'btn-success',
+                'swp': 'btn-warning'
+            };
+            $(`.action-type-selector[data-action="${actionType}"]`).addClass(colorMap[actionType]);
+            
+            // Set hidden field
+            $('#action-type').val(actionType);
+            
+            // CRITICAL FIX: Always call showRelevantFields to ensure proper field visibility
+            showRelevantFields(actionType);
+        }
+
+        // FIXED: Enhanced showRelevantFields function with better field management
+        function showRelevantFields(actionType) {
+            console.log('Showing relevant fields for:', actionType);
+            
+            // Hide all conditional fields first
+            $('.conditional-field').removeClass('show').hide();
+            
+            // Show common fields based on action type
+            switch(actionType) {
+                case 'purchase':
+                    $('#purchase-type-group, #purchase-amount-group, #purchase-options-group').addClass('show').show();
+                    $('#source-scheme-group').hide();
+                    break;
+                case 'redeem':
+                    $('#redeem-by-group').addClass('show').show();
+                    $('#source-scheme-group').show();
+                    break;
+                case 'switch':
+                    $('#target-scheme-group, #switch-by-group').addClass('show').show();
+                    $('#source-scheme-group').show();
+                    break;
+                case 'stp':
+                    $('#target-scheme-group, #stp-amount-group, #stp-frequency-group').addClass('show').show();
+                    $('#source-scheme-group').show();
+                    break;
+                case 'sip':
+                    $('#target-scheme-group, #sip-amount-group, #sip-frequency-group, #sip-date-group').addClass('show').show();
+                    $('#source-scheme-group').hide(); // SIP doesn't need source scheme
+                    $('#source-scheme').val(''); // Clear source scheme for SIP
+                    break;
+                case 'swp':
+                    $('#swp-amount-group, #swp-frequency-group, #swp-date-group').addClass('show').show();
+                    $('#source-scheme-group').show();
+                    break;
+            }
+
+            // Force a small delay to ensure DOM updates are complete
+            setTimeout(() => {
+                // Trigger any additional field-specific logic
+                if (actionType === 'purchase') {
+                    togglePurchaseFields();
+                }
+            }, 50);
+        }
+
+        function togglePurchaseFields() {
+            const purchaseType = $('#purchase-type').val();
+            
+            if (purchaseType === 'existing_scheme') {
+                $('#source-scheme-group').show();
+                $('#target-scheme-group').removeClass('show').hide();
+                $('#folio-group').addClass('show').show();
+            } else if (purchaseType === 'new_scheme') {
+                $('#source-scheme-group').hide();
+                $('#target-scheme-group').addClass('show').show();
+                $('#folio-group').removeClass('show').hide();
+                $('#source-scheme').val(''); // Clear source scheme
+            } else {
+                $('#source-scheme-group').hide();
+                $('#target-scheme-group').removeClass('show').hide();
+                $('#folio-group').removeClass('show').hide();
+            }
+        }
+
+        function toggleAmountField(type) {
+            const selectedValue = $(`#${type}-by`).val();
+            
+            // Hide all amount/unit fields for this type
+            $(`#${type}-amount-group, #${type}-units-group`).removeClass('show').hide();
+            
+            // Show relevant field based on selection
+            if (selectedValue === 'specific_amount') {
+                $(`#${type}-amount-group`).addClass('show').show();
+            } else if (selectedValue === 'specific_units') {
+                $(`#${type}-units-group`).addClass('show').show();
+            }
+        }
+
+        function resetActionForm() {
+            $('#actionForm')[0].reset();
+            $('.conditional-field').removeClass('show').hide();
+            $('.action-type-selector').removeClass('active btn-danger btn-primary btn-info btn-success btn-warning')
+                .addClass('btn-outline-danger btn-outline-primary btn-outline-info btn-outline-success btn-outline-warning');
+            
+            // Clear scheme data attributes
+            $('#target-scheme').removeAttr('data-scheme-id data-scheme-code data-amc-name data-min-investment data-min-sip data-scheme-type data-risk-category');
+        }
+
+        // Enhanced Scheme Search Functions
+        function openSchemeSearchModal() {
+            $('#schemeSearchModal').modal('show');
             resetSearchResults();
+            
+            // Test the search URL when modal opens
+            testSearchEndpoint();
         }
-    });
-    
-    // Setup action type selection
-    $('.action-type-selector').on('click', function() {
-        const actionType = $(this).data('action');
-        selectActionType(actionType);
-    });
-    
-    // Setup source scheme change handler
-    $('#source-scheme').on('change', function() {
-        const selectedScheme = $(this).val();
-        if (selectedScheme) {
-            updatePortfolioData(selectedScheme);
-        }
-    });
-    
-    // Setup purchase type change handler
-    $('#purchase-type').on('change', function() {
-        togglePurchaseFields();
-    });
-    
-    // Setup redeem/switch by change handlers
-    $('#redeem-by').on('change', function() {
-        toggleAmountField('redeem');
-    });
-    
-    $('#switch-by').on('change', function() {
-        toggleAmountField('switch');
-    });
-    
-    // Load draft if available
-    loadDraftFromStorage();
-    
-    // Setup CSRF token for AJAX requests
-    setupCSRFToken();
-    
-    // Setup keyboard shortcuts
-    setupKeyboardShortcuts();
-    
-    // Set client ID from template
-    if (typeof window.templateClientId !== 'undefined') {
-        window.clientId = window.templateClientId;
-    }
-    
-    // Update unsaved changes status periodically
-    setInterval(updateUnsavedChangesStatus, 1000);
-    
-    // Cache portfolio schemes for offline search
-    cachePortfolioSchemes();
-});
 
-function setupSearchConfiguration() {
-    // Try to get the search URL from different possible sources
-    window.schemeSearchUrl = window.schemeSearchUrl || 
-                             $('#scheme-search-input').data('search-url') ||
-                             '/execution-plans/api/schemes/search/' ||
-                             '{% url "search_schemes_ajax" %}'; // Django template fallback
-    
-    // Log for debugging
-    console.log('Search URL configured:', window.schemeSearchUrl);
-}
-
-function cachePortfolioSchemes() {
-    // Extract schemes from the portfolio data already loaded on the page
-    window.portfolioSchemes = [];
-    
-    // Try to extract from portfolio table
-    $('#planned-actions table tbody tr').each(function() {
-        const schemeName = $(this).data('scheme-name');
-        if (schemeName) {
-            window.portfolioSchemes.push({
-                scheme_name: schemeName,
-                id: $(this).data('portfolio-id'),
-                current_value: $(this).data('current-value'),
-                units: $(this).data('units')
+        function testSearchEndpoint() {
+            // Quick test to see if the search endpoint is working
+            $.ajax({
+                url: window.schemeSearchUrl,
+                method: 'GET',
+                data: { q: 'test', limit: 1 },
+                timeout: 5000,
+                success: function(response) {
+                    console.log('Search endpoint test successful:', response);
+                },
+                error: function(xhr, textStatus, errorThrown) {
+                    console.warn('Search endpoint test failed:', {
+                        url: window.schemeSearchUrl,
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        textStatus: textStatus
+                    });
+                    
+                    // Show a warning in the search modal
+                    if (xhr.status === 404) {
+                        $('#scheme-search-results').html(`
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <strong>Search endpoint not configured properly.</strong><br>
+                                URL: ${window.schemeSearchUrl}<br>
+                                <small>Please check your Django URL configuration.</small>
+                            </div>
+                        `);
+                    }
+                }
             });
         }
-    });
-    
-    // Try to extract from source scheme dropdown
-    $('#source-scheme option').each(function() {
-        const schemeName = $(this).val();
-        if (schemeName && schemeName !== '') {
-            window.portfolioSchemes.push({
-                scheme_name: schemeName,
-                id: $(this).data('portfolio-id'),
-                current_value: $(this).data('current-value'),
-                units: $(this).data('units'),
-                amc_name: 'From Portfolio' // Placeholder since we don't have AMC data
+
+        function openSchemeSearch(targetFieldId) {
+            currentTargetField = targetFieldId;
+            $('#schemeSearchModal').modal('show');
+            resetSearchResults();
+            
+            // Focus on search input when modal opens
+            $('#schemeSearchModal').on('shown.bs.modal', function() {
+                $('#scheme-search-input').focus();
             });
         }
-    });
-    
-    // Remove duplicates
-    window.portfolioSchemes = window.portfolioSchemes.filter((scheme, index, self) =>
-        index === self.findIndex(s => s.scheme_name === scheme.scheme_name)
-    );
-    
-    console.log('Cached portfolio schemes:', window.portfolioSchemes.length);
-}
 
-// Initialize asset allocation visualization
-function initializeAssetAllocation() {
-    // This function remains the same as in original code
-    const allocation = {
-        total_aum: parseFloat($('#asset-allocation-bar').attr('data-total-aum') || 0),
-        total_equity: parseFloat($('#asset-allocation-bar').attr('data-total-equity') || 0),
-        total_debt: parseFloat($('#asset-allocation-bar').attr('data-total-debt') || 0),
-        total_hybrid: parseFloat($('#asset-allocation-bar').attr('data-total-hybrid') || 0),
-        total_liquid: parseFloat($('#asset-allocation-bar').attr('data-total-liquid') || 0),
-        total_other: parseFloat($('#asset-allocation-bar').attr('data-total-other') || 0),
-        total_arbitrage: parseFloat($('#asset-allocation-bar').attr('data-total-arbitrage') || 0)
-    };
-    
-    if (allocation.total_aum > 0) {
-        displayAssetAllocation(allocation);
-    }
-}
+        function resetSearchResults() {
+            $('#scheme-search-results').html(`
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-search fa-2x mb-3"></i>
+                    <p>Enter at least 2 characters to search for schemes</p>
+                    <small class="text-muted">Search by scheme name, AMC, ISIN, category, or scheme code</small>
+                </div>
+            `);
+        }
 
-function displayAssetAllocation(allocation) {
-    const barContainer = $('#asset-allocation-bar');
-    const legendContainer = $('#asset-allocation-legend');
-    
-    let barHtml = '';
-    let legendHtml = '';
-    
-    const segments = [
-        { name: 'Equity', value: allocation.total_equity, class: 'equity-segment' },
-        { name: 'Debt', value: allocation.total_debt, class: 'debt-segment' },
-        { name: 'Hybrid', value: allocation.total_hybrid, class: 'hybrid-segment' },
-        { name: 'Liquid', value: allocation.total_liquid, class: 'liquid-segment' },
-        { name: 'Other', value: allocation.total_other, class: 'other-segment' },
-        { name: 'Arbitrage', value: allocation.total_arbitrage, class: 'arbitrage-segment' }
-    ];
-    
-    segments.forEach(segment => {
-        if (segment.value > 0) {
-            const percentage = (segment.value / allocation.total_aum) * 100;
+        function searchSchemes() {
+            const query = $('#scheme-search-input').val().trim();
             
-            // Add to bar
-            barHtml += `<div class="allocation-segment ${segment.class}" style="width: ${percentage}%"></div>`;
+            if (query.length < 2) {
+                resetSearchResults();
+                return;
+            }
             
-            // Add to legend
-            legendHtml += `
-                <div class="col-2">
-                    <span class="${segment.class} d-inline-block" style="width: 12px; height: 12px; border-radius: 2px;"></span> 
-                    ${segment.name}: ₹${segment.value.toLocaleString()}
+            // Show loading spinner
+            $('.loading-spinner').show();
+            $('#scheme-search-results').hide();
+            
+            // Get the search URL from the template or use fallback
+            const searchUrl = window.schemeSearchUrl || '/execution-plans/api/schemes/search/';
+            
+            // Make AJAX request to search schemes with enhanced search parameters
+            $.ajax({
+                url: searchUrl,
+                method: 'GET',
+                data: { 
+                    q: query,
+                    search_by: 'scheme_nav_name', // Specify NAV name search
+                    include_inactive: false, // Only active schemes
+                    limit: 50 // Limit results
+                },
+                timeout: 10000, // 10 second timeout
+                success: function(response) {
+                    $('.loading-spinner').hide();
+                    $('#scheme-search-results').show();
+                    
+                    // Handle different response formats
+                    if (response && (response.success === true || response.schemes)) {
+                        const schemes = response.schemes || response.data || response;
+                        if (Array.isArray(schemes) && schemes.length > 0) {
+                            // Store results globally for scheme selection
+                            window.lastSearchResults = schemes;
+                            displayEnhancedSchemeResults(schemes, query);
+                        } else {
+                            displayNoResultsMessage(query);
+                        }
+                    } else if (response && response.success === false) {
+                        displayErrorMessage(response.error || 'Search failed');
+                    } else {
+                        displayNoResultsMessage(query);
+                    }
+                },
+                error: function(xhr, textStatus, errorThrown) {
+                    $('.loading-spinner').hide();
+                    $('#scheme-search-results').show();
+                    
+                    let errorMessage = 'Error searching schemes. ';
+                    
+                    if (textStatus === 'timeout') {
+                        errorMessage += 'Request timed out. Please try again.';
+                    } else if (xhr.status === 404) {
+                        errorMessage += 'Search endpoint not found. Please contact support.';
+                    } else if (xhr.status === 403) {
+                        errorMessage += 'Access denied. Please check your permissions.';
+                    } else if (xhr.status === 500) {
+                        errorMessage += 'Server error. Please try again later.';
+                    } else if (textStatus === 'parsererror') {
+                        errorMessage += 'Invalid response format.';
+                    } else {
+                        errorMessage += 'Please check your connection and try again.';
+                    }
+                    
+                    displayErrorMessage(errorMessage, xhr.status);
+                    
+                    // Log error for debugging
+                    console.error('Search error:', {
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        textStatus: textStatus,
+                        errorThrown: errorThrown,
+                        responseText: xhr.responseText
+                    });
+                }
+            });
+        }
+
+        function displayEnhancedSchemeResults(schemes, query) {
+            let html = '<div class="list-group">';
+            
+            // Sort schemes by relevance (exact matches first, then partial matches)
+            const sortedSchemes = schemes.sort((a, b) => {
+                const aName = (a.scheme_name || '').toLowerCase();
+                const bName = (b.scheme_name || '').toLowerCase();
+                const queryLower = query.toLowerCase();
+                
+                // Exact matches first
+                if (aName === queryLower && bName !== queryLower) return -1;
+                if (bName === queryLower && aName !== queryLower) return 1;
+                
+                // Starts with query
+                if (aName.startsWith(queryLower) && !bName.startsWith(queryLower)) return -1;
+                if (bName.startsWith(queryLower) && !aName.startsWith(queryLower)) return 1;
+                
+                // Contains query
+                if (aName.includes(queryLower) && !bName.includes(queryLower)) return -1;
+                if (bName.includes(queryLower) && !aName.includes(queryLower)) return 1;
+                
+                // Alphabetical order
+                return aName.localeCompare(bName);
+            });
+            
+            sortedSchemes.forEach(function(scheme) {
+                html += createEnhancedSchemeResultCard(scheme, query);
+            });
+            
+            html += '</div>';
+            
+            // Add search summary
+            const summaryHtml = `
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-info-circle"></i> 
+                    Found <strong>${schemes.length}</strong> schemes matching "<strong>${query}</strong>"
+                    ${schemes.length >= 50 ? ' (showing top 50 results)' : ''}
+                </div>
+            `;
+            
+            $('#scheme-search-results').html(summaryHtml + html);
+        }
+
+        function createEnhancedSchemeResultCard(scheme, query) {
+            const schemeName = scheme.scheme_name || '';
+            const amcName = scheme.amc_name || 'Unknown AMC';
+            const category = scheme.category || 'Unknown Category';
+            const schemeType = scheme.scheme_type || 'other';
+            const riskCategory = scheme.risk_category || 'moderate';
+            const minInvestment = scheme.minimum_investment || 500;
+            const minSip = scheme.minimum_sip || 500;
+            
+            const isinGrowth = scheme.isin_growth || '';
+            const isinDiv = scheme.isin_div_reinvestment || '';
+            const schemeCode = scheme.scheme_code || '';
+            
+            const lastNavPrice = scheme.last_nav_price ? parseFloat(scheme.last_nav_price).toFixed(4) : null;
+            const lastNavDate = scheme.last_nav_date || '';
+            
+            const isActive = scheme.is_active !== false;
+            
+            // Highlight matching text
+            const highlightedName = highlightMatchingText(schemeName, query);
+            const highlightedAMC = highlightMatchingText(amcName, query);
+            const highlightedCategory = highlightMatchingText(category, query);
+            
+            const typeColors = {
+                'equity': 'success',
+                'debt': 'primary', 
+                'hybrid': 'warning',
+                'liquid': 'info',
+                'ultra_short': 'info',
+                'elss': 'success',
+                'index': 'secondary',
+                'etf': 'dark',
+                'arbitrage': 'danger',
+                'other': 'secondary'
+            };
+            
+            const riskColors = {
+                'low': 'success',
+                'moderate': 'warning',
+                'high': 'danger',
+                'very_high': 'danger'
+            };
+            
+            const typeColor = typeColors[schemeType] || 'secondary';
+            const riskColor = riskColors[riskCategory] || 'warning';
+            
+            // Calculate match score for sorting indication
+            const matchScore = calculateMatchScore(scheme, query);
+            const matchIndicator = matchScore > 90 ? '<i class="fas fa-star text-warning" title="Exact match"></i>' : 
+                                  matchScore > 70 ? '<i class="fas fa-star-half-alt text-warning" title="Good match"></i>' : '';
+            
+            return `
+                <div class="scheme-search-result list-group-item list-group-item-action" onclick="selectScheme('${schemeName.replace(/'/g, "\\'")}', '${amcName.replace(/'/g, "\\'")}', '${scheme.id}', '${schemeCode.replace(/'/g, "\\'")}')">
+                    <div class="d-flex w-100 justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center mb-2">
+                                <h6 class="mb-0 text-primary flex-grow-1">${highlightedName}</h6>
+                                <div class="ms-2">
+                                    ${matchIndicator}
+                                    ${isActive ? '<span class="badge bg-success ms-1">Active</span>' : '<span class="badge bg-danger ms-1">Inactive</span>'}
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-2">
+                                <div class="col-md-8">
+                                    <p class="mb-1">
+                                        <strong>AMC:</strong> ${highlightedAMC}
+                                    </p>
+                                    <p class="mb-1">
+                                        <strong>Category:</strong> ${highlightedCategory}
+                                        <span class="badge bg-${typeColor} ms-2">${schemeType.toUpperCase()}</span>
+                                        <span class="badge bg-${riskColor} ms-1">${riskCategory.replace('_', ' ').toUpperCase()}</span>
+                                    </p>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    ${lastNavPrice ? `<div class="text-success"><strong>NAV:</strong> ₹${lastNavPrice}</div>` : ''}
+                                    ${lastNavDate ? `<small class="text-muted">${lastNavDate}</small>` : ''}
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    ${isinGrowth ? `<small class="text-muted d-block"><strong>ISIN Growth:</strong> ${isinGrowth}</small>` : ''}
+                                    ${isinDiv ? `<small class="text-muted d-block"><strong>ISIN Div Reinv:</strong> ${isinDiv}</small>` : ''}
+                                    ${schemeCode ? `<small class="text-muted d-block"><strong>Code:</strong> ${schemeCode}</small>` : ''}
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted d-block"><strong>Min Investment:</strong> ₹${minInvestment.toLocaleString()}</small>
+                                    <small class="text-muted d-block"><strong>Min SIP:</strong> ₹${minSip.toLocaleString()}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             `;
         }
-    });
-    
-    barContainer.html(barHtml);
-    legendContainer.html(legendHtml);
-}
 
-// Action Modal Functions
-function openActionModal(actionType, schemeName = '', currentValue = 0, currentUnits = 0, portfolioId = null) {
-    resetActionForm();
-
-    // Set hidden form values
-    $('#action-type').val(actionType);
-    $('#current-value').val(currentValue);
-    $('#current-units').val(currentUnits);
-    $('#portfolio-id').val(portfolioId);
-
-    // If a source scheme is provided (and not a SIP), prefill it
-    if (schemeName && actionType !== 'sip') {
-        $('#source-scheme').val(schemeName);
-        updatePortfolioData(schemeName);
-    }
-
-    // Activate the action type and show its relevant fields
-    selectActionType(actionType);
-
-    // For purchase actions on an existing scheme, show the existing-scheme fields
-    if (actionType === 'purchase' && schemeName) {
-        $('#purchase-type').val('existing_scheme');
-        togglePurchaseFields();
-    }
-
-    // Update modal title and show it
-    const actionTitles = {
-        'purchase': 'Purchase Investment',
-        'redeem':  'Redeem Investment',
-        'switch':  'Switch Investment',
-        'stp':     'Systematic Transfer Plan',
-        'sip':     'Systematic Investment Plan',
-        'swp':     'Systematic Withdrawal Plan'
-    };
-    $('#actionModalLabel').text(actionTitles[actionType] || 'Add Action');
-    $('#actionModal').modal('show');
-}
-
-
-function updatePortfolioData(schemeName) {
-    // Find the selected option and update hidden fields
-    const selectedOption = $(`#source-scheme option[value="${schemeName}"]`);
-    if (selectedOption.length > 0) {
-        $('#portfolio-id').val(selectedOption.data('portfolio-id'));
-        $('#current-value').val(selectedOption.data('current-value'));
-        $('#current-units').val(selectedOption.data('units'));
-    }
-}
-
-function selectActionType(actionType) {
-    // Reset all buttons
-    $('.action-type-selector').removeClass('active btn-danger btn-primary btn-info btn-success btn-warning')
-        .addClass('btn-outline-danger btn-outline-primary btn-outline-info btn-outline-success btn-outline-warning');
-    
-    // Activate selected button
-    $(`.action-type-selector[data-action="${actionType}"]`)
-        .removeClass('btn-outline-danger btn-outline-primary btn-outline-info btn-outline-success btn-outline-warning')
-        .addClass('active');
-    
-    // Apply appropriate color
-    const colorMap = {
-        'purchase': 'btn-success',
-        'redeem': 'btn-danger',
-        'switch': 'btn-primary',
-        'stp': 'btn-info',
-        'sip': 'btn-success',
-        'swp': 'btn-warning'
-    };
-    $(`.action-type-selector[data-action="${actionType}"]`).addClass(colorMap[actionType]);
-    
-    // Set hidden field
-    $('#action-type').val(actionType);
-    
-    // Show/hide relevant fields
-    showRelevantFields(actionType);
-}
-
-function showRelevantFields(actionType) {
-    // Hide all conditional fields
-    $('.conditional-field').removeClass('show');
-    
-    // Show common fields based on action type
-    switch(actionType) {
-        case 'purchase':
-            $('#purchase-type-group, #purchase-amount-group, #purchase-options-group').addClass('show');
-            $('#source-scheme-group').hide();
-            break;
-        case 'redeem':
-            $('#redeem-by-group').addClass('show');
-            $('#source-scheme-group').show();
-            break;
-        case 'switch':
-            $('#target-scheme-group, #switch-by-group').addClass('show');
-            $('#source-scheme-group').show();
-            break;
-        case 'stp':
-            $('#target-scheme-group, #stp-amount-group, #stp-frequency-group').addClass('show');
-            $('#source-scheme-group').show();
-            break;
-        case 'sip':
-            $('#target-scheme-group, #sip-amount-group, #sip-frequency-group, #sip-date-group').addClass('show');
-            $('#source-scheme-group').hide(); // SIP doesn't need source scheme
-            $('#source-scheme').val(''); // Clear source scheme for SIP
-            break;
-        case 'swp':
-            $('#swp-amount-group, #swp-frequency-group, #swp-date-group').addClass('show');
-            $('#source-scheme-group').show();
-            break;
-    }
-}
-
-function togglePurchaseFields() {
-    const purchaseType = $('#purchase-type').val();
-    
-    if (purchaseType === 'existing_scheme') {
-        $('#source-scheme-group').show();
-        $('#target-scheme-group').removeClass('show');
-        $('#folio-group').addClass('show');
-    } else if (purchaseType === 'new_scheme') {
-        $('#source-scheme-group').hide();
-        $('#target-scheme-group').addClass('show');
-        $('#folio-group').removeClass('show');
-        $('#source-scheme').val(''); // Clear source scheme
-    } else {
-        $('#source-scheme-group').hide();
-        $('#target-scheme-group').removeClass('show');
-        $('#folio-group').removeClass('show');
-    }
-}
-
-function toggleAmountField(type) {
-    const selectedValue = $(`#${type}-by`).val();
-    
-    // Hide all amount/unit fields for this type
-    $(`#${type}-amount-group, #${type}-units-group`).removeClass('show');
-    
-    // Show relevant field based on selection
-    if (selectedValue === 'specific_amount') {
-        $(`#${type}-amount-group`).addClass('show');
-    } else if (selectedValue === 'specific_units') {
-        $(`#${type}-units-group`).addClass('show');
-    }
-}
-
-function resetActionForm() {
-    $('#actionForm')[0].reset();
-    $('.conditional-field').removeClass('show');
-    $('.action-type-selector').removeClass('active btn-danger btn-primary btn-info btn-success btn-warning')
-        .addClass('btn-outline-danger btn-outline-primary btn-outline-info btn-outline-success btn-outline-warning');
-    
-    // Clear scheme data attributes
-    $('#target-scheme').removeAttr('data-scheme-id data-scheme-code data-amc-name data-min-investment data-min-sip data-scheme-type data-risk-category');
-}
-
-// Enhanced Scheme Search Functions
-function openSchemeSearchModal() {
-    $('#schemeSearchModal').modal('show');
-    resetSearchResults();
-    
-    // Test the search URL when modal opens
-    testSearchEndpoint();
-}
-
-function testSearchEndpoint() {
-    // Quick test to see if the search endpoint is working
-    $.ajax({
-        url: window.schemeSearchUrl,
-        method: 'GET',
-        data: { q: 'test', limit: 1 },
-        timeout: 5000,
-        success: function(response) {
-            console.log('Search endpoint test successful:', response);
-        },
-        error: function(xhr, textStatus, errorThrown) {
-            console.warn('Search endpoint test failed:', {
-                url: window.schemeSearchUrl,
-                status: xhr.status,
-                statusText: xhr.statusText,
-                textStatus: textStatus
-            });
+        function highlightMatchingText(text, query) {
+            if (!text || !query) return text;
             
-            // Show a warning in the search modal
-            if (xhr.status === 404) {
+            const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            return text.replace(regex, '<mark>$1</mark>');
+        }
+
+        function calculateMatchScore(scheme, query) {
+            const queryLower = query.toLowerCase();
+            const schemeName = (scheme.scheme_name || '').toLowerCase();
+            const amcName = (scheme.amc_name || '').toLowerCase();
+            const category = (scheme.category || '').toLowerCase();
+            
+            // Exact match gets highest score
+            if (schemeName === queryLower) return 100;
+            
+            // Starts with query gets high score
+            if (schemeName.startsWith(queryLower)) return 90;
+            
+            // Contains query in scheme name
+            if (schemeName.includes(queryLower)) return 80;
+            
+            // AMC name match
+            if (amcName.includes(queryLower)) return 70;
+            
+            // Category match
+            if (category.includes(queryLower)) return 60;
+            
+            return 50; // Default score
+        }
+
+        function displayNoResultsMessage(query) {
+            $('#scheme-search-results').html(`
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-search fa-2x mb-3"></i>
+                    <p>No schemes found for "<strong>${query}</strong>"</p>
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <strong>Search Tips:</strong><br>
+                            • Try different keywords (AMC name, scheme type, category)<br>
+                            • Use partial scheme names<br>
+                            • Search by ISIN or scheme code<br>
+                            • Check spelling and try variations
+                        </small>
+                    </div>
+                </div>
+            `);
+        }
+
+        function displayErrorMessage(message, statusCode) {
+            const defaultMessage = message || 'Error searching schemes. Please try again.';
+            
+            $('#scheme-search-results').html(`
+                <div class="text-center text-danger py-4">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                    <p class="mb-3">${defaultMessage}</p>
+                    ${statusCode ? `<small class="text-muted">Error Code: ${statusCode}</small><br>` : ''}
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-outline-primary me-2" onclick="searchSchemes()">
+                            <i class="fas fa-redo"></i> Retry Search
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="tryOfflineSearch()">
+                            <i class="fas fa-database"></i> Search Offline
+                        </button>
+                    </div>
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <strong>Troubleshooting:</strong><br>
+                            • Check your internet connection<br>
+                            • Try a different search term<br>
+                            • Contact support if the issue persists
+                        </small>
+                    </div>
+                </div>
+            `);
+        }
+
+        // Fallback search function for when AJAX fails
+        function tryOfflineSearch() {
+            const query = $('#scheme-search-input').val().trim();
+            
+            if (query.length < 2) {
+                showWarningMessage('Please enter at least 2 characters to search');
+                return;
+            }
+            
+            // Check if we have any cached schemes data
+            if (window.portfolioSchemes && window.portfolioSchemes.length > 0) {
+                const filteredSchemes = window.portfolioSchemes.filter(scheme => {
+                    const schemeName = (scheme.scheme_name || '').toLowerCase();
+                    const amcName = (scheme.amc_name || '').toLowerCase();
+                    const queryLower = query.toLowerCase();
+                    
+                    return schemeName.includes(queryLower) || 
+                           amcName.includes(queryLower) ||
+                           schemeName.startsWith(queryLower);
+                });
+                
+                if (filteredSchemes.length > 0) {
+                    displayEnhancedSchemeResults(filteredSchemes, query);
+                    showInfoMessage(`Found ${filteredSchemes.length} schemes from your portfolio`);
+                } else {
+                    displayNoResultsMessage(query);
+                }
+            } else {
                 $('#scheme-search-results').html(`
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <strong>Search endpoint not configured properly.</strong><br>
-                        URL: ${window.schemeSearchUrl}<br>
-                        <small>Please check your Django URL configuration.</small>
+                    <div class="text-center text-warning py-4">
+                        <i class="fas fa-wifi fa-2x mb-3"></i>
+                        <p>Offline search not available</p>
+                        <small class="text-muted">Please check your connection and try the online search</small>
                     </div>
                 `);
             }
         }
-    });
-}
 
-function openSchemeSearch(targetFieldId) {
-    currentTargetField = targetFieldId;
-    $('#schemeSearchModal').modal('show');
-    resetSearchResults();
-    
-    // Focus on search input when modal opens
-    $('#schemeSearchModal').on('shown.bs.modal', function() {
-        $('#scheme-search-input').focus();
-    });
-}
-
-function resetSearchResults() {
-    $('#scheme-search-results').html(`
-        <div class="text-center text-muted py-4">
-            <i class="fas fa-search fa-2x mb-3"></i>
-            <p>Enter at least 2 characters to search for schemes</p>
-            <small class="text-muted">Search by scheme name, AMC, ISIN, category, or scheme code</small>
-        </div>
-    `);
-}
-
-function searchSchemes() {
-    const query = $('#scheme-search-input').val().trim();
-    
-    if (query.length < 2) {
-        resetSearchResults();
-        return;
-    }
-    
-    // Show loading spinner
-    $('.loading-spinner').show();
-    $('#scheme-search-results').hide();
-    
-    // Get the search URL from the template or use fallback
-    const searchUrl = window.schemeSearchUrl || '/execution-plans/api/schemes/search/';
-    
-    // Make AJAX request to search schemes with enhanced search parameters
-    $.ajax({
-        url: searchUrl,
-        method: 'GET',
-        data: { 
-            q: query,
-            search_by: 'scheme_nav_name', // Specify NAV name search
-            include_inactive: false, // Only active schemes
-            limit: 50 // Limit results
-        },
-        timeout: 10000, // 10 second timeout
-        success: function(response) {
-            $('.loading-spinner').hide();
-            $('#scheme-search-results').show();
+        function selectScheme(schemeName, amcName, schemeId, schemeCode) {
+            const fullSchemeName = schemeName;
             
-            // Handle different response formats
-            if (response && (response.success === true || response.schemes)) {
-                const schemes = response.schemes || response.data || response;
-                if (Array.isArray(schemes) && schemes.length > 0) {
-                    // Store results globally for scheme selection
-                    window.lastSearchResults = schemes;
-                    displayEnhancedSchemeResults(schemes, query);
-                } else {
-                    displayNoResultsMessage(query);
-                }
-            } else if (response && response.success === false) {
-                displayErrorMessage(response.error || 'Search failed');
-            } else {
-                displayNoResultsMessage(query);
-            }
-        },
-        error: function(xhr, textStatus, errorThrown) {
-            $('.loading-spinner').hide();
-            $('#scheme-search-results').show();
-            
-            let errorMessage = 'Error searching schemes. ';
-            
-            if (textStatus === 'timeout') {
-                errorMessage += 'Request timed out. Please try again.';
-            } else if (xhr.status === 404) {
-                errorMessage += 'Search endpoint not found. Please contact support.';
-            } else if (xhr.status === 403) {
-                errorMessage += 'Access denied. Please check your permissions.';
-            } else if (xhr.status === 500) {
-                errorMessage += 'Server error. Please try again later.';
-            } else if (textStatus === 'parsererror') {
-                errorMessage += 'Invalid response format.';
-            } else {
-                errorMessage += 'Please check your connection and try again.';
-            }
-            
-            displayErrorMessage(errorMessage, xhr.status);
-            
-            // Log error for debugging
-            console.error('Search error:', {
-                status: xhr.status,
-                statusText: xhr.statusText,
-                textStatus: textStatus,
-                errorThrown: errorThrown,
-                responseText: xhr.responseText
-            });
-        }
-    });
-}
-
-function displayEnhancedSchemeResults(schemes, query) {
-    let html = '<div class="list-group">';
-    
-    // Sort schemes by relevance (exact matches first, then partial matches)
-    const sortedSchemes = schemes.sort((a, b) => {
-        const aName = (a.scheme_name || '').toLowerCase();
-        const bName = (b.scheme_name || '').toLowerCase();
-        const queryLower = query.toLowerCase();
-        
-        // Exact matches first
-        if (aName === queryLower && bName !== queryLower) return -1;
-        if (bName === queryLower && aName !== queryLower) return 1;
-        
-        // Starts with query
-        if (aName.startsWith(queryLower) && !bName.startsWith(queryLower)) return -1;
-        if (bName.startsWith(queryLower) && !aName.startsWith(queryLower)) return 1;
-        
-        // Contains query
-        if (aName.includes(queryLower) && !bName.includes(queryLower)) return -1;
-        if (bName.includes(queryLower) && !aName.includes(queryLower)) return 1;
-        
-        // Alphabetical order
-        return aName.localeCompare(bName);
-    });
-    
-    sortedSchemes.forEach(function(scheme) {
-        html += createEnhancedSchemeResultCard(scheme, query);
-    });
-    
-    html += '</div>';
-    
-    // Add search summary
-    const summaryHtml = `
-        <div class="alert alert-info mb-3">
-            <i class="fas fa-info-circle"></i> 
-            Found <strong>${schemes.length}</strong> schemes matching "<strong>${query}</strong>"
-            ${schemes.length >= 50 ? ' (showing top 50 results)' : ''}
-        </div>
-    `;
-    
-    $('#scheme-search-results').html(summaryHtml + html);
-}
-
-function createEnhancedSchemeResultCard(scheme, query) {
-    const schemeName = scheme.scheme_name || '';
-    const amcName = scheme.amc_name || 'Unknown AMC';
-    const category = scheme.category || 'Unknown Category';
-    const schemeType = scheme.scheme_type || 'other';
-    const riskCategory = scheme.risk_category || 'moderate';
-    const minInvestment = scheme.minimum_investment || 500;
-    const minSip = scheme.minimum_sip || 500;
-    
-    const isinGrowth = scheme.isin_growth || '';
-    const isinDiv = scheme.isin_div_reinvestment || '';
-    const schemeCode = scheme.scheme_code || '';
-    
-    const lastNavPrice = scheme.last_nav_price ? parseFloat(scheme.last_nav_price).toFixed(4) : null;
-    const lastNavDate = scheme.last_nav_date || '';
-    
-    const isActive = scheme.is_active !== false;
-    
-    // Highlight matching text
-    const highlightedName = highlightMatchingText(schemeName, query);
-    const highlightedAMC = highlightMatchingText(amcName, query);
-    const highlightedCategory = highlightMatchingText(category, query);
-    
-    const typeColors = {
-        'equity': 'success',
-        'debt': 'primary', 
-        'hybrid': 'warning',
-        'liquid': 'info',
-        'ultra_short': 'info',
-        'elss': 'success',
-        'index': 'secondary',
-        'etf': 'dark',
-        'arbitrage': 'danger',
-        'other': 'secondary'
-    };
-    
-    const riskColors = {
-        'low': 'success',
-        'moderate': 'warning',
-        'high': 'danger',
-        'very_high': 'danger'
-    };
-    
-    const typeColor = typeColors[schemeType] || 'secondary';
-    const riskColor = riskColors[riskCategory] || 'warning';
-    
-    // Calculate match score for sorting indication
-    const matchScore = calculateMatchScore(scheme, query);
-    const matchIndicator = matchScore > 90 ? '<i class="fas fa-star text-warning" title="Exact match"></i>' : 
-                          matchScore > 70 ? '<i class="fas fa-star-half-alt text-warning" title="Good match"></i>' : '';
-    
-    return `
-        <div class="scheme-search-result list-group-item list-group-item-action" onclick="selectScheme('${schemeName.replace(/'/g, "\\'")}', '${amcName.replace(/'/g, "\\'")}', '${scheme.id}', '${schemeCode.replace(/'/g, "\\'")}')">
-            <div class="d-flex w-100 justify-content-between align-items-start">
-                <div class="flex-grow-1">
-                    <div class="d-flex align-items-center mb-2">
-                        <h6 class="mb-0 text-primary flex-grow-1">${highlightedName}</h6>
-                        <div class="ms-2">
-                            ${matchIndicator}
-                            ${isActive ? '<span class="badge bg-success ms-1">Active</span>' : '<span class="badge bg-danger ms-1">Inactive</span>'}
-                        </div>
-                    </div>
-                    
-                    <div class="row mb-2">
-                        <div class="col-md-8">
-                            <p class="mb-1">
-                                <strong>AMC:</strong> ${highlightedAMC}
-                            </p>
-                            <p class="mb-1">
-                                <strong>Category:</strong> ${highlightedCategory}
-                                <span class="badge bg-${typeColor} ms-2">${schemeType.toUpperCase()}</span>
-                                <span class="badge bg-${riskColor} ms-1">${riskCategory.replace('_', ' ').toUpperCase()}</span>
-                            </p>
-                        </div>
-                        <div class="col-md-4 text-end">
-                            ${lastNavPrice ? `<div class="text-success"><strong>NAV:</strong> ₹${lastNavPrice}</div>` : ''}
-                            ${lastNavDate ? `<small class="text-muted">${lastNavDate}</small>` : ''}
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            ${isinGrowth ? `<small class="text-muted d-block"><strong>ISIN Growth:</strong> ${isinGrowth}</small>` : ''}
-                            ${isinDiv ? `<small class="text-muted d-block"><strong>ISIN Div Reinv:</strong> ${isinDiv}</small>` : ''}
-                            ${schemeCode ? `<small class="text-muted d-block"><strong>Code:</strong> ${schemeCode}</small>` : ''}
-                        </div>
-                        <div class="col-md-6">
-                            <small class="text-muted d-block"><strong>Min Investment:</strong> ₹${minInvestment.toLocaleString()}</small>
-                            <small class="text-muted d-block"><strong>Min SIP:</strong> ₹${minSip.toLocaleString()}</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function highlightMatchingText(text, query) {
-    if (!text || !query) return text;
-    
-    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-    return text.replace(regex, '<mark>$1</mark>');
-}
-
-function calculateMatchScore(scheme, query) {
-    const queryLower = query.toLowerCase();
-    const schemeName = (scheme.scheme_name || '').toLowerCase();
-    const amcName = (scheme.amc_name || '').toLowerCase();
-    const category = (scheme.category || '').toLowerCase();
-    
-    // Exact match gets highest score
-    if (schemeName === queryLower) return 100;
-    
-    // Starts with query gets high score
-    if (schemeName.startsWith(queryLower)) return 90;
-    
-    // Contains query in scheme name
-    if (schemeName.includes(queryLower)) return 80;
-    
-    // AMC name match
-    if (amcName.includes(queryLower)) return 70;
-    
-    // Category match
-    if (category.includes(queryLower)) return 60;
-    
-    return 50; // Default score
-}
-
-function displayNoResultsMessage(query) {
-    $('#scheme-search-results').html(`
-        <div class="text-center text-muted py-4">
-            <i class="fas fa-search fa-2x mb-3"></i>
-            <p>No schemes found for "<strong>${query}</strong>"</p>
-            <div class="mt-3">
-                <small class="text-muted">
-                    <strong>Search Tips:</strong><br>
-                    • Try different keywords (AMC name, scheme type, category)<br>
-                    • Use partial scheme names<br>
-                    • Search by ISIN or scheme code<br>
-                    • Check spelling and try variations
-                </small>
-            </div>
-        </div>
-    `);
-}
-
-function displayErrorMessage(message, statusCode) {
-    const defaultMessage = message || 'Error searching schemes. Please try again.';
-    
-    $('#scheme-search-results').html(`
-        <div class="text-center text-danger py-4">
-            <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
-            <p class="mb-3">${defaultMessage}</p>
-            ${statusCode ? `<small class="text-muted">Error Code: ${statusCode}</small><br>` : ''}
-            <div class="mt-3">
-                <button type="button" class="btn btn-outline-primary me-2" onclick="searchSchemes()">
-                    <i class="fas fa-redo"></i> Retry Search
-                </button>
-                <button type="button" class="btn btn-outline-secondary" onclick="tryOfflineSearch()">
-                    <i class="fas fa-database"></i> Search Offline
-                </button>
-            </div>
-            <div class="mt-3">
-                <small class="text-muted">
-                    <strong>Troubleshooting:</strong><br>
-                    • Check your internet connection<br>
-                    • Try a different search term<br>
-                    • Contact support if the issue persists
-                </small>
-            </div>
-        </div>
-    `);
-}
-
-// Fallback search function for when AJAX fails
-function tryOfflineSearch() {
-    const query = $('#scheme-search-input').val().trim();
-    
-    if (query.length < 2) {
-        showWarningMessage('Please enter at least 2 characters to search');
-        return;
-    }
-    
-    // Check if we have any cached schemes data
-    if (window.portfolioSchemes && window.portfolioSchemes.length > 0) {
-        const filteredSchemes = window.portfolioSchemes.filter(scheme => {
-            const schemeName = (scheme.scheme_name || '').toLowerCase();
-            const amcName = (scheme.amc_name || '').toLowerCase();
-            const queryLower = query.toLowerCase();
-            
-            return schemeName.includes(queryLower) || 
-                   amcName.includes(queryLower) ||
-                   schemeName.startsWith(queryLower);
-        });
-        
-        if (filteredSchemes.length > 0) {
-            displayEnhancedSchemeResults(filteredSchemes, query);
-            showInfoMessage(`Found ${filteredSchemes.length} schemes from your portfolio`);
-        } else {
-            displayNoResultsMessage(query);
-        }
-    } else {
-        $('#scheme-search-results').html(`
-            <div class="text-center text-warning py-4">
-                <i class="fas fa-wifi fa-2x mb-3"></i>
-                <p>Offline search not available</p>
-                <small class="text-muted">Please check your connection and try the online search</small>
-            </div>
-        `);
-    }
-}
-
-function selectScheme(schemeName, amcName, schemeId, schemeCode) {
-    const fullSchemeName = schemeName;
-    
-    if (currentTargetField) {
-        // If target field is specified, populate that field
-        $(`#${currentTargetField}`).val(fullSchemeName);
-        $(`#${currentTargetField}`).attr('data-scheme-id', schemeId);
-        $(`#${currentTargetField}`).attr('data-scheme-code', schemeCode);
-        $(`#${currentTargetField}`).attr('data-amc-name', amcName);
-        
-        // Store additional scheme data for validation
-        const selectedScheme = window.lastSearchResults?.find(s => s.id == schemeId);
-        if (selectedScheme) {
-            $(`#${currentTargetField}`).attr('data-min-investment', selectedScheme.minimum_investment || 500);
-            $(`#${currentTargetField}`).attr('data-min-sip', selectedScheme.minimum_sip || 500);
-            $(`#${currentTargetField}`).attr('data-scheme-type', selectedScheme.scheme_type || 'other');
-            $(`#${currentTargetField}`).attr('data-risk-category', selectedScheme.risk_category || 'moderate');
-        }
-        
-        currentTargetField = null;
-    } else {
-        // If no target field, open purchase modal for new scheme
-        openActionModal('purchase', '', 0, 0, null);
-        $('#target-scheme').val(fullSchemeName);
-        $('#target-scheme').attr('data-scheme-id', schemeId);
-        $('#target-scheme').attr('data-scheme-code', schemeCode);
-        $('#target-scheme').attr('data-amc-name', amcName);
-        $('#purchase-type').val('new_scheme');
-        togglePurchaseFields();
-    }
-    
-    $('#schemeSearchModal').modal('hide');
-}
-
-// Action Management Functions
-function addAction() {
-    const formData = new FormData($('#actionForm')[0]);
-    const actionType = formData.get('action_type');
-    
-    // Validate required fields
-    if (!validateActionForm(actionType, formData)) {
-        return;
-    }
-    
-    // Create action object
-    const action = createActionObject(formData);
-    
-    // Add to planned actions
-    plannedActions.push(action);
-    
-    // Update UI
-    displayPlannedActions();
-    updateActionsSummary();
-    onActionsModified();
-    
-    // Close modal
-    $('#actionModal').modal('hide');
-    
-    // Show success message
-    showSuccessMessage(`${actionType.toUpperCase()} action added successfully!`);
-}
-
-function validateActionForm(actionType, formData) {
-    let isValid = true;
-    let errorMessage = '';
-    
-    switch(actionType) {
-        case 'purchase':
-            if (!formData.get('purchase_type')) {
-                errorMessage = 'Please select purchase type';
-                isValid = false;
-            } else if (!formData.get('purchase_amount')) {
-                errorMessage = 'Purchase amount is required';
-                isValid = false;
-            } else if (formData.get('purchase_type') === 'new_scheme' && !formData.get('target_scheme')) {
-                errorMessage = 'Target scheme is required for new scheme purchase';
-                isValid = false;
-            } else if (formData.get('purchase_type') === 'existing_scheme' && !formData.get('source_scheme')) {
-                errorMessage = 'Please select an existing scheme';
-                isValid = false;
-            } else {
-                // Validate minimum investment
-                const minInvestment = parseFloat($('#target-scheme').attr('data-min-investment') || $('#source-scheme option:selected').attr('data-min-investment') || 500);
-                const purchaseAmount = parseFloat(formData.get('purchase_amount'));
-                if (purchaseAmount < minInvestment) {
-                    errorMessage = `Purchase amount must be at least ₹${minInvestment.toLocaleString()} for the selected scheme`;
-                    isValid = false;
-                }
-            }
-            break;
-            
-        case 'redeem':
-            if (!formData.get('source_scheme')) {
-                errorMessage = 'Please select a source scheme';
-                isValid = false;
-            } else if (!formData.get('redeem_by')) {
-                errorMessage = 'Please select redeem method';
-                isValid = false;
-            } else if (formData.get('redeem_by') === 'specific_amount' && !formData.get('redeem_amount')) {
-                errorMessage = 'Redeem amount is required';
-                isValid = false;
-            } else if (formData.get('redeem_by') === 'specific_units' && !formData.get('redeem_units')) {
-                errorMessage = 'Redeem units is required';
-                isValid = false;
-            }
-            break;
-            
-        case 'switch':
-            if (!formData.get('source_scheme')) {
-                errorMessage = 'Please select a source scheme';
-                isValid = false;
-            } else if (!formData.get('target_scheme')) {
-                errorMessage = 'Target scheme is required. Please search and select a scheme.';
-                isValid = false;
-            } else if (!formData.get('switch_by')) {
-                errorMessage = 'Please select switch method';
-                isValid = false;
-            } else if (formData.get('switch_by') === 'specific_amount' && !formData.get('switch_amount')) {
-                errorMessage = 'Switch amount is required';
-                isValid = false;
-            } else if (formData.get('switch_by') === 'specific_units' && !formData.get('switch_units')) {
-                errorMessage = 'Switch units is required';
-                isValid = false;
-            } else {
-                // Validate minimum investment for switch
-                const minInvestment = parseFloat($('#target-scheme').attr('data-min-investment')) || 500;
-                const switchAmount = parseFloat(formData.get('switch_amount'));
-                if (formData.get('switch_by') === 'specific_amount' && switchAmount < minInvestment) {
-                    errorMessage = `Switch amount must be at least ₹${minInvestment.toLocaleString()} for the selected scheme`;
-                    isValid = false;
-                }
-            }
-            break;
-            
-        case 'stp':
-            if (!formData.get('source_scheme')) {
-                errorMessage = 'Please select a source scheme';
-                isValid = false;
-            } else if (!formData.get('target_scheme')) {
-                errorMessage = 'Target scheme is required. Please search and select a scheme.';
-                isValid = false;
-            } else if (!formData.get('stp_amount')) {
-                errorMessage = 'STP amount is required';
-                isValid = false;
-            } else if (!formData.get('stp_frequency')) {
-                errorMessage = 'STP frequency is required';
-                isValid = false;
-            } else {
-                // Validate minimum STP amount
-                const minInvestment = parseFloat($('#target-scheme').attr('data-min-investment')) || 500;
-                const stpAmount = parseFloat(formData.get('stp_amount'));
-                if (stpAmount < minInvestment) {
-                    errorMessage = `STP amount must be at least ₹${minInvestment.toLocaleString()} for the selected scheme`;
-                    isValid = false;
-                }
-            }
-            break;
-            
-        case 'sip':
-            if (!formData.get('target_scheme')) {
-                errorMessage = 'Target scheme is required. Please search and select a scheme.';
-                isValid = false;
-            } else if (!formData.get('sip_amount')) {
-                errorMessage = 'SIP amount is required';
-                isValid = false;
-            } else if (!formData.get('sip_frequency')) {
-                errorMessage = 'SIP frequency is required';
-                isValid = false;
-            } else if (!formData.get('sip_date')) {
-                errorMessage = 'SIP date is required';
-                isValid = false;
-            } else {
-                // Validate minimum SIP amount
-                const minSip = parseFloat($('#target-scheme').attr('data-min-sip')) || 500;
-                const sipAmount = parseFloat(formData.get('sip_amount'));
-                if (sipAmount < minSip) {
-                    errorMessage = `SIP amount must be at least ₹${minSip.toLocaleString()} for the selected scheme`;
-                    isValid = false;
-                }
-            }
-            break;
-            
-        case 'swp':
-            if (!formData.get('source_scheme')) {
-                errorMessage = 'Please select a source scheme';
-                isValid = false;
-            } else if (!formData.get('swp_amount')) {
-                errorMessage = 'SWP amount is required';
-                isValid = false;
-            } else if (!formData.get('swp_frequency')) {
-                errorMessage = 'SWP frequency is required';
-                isValid = false;
-            } else if (!formData.get('swp_date')) {
-                errorMessage = 'SWP date is required';
-                isValid = false;
-            }
-            break;
-    }
-    
-    if (!isValid) {
-        showErrorMessage(errorMessage);
-    }
-    
-    return isValid;
-}
-
-function createActionObject(formData) {
-    const actionType = formData.get('action_type');
-    const action = {
-        id: Date.now() + Math.random(), // Unique ID
-        action_type: actionType,
-        source_scheme: formData.get('source_scheme') || '',
-        target_scheme: formData.get('target_scheme') || '',
-        notes: formData.get('notes') || '',
-        portfolio_id: formData.get('portfolio_id') || null,
-        // Add scheme IDs and codes for backend processing
-        source_scheme_id: $('#source-scheme option:selected').data('portfolio-id') || null,
-        target_scheme_id: $('#target-scheme').attr('data-scheme-id') || null,
-        target_scheme_code: $('#target-scheme').attr('data-scheme-code') || null,
-        // Add minimum investment validation data
-        target_scheme_min_investment: $('#target-scheme').attr('data-min-investment') || null,
-        target_scheme_min_sip: $('#target-scheme').attr('data-min-sip') || null,
-        created_at: new Date().toISOString()
-    };
-    
-    // Add type-specific fields with validation
-    switch(actionType) {
-        case 'purchase':
-            action.purchase_type = formData.get('purchase_type');
-            action.purchase_amount = formData.get('purchase_amount');
-            action.investment_option = formData.get('investment_option');
-            action.plan_type = formData.get('plan_type');
-            action.folio_number = formData.get('folio_number');
-            // Set the scheme field based on purchase type
-            if (action.purchase_type === 'existing_scheme') {
-                action.scheme = action.source_scheme;
-                action.scheme_id = action.source_scheme_id;
-            } else {
-                action.scheme = action.target_scheme;
-                action.scheme_id = action.target_scheme_id;
-            }
-            break;
-        case 'redeem':
-            action.redeem_by = formData.get('redeem_by');
-            action.redeem_amount = formData.get('redeem_amount');
-            action.redeem_units = formData.get('redeem_units');
-            action.scheme = action.source_scheme;
-            action.scheme_id = action.source_scheme_id;
-            break;
-        case 'switch':
-            action.switch_by = formData.get('switch_by');
-            action.switch_amount = formData.get('switch_amount');
-            action.switch_units = formData.get('switch_units');
-            action.scheme = action.source_scheme;
-            action.scheme_id = action.source_scheme_id;
-            break;
-        case 'stp':
-            action.stp_amount = formData.get('stp_amount');
-            action.stp_frequency = formData.get('stp_frequency');
-            action.scheme = action.source_scheme;
-            action.scheme_id = action.source_scheme_id;
-            break;
-        case 'sip':
-            action.sip_amount = formData.get('sip_amount');
-            action.sip_frequency = formData.get('sip_frequency');
-            action.sip_date = formData.get('sip_date');
-            action.investment_option = formData.get('investment_option') || 'growth';
-            action.plan_type = formData.get('plan_type') || 'direct';
-            action.scheme = action.target_scheme;
-            action.scheme_id = action.target_scheme_id;
-            break;
-        case 'swp':
-            action.swp_amount = formData.get('swp_amount');
-            action.swp_frequency = formData.get('swp_frequency');
-            action.swp_date = formData.get('swp_date');
-            action.scheme = action.source_scheme;
-            action.scheme_id = action.source_scheme_id;
-            break;
-    }
-    
-    return action;
-}
-
-function displayPlannedActions() {
-    const container = $('#planned-actions');
-    
-    if (plannedActions.length === 0) {
-        container.html(`
-            <div class="text-center text-muted py-4">
-                <i class="fas fa-clipboard-list fa-3x mb-3"></i>
-                <p>No actions planned yet. Start by adding actions from your portfolio or creating new investments.</p>
-                <div class="mt-3">
-                    <button type="button" class="btn btn-outline-primary" onclick="openActionModal('purchase', '', 0, 0, null)">
-                        <i class="fas fa-plus"></i> Add First Action
-                    </button>
-                </div>
-            </div>
-        `);
-        return;
-    }
-    
-    let html = '';
-    plannedActions.forEach(function(action, index) {
-        html += createActionCard(action, index);
-    });
-    
-    container.html(html);
-}
-
-function createActionCard(action, index) {
-    const actionTypeColors = {
-        'purchase': 'success',
-        'redeem': 'danger',
-        'switch': 'primary',
-        'stp': 'info',
-        'sip': 'success',
-        'swp': 'warning'
-    };
-    
-    const actionTypeIcons = {
-        'purchase': 'fas fa-shopping-cart',
-        'redeem': 'fas fa-minus-circle',
-        'switch': 'fas fa-exchange-alt',
-        'stp': 'fas fa-arrow-right',
-        'sip': 'fas fa-plus-circle',
-        'swp': 'fas fa-arrow-down'
-    };
-    
-    const color = actionTypeColors[action.action_type] || 'secondary';
-    const icon = actionTypeIcons[action.action_type] || 'fas fa-cog';
-    
-    return `
-        <div class="card action-card mb-3" data-action-index="${index}" id="action-card-${index}">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="flex-grow-1">
-                        <div class="d-flex align-items-center mb-2">
-                            <h6 class="card-title mb-0">
-                                <i class="${icon} text-${color}"></i>
-                                ${action.action_type.toUpperCase()}
-                                <span class="badge bg-${color} ms-2">#${index + 1}</span>
-                            </h6>
-                            <small class="text-muted ms-auto">
-                                ${new Date(action.created_at).toLocaleString()}
-                            </small>
-                        </div>
-                        <div class="action-details">
-                            ${formatActionDetails(action)}
-                        </div>
-                        ${action.notes ? `<div class="mt-2"><small class="text-muted"><i class="fas fa-sticky-note"></i> ${action.notes}</small></div>` : ''}
-                        
-                        <!-- Action Summary -->
-                        <div class="mt-2 p-2 bg-light rounded">
-                            <small class="text-muted">
-                                <strong>Impact:</strong> ${getActionImpact(action)}
-                            </small>
-                        </div>
-                    </div>
-                    <div class="action-controls ms-3">
-                        <div class="btn-group-vertical" role="group">
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="editAction(${index})" title="Edit Action">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="duplicateAction(${index})" title="Duplicate Action">
-                                <i class="fas fa-copy"></i>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeAction(${index})" title="Remove Action">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function formatActionDetails(action) {
-    let details = '';
-    
-    switch(action.action_type) {
-        case 'purchase':
-            const scheme = action.purchase_type === 'existing_scheme' ? action.source_scheme : action.target_scheme;
-            details = `<div class="row">`;
-            details += `<div class="col-md-8">`;
-            details += `<strong>Scheme:</strong> ${truncateText(scheme, 50)}<br>`;
-            details += `<strong>Amount:</strong> ₹${parseFloat(action.purchase_amount).toLocaleString()}<br>`;
-            details += `<strong>Type:</strong> ${action.purchase_type === 'existing_scheme' ? 'Existing from Portfolio' : 'New Scheme'}<br>`;
-            details += `<strong>Option:</strong> ${action.investment_option} (${action.plan_type})`;
-            details += `</div>`;
-            if (action.folio_number) {
-                details += `<div class="col-md-4"><strong>Folio:</strong> ${action.folio_number}</div>`;
-            }
-            details += `</div>`;
-            break;
-            
-        case 'redeem':
-            details = `<strong>From:</strong> ${truncateText(action.source_scheme, 50)}<br>`;
-            if (action.redeem_by === 'all_units') {
-                details += '<strong>Amount:</strong> <span class="text-warning">All Units</span>';
-            } else if (action.redeem_by === 'specific_amount') {
-                details += `<strong>Amount:</strong> ₹${parseFloat(action.redeem_amount).toLocaleString()}`;
-            } else if (action.redeem_by === 'specific_units') {
-                details += `<strong>Units:</strong> ${parseFloat(action.redeem_units).toLocaleString()}`;
-            }
-            break;
-            
-        case 'switch':
-            details = `<strong>From:</strong> ${truncateText(action.source_scheme, 40)}<br>`;
-            details += `<strong>To:</strong> ${truncateText(action.target_scheme, 40)}<br>`;
-            if (action.switch_by === 'all_units') {
-                details += '<strong>Amount:</strong> <span class="text-warning">All Units</span>';
-            } else if (action.switch_by === 'specific_amount') {
-                details += `<strong>Amount:</strong> ₹${parseFloat(action.switch_amount).toLocaleString()}`;
-            } else if (action.switch_by === 'specific_units') {
-                details += `<strong>Units:</strong> ${parseFloat(action.switch_units).toLocaleString()}`;
-            }
-            break;
-            
-        case 'stp':
-            details = `<strong>From:</strong> ${truncateText(action.source_scheme, 40)}<br>`;
-            details += `<strong>To:</strong> ${truncateText(action.target_scheme, 40)}<br>`;
-            details += `<strong>Amount:</strong> ₹${parseFloat(action.stp_amount).toLocaleString()} <span class="badge bg-info">${action.stp_frequency}</span>`;
-            break;
-            
-        case 'sip':
-            details = `<strong>Scheme:</strong> ${truncateText(action.target_scheme, 50)}<br>`;
-            details += `<strong>Amount:</strong> ₹${parseFloat(action.sip_amount).toLocaleString()} <span class="badge bg-success">${action.sip_frequency}</span><br>`;
-            details += `<strong>Date:</strong> ${action.sip_date} of every ${action.sip_frequency === 'monthly' ? 'month' : action.sip_frequency}`;
-            break;
-            
-        case 'swp':
-            details = `<strong>From:</strong> ${truncateText(action.source_scheme, 50)}<br>`;
-            details += `<strong>Amount:</strong> ₹${parseFloat(action.swp_amount).toLocaleString()} <span class="badge bg-warning">${action.swp_frequency}</span><br>`;
-            details += `<strong>Date:</strong> ${action.swp_date} of every ${action.swp_frequency === 'monthly' ? 'month' : action.swp_frequency}`;
-            break;
-    }
-    
-    return details;
-}
-
-function getActionImpact(action) {
-    switch(action.action_type) {
-        case 'purchase':
-            return `Investment: +₹${parseFloat(action.purchase_amount).toLocaleString()}`;
-        case 'sip':
-            const monthlyAmount = parseFloat(action.sip_amount);
-            const frequency = action.sip_frequency;
-            let annualAmount = monthlyAmount * 12;
-            if (frequency === 'weekly') annualAmount = monthlyAmount * 52;
-            if (frequency === 'fortnightly') annualAmount = monthlyAmount * 26;
-            if (frequency === 'daily') annualAmount = monthlyAmount * 365;
-            return `Investment: +₹${monthlyAmount.toLocaleString()}/${frequency} (~₹${annualAmount.toLocaleString()}/year)`;
-        case 'redeem':
-            if (action.redeem_by === 'specific_amount') {
-                return `Redemption: -₹${parseFloat(action.redeem_amount).toLocaleString()}`;
-            }
-            return `Redemption: ${action.redeem_by === 'all_units' ? 'Full' : 'Partial'}`;
-        case 'switch':
-            return `Portfolio rebalancing`;
-        case 'stp':
-            return `Transfer: ₹${parseFloat(action.stp_amount).toLocaleString()}/${action.stp_frequency}`;
-        case 'swp':
-            return `Withdrawal: -₹${parseFloat(action.swp_amount).toLocaleString()}/${action.swp_frequency}`;
-        default:
-            return 'Portfolio action';
-    }
-}
-
-function truncateText(text, length) {
-    if (!text) return '';
-    return text.length > length ? text.substring(0, length) + '...' : text;
-}
-
-function editAction(index) {
-    const action = plannedActions[index];
-    
-    // Populate form with action data
-    populateActionForm(action);
-    
-    // Remove action from list (will be re-added when form is submitted)
-    plannedActions.splice(index, 1);
-    displayPlannedActions();
-    updateActionsSummary();
-    
-    // Show modal
-    $('#actionModal').modal('show');
-    
-    showInfoMessage('Action loaded for editing. Make changes and click "Add Action" to save.');
-}
-
-function duplicateAction(index) {
-    const action = JSON.parse(JSON.stringify(plannedActions[index])); // Deep copy
-    
-    // Update ID and timestamp
-    action.id = Date.now() + Math.random();
-    action.created_at = new Date().toISOString();
-    
-    // Add to planned actions
-    plannedActions.push(action);
-    
-    // Update UI
-    displayPlannedActions();
-    updateActionsSummary();
-    onActionsModified();
-    
-    // Scroll to new action
-    setTimeout(() => {
-        const newActionCard = $(`#action-card-${plannedActions.length - 1}`);
-        if (newActionCard.length) {
-            newActionCard[0].scrollIntoView({ behavior: 'smooth' });
-            newActionCard.addClass('border-success').delay(2000).queue(function() {
-                $(this).removeClass('border-success').dequeue();
-            });
-        }
-    }, 100);
-    
-    showSuccessMessage('Action duplicated successfully!');
-}
-
-function populateActionForm(action) {
-    // Reset form first
-    resetActionForm();
-    
-    // Set action type
-    selectActionType(action.action_type);
-    
-    // Set common fields
-    $('#source-scheme').val(action.source_scheme);
-    $('#target-scheme').val(action.target_scheme);
-    $('#action-notes').val(action.notes);
-    
-    // Set scheme data attributes for target scheme
-    if (action.target_scheme_id) {
-        $('#target-scheme').attr('data-scheme-id', action.target_scheme_id);
-        $('#target-scheme').attr('data-scheme-code', action.target_scheme_code);
-        $('#target-scheme').attr('data-min-investment', action.target_scheme_min_investment);
-        $('#target-scheme').attr('data-min-sip', action.target_scheme_min_sip);
-    }
-    
-    // Set type-specific fields
-    switch(action.action_type) {
-        case 'purchase':
-            $('#purchase-type').val(action.purchase_type);
-            $('#purchase-amount').val(action.purchase_amount);
-            $('#investment-option').val(action.investment_option);
-            $('#plan-type').val(action.plan_type);
-            $('#folio-number').val(action.folio_number);
-            togglePurchaseFields();
-            break;
-        case 'redeem':
-            $('#redeem-by').val(action.redeem_by);
-            $('#redeem-amount').val(action.redeem_amount);
-            $('#redeem-units').val(action.redeem_units);
-            toggleAmountField('redeem');
-            break;
-        case 'switch':
-            $('#switch-by').val(action.switch_by);
-            $('#switch-amount').val(action.switch_amount);
-            $('#switch-units').val(action.switch_units);
-            toggleAmountField('switch');
-            break;
-        case 'stp':
-            $('#stp-amount').val(action.stp_amount);
-            $('#stp-frequency').val(action.stp_frequency);
-            break;
-        case 'sip':
-            $('#sip-amount').val(action.sip_amount);
-            $('#sip-frequency').val(action.sip_frequency);
-            $('#sip-date').val(action.sip_date);
-            $('#investment-option').val(action.investment_option);
-            $('#plan-type').val(action.plan_type);
-            break;
-        case 'swp':
-            $('#swp-amount').val(action.swp_amount);
-            $('#swp-frequency').val(action.swp_frequency);
-            $('#swp-date').val(action.swp_date);
-            break;
-    }
-}
-
-function removeAction(index) {
-    const action = plannedActions[index];
-    const actionType = action.action_type.toUpperCase();
-    
-    if (confirm(`Are you sure you want to remove this ${actionType} action?`)) {
-        plannedActions.splice(index, 1);
-        displayPlannedActions();
-        updateActionsSummary();
-        onActionsModified();
-        
-        showSuccessMessage(`${actionType} action removed successfully!`);
-    }
-}
-
-function updateActionsSummary() {
-    let totalInvestment = 0;
-    let totalRedemption = 0;
-    let purchaseCount = 0;
-    let sipCount = 0;
-    let redeemCount = 0;
-    let switchCount = 0;
-    let systematicCount = 0;
-    
-    plannedActions.forEach(function(action) {
-        switch(action.action_type) {
-            case 'purchase':
-                if (action.purchase_amount) {
-                    totalInvestment += parseFloat(action.purchase_amount);
-                    purchaseCount++;
-                }
-                break;
-            case 'sip':
-                if (action.sip_amount) {
-                    // For SIP, we'll show monthly amount in summary
-                    totalInvestment += parseFloat(action.sip_amount);
-                    sipCount++;
-                }
-                break;
-            case 'redeem':
-                if (action.redeem_amount) {
-                    totalRedemption += parseFloat(action.redeem_amount);
-                }
-                redeemCount++;
-                break;
-            case 'switch':
-                switchCount++;
-                break;
-            case 'stp':
-            case 'swp':
-                systematicCount++;
-                break;
-        }
-    });
-    
-    const netInvestment = totalInvestment - totalRedemption;
-    
-    // Update summary display with enhanced formatting
-    $('#total-investment').text(`₹${totalInvestment.toLocaleString()}`);
-    $('#total-redemption').text(`₹${totalRedemption.toLocaleString()}`);
-    $('#net-investment').text(`₹${netInvestment.toLocaleString()}`);
-    $('#net-investment').removeClass('text-success text-danger text-muted');
-    
-    if (netInvestment > 0) {
-        $('#net-investment').addClass('text-success');
-    } else if (netInvestment < 0) {
-        $('#net-investment').addClass('text-danger');
-    } else {
-        $('#net-investment').addClass('text-muted');
-    }
-    
-    $('#action-count').text(`${plannedActions.length} Action${plannedActions.length !== 1 ? 's' : ''}`);
-    
-    // Update action type counts
-    $('#purchase-count').text(purchaseCount);
-    $('#sip-count').text(sipCount);
-    $('#redeem-count').text(redeemCount);
-    $('#switch-count').text(switchCount);
-    $('#systematic-count').text(systematicCount);
-    
-    // Enable/disable save buttons
-    const hasActions = plannedActions.length > 0;
-    $('#save-plan-btn, #submit-plan-btn').prop('disabled', !hasActions);
-    
-    // Update button text with action count
-    if (hasActions) {
-        $('#save-plan-btn').html(`<i class="fas fa-save"></i> Save ${plannedActions.length} Actions as Draft`);
-        $('#submit-plan-btn').html(`<i class="fas fa-paper-plane"></i> Save & Submit ${plannedActions.length} Actions`);
-    } else {
-        $('#save-plan-btn').html(`<i class="fas fa-save"></i> Save as Draft`);
-        $('#submit-plan-btn').html(`<i class="fas fa-paper-plane"></i> Save & Submit`);
-    }
-}
-
-// Plan Saving Functions
-function savePlan(submitForApproval = false) {
-    if (plannedActions.length === 0) {
-        showErrorMessage('Please add at least one action before saving the plan.');
-        return;
-    }
-    
-    // Validate all actions
-    const validationErrors = validateAllActions();
-    if (validationErrors.length > 0) {
-        showErrorMessage('Please fix the following errors before saving:\n' + validationErrors.join('\n'));
-        return;
-    }
-    
-    // Show plan name modal
-    $('#planNameModal').modal('show');
-    
-    // Store submit flag for later use
-    window.submitForApproval = submitForApproval;
-    
-    // Set modal title based on action
-    const modalTitle = submitForApproval ? 'Submit Execution Plan for Approval' : 'Save Execution Plan as Draft';
-    $('#planNameModalLabel').text(modalTitle);
-}
-
-function validateAllActions() {
-    const errors = [];
-    
-    plannedActions.forEach((action, index) => {
-        const actionNum = index + 1;
-        
-        // Basic validation
-        if (!action.action_type) {
-            errors.push(`Action ${actionNum}: Missing action type`);
-        }
-        
-        // Type-specific validation
-        switch(action.action_type) {
-            case 'purchase':
-                if (!action.purchase_amount || parseFloat(action.purchase_amount) <= 0) {
-                    errors.push(`Action ${actionNum}: Invalid purchase amount`);
-                }
-                if (action.purchase_type === 'new_scheme' && !action.target_scheme) {
-                    errors.push(`Action ${actionNum}: Missing target scheme for new purchase`);
-                }
-                break;
-            case 'sip':
-                if (!action.sip_amount || parseFloat(action.sip_amount) <= 0) {
-                    errors.push(`Action ${actionNum}: Invalid SIP amount`);
-                }
-                if (!action.target_scheme) {
-                    errors.push(`Action ${actionNum}: Missing target scheme for SIP`);
-                }
-                break;
-            // Add more validations as needed
-        }
-    });
-    
-    return errors;
-}
-
-// Plan Saving Functions
-function savePlan(submitForApproval = false) {
-    if (plannedActions.length === 0) {
-        alert('Please add at least one action before saving the plan.');
-        return;
-    }
-    
-    // Show plan name modal
-    $('#planNameModal').modal('show');
-    
-    // Store submit flag for later use
-    window.submitForApproval = submitForApproval;
-}
-
-// Helper function to sanitize action data
-function sanitizeActionData(action) {
-    const sanitized = { ...action };
-    
-    // Convert string numbers to actual numbers and ensure required fields are not null
-    if (sanitized.portfolio_id) {
-        sanitized.portfolio_id = typeof sanitized.portfolio_id === 'string' ? parseInt(sanitized.portfolio_id) : sanitized.portfolio_id;
-    }
-    if (sanitized.purchase_amount) {
-        sanitized.purchase_amount = typeof sanitized.purchase_amount === 'string' ? parseFloat(sanitized.purchase_amount) : sanitized.purchase_amount;
-    }
-    if (sanitized.source_scheme_id) {
-        sanitized.source_scheme_id = typeof sanitized.source_scheme_id === 'string' ? parseInt(sanitized.source_scheme_id) : sanitized.source_scheme_id;
-    }
-    if (sanitized.scheme_id) {
-        sanitized.scheme_id = typeof sanitized.scheme_id === 'string' ? parseInt(sanitized.scheme_id) : sanitized.scheme_id;
-    }
-    
-    // Ensure scheme_id is set - if source_scheme_id exists but scheme_id doesn't, use source_scheme_id
-    if (!sanitized.scheme_id && sanitized.source_scheme_id) {
-        sanitized.scheme_id = sanitized.source_scheme_id;
-    }
-    
-    // Convert string 'null' to actual null and empty strings to null
-    // BUT keep required fields as empty strings if they can't be null
-    Object.keys(sanitized).forEach(key => {
-        if (sanitized[key] === 'null' || sanitized[key] === 'None') {
-            // Special handling for fields that can't be null
-            if (key === 'notes' || key === 'folio_number') {
-                sanitized[key] = '';
-            } else {
-                sanitized[key] = null;
-            }
-        }
-        // Ensure empty strings stay as empty strings for required fields
-        if (sanitized[key] === '' && (key === 'notes' || key === 'folio_number')) {
-            sanitized[key] = '';
-        }
-    });
-    
-    // Validate required fields - ensure they're not null/undefined
-    const requiredFields = ['scheme_id', 'portfolio_id', 'action_type', 'purchase_amount'];
-    requiredFields.forEach(field => {
-        if (sanitized[field] === null || sanitized[field] === undefined || sanitized[field] === '') {
-            console.error(`Required field ${field} is missing or null:`, sanitized[field]);
-            throw new Error(`Required field ${field} cannot be null or empty`);
-        }
-    });
-    
-    // Remove fields that should not be sent if they're null or undefined
-    const fieldsToRemoveIfNull = [
-        'target_scheme', 'target_scheme_id', 'target_scheme_code', 
-        'target_scheme_min_investment', 'target_scheme_min_sip'
-    ];
-    
-    fieldsToRemoveIfNull.forEach(field => {
-        if (sanitized[field] === null || sanitized[field] === undefined) {
-            delete sanitized[field];
-        }
-    });
-    
-    return sanitized;
-}
-
-function submitPlan(submitForApproval) {
-    const planName = $('#plan-name').val().trim();
-    
-    if (!planName) {
-        alert('Plan name is required.');
-        return;
-    }
-    
-    // Sanitize all actions before sending
-    const sanitizedActions = plannedActions.map(action => sanitizeActionData(action));
-    
-    const planData = {
-        client_id: {{ client.id }},
-        plan_name: planName,
-        description: $('#plan-description').val(),
-        actions: sanitizedActions,
-        submit_for_approval: submitForApproval
-    };
-    
-    // Debug: Log the sanitized data
-    console.log('Sanitized plan data:', JSON.stringify(planData, null, 2));
-    
-    // Show loading state
-    const saveBtn = submitForApproval ? $('#submit-approval-btn') : $('#save-draft-btn');
-    const originalText = saveBtn.html();
-    saveBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
-    
-    // Submit to server
-    $.ajaxSetup({
-        beforeSend: function(xhr, settings) {
-            if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
-                xhr.setRequestHeader("X-CSRFToken", $('[name=csrfmiddlewaretoken]').val());
-            }
-        }
-    });
-    
-    $.ajax({
-        url: '{% url "save_execution_plan" %}',
-        method: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify(planData),
-        success: function(response) {
-            if (response.success) {
-                alert(response.message);
-                // Redirect to plan detail page
-                window.location.href = response.plan_url;
-            } else {
-                alert('Error: ' + response.error);
-                saveBtn.prop('disabled', false).html(originalText);
-            }
-        },
-        error: function(xhr) {
-            let errorMessage = 'An error occurred while saving the plan.';
-            try {
-                const response = JSON.parse(xhr.responseText);
-                errorMessage = response.error || errorMessage;
-            } catch(e) {
-                // If response is not JSON, show more details
-                errorMessage = `Error ${xhr.status}: ${xhr.statusText}`;
-                if (xhr.responseText) {
-                    errorMessage += ` - ${xhr.responseText}`;
-                }
-            }
-            
-            console.error('Save plan error:', xhr);
-            alert(errorMessage);
-            saveBtn.prop('disabled', false).html(originalText);
-        }
-    });
-}
-
-function calculateTotalInvestment() {
-    return plannedActions.reduce((total, action) => {
-        if (action.action_type === 'purchase' && action.purchase_amount) {
-            return total + parseFloat(action.purchase_amount);
-        } else if (action.action_type === 'sip' && action.sip_amount) {
-            return total + parseFloat(action.sip_amount);
-        }
-        return total;
-    }, 0);
-}
-
-function calculateTotalRedemption() {
-    return plannedActions.reduce((total, action) => {
-        if (action.action_type === 'redeem' && action.redeem_amount) {
-            return total + parseFloat(action.redeem_amount);
-        }
-        return total;
-    }, 0);
-}
-
-function generateActionSummary() {
-    const summary = {
-        purchase: 0,
-        sip: 0,
-        redeem: 0,
-        switch: 0,
-        systematic: 0
-    };
-    
-    plannedActions.forEach(action => {
-        if (action.action_type === 'purchase') summary.purchase++;
-        else if (action.action_type === 'sip') summary.sip++;
-        else if (action.action_type === 'redeem') summary.redeem++;
-        else if (action.action_type === 'switch') summary.switch++;
-        else if (['stp', 'swp'].includes(action.action_type)) summary.systematic++;
-    });
-    
-    return summary;
-}
-
-// Template Functions
-function loadTemplate() {
-    showInfoMessage('Template functionality will be implemented in the next phase.');
-}
-
-// Draft Management Functions
-function clearDraft() {
-    localStorage.removeItem('executionPlanDraft');
-}
-
-function saveDraftToStorage() {
-    if (plannedActions.length > 0) {
-        const draft = {
-            client_id: window.clientId || null,
-            actions: plannedActions,
-            timestamp: new Date().toISOString(),
-            version: '1.1' // Version for future compatibility
-        };
-        localStorage.setItem('executionPlanDraft', JSON.stringify(draft));
-    } else {
-        clearDraft();
-    }
-}
-
-function loadDraftFromStorage() {
-    const draft = localStorage.getItem('executionPlanDraft');
-    if (draft) {
-        try {
-            const data = JSON.parse(draft);
-            if (data.client_id === window.clientId && data.actions && data.actions.length > 0) {
-                // Check if draft is not too old (24 hours)
-                const draftAge = new Date() - new Date(data.timestamp);
-                const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+            if (currentTargetField) {
+                // If target field is specified, populate that field
+                $(`#${currentTargetField}`).val(fullSchemeName);
+                $(`#${currentTargetField}`).attr('data-scheme-id', schemeId);
+                $(`#${currentTargetField}`).attr('data-scheme-code', schemeCode);
+                $(`#${currentTargetField}`).attr('data-amc-name', amcName);
                 
-                if (draftAge < maxAge) {
-                    if (confirm(`A draft plan from ${new Date(data.timestamp).toLocaleString()} was found for this client. Would you like to restore it?`)) {
-                        plannedActions = data.actions;
-                        displayPlannedActions();
-                        updateActionsSummary();
-                        showInfoMessage(`Draft plan with ${data.actions.length} actions restored successfully!`);
+                // Store additional scheme data for validation
+                const selectedScheme = window.lastSearchResults?.find(s => s.id == schemeId);
+                if (selectedScheme) {
+                    $(`#${currentTargetField}`).attr('data-min-investment', selectedScheme.minimum_investment || 500);
+                    $(`#${currentTargetField}`).attr('data-min-sip', selectedScheme.minimum_sip || 500);
+                    $(`#${currentTargetField}`).attr('data-scheme-type', selectedScheme.scheme_type || 'other');
+                    $(`#${currentTargetField}`).attr('data-risk-category', selectedScheme.risk_category || 'moderate');
+                }
+                
+                currentTargetField = null;
+            } else {
+                // If no target field, open purchase modal for new scheme
+                openActionModal('purchase', '', 0, 0, null);
+                $('#target-scheme').val(fullSchemeName);
+                $('#target-scheme').attr('data-scheme-id', schemeId);
+                $('#target-scheme').attr('data-scheme-code', schemeCode);
+                $('#target-scheme').attr('data-amc-name', amcName);
+                $('#purchase-type').val('new_scheme');
+                togglePurchaseFields();
+            }
+            
+            $('#schemeSearchModal').modal('hide');
+        }
+
+        // Action Management Functions
+        function addAction() {
+            const formData = new FormData($('#actionForm')[0]);
+            const actionType = formData.get('action_type');
+            
+            // Validate required fields
+            if (!validateActionForm(actionType, formData)) {
+                return;
+            }
+            
+            // Create action object
+            const action = createActionObject(formData);
+            
+            // Add to planned actions
+            plannedActions.push(action);
+            
+            // Update UI
+            displayPlannedActions();
+            updateActionsSummary();
+            onActionsModified();
+            
+            // Close modal
+            $('#actionModal').modal('hide');
+            
+            // Show success message
+            showSuccessMessage(`${actionType.toUpperCase()} action added successfully!`);
+        }
+
+        function validateActionForm(actionType, formData) {
+            let isValid = true;
+            let errorMessage = '';
+            
+            switch(actionType) {
+                case 'purchase':
+                    if (!formData.get('purchase_type')) {
+                        errorMessage = 'Please select purchase type';
+                        isValid = false;
+                    } else if (!formData.get('purchase_amount')) {
+                        errorMessage = 'Purchase amount is required';
+                        isValid = false;
+                    } else if (formData.get('purchase_type') === 'new_scheme' && !formData.get('target_scheme')) {
+                        errorMessage = 'Target scheme is required for new scheme purchase';
+                        isValid = false;
+                    } else if (formData.get('purchase_type') === 'existing_scheme' && !formData.get('source_scheme')) {
+                        errorMessage = 'Please select an existing scheme';
+                        isValid = false;
+                    } else {
+                        // Validate minimum investment
+                        const minInvestment = parseFloat($('#target-scheme').attr('data-min-investment') || $('#source-scheme option:selected').attr('data-min-investment') || 500);
+                        const purchaseAmount = parseFloat(formData.get('purchase_amount'));
+                        if (purchaseAmount < minInvestment) {
+                            errorMessage = `Purchase amount must be at least ₹${minInvestment.toLocaleString()} for the selected scheme`;
+                            isValid = false;
+                        }
                     }
-                } else {
-                    // Clean up old draft
-                    clearDraft();
-                }
-            }
-        } catch(e) {
-            console.error('Error loading draft:', e);
-            clearDraft(); // Clear corrupted draft
-        }
-    }
-}
-
-// Auto-save functionality
-let autoSaveTimer;
-function scheduleAutoSave() {
-    clearTimeout(autoSaveTimer);
-    autoSaveTimer = setTimeout(function() {
-        saveDraftToStorage();
-        console.log('Draft auto-saved at', new Date().toLocaleString());
-    }, 30000); // Auto-save every 30 seconds
-}
-
-// Schedule auto-save whenever actions are modified
-function onActionsModified() {
-    updateActionsSummary();
-    scheduleAutoSave();
-}
-
-// Warning before leaving page with unsaved changes
-let hasUnsavedChanges = false;
-function updateUnsavedChangesStatus() {
-    hasUnsavedChanges = plannedActions.length > 0;
-}
-
-window.addEventListener('beforeunload', function(e) {
-    if (hasUnsavedChanges && plannedActions.length > 0) {
-        e.preventDefault();
-        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
-        return 'You have unsaved changes. Are you sure you want to leave?';
-    }
-});
-
-// Utility Functions for User Feedback
-function showSuccessMessage(message) {
-    showToast(message, 'success');
-}
-
-function showErrorMessage(message) {
-    showToast(message, 'danger');
-}
-
-function showInfoMessage(message) {
-    showToast(message, 'info');
-}
-
-function showWarningMessage(message) {
-    showToast(message, 'warning');
-}
-
-function showToast(message, type = 'info') {
-    // Create toast container if it doesn't exist
-    let toastContainer = $('#toast-container');
-    if (toastContainer.length === 0) {
-        toastContainer = $(`
-            <div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
-            </div>
-        `);
-        $('body').append(toastContainer);
-    }
-    
-    // Create unique toast ID
-    const toastId = 'toast-' + Date.now();
-    
-    // Create toast HTML
-    const toastHtml = `
-        <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert">
-            <div class="d-flex">
-                <div class="toast-body">
-                    <i class="fas ${getToastIcon(type)} me-2"></i>
-                    ${message}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
-        </div>
-    `;
-    
-    // Add toast to container
-    toastContainer.append(toastHtml);
-    
-    // Initialize and show toast
-    const toastElement = $(`#${toastId}`);
-    const toast = new bootstrap.Toast(toastElement[0], {
-        autohide: type !== 'danger', // Don't auto-hide error messages
-        delay: type === 'success' ? 3000 : 5000
-    });
-    
-    toast.show();
-    
-    // Remove toast element after it's hidden
-    toastElement.on('hidden.bs.toast', function() {
-        $(this).remove();
-    });
-}
-
-function getToastIcon(type) {
-    const icons = {
-        'success': 'fa-check-circle',
-        'danger': 'fa-exclamation-triangle',
-        'warning': 'fa-exclamation-circle',
-        'info': 'fa-info-circle'
-    };
-    return icons[type] || 'fa-info-circle';
-}
-
-// CSRF Token Setup
-function setupCSRFToken() {
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                     break;
+                    
+                case 'redeem':
+                    if (!formData.get('source_scheme')) {
+                        errorMessage = 'Please select a source scheme';
+                        isValid = false;
+                    } else if (!formData.get('redeem_by')) {
+                        errorMessage = 'Please select redeem method';
+                        isValid = false;
+                    } else if (formData.get('redeem_by') === 'specific_amount' && !formData.get('redeem_amount')) {
+                        errorMessage = 'Redeem amount is required';
+                        isValid = false;
+                    } else if (formData.get('redeem_by') === 'specific_units' && !formData.get('redeem_units')) {
+                        errorMessage = 'Redeem units is required';
+                        isValid = false;
+                    }
+                    break;
+                    
+                case 'switch':
+                    if (!formData.get('source_scheme')) {
+                        errorMessage = 'Please select a source scheme';
+                        isValid = false;
+                    } else if (!formData.get('target_scheme')) {
+                        errorMessage = 'Target scheme is required. Please search and select a scheme.';
+                        isValid = false;
+                    } else if (!formData.get('switch_by')) {
+                        errorMessage = 'Please select switch method';
+                        isValid = false;
+                    } else if (formData.get('switch_by') === 'specific_amount' && !formData.get('switch_amount')) {
+                        errorMessage = 'Switch amount is required';
+                        isValid = false;
+                    } else if (formData.get('switch_by') === 'specific_units' && !formData.get('switch_units')) {
+                        errorMessage = 'Switch units is required';
+                        isValid = false;
+                    } else {
+                        // Validate minimum investment for switch
+                        const minInvestment = parseFloat($('#target-scheme').attr('data-min-investment')) || 500;
+                        const switchAmount = parseFloat(formData.get('switch_amount'));
+                        if (formData.get('switch_by') === 'specific_amount' && switchAmount < minInvestment) {
+                            errorMessage = `Switch amount must be at least ₹${minInvestment.toLocaleString()} for the selected scheme`;
+                            isValid = false;
+                        }
+                    }
+                    break;
+                    
+                case 'stp':
+                    if (!formData.get('source_scheme')) {
+                        errorMessage = 'Please select a source scheme';
+                        isValid = false;
+                    } else if (!formData.get('target_scheme')) {
+                        errorMessage = 'Target scheme is required. Please search and select a scheme.';
+                        isValid = false;
+                    } else if (!formData.get('stp_amount')) {
+                        errorMessage = 'STP amount is required';
+                        isValid = false;
+                    } else if (!formData.get('stp_frequency')) {
+                        errorMessage = 'STP frequency is required';
+                        isValid = false;
+                    } else {
+                        // Validate minimum STP amount
+                        const minInvestment = parseFloat($('#target-scheme').attr('data-min-investment')) || 500;
+                        const stpAmount = parseFloat(formData.get('stp_amount'));
+                        if (stpAmount < minInvestment) {
+                            errorMessage = `STP amount must be at least ₹${minInvestment.toLocaleString()} for the selected scheme`;
+                            isValid = false;
+                        }
+                    }
+                    break;
+                    
+                case 'sip':
+                    if (!formData.get('target_scheme')) {
+                        errorMessage = 'Target scheme is required. Please search and select a scheme.';
+                        isValid = false;
+                    } else if (!formData.get('sip_amount')) {
+                        errorMessage = 'SIP amount is required';
+                        isValid = false;
+                    } else if (!formData.get('sip_frequency')) {
+                        errorMessage = 'SIP frequency is required';
+                        isValid = false;
+                    } else if (!formData.get('sip_date')) {
+                        errorMessage = 'SIP date is required';
+                        isValid = false;
+                    } else {
+                        // Validate minimum SIP amount
+                        const minSip = parseFloat($('#target-scheme').attr('data-min-sip')) || 500;
+                        const sipAmount = parseFloat(formData.get('sip_amount'));
+                        if (sipAmount < minSip) {
+                            errorMessage = `SIP amount must be at least ₹${minSip.toLocaleString()} for the selected scheme`;
+                            isValid = false;
+                        }
+                    }
+                    break;
+                    
+                case 'swp':
+                    if (!formData.get('source_scheme')) {
+                        errorMessage = 'Please select a source scheme';
+                        isValid = false;
+                    } else if (!formData.get('swp_amount')) {
+                        errorMessage = 'SWP amount is required';
+                        isValid = false;
+                    } else if (!formData.get('swp_frequency')) {
+                        errorMessage = 'SWP frequency is required';
+                        isValid = false;
+                    } else if (!formData.get('swp_date')) {
+                        errorMessage = 'SWP date is required';
+                        isValid = false;
+                    }
+                    break;
+            }
+            
+            if (!isValid) {
+                showErrorMessage(errorMessage);
+            }
+            
+            return isValid;
+        }
+
+        function createActionObject(formData) {
+            const actionType = formData.get('action_type');
+            const action = {
+                id: Date.now() + Math.random(), // Unique ID
+                action_type: actionType,
+                source_scheme: formData.get('source_scheme') || '',
+                target_scheme: formData.get('target_scheme') || '',
+                notes: formData.get('notes') || '',
+                portfolio_id: formData.get('portfolio_id') || null,
+                // Add scheme IDs and codes for backend processing
+                source_scheme_id: $('#source-scheme option:selected').data('portfolio-id') || null,
+                target_scheme_id: $('#target-scheme').attr('data-scheme-id') || null,
+                target_scheme_code: $('#target-scheme').attr('data-scheme-code') || null,
+                // Add minimum investment validation data
+                target_scheme_min_investment: $('#target-scheme').attr('data-min-investment') || null,
+                target_scheme_min_sip: $('#target-scheme').attr('data-min-sip') || null,
+                created_at: new Date().toISOString()
+            };
+            
+            // Add type-specific fields with validation
+            switch(actionType) {
+                case 'purchase':
+                    action.purchase_type = formData.get('purchase_type');
+                    action.purchase_amount = formData.get('purchase_amount');
+                    action.investment_option = formData.get('investment_option');
+                    action.plan_type = formData.get('plan_type');
+                    action.folio_number = formData.get('folio_number');
+                    // Set the scheme field based on purchase type
+                    if (action.purchase_type === 'existing_scheme') {
+                        action.scheme = action.source_scheme;
+                        action.scheme_id = action.source_scheme_id;
+                    } else {
+                        action.scheme = action.target_scheme;
+                        action.scheme_id = action.target_scheme_id;
+                    }
+                    break;
+                case 'redeem':
+                    action.redeem_by = formData.get('redeem_by');
+                    action.redeem_amount = formData.get('redeem_amount');
+                    action.redeem_units = formData.get('redeem_units');
+                    action.scheme = action.source_scheme;
+                    action.scheme_id = action.source_scheme_id;
+                    break;
+                case 'switch':
+                    action.switch_by = formData.get('switch_by');
+                    action.switch_amount = formData.get('switch_amount');
+                    action.switch_units = formData.get('switch_units');
+                    action.scheme = action.source_scheme;
+                    action.scheme_id = action.source_scheme_id;
+                    break;
+                case 'stp':
+                    action.stp_amount = formData.get('stp_amount');
+                    action.stp_frequency = formData.get('stp_frequency');
+                    action.scheme = action.source_scheme;
+                    action.scheme_id = action.source_scheme_id;
+                    break;
+                case 'sip':
+                    action.sip_amount = formData.get('sip_amount');
+                    action.sip_frequency = formData.get('sip_frequency');
+                    action.sip_date = formData.get('sip_date');
+                    action.investment_option = formData.get('investment_option') || 'growth';
+                    action.plan_type = formData.get('plan_type') || 'direct';
+                    action.scheme = action.target_scheme;
+                    action.scheme_id = action.target_scheme_id;
+                    break;
+                case 'swp':
+                    action.swp_amount = formData.get('swp_amount');
+                    action.swp_frequency = formData.get('swp_frequency');
+                    action.swp_date = formData.get('swp_date');
+                    action.scheme = action.source_scheme;
+                    action.scheme_id = action.source_scheme_id;
+                    break;
+            }
+            
+            return action;
+        }
+
+        function displayPlannedActions() {
+            const container = $('#planned-actions');
+            
+            if (plannedActions.length === 0) {
+                container.html(`
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-clipboard-list fa-3x mb-3"></i>
+                        <p>No actions planned yet. Start by adding actions from your portfolio or creating new investments.</p>
+                        <div class="mt-3">
+                            <button type="button" class="btn btn-outline-primary" onclick="openActionModal('purchase', '', 0, 0, null)">
+                                <i class="fas fa-plus"></i> Add First Action
+                            </button>
+                        </div>
+                    </div>
+                `);
+                return;
+            }
+            
+            let html = '';
+            plannedActions.forEach(function(action, index) {
+                html += createActionCard(action, index);
+            });
+            
+            container.html(html);
+        }
+
+        function createActionCard(action, index) {
+            const actionTypeColors = {
+                'purchase': 'success',
+                'redeem': 'danger',
+                'switch': 'primary',
+                'stp': 'info',
+                'sip': 'success',
+                'swp': 'warning'
+            };
+            
+            const actionTypeIcons = {
+                'purchase': 'fas fa-shopping-cart',
+                'redeem': 'fas fa-minus-circle',
+                'switch': 'fas fa-exchange-alt',
+                'stp': 'fas fa-arrow-right',
+                'sip': 'fas fa-plus-circle',
+                'swp': 'fas fa-arrow-down'
+            };
+            
+            const color = actionTypeColors[action.action_type] || 'secondary';
+            const icon = actionTypeIcons[action.action_type] || 'fas fa-cog';
+            
+            return `
+                <div class="card action-card mb-3" data-action-index="${index}" id="action-card-${index}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-2">
+                                    <h6 class="card-title mb-0">
+                                        <i class="${icon} text-${color}"></i>
+                                        ${action.action_type.toUpperCase()}
+                                        <span class="badge bg-${color} ms-2">#${index + 1}</span>
+                                    </h6>
+                                    <small class="text-muted ms-auto">
+                                        ${new Date(action.created_at).toLocaleString()}
+                                    </small>
+                                </div>
+                                <div class="action-details">
+                                    ${formatActionDetails(action)}
+                                </div>
+                                ${action.notes ? `<div class="mt-2"><small class="text-muted"><i class="fas fa-sticky-note"></i> ${action.notes}</small></div>` : ''}
+                                
+                                <!-- Action Summary -->
+                                <div class="mt-2 p-2 bg-light rounded">
+                                    <small class="text-muted">
+                                        <strong>Impact:</strong> ${getActionImpact(action)}
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="action-controls ms-3">
+                                <div class="btn-group-vertical" role="group">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="editAction(${index})" title="Edit Action">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="duplicateAction(${index})" title="Duplicate Action">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeAction(${index})" title="Remove Action">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function formatActionDetails(action) {
+            let details = '';
+            
+            switch(action.action_type) {
+                case 'purchase':
+                    const scheme = action.purchase_type === 'existing_scheme' ? action.source_scheme : action.target_scheme;
+                    details = `<div class="row">`;
+                    details += `<div class="col-md-8">`;
+                    details += `<strong>Scheme:</strong> ${truncateText(scheme, 50)}<br>`;
+                    details += `<strong>Amount:</strong> ₹${parseFloat(action.purchase_amount).toLocaleString()}<br>`;
+                    details += `<strong>Type:</strong> ${action.purchase_type === 'existing_scheme' ? 'Existing from Portfolio' : 'New Scheme'}<br>`;
+                    details += `<strong>Option:</strong> ${action.investment_option} (${action.plan_type})`;
+                    details += `</div>`;
+                    if (action.folio_number) {
+                        details += `<div class="col-md-4"><strong>Folio:</strong> ${action.folio_number}</div>`;
+                    }
+                    details += `</div>`;
+                    break;
+                    
+                case 'redeem':
+                    details = `<strong>From:</strong> ${truncateText(action.source_scheme, 50)}<br>`;
+                    if (action.redeem_by === 'all_units') {
+                        details += '<strong>Amount:</strong> <span class="text-warning">All Units</span>';
+                    } else if (action.redeem_by === 'specific_amount') {
+                        details += `<strong>Amount:</strong> ₹${parseFloat(action.redeem_amount).toLocaleString()}`;
+                    } else if (action.redeem_by === 'specific_units') {
+                        details += `<strong>Units:</strong> ${parseFloat(action.redeem_units).toLocaleString()}`;
+                    }
+                    break;
+                    
+                case 'switch':
+                    details = `<strong>From:</strong> ${truncateText(action.source_scheme, 40)}<br>`;
+                    details += `<strong>To:</strong> ${truncateText(action.target_scheme, 40)}<br>`;
+                    if (action.switch_by === 'all_units') {
+                        details += '<strong>Amount:</strong> <span class="text-warning">All Units</span>';
+                    } else if (action.switch_by === 'specific_amount') {
+                        details += `<strong>Amount:</strong> ₹${parseFloat(action.switch_amount).toLocaleString()}`;
+                    } else if (action.switch_by === 'specific_units') {
+                        details += `<strong>Units:</strong> ${parseFloat(action.switch_units).toLocaleString()}`;
+                    }
+                    break;
+                    
+                case 'stp':
+                    details = `<strong>From:</strong> ${truncateText(action.source_scheme, 40)}<br>`;
+                    details += `<strong>To:</strong> ${truncateText(action.target_scheme, 40)}<br>`;
+                    details += `<strong>Amount:</strong> ₹${parseFloat(action.stp_amount).toLocaleString()} <span class="badge bg-info">${action.stp_frequency}</span>`;
+                    break;
+                    
+                case 'sip':
+                    details = `<strong>Scheme:</strong> ${truncateText(action.target_scheme, 50)}<br>`;
+                    details += `<strong>Amount:</strong> ₹${parseFloat(action.sip_amount).toLocaleString()} <span class="badge bg-success">${action.sip_frequency}</span><br>`;
+                    details += `<strong>Date:</strong> ${action.sip_date} of every ${action.sip_frequency === 'monthly' ? 'month' : action.sip_frequency}`;
+                    break;
+                    
+                case 'swp':
+                    details = `<strong>From:</strong> ${truncateText(action.source_scheme, 50)}<br>`;
+                    details += `<strong>Amount:</strong> ₹${parseFloat(action.swp_amount).toLocaleString()} <span class="badge bg-warning">${action.swp_frequency}</span><br>`;
+                    details += `<strong>Date:</strong> ${action.swp_date} of every ${action.swp_frequency === 'monthly' ? 'month' : action.swp_frequency}`;
+                    break;
+            }
+            
+            return details;
+        }
+
+        function getActionImpact(action) {
+            switch(action.action_type) {
+                case 'purchase':
+                    return `Investment: +₹${parseFloat(action.purchase_amount).toLocaleString()}`;
+                case 'sip':
+                    const monthlyAmount = parseFloat(action.sip_amount);
+                    const frequency = action.sip_frequency;
+                    let annualAmount = monthlyAmount * 12;
+                    if (frequency === 'weekly') annualAmount = monthlyAmount * 52;
+                    if (frequency === 'fortnightly') annualAmount = monthlyAmount * 26;
+                    if (frequency === 'daily') annualAmount = monthlyAmount * 365;
+                    return `Investment: +₹${monthlyAmount.toLocaleString()}/${frequency} (~₹${annualAmount.toLocaleString()}/year)`;
+                case 'redeem':
+                    if (action.redeem_by === 'specific_amount') {
+                        return `Redemption: -₹${parseFloat(action.redeem_amount).toLocaleString()}`;
+                    }
+                    return `Redemption: ${action.redeem_by === 'all_units' ? 'Full' : 'Partial'}`;
+                case 'switch':
+                    return `Portfolio rebalancing`;
+                case 'stp':
+                    return `Transfer: ₹${parseFloat(action.stp_amount).toLocaleString()}/${action.stp_frequency}`;
+                case 'swp':
+                    return `Withdrawal: -₹${parseFloat(action.swp_amount).toLocaleString()}/${action.swp_frequency}`;
+                default:
+                    return 'Portfolio action';
+            }
+        }
+
+        function truncateText(text, length) {
+            if (!text) return '';
+            return text.length > length ? text.substring(0, length) + '...' : text;
+        }
+
+        function editAction(index) {
+            const action = plannedActions[index];
+            
+            // Populate form with action data
+            populateActionForm(action);
+            
+            // Remove action from list (will be re-added when form is submitted)
+            plannedActions.splice(index, 1);
+            displayPlannedActions();
+            updateActionsSummary();
+            
+            // Show modal
+            $('#actionModal').modal('show');
+            
+            showInfoMessage('Action loaded for editing. Make changes and click "Add Action" to save.');
+        }
+
+        function duplicateAction(index) {
+            const action = JSON.parse(JSON.stringify(plannedActions[index])); // Deep copy
+            
+            // Update ID and timestamp
+            action.id = Date.now() + Math.random();
+            action.created_at = new Date().toISOString();
+            
+            // Add to planned actions
+            plannedActions.push(action);
+            
+            // Update UI
+            displayPlannedActions();
+            updateActionsSummary();
+            onActionsModified();
+            
+            // Scroll to new action
+            setTimeout(() => {
+                const newActionCard = $(`#action-card-${plannedActions.length - 1}`);
+                if (newActionCard.length) {
+                    newActionCard[0].scrollIntoView({ behavior: 'smooth' });
+                    newActionCard.addClass('border-success').delay(2000).queue(function() {
+                        $(this).removeClass('border-success').dequeue();
+                    });
+                }
+            }, 100);
+            
+            showSuccessMessage('Action duplicated successfully!');
+        }
+
+        function populateActionForm(action) {
+            // Reset form first
+            resetActionForm();
+            
+            // Set action type
+            selectActionType(action.action_type);
+            
+            // Set common fields
+            $('#source-scheme').val(action.source_scheme);
+            $('#target-scheme').val(action.target_scheme);
+            $('#action-notes').val(action.notes);
+            
+            // Set scheme data attributes for target scheme
+            if (action.target_scheme_id) {
+                $('#target-scheme').attr('data-scheme-id', action.target_scheme_id);
+                $('#target-scheme').attr('data-scheme-code', action.target_scheme_code);
+                $('#target-scheme').attr('data-min-investment', action.target_scheme_min_investment);
+                $('#target-scheme').attr('data-min-sip', action.target_scheme_min_sip);
+            }
+            
+            // Set type-specific fields
+            switch(action.action_type) {
+                case 'purchase':
+                    $('#purchase-type').val(action.purchase_type);
+                    $('#purchase-amount').val(action.purchase_amount);
+                    $('#investment-option').val(action.investment_option);
+                    $('#plan-type').val(action.plan_type);
+                    $('#folio-number').val(action.folio_number);
+                    togglePurchaseFields();
+                    break;
+                case 'redeem':
+                    $('#redeem-by').val(action.redeem_by);
+                    $('#redeem-amount').val(action.redeem_amount);
+                    $('#redeem-units').val(action.redeem_units);
+                    toggleAmountField('redeem');
+                    break;
+                case 'switch':
+                    $('#switch-by').val(action.switch_by);
+                    $('#switch-amount').val(action.switch_amount);
+                    $('#switch-units').val(action.switch_units);
+                    toggleAmountField('switch');
+                    break;
+                case 'stp':
+                    $('#stp-amount').val(action.stp_amount);
+                    $('#stp-frequency').val(action.stp_frequency);
+                    break;
+                case 'sip':
+                    $('#sip-amount').val(action.sip_amount);
+                    $('#sip-frequency').val(action.sip_frequency);
+                    $('#sip-date').val(action.sip_date);
+                    $('#investment-option').val(action.investment_option);
+                    $('#plan-type').val(action.plan_type);
+                    break;
+                case 'swp':
+                    $('#swp-amount').val(action.swp_amount);
+                    $('#swp-frequency').val(action.swp_frequency);
+                    $('#swp-date').val(action.swp_date);
+                    break;
+            }
+        }
+
+        function removeAction(index) {
+            const action = plannedActions[index];
+            const actionType = action.action_type.toUpperCase();
+            
+            if (confirm(`Are you sure you want to remove this ${actionType} action?`)) {
+                plannedActions.splice(index, 1);
+                displayPlannedActions();
+                updateActionsSummary();
+                onActionsModified();
+                
+                showSuccessMessage(`${actionType} action removed successfully!`);
+            }
+        }
+
+        function updateActionsSummary() {
+            let totalInvestment = 0;
+            let totalRedemption = 0;
+            let purchaseCount = 0;
+            let sipCount = 0;
+            let redeemCount = 0;
+            let switchCount = 0;
+            let systematicCount = 0;
+            
+            plannedActions.forEach(function(action) {
+                switch(action.action_type) {
+                    case 'purchase':
+                        if (action.purchase_amount) {
+                            totalInvestment += parseFloat(action.purchase_amount);
+                            purchaseCount++;
+                        }
+                        break;
+                    case 'sip':
+                        if (action.sip_amount) {
+                            // For SIP, we'll show monthly amount in summary
+                            totalInvestment += parseFloat(action.sip_amount);
+                            sipCount++;
+                        }
+                        break;
+                    case 'redeem':
+                        if (action.redeem_amount) {
+                            totalRedemption += parseFloat(action.redeem_amount);
+                        }
+                        redeemCount++;
+                        break;
+                    case 'switch':
+                        switchCount++;
+                        break;
+                    case 'stp':
+                    case 'swp':
+                        systematicCount++;
+                        break;
+                }
+            });
+            
+            const netInvestment = totalInvestment - totalRedemption;
+            
+            // Update summary display with enhanced formatting
+            $('#total-investment').text(`₹${totalInvestment.toLocaleString()}`);
+            $('#total-redemption').text(`₹${totalRedemption.toLocaleString()}`);
+            $('#net-investment').text(`₹${netInvestment.toLocaleString()}`);
+            $('#net-investment').removeClass('text-success text-danger text-muted');
+            
+            if (netInvestment > 0) {
+                $('#net-investment').addClass('text-success');
+            } else if (netInvestment < 0) {
+                $('#net-investment').addClass('text-danger');
+            } else {
+                $('#net-investment').addClass('text-muted');
+            }
+            
+            $('#action-count').text(`${plannedActions.length} Action${plannedActions.length !== 1 ? 's' : ''}`);
+            
+            // Update action type counts
+            $('#purchase-count').text(purchaseCount);
+            $('#sip-count').text(sipCount);
+            $('#redeem-count').text(redeemCount);
+            $('#switch-count').text(switchCount);
+            $('#systematic-count').text(systematicCount);
+            
+            // Enable/disable save buttons
+            const hasActions = plannedActions.length > 0;
+            $('#save-plan-btn, #submit-plan-btn').prop('disabled', !hasActions);
+            
+            // Update button text with action count
+            if (hasActions) {
+                $('#save-plan-btn').html(`<i class="fas fa-save"></i> Save ${plannedActions.length} Actions as Draft`);
+                $('#submit-plan-btn').html(`<i class="fas fa-paper-plane"></i> Save & Submit ${plannedActions.length} Actions`);
+            } else {
+                $('#save-plan-btn').html(`<i class="fas fa-save"></i> Save as Draft`);
+                $('#submit-plan-btn').html(`<i class="fas fa-paper-plane"></i> Save & Submit`);
+            }
+        }
+
+        // Plan Saving Functions
+        function savePlan(submitForApproval = false) {
+            if (plannedActions.length === 0) {
+                showErrorMessage('Please add at least one action before saving the plan.');
+                return;
+            }
+            
+            // Validate all actions
+            const validationErrors = validateAllActions();
+            if (validationErrors.length > 0) {
+                showErrorMessage('Please fix the following errors before saving:\n' + validationErrors.join('\n'));
+                return;
+            }
+            
+            // Show plan name modal
+            $('#planNameModal').modal('show');
+            
+            // Store submit flag for later use
+            window.submitForApproval = submitForApproval;
+            
+            // Set modal title based on action
+            const modalTitle = submitForApproval ? 'Submit Execution Plan for Approval' : 'Save Execution Plan as Draft';
+            $('#planNameModalLabel').text(modalTitle);
+        }
+
+        function validateAllActions() {
+            const errors = [];
+            
+            plannedActions.forEach((action, index) => {
+                const actionNum = index + 1;
+                
+                // Basic validation
+                if (!action.action_type) {
+                    errors.push(`Action ${actionNum}: Missing action type`);
+                }
+                
+                // Type-specific validation
+                switch(action.action_type) {
+                    case 'purchase':
+                        if (!action.purchase_amount || parseFloat(action.purchase_amount) <= 0) {
+                            errors.push(`Action ${actionNum}: Invalid purchase amount`);
+                        }
+                        if (action.purchase_type === 'new_scheme' && !action.target_scheme) {
+                            errors.push(`Action ${actionNum}: Missing target scheme for new purchase`);
+                        }
+                        break;
+                    case 'sip':
+                        if (!action.sip_amount || parseFloat(action.sip_amount) <= 0) {
+                            errors.push(`Action ${actionNum}: Invalid SIP amount`);
+                        }
+                        if (!action.target_scheme) {
+                            errors.push(`Action ${actionNum}: Missing target scheme for SIP`);
+                        }
+                        break;
+                    // Add more validations as needed
+                }
+            });
+            
+            return errors;
+        }
+
+        // Helper function to sanitize action data
+        function sanitizeActionData(action) {
+            const sanitized = { ...action };
+            
+            // Convert string numbers to actual numbers and ensure required fields are not null
+            if (sanitized.portfolio_id) {
+                sanitized.portfolio_id = typeof sanitized.portfolio_id === 'string' ? parseInt(sanitized.portfolio_id) : sanitized.portfolio_id;
+            }
+            if (sanitized.purchase_amount) {
+                sanitized.purchase_amount = typeof sanitized.purchase_amount === 'string' ? parseFloat(sanitized.purchase_amount) : sanitized.purchase_amount;
+            }
+            if (sanitized.source_scheme_id) {
+                sanitized.source_scheme_id = typeof sanitized.source_scheme_id === 'string' ? parseInt(sanitized.source_scheme_id) : sanitized.source_scheme_id;
+            }
+            if (sanitized.scheme_id) {
+                sanitized.scheme_id = typeof sanitized.scheme_id === 'string' ? parseInt(sanitized.scheme_id) : sanitized.scheme_id;
+            }
+            
+            // Ensure scheme_id is set - if source_scheme_id exists but scheme_id doesn't, use source_scheme_id
+            if (!sanitized.scheme_id && sanitized.source_scheme_id) {
+                sanitized.scheme_id = sanitized.source_scheme_id;
+            }
+            
+            // Convert string 'null' to actual null and empty strings to null
+            // BUT keep required fields as empty strings if they can't be null
+            Object.keys(sanitized).forEach(key => {
+                if (sanitized[key] === 'null' || sanitized[key] === 'None') {
+                    // Special handling for fields that can't be null
+                    if (key === 'notes' || key === 'folio_number') {
+                        sanitized[key] = '';
+                    } else {
+                        sanitized[key] = null;
+                    }
+                }
+                // Ensure empty strings stay as empty strings for required fields
+                if (sanitized[key] === '' && (key === 'notes' || key === 'folio_number')) {
+                    sanitized[key] = '';
+                }
+            });
+            
+            // Validate required fields - ensure they're not null/undefined
+            const requiredFields = ['scheme_id', 'portfolio_id', 'action_type', 'purchase_amount'];
+            requiredFields.forEach(field => {
+                if (sanitized[field] === null || sanitized[field] === undefined || sanitized[field] === '') {
+                    console.error(`Required field ${field} is missing or null:`, sanitized[field]);
+                    throw new Error(`Required field ${field} cannot be null or empty`);
+                }
+            });
+            
+            // Remove fields that should not be sent if they're null or undefined
+            const fieldsToRemoveIfNull = [
+                'target_scheme', 'target_scheme_id', 'target_scheme_code', 
+                'target_scheme_min_investment', 'target_scheme_min_sip'
+            ];
+            
+            fieldsToRemoveIfNull.forEach(field => {
+                if (sanitized[field] === null || sanitized[field] === undefined) {
+                    delete sanitized[field];
+                }
+            });
+            
+            return sanitized;
+        }
+
+        function submitPlan(submitForApproval) {
+            const planName = $('#plan-name').val().trim();
+            
+            if (!planName) {
+                alert('Plan name is required.');
+                return;
+            }
+            
+            // Sanitize all actions before sending
+            const sanitizedActions = plannedActions.map(action => sanitizeActionData(action));
+            
+            const planData = {
+                client_id: {{ client.id }},
+                plan_name: planName,
+                description: $('#plan-description').val(),
+                actions: sanitizedActions,
+                submit_for_approval: submitForApproval
+            };
+            
+            // Debug: Log the sanitized data
+            console.log('Sanitized plan data:', JSON.stringify(planData, null, 2));
+            
+            // Show loading state
+            const saveBtn = submitForApproval ? $('#submit-approval-btn') : $('#save-draft-btn');
+            const originalText = saveBtn.html();
+            saveBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+            
+            // Submit to server
+            $.ajaxSetup({
+                beforeSend: function(xhr, settings) {
+                    if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", $('[name=csrfmiddlewaretoken]').val());
+                    }
+                }
+            });
+            
+            $.ajax({
+                url: '{% url "save_execution_plan" %}',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(planData),
+                success: function(response) {
+                    if (response.success) {
+                        alert(response.message);
+                        // Redirect to plan detail page
+                        window.location.href = response.plan_url;
+                    } else {
+                        alert('Error: ' + response.error);
+                        saveBtn.prop('disabled', false).html(originalText);
+                    }
+                },
+                error: function(xhr) {
+                    let errorMessage = 'An error occurred while saving the plan.';
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMessage = response.error || errorMessage;
+                    } catch(e) {
+                        // If response is not JSON, show more details
+                        errorMessage = `Error ${xhr.status}: ${xhr.statusText}`;
+                        if (xhr.responseText) {
+                            errorMessage += ` - ${xhr.responseText}`;
+                        }
+                    }
+                    
+                    console.error('Save plan error:', xhr);
+                    alert(errorMessage);
+                    saveBtn.prop('disabled', false).html(originalText);
+                }
+            });
+        }
+
+        // Template Functions
+        function loadTemplate() {
+            showInfoMessage('Template functionality will be implemented in the next phase.');
+        }
+
+        // Draft Management Functions
+        function clearDraft() {
+            localStorage.removeItem('executionPlanDraft');
+        }
+
+        function saveDraftToStorage() {
+            if (plannedActions.length > 0) {
+                const draft = {
+                    client_id: window.clientId || null,
+                    actions: plannedActions,
+                    timestamp: new Date().toISOString(),
+                    version: '1.1' // Version for future compatibility
+                };
+                localStorage.setItem('executionPlanDraft', JSON.stringify(draft));
+            } else {
+                clearDraft();
+            }
+        }
+
+        function loadDraftFromStorage() {
+            const draft = localStorage.getItem('executionPlanDraft');
+            if (draft) {
+                try {
+                    const data = JSON.parse(draft);
+                    if (data.client_id === window.clientId && data.actions && data.actions.length > 0) {
+                        // Check if draft is not too old (24 hours)
+                        const draftAge = new Date() - new Date(data.timestamp);
+                        const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+                        
+                        if (draftAge < maxAge) {
+                            if (confirm(`A draft plan from ${new Date(data.timestamp).toLocaleString()} was found for this client. Would you like to restore it?`)) {
+                                plannedActions = data.actions;
+                                displayPlannedActions();
+                                updateActionsSummary();
+                                showInfoMessage(`Draft plan with ${data.actions.length} actions restored successfully!`);
+                            }
+                        } else {
+                            // Clean up old draft
+                            clearDraft();
+                        }
+                    }
+                } catch(e) {
+                    console.error('Error loading draft:', e);
+                    clearDraft(); // Clear corrupted draft
                 }
             }
         }
-        return cookieValue;
-    }
-    
-    const csrftoken = getCookie('csrftoken');
-    
-    $.ajaxSetup({
-        beforeSend: function(xhr, settings) {
-            if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
-                xhr.setRequestHeader("X-CSRFToken", csrftoken);
-            }
-        }
-    });
-}
 
-// Enhanced Portfolio Analysis Functions
-function analyzePortfolioImpact() {
-    if (plannedActions.length === 0) {
-        return null;
-    }
-    
-    const analysis = {
-        totalInvestment: 0,
-        totalRedemption: 0,
-        netCashFlow: 0,
-        schemeCount: new Set(),
-        riskProfile: {
-            equity: 0,
-            debt: 0,
-            hybrid: 0,
-            other: 0
-        },
-        warnings: []
-    };
-    
-    plannedActions.forEach(action => {
-        // Track schemes
-        if (action.target_scheme) analysis.schemeCount.add(action.target_scheme);
-        if (action.source_scheme) analysis.schemeCount.add(action.source_scheme);
-        
-        // Calculate cash flows
-        switch(action.action_type) {
-            case 'purchase':
-                analysis.totalInvestment += parseFloat(action.purchase_amount || 0);
-                break;
-            case 'redeem':
-                if (action.redeem_amount) {
-                    analysis.totalRedemption += parseFloat(action.redeem_amount);
+        // Auto-save functionality
+        let autoSaveTimer;
+        function scheduleAutoSave() {
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(function() {
+                saveDraftToStorage();
+                console.log('Draft auto-saved at', new Date().toLocaleString());
+            }, 30000); // Auto-save every 30 seconds
+        }
+
+        // Schedule auto-save whenever actions are modified
+        function onActionsModified() {
+            updateActionsSummary();
+            scheduleAutoSave();
+        }
+
+        // Warning before leaving page with unsaved changes
+        let hasUnsavedChanges = false;
+        function updateUnsavedChangesStatus() {
+            hasUnsavedChanges = plannedActions.length > 0;
+        }
+
+        window.addEventListener('beforeunload', function(e) {
+            if (hasUnsavedChanges && plannedActions.length > 0) {
+                e.preventDefault();
+                e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+                return 'You have unsaved changes. Are you sure you want to leave?';
+            }
+        });
+
+        // Utility Functions for User Feedback
+        function showSuccessMessage(message) {
+            showToast(message, 'success');
+        }
+
+        function showErrorMessage(message) {
+            showToast(message, 'danger');
+        }
+
+        function showInfoMessage(message) {
+            showToast(message, 'info');
+        }
+
+        function showWarningMessage(message) {
+            showToast(message, 'warning');
+        }
+
+        function showToast(message, type = 'info') {
+            // Create toast container if it doesn't exist
+            let toastContainer = $('#toast-container');
+            if (toastContainer.length === 0) {
+                toastContainer = $(`
+                    <div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+                    </div>
+                `);
+                $('body').append(toastContainer);
+            }
+            
+            // Create unique toast ID
+            const toastId = 'toast-' + Date.now();
+            
+            // Create toast HTML
+            const toastHtml = `
+                <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="fas ${getToastIcon(type)} me-2"></i>
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            
+            // Add toast to container
+            toastContainer.append(toastHtml);
+            
+            // Initialize and show toast
+            const toastElement = $(`#${toastId}`);
+            const toast = new bootstrap.Toast(toastElement[0], {
+                autohide: type !== 'danger', // Don't auto-hide error messages
+                delay: type === 'success' ? 3000 : 5000
+            });
+            
+            toast.show();
+            
+            // Remove toast element after it's hidden
+            toastElement.on('hidden.bs.toast', function() {
+                $(this).remove();
+            });
+        }
+
+        function getToastIcon(type) {
+            const icons = {
+                'success': 'fa-check-circle',
+                'danger': 'fa-exclamation-triangle',
+                'warning': 'fa-exclamation-circle',
+                'info': 'fa-info-circle'
+            };
+            return icons[type] || 'fa-info-circle';
+        }
+
+        // CSRF Token Setup
+        function setupCSRFToken() {
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
                 }
-                break;
-            case 'sip':
-                // For analysis, consider monthly SIP amount
-                analysis.totalInvestment += parseFloat(action.sip_amount || 0);
-                break;
-        }
-    });
-    
-    analysis.netCashFlow = analysis.totalInvestment - analysis.totalRedemption;
-    analysis.uniqueSchemes = analysis.schemeCount.size;
-    
-    // Generate warnings
-    if (analysis.totalRedemption > analysis.totalInvestment) {
-        analysis.warnings.push('Plan has more redemptions than investments');
-    }
-    
-    if (analysis.uniqueSchemes > 15) {
-        analysis.warnings.push('Portfolio may be over-diversified with too many schemes');
-    }
-    
-    return analysis;
-}
-
-// Export Functions (for potential future use)
-function exportPlanToCSV() {
-    if (plannedActions.length === 0) {
-        showWarningMessage('No actions to export');
-        return;
-    }
-    
-    let csv = 'Action Type,Scheme,Amount,Frequency,Date,Notes\n';
-    
-    plannedActions.forEach(action => {
-        const row = [
-            action.action_type,
-            action.scheme || action.target_scheme || action.source_scheme || '',
-            getActionAmount(action),
-            getActionFrequency(action),
-            action.created_at ? new Date(action.created_at).toLocaleDateString() : '',
-            (action.notes || '').replace(/,/g, ';') // Replace commas to avoid CSV issues
-        ];
-        csv += row.map(field => `"${field}"`).join(',') + '\n';
-    });
-    
-    // Download CSV
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `execution-plan-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-    
-    showSuccessMessage('Plan exported to CSV successfully!');
-}
-
-function getActionAmount(action) {
-    switch(action.action_type) {
-        case 'purchase': return action.purchase_amount || '';
-        case 'redeem': return action.redeem_amount || action.redeem_units || 'All Units';
-        case 'switch': return action.switch_amount || action.switch_units || 'All Units';
-        case 'sip': return action.sip_amount || '';
-        case 'stp': return action.stp_amount || '';
-        case 'swp': return action.swp_amount || '';
-        default: return '';
-    }
-}
-
-function getActionFrequency(action) {
-    switch(action.action_type) {
-        case 'sip': return action.sip_frequency || '';
-        case 'stp': return action.stp_frequency || '';
-        case 'swp': return action.swp_frequency || '';
-        default: return 'One-time';
-    }
-}
-
-// Keyboard Shortcuts
-function setupKeyboardShortcuts() {
-    $(document).keydown(function(e) {
-        // Ctrl/Cmd + S to save draft
-        if ((e.ctrlKey || e.metaKey) && e.keyCode === 83) {
-            e.preventDefault();
-            if (plannedActions.length > 0) {
-                savePlan(false);
+                return cookieValue;
             }
+            
+            const csrftoken = getCookie('csrftoken');
+            
+            $.ajaxSetup({
+                beforeSend: function(xhr, settings) {
+                    if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    }
+                }
+            });
         }
-        
-        // Ctrl/Cmd + Enter to submit plan
-        if ((e.ctrlKey || e.metaKey) && e.keyCode === 13) {
-            e.preventDefault();
-            if (plannedActions.length > 0) {
-                savePlan(true);
-            }
-        }
-        
-        // Escape to close modals
-        if (e.keyCode === 27) {
-            $('.modal').modal('hide');
-        }
-    });
-}
 
-// Initialize keyboard shortcuts when document is ready
-// (Moved to main $(document).ready() function above)
-
-// Plan Validation and Business Rules
-function validateBusinessRules() {
-    const errors = [];
-    const warnings = [];
-    
-    // Check for conflicting actions on same scheme
-    const schemeActions = {};
-    plannedActions.forEach((action, index) => {
-        const scheme = action.source_scheme || action.target_scheme;
-        if (scheme) {
-            if (!schemeActions[scheme]) schemeActions[scheme] = [];
-            schemeActions[scheme].push({ action, index });
+        // Keyboard Shortcuts
+        function setupKeyboardShortcuts() {
+            $(document).keydown(function(e) {
+                // Ctrl/Cmd + S to save draft
+                if ((e.ctrlKey || e.metaKey) && e.keyCode === 83) {
+                    e.preventDefault();
+                    if (plannedActions.length > 0) {
+                        savePlan(false);
+                    }
+                }
+                
+                // Ctrl/Cmd + Enter to submit plan
+                if ((e.ctrlKey || e.metaKey) && e.keyCode === 13) {
+                    e.preventDefault();
+                    if (plannedActions.length > 0) {
+                        savePlan(true);
+                    }
+                }
+                
+                // Escape to close modals
+                if (e.keyCode === 27) {
+                    $('.modal').modal('hide');
+                }
+            });
         }
-    });
-    
-    // Check for redemption/switch conflicts
-    Object.entries(schemeActions).forEach(([scheme, actions]) => {
-        const hasRedeem = actions.some(a => a.action.action_type === 'redeem' && a.action.redeem_by === 'all_units');
-        const hasOtherActions = actions.some(a => ['purchase', 'stp', 'swp'].includes(a.action.action_type));
-        
-        if (hasRedeem && hasOtherActions) {
-            warnings.push(`Scheme "${scheme}" has full redemption and other actions that may conflict`);
-        }
-    });
-    
-    // Check minimum investment amounts
-    plannedActions.forEach((action, index) => {
-        if (action.action_type === 'purchase' && action.target_scheme_min_investment) {
-            const minAmount = parseFloat(action.target_scheme_min_investment);
-            const purchaseAmount = parseFloat(action.purchase_amount);
-            if (purchaseAmount < minAmount) {
-                errors.push(`Action ${index + 1}: Purchase amount ₹${purchaseAmount.toLocaleString()} is below minimum ₹${minAmount.toLocaleString()}`);
-            }
-        }
-    });
-    
-    return { errors, warnings };
-}
-
-// Enhanced Plan Summary
-function generateDetailedSummary() {
-    const summary = {
-        actions: plannedActions.length,
-        totalInvestment: calculateTotalInvestment(),
-        totalRedemption: calculateTotalRedemption(),
-        uniqueSchemes: new Set(plannedActions.map(a => a.source_scheme || a.target_scheme).filter(Boolean)).size,
-        actionBreakdown: {},
-        estimatedTimeToComplete: estimateCompletionTime()
-    };
-    
-    // Count action types
-    plannedActions.forEach(action => {
-        summary.actionBreakdown[action.action_type] = (summary.actionBreakdown[action.action_type] || 0) + 1;
-    });
-    
-    return summary;
-}
-
-function estimateCompletionTime() {
-    // Rough estimate based on action complexity
-    let days = 0;
-    
-    plannedActions.forEach(action => {
-        switch(action.action_type) {
-            case 'purchase':
-            case 'redeem':
-                days += action.purchase_type === 'new_scheme' ? 3 : 1; // New schemes take longer
-                break;
-            case 'switch':
-                days += 2; // Switches can take 1-2 days
-                break;
-            case 'sip':
-            case 'stp':
-            case 'swp':
-                days += 5; // Systematic plans take longer to set up
-                break;
-            default:
-                days += 1;
-        }
-    });
-    
-    return Math.max(1, Math.min(days, 15)); // Between 1-15 days
-}
     </script>
 
     <!-- Add CSRF token for AJAX requests -->
