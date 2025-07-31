@@ -206,29 +206,39 @@
                                         <td class="text-end">{{ holding.units|floatformat:4 }}</td>
                                         <td class="text-center">
                                             <div class="btn-group" role="group">
-                                                <button type="button" class="btn btn-sm btn-outline-success" onclick="openActionModal('purchase', '{{ holding.scheme_name|escapejs }}', {{ holding.current_value }}, {{ holding.units }}, {{ holding.id }})">
-                                                    <i class="fas fa-shopping-cart"></i> Purchase
-                                                </button>
-                                                {% if holding.can_redeem %}
-                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="openActionModal('redeem', '{{ holding.scheme_name|escapejs }}', {{ holding.current_value }}, {{ holding.units }}, {{ holding.id }})">
-                                                    <i class="fas fa-minus-circle"></i> Redeem
-                                                </button>
-                                                {% endif %}
-                                                {% if holding.can_switch %}
-                                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="openActionModal('switch', '{{ holding.scheme_name|escapejs }}', {{ holding.current_value }}, {{ holding.units }}, {{ holding.id }})">
-                                                    <i class="fas fa-exchange-alt"></i> Switch
-                                                </button>
-                                                {% endif %}
-                                                {% if holding.can_stp %}
-                                                <button type="button" class="btn btn-sm btn-outline-info" onclick="openActionModal('stp', '{{ holding.scheme_name|escapejs }}', {{ holding.current_value }}, {{ holding.units }}, {{ holding.id }})">
-                                                    <i class="fas fa-arrow-right"></i> STP
-                                                </button>
-                                                {% endif %}
-                                                {% if holding.can_swp %}
-                                                <button type="button" class="btn btn-sm btn-outline-warning" onclick="openActionModal('swp', '{{ holding.scheme_name|escapejs }}', {{ holding.current_value }}, {{ holding.units }}, {{ holding.id }})">
-                                                    <i class="fas fa-arrow-down"></i> SWP
-                                                </button>
-                                                {% endif %}
+                                               <button type="button" class="btn btn-sm btn-outline-success"
+        onclick="openActionModal('purchase', '{{ holding.scheme_name|escapejs }}', {{ holding.current_value|floatformat:2 }}, {{ holding.units|floatformat:4 }}, {{ holding.id }})">
+    <i class="fas fa-shopping-cart"></i> Purchase
+</button>
+
+{% if holding.can_redeem %}
+<button type="button" class="btn btn-sm btn-outline-danger"
+        onclick="openActionModal('redeem', '{{ holding.scheme_name|escapejs }}', {{ holding.current_value|floatformat:2 }}, {{ holding.units|floatformat:4 }}, {{ holding.id }})">
+    <i class="fas fa-minus-circle"></i> Redeem
+</button>
+{% endif %}
+
+{% if holding.can_switch %}
+<button type="button" class="btn btn-sm btn-outline-primary"
+        onclick="openActionModal('switch', '{{ holding.scheme_name|escapejs }}', {{ holding.current_value|floatformat:2 }}, {{ holding.units|floatformat:4 }}, {{ holding.id }})">
+    <i class="fas fa-exchange-alt"></i> Switch
+</button>
+{% endif %}
+
+{% if holding.can_stp %}
+<button type="button" class="btn btn-sm btn-outline-info"
+        onclick="openActionModal('stp', '{{ holding.scheme_name|escapejs }}', {{ holding.current_value|floatformat:2 }}, {{ holding.units|floatformat:4 }}, {{ holding.id }})">
+    <i class="fas fa-arrow-right"></i> STP
+</button>
+{% endif %}
+
+{% if holding.can_swp %}
+<button type="button" class="btn btn-sm btn-outline-warning"
+        onclick="openActionModal('swp', '{{ holding.scheme_name|escapejs }}', {{ holding.current_value|floatformat:2 }}, {{ holding.units|floatformat:4 }}, {{ holding.id }})">
+    <i class="fas fa-arrow-down"></i> SWP
+</button>
+{% endif %}
+
                                             </div>
                                         </td>
                                     </tr>
@@ -915,44 +925,41 @@ function displayAssetAllocation(allocation) {
 // Action Modal Functions
 function openActionModal(actionType, schemeName = '', currentValue = 0, currentUnits = 0, portfolioId = null) {
     resetActionForm();
-    
-    // Set initial values
+
+    // Set hidden form values
     $('#action-type').val(actionType);
     $('#current-value').val(currentValue);
     $('#current-units').val(currentUnits);
     $('#portfolio-id').val(portfolioId);
-    
-    // Set source scheme if provided (for existing portfolio schemes)
-    if (schemeName && actionType !== 'sip' && actionType !== 'purchase') {
+
+    // If a source scheme is provided (and not a SIP), prefill it
+    if (schemeName && actionType !== 'sip') {
         $('#source-scheme').val(schemeName);
         updatePortfolioData(schemeName);
     }
-    
-    // For purchase actions with existing scheme, set the scheme in the source field
+
+    // Activate the action type and show its relevant fields
+    selectActionType(actionType);
+
+    // For purchase actions on an existing scheme, show the existing-scheme fields
     if (actionType === 'purchase' && schemeName) {
-        $('#source-scheme').val(schemeName);
-        updatePortfolioData(schemeName);
         $('#purchase-type').val('existing_scheme');
         togglePurchaseFields();
     }
-    
-    // Select action type
-    selectActionType(actionType);
-    
-    // Set modal title
+
+    // Update modal title and show it
     const actionTitles = {
         'purchase': 'Purchase Investment',
-        'redeem': 'Redeem Investment',
-        'switch': 'Switch Investment', 
-        'stp': 'Systematic Transfer Plan',
-        'sip': 'Systematic Investment Plan',
-        'swp': 'Systematic Withdrawal Plan'
+        'redeem':  'Redeem Investment',
+        'switch':  'Switch Investment',
+        'stp':     'Systematic Transfer Plan',
+        'sip':     'Systematic Investment Plan',
+        'swp':     'Systematic Withdrawal Plan'
     };
     $('#actionModalLabel').text(actionTitles[actionType] || 'Add Action');
-    
-    // Show modal
     $('#actionModal').modal('show');
 }
+
 
 function updatePortfolioData(schemeName) {
     // Find the selected option and update hidden fields
