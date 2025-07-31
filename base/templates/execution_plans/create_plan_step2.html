@@ -2287,412 +2287,351 @@
             const planName = $('#plan-name').val().trim();
             
             if (!planName) {
-                showErrorMessage('Plan name is required.');
+                alert('Plan name is required.');
                 return;
             }
             
-            if (plannedActions.length === 0) {
-                showErrorMessage('Please add at least one action before saving the plan.');
-                return;
-            }
+            // Sanitize all actions before sending
+            const sanitizedActions = plannedActions.map(action => sanitizeActionData(action));
             
-            // Prepare the data - simplified approach
             const planData = {
                 client_id: {{ client.id }},
                 plan_name: planName,
-                description: $('#plan-description').val() || '',
-                submit_for_approval: submitForApproval,
-                actions: plannedActions.map(action => {
-                    // Create a clean copy of the action
-                    const cleanAction = {
-                        action_type: action.action_type,
-                        source_scheme: action.source_scheme || '',
-                        target_scheme: action.target_scheme || '',
-                        notes: action.notes || '',
-                        portfolio_id: action.portfolio_id || null
-                    };
-            
-                    // Add type-specific fields
-                    switch(action.action_type) {
-                        case 'purchase':
-                            cleanAction.purchase_type = action.purchase_type;
-                            cleanAction.purchase_amount = parseFloat(action.purchase_amount) || 0;
-                            cleanAction.investment_option = action.investment_option || 'growth';
-                            cleanAction.plan_type = action.plan_type || 'direct';
-                            cleanAction.folio_number = action.folio_number || '';
-                            break;
-                        case 'redeem':
-                            cleanAction.redeem_by = action.redeem_by;
-                            cleanAction.redeem_amount = action.redeem_amount ? parseFloat(action.redeem_amount) : null;
-                            cleanAction.redeem_units = action.redeem_units ? parseFloat(action.redeem_units) : null;
-                            break;
-                        case 'switch':
-                            cleanAction.switch_by = action.switch_by;
-                            cleanAction.switch_amount = action.switch_amount ? parseFloat(action.switch_amount) : null;
-                            cleanAction.switch_units = action.switch_units ? parseFloat(action.switch_units) : null;
-                            break;
-                        case 'stp':
-                            cleanAction.stp_amount = parseFloat(action.stp_amount) || 0;
-                            cleanAction.stp_frequency = action.stp_frequency;
-                            break;
-                        case 'sip':
-                            cleanAction.sip_amount = parseFloat(action.sip_amount) || 0;
-                            cleanAction.sip_frequency = action.sip_frequency;
-                            cleanAction.sip_date = action.sip_date;
-                            cleanAction.investment_option = action.investment_option || 'growth';
-                            cleanAction.plan_type = action.plan_type || 'direct';
-                            break;
-                        case 'swp':
-                            cleanAction.swp_amount = parseFloat(action.swp_amount) || 0;
-                            cleanAction.swp_frequency = action.swp_frequency;
-                            cleanAction.swp_date = action.swp_date;
-                            break;
-                    }
-            
-                    return cleanAction;
-                })
+                description: $('#plan-description').val(),
+                actions: sanitizedActions,
+                submit_for_approval: submitForApproval
             };
             
-            console.log('Submitting plan data:', planData);
+            // Debug: Log the sanitized data
+            console.log('Sanitized plan data:', JSON.stringify(planData, null, 2));
             
             // Show loading state
             const saveBtn = submitForApproval ? $('#submit-approval-btn') : $('#save-draft-btn');
             const originalText = saveBtn.html();
             saveBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
             
-            // Get CSRF token
-            const csrfToken = $('[name=csrfmiddlewaretoken]').val() || getCookie('csrftoken');
+            // Submit to server
+            $.ajaxSetup({
+                beforeSend: function(xhr, settings) {
+                    if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", $('[name=csrfmiddlewaretoken]').val());
+                    }
+                }
+            });
             
-            // Make the AJAX request
             $.ajax({
-                url: window.location.pathname.replace('/step2/', '/save/'), // Dynamic URL construction
+                url: '{% url "save_execution_plan" %}',
                 method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrfToken,
-                    'Content-Type': 'application/json'
-                },
+                contentType: 'application/json',
                 data: JSON.stringify(planData),
-                timeout: 30000, // 30 second timeout
                 success: function(response) {
-                    console.log('Save response:', response);
-                    
                     if (response.success) {
-                        showSuccessMessage(response.message || 'Plan saved successfully!');
-                        
-                        // Clear draft from localStorage
-                        clearDraft();
-                        hasUnsavedChanges = false;
-                        
-                        // Close modal
-                        $('#planNameModal').modal('hide');
-                        
-                        // Redirect after a short delay
-                        setTimeout(() => {
-                            if (response.redirect_url) {
-                                window.location.href = response.redirect_url;
-                            } else if (response.plan_url) {
-                                window.location.href = response.plan_url;
-                            } else {
-                                // Fallback redirect
-                                window.location.href = '/execution-plans/';
-                            }
-                        }, 1500);
-                        
+                        alert(response.message);
+                        // Redirect to plan detail page
+                        window.location.href = response.plan_url;
                     } else {
-                        showErrorMessage(response.error || 'Failed to save plan. Please try again.');
+                        alert('Error: ' + response.error);
                         saveBtn.prop('disabled', false).html(originalText);
                     }
                 },
-                error: function(xhr, textStatus, errorThrown) {
-                    console.error('Save plan error:', {
-                        status: xhr.status,
-                        statusText: xhr.statusText,
-                        textStatus: textStatus,
-                        errorThrown: errorThrown,
-                        responseText: xhr.responseText
-                    });
-                    
-                    let errorMessage = 'Failed to save plan. ';
-                    
-                    if (textStatus === 'timeout') {
-                        errorMessage += 'Request timed out. Please try again.';
-                    } else if (xhr.status === 403) {
-                        errorMessage += 'Permission denied. Please refresh the page and try again.';
-                    } else if (xhr.status === 404) {
-                        errorMessage += 'Save endpoint not found. Please contact support.';
-                    } else if (xhr.status === 500) {
-                        errorMessage += 'Server error. Please try again later.';
-                    } else if (xhr.status === 0) {
-                        errorMessage += 'Network error. Please check your connection.';
-                    } else {
-                        try {
-                            const response = JSON.parse(xhr.responseText);
-                            errorMessage += response.error || response.message || 'Unknown error occurred.';
-                        } catch(e) {
-                            errorMessage += `Error ${xhr.status}: ${xhr.statusText}`;
+                error: function(xhr) {
+                    let errorMessage = 'An error occurred while saving the plan.';
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMessage = response.error || errorMessage;
+                    } catch(e) {
+                        // If response is not JSON, show more details
+                        errorMessage = `Error ${xhr.status}: ${xhr.statusText}`;
+                        if (xhr.responseText) {
+                            errorMessage += ` - ${xhr.responseText}`;
                         }
                     }
                     
-                    showErrorMessage(errorMessage);
+                    console.error('Save plan error:', xhr);
+                    alert(errorMessage);
                     saveBtn.prop('disabled', false).html(originalText);
                 }
             });
         }
 
-        // Enhanced CSRF token getter
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
+        // Template Functions
+        function loadTemplate() {
+            showInfoMessage('Template functionality will be implemented in the next phase.');
         }
 
-        // Enhanced savePlan function with better error handling
-        function savePlan(submitForApproval = false) {
-            if (plannedActions.length === 0) {
-                showErrorMessage('Please add at least one action before saving the plan.');
-                return;
-            }
-            
-            // Validate all actions
-            const validationErrors = validateAllActions();
-            if (validationErrors.length > 0) {
-                showErrorMessage('Please fix the following errors before saving:\n• ' + validationErrors.join('\n• '));
-                return;
-            }
-            
-            // Store submit flag for later use
-            window.submitForApproval = submitForApproval;
-            
-            // Set modal title and button text based on action
-            if (submitForApproval) {
-                $('#planNameModalLabel').text('Submit Execution Plan for Approval');
-                $('#save-draft-btn').hide();
-                $('#submit-approval-btn').show().html('<i class="fas fa-paper-plane"></i> Submit for Approval');
+        // Draft Management Functions
+        function clearDraft() {
+            localStorage.removeItem('executionPlanDraft');
+        }
+
+        function saveDraftToStorage() {
+            if (plannedActions.length > 0) {
+                const draft = {
+                    client_id: window.clientId || null,
+                    actions: plannedActions,
+                    timestamp: new Date().toISOString(),
+                    version: '1.1' // Version for future compatibility
+                };
+                localStorage.setItem('executionPlanDraft', JSON.stringify(draft));
             } else {
-                $('#planNameModalLabel').text('Save Execution Plan as Draft');
-                $('#save-draft-btn').show().html('<i class="fas fa-save"></i> Save as Draft');
-                $('#submit-approval-btn').hide();
+                clearDraft();
+            }
+        }
+
+        function loadDraftFromStorage() {
+            const draft = localStorage.getItem('executionPlanDraft');
+            if (draft) {
+                try {
+                    const data = JSON.parse(draft);
+                    if (data.client_id === window.clientId && data.actions && data.actions.length > 0) {
+                        // Check if draft is not too old (24 hours)
+                        const draftAge = new Date() - new Date(data.timestamp);
+                        const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+                        
+                        if (draftAge < maxAge) {
+                            if (confirm(`A draft plan from ${new Date(data.timestamp).toLocaleString()} was found for this client. Would you like to restore it?`)) {
+                                plannedActions = data.actions;
+                                displayPlannedActions();
+                                updateActionsSummary();
+                                showInfoMessage(`Draft plan with ${data.actions.length} actions restored successfully!`);
+                            }
+                        } else {
+                            // Clean up old draft
+                            clearDraft();
+                        }
+                    }
+                } catch(e) {
+                    console.error('Error loading draft:', e);
+                    clearDraft(); // Clear corrupted draft
+                }
+            }
+        }
+
+        // Auto-save functionality
+        let autoSaveTimer;
+        function scheduleAutoSave() {
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(function() {
+                saveDraftToStorage();
+                console.log('Draft auto-saved at', new Date().toLocaleString());
+            }, 30000); // Auto-save every 30 seconds
+        }
+
+        // Schedule auto-save whenever actions are modified
+        function onActionsModified() {
+            updateActionsSummary();
+            scheduleAutoSave();
+        }
+
+        // Warning before leaving page with unsaved changes
+        let hasUnsavedChanges = false;
+        function updateUnsavedChangesStatus() {
+            hasUnsavedChanges = plannedActions.length > 0;
+        }
+
+        window.addEventListener('beforeunload', function(e) {
+            if (hasUnsavedChanges && plannedActions.length > 0) {
+                e.preventDefault();
+                e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+                return 'You have unsaved changes. Are you sure you want to leave?';
+            }
+        });
+
+        // Utility Functions for User Feedback
+        function showSuccessMessage(message) {
+            showToast(message, 'success');
+        }
+
+        function showErrorMessage(message) {
+            showToast(message, 'danger');
+        }
+
+        function showInfoMessage(message) {
+            showToast(message, 'info');
+        }
+
+        function showWarningMessage(message) {
+            showToast(message, 'warning');
+        }
+
+        function showToast(message, type = 'info') {
+            // Create toast container if it doesn't exist
+            let toastContainer = $('#toast-container');
+            if (toastContainer.length === 0) {
+                toastContainer = $(`
+                    <div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+                    </div>
+                `);
+                $('body').append(toastContainer);
             }
             
-            // Clear previous form data
-            $('#plan-name').val('');
-            $('#plan-description').val('');
+            // Create unique toast ID
+            const toastId = 'toast-' + Date.now();
             
-            // Show plan name modal
-            $('#planNameModal').modal('show');
+            // Create toast HTML
+            const toastHtml = `
+                <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="fas ${getToastIcon(type)} me-2"></i>
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
             
-            // Focus on plan name input
-            $('#planNameModal').on('shown.bs.modal', function() {
-                $('#plan-name').focus();
+            // Add toast to container
+            toastContainer.append(toastHtml);
+            
+            // Initialize and show toast
+            const toastElement = $(`#${toastId}`);
+            const toast = new bootstrap.Toast(toastElement[0], {
+                autohide: type !== 'danger', // Don't auto-hide error messages
+                delay: type === 'success' ? 3000 : 5000
+            });
+            
+            toast.show();
+            
+            // Remove toast element after it's hidden
+            toastElement.on('hidden.bs.toast', function() {
+                $(this).remove();
             });
         }
 
-        // Add form submission handler for the plan name modal
-        $(document).ready(function() {
-            // Handle form submission with Enter key
-            $('#planNameForm').on('submit', function(e) {
-                e.preventDefault();
-                submitPlan(window.submitForApproval || false);
-            });
-            
-            // Handle Enter key in plan name input
-            $('#plan-name').on('keypress', function(e) {
-                if (e.which === 13) {
-                    e.preventDefault();
-                    submitPlan(window.submitForApproval || false);
-                }
-            });
-            
-            // Enhanced button click handlers
-            $('#save-draft-btn').off('click').on('click', function() {
-                submitPlan(false);
-            });
-            
-            $('#submit-approval-btn').off('click').on('click', function() {
-                submitPlan(true);
-            });
-            
-            // Test save endpoint on page load
-            testSaveEndpoint();
-        });
+        function getToastIcon(type) {
+            const icons = {
+                'success': 'fa-check-circle',
+                'danger': 'fa-exclamation-triangle',
+                'warning': 'fa-exclamation-circle',
+                'info': 'fa-info-circle'
+            };
+            return icons[type] || 'fa-info-circle';
+        }
 
-        // Test function to verify save endpoint
-        function testSaveEndpoint() {
-            const testUrl = window.location.pathname.replace('/step2/', '/save/');
-            console.log('Testing save endpoint:', testUrl);
-            
-            // Quick test with minimal data
-            $.ajax({
-                url: testUrl,
-                method: 'GET', // Use GET for testing
-                timeout: 5000,
-                success: function() {
-                    console.log('Save endpoint is accessible');
-                },
-                error: function(xhr) {
-                    if (xhr.status === 405) {
-                        console.log('Save endpoint found (Method Not Allowed is expected for GET)');
-                    } else if (xhr.status === 404) {
-                        console.warn('Save endpoint not found:', testUrl);
-                        showWarningMessage('Save functionality may not work. Please contact support if you encounter issues.');
-                    } else {
-                        console.log('Save endpoint test result:', xhr.status);
+        // CSRF Token Setup
+        function setupCSRFToken() {
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
                     }
                 }
-        });
-}
-
-// Enhanced validation function
-function validateAllActions() {
-    const errors = [];
-    
-    plannedActions.forEach((action, index) => {
-        const actionNum = index + 1;
-        
-        // Basic validation
-        if (!action.action_type) {
-            errors.push(`Action ${actionNum}: Missing action type`);
-            return;
-        }
-        
-        // Type-specific validation
-        switch(action.action_type) {
-            case 'purchase':
-                if (!action.purchase_amount || parseFloat(action.purchase_amount) <= 0) {
-                    errors.push(`Action ${actionNum} (Purchase): Invalid or missing purchase amount`);
-                }
-                if (!action.purchase_type) {
-                    errors.push(`Action ${actionNum} (Purchase): Missing purchase type`);
-                }
-                if (action.purchase_type === 'new_scheme' && !action.target_scheme) {
-                    errors.push(`Action ${actionNum} (Purchase): Missing target scheme for new purchase`);
-                }
-                if (action.purchase_type === 'existing_scheme' && !action.source_scheme) {
-                    errors.push(`Action ${actionNum} (Purchase): Missing source scheme for existing purchase`);
-                }
-                break;
-                
-            case 'sip':
-                if (!action.sip_amount || parseFloat(action.sip_amount) <= 0) {
-                    errors.push(`Action ${actionNum} (SIP): Invalid or missing SIP amount`);
-                }
-                if (!action.target_scheme) {
-                    errors.push(`Action ${actionNum} (SIP): Missing target scheme`);
-                }
-                if (!action.sip_frequency) {
-                    errors.push(`Action ${actionNum} (SIP): Missing SIP frequency`);
-                }
-                if (!action.sip_date) {
-                    errors.push(`Action ${actionNum} (SIP): Missing SIP date`);
-                }
-                break;
-                
-            case 'redeem':
-                if (!action.source_scheme) {
-                    errors.push(`Action ${actionNum} (Redeem): Missing source scheme`);
-                }
-                if (!action.redeem_by) {
-                    errors.push(`Action ${actionNum} (Redeem): Missing redeem method`);
-                }
-                if (action.redeem_by === 'specific_amount' && (!action.redeem_amount || parseFloat(action.redeem_amount) <= 0)) {
-                    errors.push(`Action ${actionNum} (Redeem): Invalid redeem amount`);
-                }
-                if (action.redeem_by === 'specific_units' && (!action.redeem_units || parseFloat(action.redeem_units) <= 0)) {
-                    errors.push(`Action ${actionNum} (Redeem): Invalid redeem units`);
-                }
-                break;
-                
-            case 'switch':
-                if (!action.source_scheme) {
-                    errors.push(`Action ${actionNum} (Switch): Missing source scheme`);
-                }
-                if (!action.target_scheme) {
-                    errors.push(`Action ${actionNum} (Switch): Missing target scheme`);
-                }
-                if (!action.switch_by) {
-                    errors.push(`Action ${actionNum} (Switch): Missing switch method`);
-                }
-                break;
-                
-            case 'stp':
-                if (!action.source_scheme) {
-                    errors.push(`Action ${actionNum} (STP): Missing source scheme`);
-                }
-                if (!action.target_scheme) {
-                    errors.push(`Action ${actionNum} (STP): Missing target scheme`);
-                }
-                if (!action.stp_amount || parseFloat(action.stp_amount) <= 0) {
-                    errors.push(`Action ${actionNum} (STP): Invalid STP amount`);
-                }
-                if (!action.stp_frequency) {
-                    errors.push(`Action ${actionNum} (STP): Missing STP frequency`);
-                }
-                break;
-                
-            case 'swp':
-                if (!action.source_scheme) {
-                    errors.push(`Action ${actionNum} (SWP): Missing source scheme`);
-                }
-                if (!action.swp_amount || parseFloat(action.swp_amount) <= 0) {
-                    errors.push(`Action ${actionNum} (SWP): Invalid SWP amount`);
-                }
-                if (!action.swp_frequency) {
-                    errors.push(`Action ${actionNum} (SWP): Missing SWP frequency`);
-                }
-                if (!action.swp_date) {
-                    errors.push(`Action ${actionNum} (SWP): Missing SWP date`);
-                }
-                break;
-        }
-    });
-    
-    return errors;
-}
-\`\`\`javascript
-// Enhanced CSRF Token Setup - add this to the $(document).ready function
-function setupCSRFToken() {
-    const csrfToken = getCookie('csrftoken') || $('[name=csrfmiddlewaretoken]').val();
-    
-    if (csrfToken) {
-        $.ajaxSetup({
-            beforeSend: function(xhr, settings) {
-                if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
-                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
-                }
-            }
-        });
-        console.log('CSRF token configured successfully');
-    } else {
-        console.warn('CSRF token not found');
-    }
-}
-
-// Call this in the document ready function
-setupCSRFToken();
-\`\`\`
-            // Setup CSRF token for AJAX requests
-            setupCSRFToken();
-            
-            // Setup keyboard shortcuts
-            setupKeyboardShortcuts();
-            
-            // Set client ID from template
-            if (typeof window.templateClientId !== 'undefined') {
-                window.clientId = window.templateClientId;
+                return cookieValue;
             }
             
-            // Update unsaved changes status periodically
-            setInterval(updateUnsavedChangesStatus, 1000);
+            const csrftoken = getCookie('csrftoken');
             
-            // Cache portfolio schemes for offline search
-            cachePortfolioSchemes();
-        });
+            $.ajaxSetup({
+                beforeSend: function(xhr, settings) {
+                    if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    }
+                }
+            });
+        }
+
+        // Keyboard Shortcuts
+        function setupKeyboardShortcuts() {
+            $(document).keydown(function(e) {
+                // Ctrl/Cmd + S to save draft
+                if ((e.ctrlKey || e.metaKey) && e.keyCode === 83) {
+                    e.preventDefault();
+                    if (plannedActions.length > 0) {
+                        savePlan(false);
+                    }
+                }
+                
+                // Ctrl/Cmd + Enter to submit plan
+                if ((e.ctrlKey || e.metaKey) && e.keyCode === 13) {
+                    e.preventDefault();
+                    if (plannedActions.length > 0) {
+                        savePlan(true);
+                    }
+                }
+                
+                // Escape to close modals
+                if (e.keyCode === 27) {
+                    $('.modal').modal('hide');
+                }
+            });
+        }
+    </script>
+
+    <!-- Add CSRF token for AJAX requests -->
+    {% csrf_token %}
+    <script>
+        // Make CSRF token available to JavaScript
+        window.csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    </script>
+
+    <!-- Additional CSS for responsiveness -->
+    <style>
+        @media (max-width: 768px) {
+            .action-controls {
+                margin-top: 10px;
+            }
+            
+            .action-card .card-body {
+                padding: 0.75rem;
+            }
+            
+            .btn-group .btn {
+                font-size: 0.8rem;
+                padding: 0.25rem 0.5rem;
+            }
+            
+            .client-summary .row > div {
+                margin-bottom: 1rem;
+            }
+            
+            .asset-allocation-bar {
+                height: 15px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .action-type-btn {
+                margin-bottom: 0.5rem;
+            }
+            
+            .table-responsive {
+                font-size: 0.9rem;
+            }
+            
+            .modal-lg {
+                max-width: 90%;
+            }
+        }
+        
+        /* Print styles */
+        @media print {
+            .btn, .modal, .action-controls {
+                display: none !important;
+            }
+            
+            .action-card {
+                border: 1px solid #000 !important;
+                page-break-inside: avoid;
+            }
+        }
+        
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            .scheme-search-result:hover {
+                background-color: #2d3748;
+            }
+            
+            .action-card:hover {
+                border-color: #4299e1;
+                box-shadow: 0 2px 8px rgba(66,153,225,0.15);
+            }
+        }
+    </style>
+{% endblock %}
