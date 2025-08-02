@@ -27,7 +27,7 @@
                     <button type="submit" class="btn btn-primary">Filter</button>
                     <a href="{% url 'lead_list' %}" class="btn btn-outline-secondary ms-2">Reset</a>
                 </div>
-                {% if user.role == 'rm_head' or user.role == 'business_head' or user.role == 'top_management' %}
+                {% if user.role == 'rm_head' or user.role == 'business_head' or user.role == 'top_management' or user.role == 'rm' %}
                 <div class="col-md-3 d-flex align-items-end justify-content-end">
                     <a href="{% url 'lead_create' %}" class="btn btn-success">Create New Lead</a>
                 </div>

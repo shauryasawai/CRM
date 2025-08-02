@@ -1762,7 +1762,6 @@ class Reminder(models.Model):
         return f"Reminder for {self.user.username}: {self.message}"
 
 # Service Request Models - Fixed to avoid duplicate definitions
-
 class ServiceRequestType(models.Model):
     """
     Service Request Type categorization with essential fields only
@@ -1787,7 +1786,7 @@ class ServiceRequestType(models.Model):
     # Basic Information
     name = models.CharField(max_length=100)
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
-    code = models.CharField(max_length=20, unique=True)
+    code = models.CharField(max_length=50, unique=True)
     description = models.TextField(blank=True)
     
     # Essential Configuration

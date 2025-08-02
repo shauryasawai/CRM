@@ -2517,7 +2517,15 @@ from .models import User
 @login_required
 def lead_list(request):
     user = request.user
-    leads = get_user_accessible_data(user, Lead, 'assigned_to')
+    
+    # Get leads accessible to user (assigned to them or users they can access)
+    accessible_leads = get_user_accessible_data(user, Lead, 'assigned_to')
+    
+    # Also include leads created by the current user (regardless of assignee)
+    created_leads = Lead.objects.filter(created_by=user)
+    
+    # Combine both querysets and remove duplicates
+    leads = (accessible_leads | created_leads).distinct()
     
     # Filtering options
     status_filter = request.GET.get('status')
@@ -2597,7 +2605,7 @@ def lead_detail(request, pk):
 
 @login_required
 def lead_create(request):
-    if not request.user.role in ['rm_head', 'business_head', 'top_management']:
+    if not request.user.role in ['rm', 'rm_head', 'business_head', 'top_management']:
         messages.error(request, "You don't have permission to create leads.")
         return redirect('lead_list')
         
@@ -2855,30 +2863,53 @@ def convert_lead(request, pk):
         return redirect('lead_detail', pk=pk)
     
     lead = get_object_or_404(Lead, pk=pk)
-    form = LeadConversionForm(request.POST)
     
-    if form.is_valid():
-        # Update lead as converted
-        lead.converted = True
-        lead.converted_at = timezone.now()
-        lead.converted_by = request.user
-        lead.client_id = generate_client_id()  # Custom function
-        lead.save()
-        
-        # Record status change
-        LeadStatusChange.objects.create(
-            lead=lead,
-            changed_by=request.user,
-            old_status=lead.status,
-            new_status='converted',
-            notes=f"Lead converted to client {lead.client_id}"
-        )
-        
-        messages.success(request, f"Lead successfully converted to client {lead.client_id}.")
-    else:
-        messages.error(request, "Error converting lead.")
+    # Check if lead is already converted
+    if lead.converted:
+        messages.warning(request, "This lead is already converted.")
+        return redirect('lead_detail', pk=pk)
     
-    return redirect('lead_detail', pk=lead.pk)
+    # Check if lead status allows conversion
+    if lead.status != 'conversion_requested':
+        messages.error(request, "Lead must be in 'conversion_requested' status to be converted.")
+        return redirect('lead_detail', pk=pk)
+    
+    try:
+        with transaction.atomic():
+            # Update lead as converted
+            lead.converted = True
+            lead.converted_at = timezone.now()
+            lead.converted_by = request.user
+            lead.status = 'converted'
+            
+            # Use client_id from form if provided, otherwise generate one
+            client_id = request.POST.get('client_id')
+            if client_id and client_id.strip():
+                lead.client_id = client_id.strip()
+            else:
+                lead.client_id = generate_client_id()  # Custom function
+            
+            lead.save()
+            
+            # Record status change
+            LeadStatusChange.objects.create(
+                lead=lead,
+                changed_by=request.user,
+                old_status='conversion_requested',
+                new_status='converted',
+                notes=f"Lead converted to client {lead.client_id}"
+            )
+            
+            messages.success(request, f"Lead successfully converted to client {lead.client_id}.")
+            
+    except Exception as e:
+        messages.error(request, f"Error converting lead: {str(e)}")
+        # Log the error for debugging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Lead conversion failed for lead {pk}: {str(e)}")
+    
+    return redirect('lead_detail', pk=pk)
 
 @login_required
 @require_POST
@@ -3144,7 +3175,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q, Sum, Count, IntegerField
+from django.db.models import Q, Sum, Count, IntegerField, Case, When
 from django.db.models.functions import Coalesce
 from django.forms import ModelForm
 from django import forms
@@ -4136,11 +4167,20 @@ def client_delete(request, pk):
 
 # Task Views with Hierarchy
 from django.views.decorators.csrf import csrf_protect
+from django.db.models import Q
 
 @login_required
 def task_list(request):
     user = request.user
-    tasks = get_user_accessible_data(user, Task, 'assigned_to')
+    
+    # Get tasks accessible to user (assigned to them or users they can access)
+    accessible_tasks = get_user_accessible_data(user, Task, 'assigned_to')
+    
+    # Also include tasks created by the current user (regardless of assignee)
+    created_tasks = Task.objects.filter(assigned_by=user)
+    
+    # Combine both querysets and remove duplicates
+    tasks = (accessible_tasks | created_tasks).distinct()
     
     # Add filtering options
     status_filter = request.GET.get('status')
@@ -4163,7 +4203,7 @@ def task_list(request):
         'tasks': tasks.order_by('-created_at'),
         'current_status': status_filter,
         'search_query': search_query,
-        'now': timezone.now(),  # Add current time for template
+        'now': timezone.now(),
     }
     
     return render(request, 'base/tasks.html', context)
@@ -4517,19 +4557,8 @@ def get_task_status(task):
     else:
         return 'pending'
     
-# Service Request Views with Hierarchy
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib import messages
-from django.http import JsonResponse, HttpResponseForbidden
-from django.db.models import Q, Count, Avg, F, Case, When, IntegerField
-from django.db.models.functions import Extract
-from django.utils import timezone
-from django.core.paginator import Paginator
-from datetime import timedelta, datetime
-from django.views.decorators.http import require_http_methods
-import json
-
+# Solution 3: Quick fix - modify your service_request_list view
+# Remove or comment out the problematic line
 
 @login_required
 def service_request_list(request):
@@ -4652,9 +4681,13 @@ def service_request_list(request):
     # Dashboard statistics
     stats = get_service_request_stats(user, service_requests.model.objects)
     
-    # Get filter options
+    # Get filter options with hierarchy-based assignment restrictions
     request_types = ServiceRequestType.objects.filter(is_active=True)
-    assignable_users = get_assignable_users(user)
+    
+    # Uncomment the line below for debugging user roles
+    # check_users_and_roles()
+    
+    assignable_users = get_assignable_users_by_hierarchy(user)  # Modified function
     
     context = {
         'page_obj': page_obj,
@@ -4678,6 +4711,55 @@ def service_request_list(request):
     
     return render(request, 'base/service_requests.html', context)
 
+def get_assignable_users_by_hierarchy(user):
+    """Get users that can be assigned service requests based on hierarchy"""
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    
+    # Debug logging
+    print(f"DEBUG: Current user: {user.username}, Role: {user.role}")
+    
+    if user.role == 'rm_head':
+        # RM Head can only assign to ops_team_lead
+        assignable_users = User.objects.filter(role='ops_team_lead', is_active=True)
+        print(f"DEBUG: RM Head assignable users: {list(assignable_users.values_list('username', 'role'))}")
+        return assignable_users
+    elif user.role == 'ops_team_lead':
+        # Ops Team Lead can only assign to ops_exec
+        assignable_users = User.objects.filter(role='ops_exec', is_active=True)
+        print(f"DEBUG: Ops Team Lead assignable users: {list(assignable_users.values_list('username', 'role'))}")
+        return assignable_users
+    elif user.role in ['business_head_ops', 'business_head', 'top_management']:
+        # Higher roles can assign to multiple levels
+        assignable_users = User.objects.filter(
+            role__in=['ops_team_lead', 'ops_exec'], 
+            is_active=True
+        )
+        print(f"DEBUG: Higher role assignable users: {list(assignable_users.values_list('username', 'role'))}")
+        return assignable_users
+    else:
+        # Other roles cannot assign (or have limited assignment)
+        print(f"DEBUG: Role {user.role} has no assignment privileges")
+        return User.objects.none()
+    
+def check_users_and_roles():
+    """Helper function to check what users exist in the database"""
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    
+    print("\n=== USER ROLES DEBUG ===")
+    print("All active users and their roles:")
+    for user in User.objects.filter(is_active=True).order_by('role', 'username'):
+        print(f"  {user.username} ({user.get_full_name() or 'No name'}): {user.role}")
+    
+    print("\nActive users by role:")
+    for role_code, role_name in User.ROLE_CHOICES:
+        count = User.objects.filter(role=role_code, is_active=True).count()
+        if count > 0:
+            users = User.objects.filter(role=role_code, is_active=True).values_list('username', flat=True)
+            print(f"  {role_code} ({role_name}): {count} users - {', '.join(users)}")
+    print("=" * 30)
+    
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -4999,19 +5081,19 @@ def can_view_service_request(user, service_request):
     return (user == service_request.raised_by or 
             user == service_request.assigned_to or 
             user == service_request.current_owner or
-            user.role in ['operations_head', 'business_head', 'top_management'])
+            user.role in ['operations_head', 'business_head', 'top_management','ops_team_lead'])
 
 
 def can_edit_service_request(user, service_request):
     """Check if user can edit the service request"""
     return (user == service_request.raised_by and service_request.status in ['draft', 'submitted'] or
-            user.role in ['operations_head', 'business_head', 'top_management'])
+            user.role in ['operations_head', 'business_head', 'top_management','ops_team_lead'])
 
 
 def can_delete_service_request(user, service_request):
     """Check if user can delete the service request"""
     return (user == service_request.raised_by and service_request.status == 'draft' or
-            user.role in ['operations_head', 'business_head', 'top_management'])
+            user.role in ['operations_head', 'business_head', 'top_management','ops_team_lead'])
 
 
 def can_add_comment(user, service_request):
@@ -5019,14 +5101,14 @@ def can_add_comment(user, service_request):
     return (user == service_request.raised_by or
             user == service_request.assigned_to or
             user == service_request.current_owner or
-            user.role in ['operations_head', 'business_head', 'top_management'])
+            user.role in ['operations_head', 'business_head', 'top_management','ops_team_lead'])
 
 
 def can_upload_documents(user, service_request):
     """Check if user can upload documents"""
     return (user == service_request.raised_by or
             user == service_request.assigned_to or
-            user.role in ['operations_head', 'business_head', 'top_management'])
+            user.role in ['operations_head', 'business_head', 'top_management','ops_team_lead'])
 
 
 def can_request_documents(user, service_request):
@@ -5679,61 +5761,104 @@ def can_update_service_request(user, service_request):
 
 @login_required
 def service_request_create(request):
-    # Debug: Print user role and client count
-    print(f"User: {request.user.username}, Role: {request.user.role}")
-    print(f"Total clients in DB: {Client.objects.count()}")
-    
+    """Create service request with hierarchy-based assignment restrictions"""
     if request.method == 'POST':
-        form = ServiceRequestForm(request.POST, current_user=request.user)
+        form = ServiceRequestForm(request.POST)
+        
+        # CRITICAL: Apply hierarchy restrictions to the form
+        assignable_users = get_assignable_users_by_hierarchy(request.user)
+        form.fields['assigned_to'].queryset = assignable_users
+        
         if form.is_valid():
             service_request = form.save(commit=False)
             service_request.raised_by = request.user
+            
+            # Set current owner to assigned user if provided, otherwise to the requester
+            assigned_to = form.cleaned_data.get('assigned_to')
+            if assigned_to:
+                service_request.current_owner = assigned_to
+            else:
+                service_request.current_owner = request.user
+            
             service_request.save()
-            messages.success(request, "Service request created successfully.")
-            return redirect('service_request_list')
+            
+            messages.success(request, 'Service request created successfully.')
+            return redirect('service_request_detail', pk=service_request.pk)
+        else:
+            # Debug form errors
+            print(f"DEBUG: Form errors: {form.errors}")
     else:
-        form = ServiceRequestForm(current_user=request.user)
+        form = ServiceRequestForm()
         
-        # Debug: Print client queryset count after form initialization
-        print(f"Client queryset count: {form.fields['client'].queryset.count()}")
+        # CRITICAL: Apply hierarchy restrictions to the form queryset
+        assignable_users = get_assignable_users_by_hierarchy(request.user)
+        form.fields['assigned_to'].queryset = assignable_users
+        
+        # Debug output
+        print(f"DEBUG: CREATE - User {request.user.username} ({request.user.role}) can assign to:")
+        for user in assignable_users:
+            print(f"  - {user.username} ({user.role}) - {user.get_full_name()}")
     
-    return render(request, 'base/service_request_form.html', {'form': form, 'action': 'Create'})
+    context = {
+        'form': form,
+        'service_request': None,  # For new requests
+    }
+    
+    return render(request, 'base/service_request_form.html', context)
 
-@login_required
+@login_required 
 def service_request_update(request, pk):
+    """Update service request with hierarchy-based assignment restrictions"""
     service_request = get_object_or_404(ServiceRequest, pk=pk)
     
-    # Check permissions
-    accessible_users = request.user.get_accessible_users()
-    if not (service_request.raised_by in accessible_users or 
-            service_request.client.user in accessible_users or
-            service_request.assigned_to in accessible_users):
-        raise PermissionDenied("You don't have permission to edit this service request.")
+    # Basic permission check - you can expand this
+    if not (request.user == service_request.raised_by or 
+            request.user == service_request.assigned_to or
+            request.user == service_request.current_owner or
+            request.user.role in ['business_head', 'business_head_ops', 'top_management', 'ops_team_lead']):
+        messages.error(request, "You don't have permission to edit this service request.")
+        return redirect('service_request_detail', pk=pk)
     
     if request.method == 'POST':
         form = ServiceRequestForm(request.POST, instance=service_request)
+        
+        # CRITICAL: Apply hierarchy restrictions to the form
+        assignable_users = get_assignable_users_by_hierarchy(request.user)
+        form.fields['assigned_to'].queryset = assignable_users
+        
         if form.is_valid():
-            updated_request = form.save()
-            if updated_request.status in ['resolved', 'closed'] and not updated_request.resolved_at:
-                updated_request.resolved_at = timezone.now()
-                updated_request.save()
-            messages.success(request, "Service request updated successfully.")
-            return redirect('service_request_list')
+            updated_request = form.save(commit=False)
+            
+            # Update current owner if assigned_to changed
+            if 'assigned_to' in form.changed_data:
+                assigned_to = form.cleaned_data.get('assigned_to')
+                if assigned_to:
+                    updated_request.current_owner = assigned_to
+            
+            updated_request.save()
+            messages.success(request, 'Service request updated successfully.')
+            return redirect('service_request_detail', pk=service_request.pk)
+        else:
+            # Debug form errors
+            print(f"DEBUG: Update form errors: {form.errors}")
     else:
         form = ServiceRequestForm(instance=service_request)
         
-        # Limit client choices based on user's access
-        if request.user.role == 'rm':
-            form.fields['client'].queryset = Client.objects.filter(user=request.user)
-        elif request.user.role == 'rm_head':
-            accessible_users = request.user.get_accessible_users()
-            form.fields['client'].queryset = Client.objects.filter(user__in=accessible_users)
+        # CRITICAL: Apply hierarchy restrictions to the form queryset
+        assignable_users = get_assignable_users_by_hierarchy(request.user)
+        form.fields['assigned_to'].queryset = assignable_users
+        
+        # Debug output
+        print(f"DEBUG: UPDATE - User {request.user.username} ({request.user.role}) can assign to:")
+        for user in assignable_users:
+            print(f"  - {user.username} ({user.role}) - {user.get_full_name()}")
     
-    return render(request, 'base/service_request_form.html', {
-        'form': form, 
-        'action': 'Update', 
-        'service_request': service_request
-    })
+    context = {
+        'form': form,
+        'service_request': service_request,
+    }
+    
+    return render(request, 'base/service_request_form.html', context)
 
 @login_required
 def service_request_delete(request, pk):

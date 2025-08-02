@@ -7,7 +7,7 @@
         <h1>Lead Details: {{ lead.name }}</h1>
         <div>
             {% if user.can_access_user_data|user_can_edit:lead %}
-            <a href="{% url 'leads:lead_update' lead.pk %}" class="btn btn-secondary">Edit Lead</a>
+            <a href="{% url 'lead_update' lead.pk %}" class="btn btn-secondary">Edit Lead</a>
             {% endif %}
             <a href="{% url 'lead_list' %}" class="btn btn-outline-primary">Back to List</a>
         </div>
@@ -160,15 +160,11 @@
                 <div class="col-md-6">
                     <label for="interaction_type" class="form-label">Interaction Type*</label>
                     <select name="interaction_type" id="interaction_type" class="form-select" required>
-                                <option value="call">Phone Call</option>
-                                <option value="meeting">In-Person Meeting</option>
-                                <option value="email">Email</option>
-                                <option value="message">Message</option>
-                                <option value="other">Other</option>
-                            </select>
-                        {% for value, label in LeadInteraction.INTERACTION_CHOICES %}
-                            <option value="{{ value }}">{{ label }}</option>
-                        {% endfor %}
+                        <option value="call">Phone Call</option>
+                        <option value="meeting">In-Person Meeting</option>
+                        <option value="email">Email</option>
+                        <option value="message">Message</option>
+                        <option value="other">Other</option>
                     </select>
                 </div>
                 <div class="col-md-6">
@@ -212,29 +208,29 @@
 
         <hr class="my-4">
 
-                    <h6>Interaction History</h6>
-                    <div class="list-group">
-                        {% for interaction in interactions %}
-                        <div class="list-group-item">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1">{{ interaction.get_interaction_type_display }}</h6>
-                                <small>{{ interaction.interaction_date|date:"d M Y H:i" }}</small>
-                            </div>
-                            <p class="mb-1">{{ interaction.notes }}</p>
-                            {% if interaction.next_step %}
-                            <small class="text-muted">Next: {{ interaction.next_step }} 
-                                {% if interaction.next_date %}({{ interaction.next_date|date:"d M Y" }}){% endif %}
-                            </small>
-                            {% endif %}
-                        </div>
-                        {% empty %}
-                        <div class="list-group-item">
-                            <p class="mb-0 text-muted">No interactions recorded yet</p>
-                        </div>
-                        {% endfor %}
-                    </div>
+        <h6>Interaction History</h6>
+        <div class="list-group">
+            {% for interaction in interactions %}
+            <div class="list-group-item">
+                <div class="d-flex w-100 justify-content-between">
+                    <h6 class="mb-1">{{ interaction.get_interaction_type_display }}</h6>
+                    <small>{{ interaction.interaction_date|date:"d M Y H:i" }}</small>
                 </div>
+                <p class="mb-1">{{ interaction.notes }}</p>
+                {% if interaction.next_step %}
+                <small class="text-muted">Next: {{ interaction.next_step }} 
+                    {% if interaction.next_date %}({{ interaction.next_date|date:"d M Y" }}){% endif %}
+                </small>
+                {% endif %}
             </div>
+            {% empty %}
+            <div class="list-group-item">
+                <p class="mb-0 text-muted">No interactions recorded yet</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
         </div>
     </div>
 
@@ -343,14 +339,18 @@
                         {% endif %}
                         {% if change.needs_approval and not change.approved and user == change.approval_by %}
                         <div class="mt-2">
-                            <form method="post" action="{% url 'leads:approve_status_change' change.pk %}" class="d-inline">
+                            {% comment %}
+                            <!-- These URLs need to be created if you want approval functionality -->
+                            <form method="post" action="{% url 'approve_status_change' change.pk %}" class="d-inline">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-sm btn-success">Approve</button>
                             </form>
-                            <form method="post" action="{% url 'leads:reject_status_change' change.pk %}" class="d-inline">
+                            <form method="post" action="{% url 'reject_status_change' change.pk %}" class="d-inline">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-sm btn-danger ms-1">Reject</button>
                             </form>
+                            {% endcomment %}
+                            <small class="text-warning">Approval functionality not yet implemented</small>
                         </div>
                         {% endif %}
                     </div>
@@ -362,29 +362,30 @@
         </div>
     </div>
 </div>
+
 <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Set current datetime as default
-            const now = new Date();
-            const timezoneOffset = now.getTimezoneOffset() * 60000;
-            const localISOTime = (new Date(now - timezoneOffset)).toISOString().slice(0, 16);
-            document.getElementById('interaction_date').value = localISOTime;
-            
-            // Handle form submission to combine date and time
-            const form = document.getElementById('interactionForm');
-            form.addEventListener('submit', function(e) {
-                const nextDate = document.getElementById('next_date').value;
-                const nextTime = document.getElementById('next_time').value;
-                
-                if (nextDate && nextTime) {
-                    // Create a hidden field with combined datetime
-                    const hiddenField = document.createElement('input');
-                    hiddenField.type = 'hidden';
-                    hiddenField.name = 'next_datetime';
-                    hiddenField.value = `${nextDate}T${nextTime}`;
-                    form.appendChild(hiddenField);
-                }
-            });
-        });
-        </script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set current datetime as default
+    const now = new Date();
+    const timezoneOffset = now.getTimezoneOffset() * 60000;
+    const localISOTime = (new Date(now - timezoneOffset)).toISOString().slice(0, 16);
+    document.getElementById('interaction_date').value = localISOTime;
+    
+    // Handle form submission to combine date and time
+    const form = document.getElementById('interactionForm');
+    form.addEventListener('submit', function(e) {
+        const nextDate = document.getElementById('next_date').value;
+        const nextTime = document.getElementById('next_time').value;
+        
+        if (nextDate && nextTime) {
+            // Create a hidden field with combined datetime
+            const hiddenField = document.createElement('input');
+            hiddenField.type = 'hidden';
+            hiddenField.name = 'next_datetime';
+            hiddenField.value = `${nextDate}T${nextTime}`;
+            form.appendChild(hiddenField);
+        }
+    });
+});
+</script>
 {% endblock %}
