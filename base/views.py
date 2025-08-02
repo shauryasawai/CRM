@@ -7105,6 +7105,7 @@ def notify_approval_required(execution_plan):
         logger.error(f"Error sending approval notifications: {str(e)}")
 
 
+
 def generate_execution_plan_excel(execution_plan):
     """Generate Excel file for execution plan with actual data"""
     try:
@@ -7232,18 +7233,6 @@ def generate_execution_plan_excel(execution_plan):
             cell.style = header_style
         
         row += 1
-        
-        # Get plan actions based on your model structure
-        plan_actions = []
-        try:
-            # Your model has 'actions' related name from PlanAction
-            if hasattr(execution_plan, 'actions'):
-                plan_actions = execution_plan.actions.all().order_by('priority', 'id')
-            else:
-                logger.warning(f"No actions relationship found on ExecutionPlan {execution_plan.id}")
-        except Exception as e:
-            logger.error(f"Error getting plan actions: {str(e)}")
-            plan_actions = []
         
         # Data rows for actions
         total_amount = 0
@@ -7390,29 +7379,32 @@ def generate_execution_plan_excel(execution_plan):
         ws[f'A{row}'] = f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         row += 1
         
-        # Generate filename
+        # Generate filename with consistent path handling
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         plan_id_clean = str(plan_id).replace('#', '').replace(' ', '_')
         filename = f"execution_plan_{plan_id_clean}_{timestamp}.xlsx"
-        file_path = os.path.join('/tmp', filename)
         
-        # Get media root path with fallback
-        # Use /tmp directory for serverless-safe temporary file writing
-        media_root = "/tmp"
-
+        # Use consistent temporary directory - /tmp is standard for Lambda/serverless
+        temp_dir = "/tmp"
+        file_path = os.path.join(temp_dir, filename)
         
-        # Create directory if it doesn't exist
-        file_path = os.path.join(media_root, filename)
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        # Ensure directory exists
+        os.makedirs(temp_dir, exist_ok=True)
         
         # Save the workbook
         wb.save(file_path)
         
         logger.info(f"Excel file generated successfully: {filename}")
+        logger.info(f"File saved at: {file_path}")
         logger.info(f"Total actions exported: {len(plan_actions)}")
         logger.info(f"Total amount: ₹{total_amount:,.2f}")
         
-        return filename
+        # Return both filename and full path for flexibility
+        return {
+            'filename': filename,
+            'file_path': file_path,
+            'temp_dir': temp_dir
+        }
         
     except Exception as e:
         logger.error(f"Error generating Excel for execution plan {execution_plan.id}: {str(e)}")
