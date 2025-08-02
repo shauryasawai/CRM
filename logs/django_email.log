@@ -696,3 +696,52 @@ INFO 2025-08-02 13:41:41,509 views 10988 960 RM Head narayan access check: TeamD
 INFO 2025-08-02 13:41:41,522 views 10988 960 Found linked profile for client 1273
 INFO 2025-08-02 13:41:41,606 views 10988 960 Found 1 portfolio holdings for client 1273
 ERROR 2025-08-02 13:41:41,810 views 10988 960 Unexpected error in create_plan_step2 for client 1273: Cannot resolve keyword 'isin_number' into field. Choices are: amc_name, category, created_at, id, is_active, isin_div_reinvestment, isin_growth, last_nav_date, last_nav_price, last_updated, minimum_investment, minimum_sip, plan_actions, risk_category, scheme_code, scheme_name, scheme_type, target_actions, updated_at, upload_batch, upload_batch_id, upload_logs
+INFO 2025-08-02 13:43:45,589 views 27192 29296 create_plan_step2 called with client_id: 1372 (type: <class 'str'>)
+INFO 2025-08-02 13:43:45,687 views 27192 29296 Found legacy client: JYOTI KUSUMAKAR BHISE (ID: 1372)
+INFO 2025-08-02 13:43:46,112 views 27192 29296 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-02 13:43:46,139 views 27192 29296 Found linked profile for client 1372
+INFO 2025-08-02 13:43:46,227 views 27192 29296 Found 9 portfolio holdings for client 1372
+INFO 2025-08-02 13:44:09,270 views 27192 24164 create_plan_step2 called with client_id: 1372 (type: <class 'str'>)
+INFO 2025-08-02 13:44:09,359 views 27192 24164 Found legacy client: JYOTI KUSUMAKAR BHISE (ID: 1372)
+INFO 2025-08-02 13:44:09,714 views 27192 24164 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-02 13:44:09,720 views 27192 24164 Found linked profile for client 1372
+INFO 2025-08-02 13:44:09,818 views 27192 24164 Found 9 portfolio holdings for client 1372
+INFO 2025-08-02 13:45:22,570 views 27192 26088 create_plan_step2 called with client_id: 1372 (type: <class 'str'>)
+INFO 2025-08-02 13:45:22,765 views 27192 26088 Found legacy client: JYOTI KUSUMAKAR BHISE (ID: 1372)
+INFO 2025-08-02 13:45:23,175 views 27192 26088 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-02 13:45:23,181 views 27192 26088 Found linked profile for client 1372
+INFO 2025-08-02 13:45:23,313 views 27192 26088 Found 9 portfolio holdings for client 1372
+INFO 2025-08-02 13:45:56,971 views 27192 7644 create_plan_step2 called with client_id: 1372 (type: <class 'str'>)
+INFO 2025-08-02 13:45:57,062 views 27192 7644 Found legacy client: JYOTI KUSUMAKAR BHISE (ID: 1372)
+INFO 2025-08-02 13:45:57,465 views 27192 7644 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-02 13:45:57,472 views 27192 7644 Found linked profile for client 1372
+INFO 2025-08-02 13:45:57,570 views 27192 7644 Found 9 portfolio holdings for client 1372
+INFO 2025-08-02 13:45:58,430 views 27192 25128 create_plan_step2 called with client_id: 1372 (type: <class 'str'>)
+INFO 2025-08-02 13:45:58,544 views 27192 25128 Found legacy client: JYOTI KUSUMAKAR BHISE (ID: 1372)
+INFO 2025-08-02 13:45:58,923 views 27192 25128 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-02 13:45:58,930 views 27192 25128 Found linked profile for client 1372
+INFO 2025-08-02 13:45:59,022 views 27192 25128 Found 9 portfolio holdings for client 1372
+INFO 2025-08-02 13:46:11,862 views 27192 30416 create_plan_step2 called with client_id: 1554 (type: <class 'str'>)
+INFO 2025-08-02 13:46:11,951 views 27192 30416 Found legacy client: RAJESH BACHUBHAI JHAVERI (ID: 1554)
+INFO 2025-08-02 13:46:12,348 views 27192 30416 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-02 13:46:12,353 views 27192 30416 Found linked profile for client 1554
+INFO 2025-08-02 13:46:12,466 views 27192 30416 Found 17 portfolio holdings for client 1554
+INFO 2025-08-02 13:49:53,142 views 27192 19612 create_plan_step2 called with client_id: 1595 (type: <class 'str'>)
+INFO 2025-08-02 13:49:53,254 views 27192 19612 Found legacy client: SAMIR NALIN KAPADIA HUF (ID: 1595)
+INFO 2025-08-02 13:49:53,608 views 27192 19612 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-02 13:49:53,620 views 27192 19612 Found linked profile for client 1595
+INFO 2025-08-02 13:49:53,734 views 27192 19612 Found 5 portfolio holdings for client 1595
+INFO 2025-08-02 13:50:31,989 views 27192 19612 Created execution plan EP202508020005 for client 1595
+INFO 2025-08-02 13:50:31,990 views 27192 19612 Processing action 1: {'action_type': 'redeem', 'source_scheme': 'Nippon India Power & Infra Fund (G)', 'target_scheme': None, 'notes': 'ok', 'portfolio_id': 15506, 'source_portfolio_id': 15506, 'source_scheme_name': 'Nippon India Power & Infra Fund (G)', 'redeem_by': 'all_units', 'redeem_amount': None, 'redeem_units': None, 'scheme': 'Nippon India Power & Infra Fund (G)', 'scheme_name': 'Nippon India Power & Infra Fund (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+ERROR 2025-08-02 13:50:31,990 views 27192 19612 No valid scheme found for action type redeem. Action data: {'action_type': 'redeem', 'source_scheme': 'Nippon India Power & Infra Fund (G)', 'target_scheme': None, 'notes': 'ok', 'portfolio_id': 15506, 'source_portfolio_id': 15506, 'source_scheme_name': 'Nippon India Power & Infra Fund (G)', 'redeem_by': 'all_units', 'redeem_amount': None, 'redeem_units': None, 'scheme': 'Nippon India Power & Infra Fund (G)', 'scheme_name': 'Nippon India Power & Infra Fund (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+ERROR 2025-08-02 13:50:31,992 views 27192 19612 Error creating action 1: No valid scheme found for action type redeem. Action data: {'action_type': 'redeem', 'source_scheme': 'Nippon India Power & Infra Fund (G)', 'target_scheme': None, 'notes': 'ok', 'portfolio_id': 15506, 'source_portfolio_id': 15506, 'source_scheme_name': 'Nippon India Power & Infra Fund (G)', 'redeem_by': 'all_units', 'redeem_amount': None, 'redeem_units': None, 'scheme': 'Nippon India Power & Infra Fund (G)', 'scheme_name': 'Nippon India Power & Infra Fund (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+ERROR 2025-08-02 13:50:31,993 views 27192 19612 Action data: {'action_type': 'redeem', 'source_scheme': 'Nippon India Power & Infra Fund (G)', 'target_scheme': None, 'notes': 'ok', 'portfolio_id': 15506, 'source_portfolio_id': 15506, 'source_scheme_name': 'Nippon India Power & Infra Fund (G)', 'redeem_by': 'all_units', 'redeem_amount': None, 'redeem_units': None, 'scheme': 'Nippon India Power & Infra Fund (G)', 'scheme_name': 'Nippon India Power & Infra Fund (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-02 13:53:21,629 views 27192 31760 Created execution plan EP202508020006 for client 1595
+INFO 2025-08-02 13:53:21,630 views 27192 31760 Processing action 1: {'action_type': 'switch', 'source_scheme': 'Nippon India Power & Infra Fund (G)', 'target_scheme': 'Nippon India Power & Infra Fund - Direct Plan Growth Plan - Growth Option', 'notes': 'ok', 'portfolio_id': 15506, 'source_portfolio_id': 15506, 'source_scheme_name': 'Nippon India Power & Infra Fund (G)', 'target_scheme_id': 10625, 'target_scheme_code': 'INF204K01I92', 'target_scheme_name': 'Nippon India Power & Infra Fund - Direct Plan Growth Plan - Growth Option', 'switch_by': 'all_units', 'switch_amount': None, 'switch_units': None, 'scheme': 'Nippon India Power & Infra Fund (G)', 'scheme_name': 'Nippon India Power & Infra Fund (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-02 13:53:22,596 views 27192 31760 Successfully created action 20 with scheme 10623 (NIPPON INDIA POWER & INFRA FUND - DIRECT Plan - IDCW Option)
+INFO 2025-08-02 13:53:22,597 views 27192 31760 Successfully created action 20
+INFO 2025-08-02 13:53:22,722 views 27192 31760 Found 1 actions for execution plan 49
+INFO 2025-08-02 13:53:22,961 views 27192 31760 Excel file generated successfully: execution_plans/execution_plan_EP202508020006_20250802_135322.xlsx
+INFO 2025-08-02 13:53:22,962 views 27192 31760 Total actions exported: 1
+INFO 2025-08-02 13:53:23,079 views 27192 31760 Generated Excel file for plan EP202508020006
+INFO 2025-08-02 13:53:23,353 views 27192 31760 Plan EP202508020006 submitted for approval
