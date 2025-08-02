@@ -274,11 +274,13 @@ class User(AbstractUser):
 ####SCHEME PROCESSING
 
 import pandas as pd
+from collections import defaultdict
+import hashlib
 
 class SchemeUploadLog(models.Model):
     """Log entries for scheme upload processing"""
     upload = models.ForeignKey(
-        'SchemeUpload',  # Use string reference since SchemeUpload is defined later
+        'SchemeUpload',
         on_delete=models.CASCADE,
         related_name='processing_logs'
     )
@@ -314,9 +316,9 @@ class SchemeUploadLog(models.Model):
         if self.row_number == 0:
             return f"{self.upload.upload_id} - System Log ({self.get_status_display()})"
         return f"{self.upload.upload_id} - Row {self.row_number} ({self.get_status_display()})"
-    
+
 class SchemeUpload(models.Model):
-    """Model to track scheme master file uploads"""
+    """Model to track scheme master file uploads - Optimized for AMFI data"""
     UPLOAD_STATUS_CHOICES = [
         ('pending', 'Pending Processing'),
         ('processing', 'Processing'),
@@ -347,6 +349,11 @@ class SchemeUpload(models.Model):
     failed_rows = models.PositiveIntegerField(default=0)
     updated_rows = models.PositiveIntegerField(default=0)
     
+    # AMFI-specific metrics
+    empty_categories_count = models.PositiveIntegerField(default=0)
+    empty_isins_count = models.PositiveIntegerField(default=0)
+    duplicate_isins_found = models.PositiveIntegerField(default=0)
+    
     # Processing Details
     processing_log = models.TextField(blank=True)
     error_details = models.JSONField(default=dict, blank=True)
@@ -360,6 +367,10 @@ class SchemeUpload(models.Model):
     mark_missing_inactive = models.BooleanField(
         default=False,
         help_text="Mark schemes not in upload as inactive"
+    )
+    skip_empty_categories = models.BooleanField(
+        default=False,
+        help_text="Skip schemes with empty categories"
     )
     
     # Archive fields
@@ -404,8 +415,26 @@ class SchemeUpload(models.Model):
             scheme=scheme
         )
     
+    def create_log_batch(self, logs_data):
+        """Create multiple log entries in batch"""
+        log_objects = []
+        for log_data in logs_data:
+            log_objects.append(SchemeUploadLog(
+                upload=self,
+                row_number=log_data.get('row_number', 0),
+                amc_name=log_data.get('amc_name', ''),
+                scheme_name=log_data.get('scheme_name', ''),
+                status=log_data['status'],
+                message=log_data['message'],
+                scheme=log_data.get('scheme'),
+                created_at=timezone.now()
+            ))
+        
+        if log_objects:
+            SchemeUploadLog.objects.bulk_create(log_objects, batch_size=1000)
+    
     def process_upload_with_logging(self):
-        """Main method to process the uploaded scheme file"""
+        """Optimized main method to process AMFI scheme file"""
         import os
         
         try:
@@ -413,109 +442,242 @@ class SchemeUpload(models.Model):
             self.save()
             
             # Log start
-            self.create_log(0, 'success', f"Started processing upload {self.upload_id}")
+            self.create_log(0, 'success', f"Started processing AMFI upload {self.upload_id}")
             
             # Check if file exists
             if not self.file or not os.path.exists(self.file.path):
                 raise Exception(f"File not found: {self.file.path if self.file else 'No file attached'}")
             
-            # Read Excel file
-            try:
-                # Try reading with header=1 (row 2 as header)
-                df = pd.read_excel(self.file.path, engine='openpyxl', header=1)
-                self.create_log(0, 'success', f"Successfully read Excel file with {len(df)} rows")
-            except Exception as e:
-                self.create_log(0, 'error', f"Failed to read Excel file: {str(e)}")
-                raise
+            # Read AMFI Excel file with specific structure handling
+            df = self._read_amfi_excel_file()
+            if df is None or df.empty:
+                raise Exception("Failed to read valid data from AMFI Excel file")
             
-            # Remove any completely empty rows
-            df = df.dropna(how='all')
+            # Validate and clean AMFI data
+            df = self._validate_and_clean_amfi_data(df)
             
-            # Check if we have data
-            if df.empty:
-                raise Exception("Excel file contains no data rows")
+            # Build lookup caches for performance
+            lookup_caches = self._build_amfi_lookup_caches()
             
-            self.total_rows = len(df)
-            self.save()
-            
-            self.create_log(0, 'success', f"Found {self.total_rows} rows to process")
-            
-            # Log column information
-            columns_found = list(df.columns)
-            self.create_log(0, 'success', f"Columns found: {', '.join(columns_found)}")
-            
-            # Expected columns based on your Excel file
-            expected_columns = [
-                'AMC Name',
-                'Scheme NAV Name', 
-                'Category',
-                'ISIN Div Payout / ISIN Growth',
-                'ISIN Div Reinvestment'
-            ]
-            
-            # Check if required columns exist
-            missing_columns = []
-            for col in expected_columns:
-                if col not in df.columns:
-                    missing_columns.append(col)
-            
-            if missing_columns:
-                error_msg = f"Missing required columns: {', '.join(missing_columns)}"
-                self.create_log(0, 'error', error_msg)
-                raise Exception(error_msg)
-            
-            self.create_log(0, 'success', f"Column validation successful")
-            
-            # Process each row
-            for index, row in df.iterrows():
-                try:
-                    self._process_single_scheme_row(row, index + 1)
-                    self.processed_rows += 1
-                    
-                    # Save progress every 100 rows
-                    if self.processed_rows % 100 == 0:
-                        self.save()
-                        self.create_log(0, 'success', f"Progress: {self.processed_rows}/{self.total_rows} rows processed")
-                        
-                except Exception as row_error:
-                    # Log the error but continue processing
-                    self.create_log(index + 1, 'error', f"Row processing failed: {str(row_error)}")
-                    self.failed_rows += 1
-                    continue
+            # Process in optimized batches
+            self._process_amfi_data_in_batches(df, lookup_caches)
             
             # Mark missing schemes as inactive if requested
             if self.mark_missing_inactive:
                 self._mark_missing_schemes_inactive()
             
             # Complete processing
-            if self.failed_rows == 0:
-                self.status = 'completed'
-            else:
-                self.status = 'partial'
-            
-            self.processed_at = timezone.now()
-            self.save()
-            
-            success_msg = f"Processing completed. Success: {self.successful_rows}, Failed: {self.failed_rows}, Updated: {self.updated_rows}"
-            self.create_log(0, 'success', success_msg)
+            self._finalize_processing()
             
             return True
             
         except Exception as e:
-            error_msg = f"Processing failed: {str(e)}"
-            
+            error_msg = f"AMFI processing failed: {str(e)}"
             self.status = 'failed'
             self.processed_at = timezone.now()
             self.error_details = {'error': str(e)}
             self.save()
-            
             self.create_log(0, 'error', error_msg)
+            logger.error(f"AMFI upload {self.upload_id} failed: {e}")
             return False
     
-def _process_single_scheme_row(self, row, row_number):
-    """Process a single scheme row"""
-    try:
-        # Extract data with better error handling
+    def _read_amfi_excel_file(self):
+        """Read AMFI Excel file with specific structure handling"""
+        try:
+            # AMFI files have:
+            # Row 1: Headers (AMC Name, Scheme NAV Name, Category, ISIN Div Payout / ISIN Growth, ISIN Div Reinvestment)
+            # Row 2: Empty row
+            # Row 3+: Data
+            
+            df = pd.read_excel(
+                self.file.path,
+                engine='openpyxl',
+                header=0,  # Use first row as headers
+                skiprows=[1],  # Skip the empty second row
+                dtype=str,  # Read all as strings to avoid type conversion
+                na_filter=False,  # Don't convert to NaN
+                usecols='A:E'  # Only read first 5 columns, ignore empty 6th column
+            )
+            
+            self.create_log(0, 'success', f"Successfully read AMFI Excel file with {len(df)} rows")
+            
+            # Remove completely empty rows
+            df = df.dropna(how='all')
+            
+            self.total_rows = len(df)
+            self.save()
+            
+            # Log column information
+            columns_found = list(df.columns)
+            self.create_log(0, 'success', f"AMFI columns found: {', '.join(columns_found)}")
+            
+            return df
+            
+        except Exception as e:
+            self.create_log(0, 'error', f"Failed to read AMFI Excel file: {str(e)}")
+            raise
+    
+    def _validate_and_clean_amfi_data(self, df):
+        """Validate and clean AMFI-specific data"""
+        
+        # Check for expected AMFI columns
+        expected_columns = [
+            'AMC Name',
+            'Scheme NAV Name', 
+            'Category',
+            'ISIN Div Payout / ISIN Growth',
+            'ISIN Div Reinvestment'
+        ]
+        
+        missing_columns = [col for col in expected_columns if col not in df.columns]
+        if missing_columns:
+            error_msg = f"Missing AMFI columns: {', '.join(missing_columns)}"
+            self.create_log(0, 'error', error_msg)
+            raise Exception(error_msg)
+        
+        self.create_log(0, 'success', "AMFI column validation successful")
+        
+        # Clean string data
+        for col in expected_columns:
+            df[col] = df[col].astype(str).str.strip()
+            df[col] = df[col].replace(['nan', 'NaN', 'None', '-'], '')
+        
+        # Count AMFI-specific data quality issues
+        self.empty_categories_count = (df['Category'] == '').sum()
+        self.empty_isins_count = (df['ISIN Div Payout / ISIN Growth'] == '').sum()
+        
+        # Check for duplicate ISINs
+        isin_column = 'ISIN Div Payout / ISIN Growth'
+        non_empty_isins = df[df[isin_column] != ''][isin_column]
+        duplicate_isins = non_empty_isins.duplicated()
+        self.duplicate_isins_found = duplicate_isins.sum()
+        
+        # Remove rows with missing critical data
+        initial_count = len(df)
+        df = df[(df['AMC Name'] != '') & (df['Scheme NAV Name'] != '')]
+        removed_count = initial_count - len(df)
+        
+        if removed_count > 0:
+            self.create_log(0, 'warning', f"Removed {removed_count} rows with missing AMC/Scheme names")
+        
+        # Optionally skip rows with empty categories
+        if self.skip_empty_categories:
+            category_initial = len(df)
+            df = df[df['Category'] != '']
+            category_removed = category_initial - len(df)
+            if category_removed > 0:
+                self.create_log(0, 'success', f"Skipped {category_removed} rows with empty categories")
+        
+        self.save()
+        
+        # Log AMFI data quality summary
+        self.create_log(0, 'success', 
+            f"AMFI data quality: {self.empty_categories_count} empty categories, "
+            f"{self.empty_isins_count} empty ISINs, {self.duplicate_isins_found} duplicate ISINs")
+        
+        return df
+    
+    def _build_amfi_lookup_caches(self):
+        """Build optimized lookup caches for AMFI processing"""
+        
+        self.create_log(0, 'success', "Building AMFI lookup caches...")
+        
+        # Get all existing schemes
+        existing_schemes = MutualFundScheme.objects.all()
+        
+        caches = {
+            'isin_to_scheme': {},
+            'name_to_scheme': {},
+            'amc_name_to_schemes': defaultdict(dict),
+            'scheme_codes_used': set()
+        }
+        
+        for scheme in existing_schemes:
+            # ISIN lookup (primary for AMFI)
+            if scheme.isin_growth:
+                isin_key = scheme.isin_growth.strip().upper()
+                caches['isin_to_scheme'][isin_key] = scheme
+            
+            # Name lookup (case-insensitive)
+            name_key = scheme.scheme_name.strip().lower()
+            caches['name_to_scheme'][name_key] = scheme
+            
+            # AMC + Name lookup
+            amc_key = scheme.amc_name.strip().lower()
+            caches['amc_name_to_schemes'][amc_key][name_key] = scheme
+            
+            # Track used scheme codes
+            if scheme.scheme_code:
+                caches['scheme_codes_used'].add(scheme.scheme_code)
+        
+        cache_stats = f"ISIN: {len(caches['isin_to_scheme'])}, Names: {len(caches['name_to_scheme'])}, AMCs: {len(caches['amc_name_to_schemes'])}"
+        self.create_log(0, 'success', f"AMFI lookup caches built - {cache_stats}")
+        
+        return caches
+    
+    def _process_amfi_data_in_batches(self, df, lookup_caches):
+        """Process AMFI data in optimized batches"""
+        
+        batch_size = 1000  # Optimized for AMFI data size
+        total_batches = (len(df) + batch_size - 1) // batch_size
+        
+        schemes_to_create = []
+        schemes_to_update = []
+        logs_to_create = []
+        
+        for batch_num in range(total_batches):
+            start_idx = batch_num * batch_size
+            end_idx = min(start_idx + batch_size, len(df))
+            batch_df = df.iloc[start_idx:end_idx]
+            
+            # Process batch
+            for idx, row in batch_df.iterrows():
+                row_number = idx + 1
+                try:
+                    result = self._process_single_amfi_row(row, row_number, lookup_caches)
+                    
+                    if result['action'] == 'create':
+                        schemes_to_create.append(result['scheme_data'])
+                        self.successful_rows += 1
+                    elif result['action'] == 'update':
+                        schemes_to_update.append(result)
+                        self.updated_rows += 1
+                    elif result['action'] == 'skip':
+                        pass  # Already logged
+                    
+                    logs_to_create.append(result['log'])
+                    
+                except Exception as e:
+                    self.failed_rows += 1
+                    logs_to_create.append({
+                        'row_number': row_number,
+                        'status': 'error',
+                        'message': f"AMFI row processing error: {str(e)}",
+                        'amc_name': str(row.get('AMC Name', '')),
+                        'scheme_name': str(row.get('Scheme NAV Name', '')),
+                        'scheme': None
+                    })
+            
+            # Execute database operations for this batch
+            self._execute_amfi_batch_operations(schemes_to_create, schemes_to_update, logs_to_create)
+            
+            # Clear for next batch
+            schemes_to_create = []
+            schemes_to_update = []
+            logs_to_create = []
+            
+            # Update progress
+            self.processed_rows = end_idx
+            self.save()
+            
+            # Log progress
+            if (batch_num + 1) % 5 == 0 or batch_num == total_batches - 1:
+                self.create_log(0, 'success', f"AMFI progress: {end_idx}/{len(df)} rows processed")
+    
+    def _process_single_amfi_row(self, row, row_number, lookup_caches):
+        """Process a single AMFI row"""
+        
+        # Extract AMFI data
         amc_name = self._safe_string_convert(row.get('AMC Name', ''))
         scheme_name = self._safe_string_convert(row.get('Scheme NAV Name', ''))
         category = self._safe_string_convert(row.get('Category', ''))
@@ -524,255 +686,267 @@ def _process_single_scheme_row(self, row, row_number):
         
         # Validate required fields
         if not amc_name or not scheme_name:
-            self.failed_rows += 1
-            self.create_log(row_number, 'error', 
-                f"Missing required fields - AMC: '{amc_name}', Scheme: '{scheme_name}'", 
-                amc_name, scheme_name)
-            return
+            return {
+                'action': 'skip',
+                'log': {
+                    'row_number': row_number,
+                    'status': 'error',
+                    'message': f"Missing required AMFI fields - AMC: '{amc_name}', Scheme: '{scheme_name}'",
+                    'amc_name': amc_name,
+                    'scheme_name': scheme_name,
+                    'scheme': None
+                }
+            }
         
-        # Generate scheme code
-        scheme_code = self._generate_scheme_code(amc_name, scheme_name, isin_growth)
+        # Find existing scheme using AMFI-optimized search
+        existing_scheme, search_method = self._find_existing_amfi_scheme(
+            amc_name, scheme_name, isin_growth, lookup_caches
+        )
         
-        # Determine scheme type
-        scheme_type = self._categorize_scheme_type(category)
-        
-        # Check if scheme exists with enhanced search methods
-        existing_scheme = None
-        search_method = ""
-        
-        # Method 1: Search by ISIN Growth
-        if isin_growth:
-            try:
-                existing_scheme = MutualFundScheme.objects.get(isin_growth=isin_growth)
-                search_method = f"ISIN Growth: {isin_growth}"
-            except MutualFundScheme.DoesNotExist:
-                pass
-            except MutualFundScheme.MultipleObjectsReturned:
-                # Handle duplicate ISINs
-                existing_scheme = MutualFundScheme.objects.filter(isin_growth=isin_growth).first()
-                search_method = f"ISIN Growth (multiple found): {isin_growth}"
-        
-        # Method 2: Search by exact Scheme NAV Name
-        if not existing_scheme:
-            try:
-                existing_scheme = MutualFundScheme.objects.get(scheme_name__iexact=scheme_name)
-                search_method = f"Scheme NAV Name (exact): {scheme_name}"
-            except MutualFundScheme.DoesNotExist:
-                pass
-            except MutualFundScheme.MultipleObjectsReturned:
-                existing_scheme = MutualFundScheme.objects.filter(scheme_name__iexact=scheme_name).first()
-                search_method = f"Scheme NAV Name (multiple found): {scheme_name}"
-        
-        # Method 3: Search by AMC Name + Scheme NAV Name combination
-        if not existing_scheme:
-            try:
-                existing_scheme = MutualFundScheme.objects.get(
-                    amc_name__iexact=amc_name,
-                    scheme_name__iexact=scheme_name
-                )
-                search_method = f"AMC + Scheme NAV Name: {amc_name} - {scheme_name}"
-            except MutualFundScheme.DoesNotExist:
-                pass
-            except MutualFundScheme.MultipleObjectsReturned:
-                existing_scheme = MutualFundScheme.objects.filter(
-                    amc_name__iexact=amc_name,
-                    scheme_name__iexact=scheme_name
-                ).first()
-                search_method = f"AMC + Scheme NAV Name (multiple found): {amc_name} - {scheme_name}"
-        
-        # Method 4: Fuzzy search by Scheme NAV Name (if enabled)
-        if not existing_scheme and hasattr(self, 'enable_fuzzy_search') and self.enable_fuzzy_search:
-            fuzzy_matches = self._fuzzy_search_by_scheme_name(scheme_name)
-            if fuzzy_matches:
-                existing_scheme = fuzzy_matches[0]
-                search_method = f"Scheme NAV Name (fuzzy match): {scheme_name} -> {existing_scheme.scheme_name}"
-        
-        # Prepare scheme data
+        # Prepare AMFI scheme data
         scheme_data = {
             'amc_name': amc_name,
             'scheme_name': scheme_name,
-            'category': category,
-            'scheme_type': scheme_type,
+            'category': category if category else 'Uncategorized',
+            'scheme_type': self._categorize_amfi_scheme_type(category),
             'isin_growth': isin_growth if isin_growth else None,
             'isin_div_reinvestment': isin_div if isin_div else None,
-            'scheme_code': scheme_code,
+            'scheme_code': self._generate_amfi_scheme_code(amc_name, scheme_name, isin_growth, lookup_caches['scheme_codes_used']),
             'is_active': True,
             'last_updated': timezone.now(),
             'upload_batch': self
         }
         
         if existing_scheme and self.update_existing:
-            # Update existing scheme
-            for field, value in scheme_data.items():
-                if field != 'upload_batch':  # Don't change upload_batch for existing
-                    setattr(existing_scheme, field, value)
-            existing_scheme.save()
-            
-            self.updated_rows += 1
-            self.create_log(row_number, 'success', 
-                f"Updated existing scheme ({search_method})", 
-                amc_name, scheme_name, existing_scheme)
-            
-        elif existing_scheme and not self.update_existing:
-            # Skip existing scheme
-            self.create_log(row_number, 'warning', 
-                f"Skipped existing scheme ({search_method}) - update disabled", 
-                amc_name, scheme_name)
-            
+            return {
+                'action': 'update',
+                'scheme_data': scheme_data,
+                'existing_scheme': existing_scheme,
+                'log': {
+                    'row_number': row_number,
+                    'status': 'success',
+                    'message': f"Updated AMFI scheme ({search_method})",
+                    'amc_name': amc_name,
+                    'scheme_name': scheme_name,
+                    'scheme': existing_scheme
+                }
+            }
+        elif existing_scheme:
+            return {
+                'action': 'skip',
+                'log': {
+                    'row_number': row_number,
+                    'status': 'warning',
+                    'message': f"Skipped AMFI scheme ({search_method}) - update disabled",
+                    'amc_name': amc_name,
+                    'scheme_name': scheme_name,
+                    'scheme': existing_scheme
+                }
+            }
         else:
-            # Create new scheme
-            new_scheme = MutualFundScheme.objects.create(**scheme_data)
-            
-            self.successful_rows += 1
-            self.create_log(row_number, 'success', 
-                f"Created new scheme - Code: {scheme_code}", 
-                amc_name, scheme_name, new_scheme)
+            return {
+                'action': 'create',
+                'scheme_data': scheme_data,
+                'log': {
+                    'row_number': row_number,
+                    'status': 'success',
+                    'message': f"Created new AMFI scheme - Code: {scheme_data['scheme_code']}",
+                    'amc_name': amc_name,
+                    'scheme_name': scheme_name,
+                    'scheme': None
+                }
+            }
+    
+    def _find_existing_amfi_scheme(self, amc_name, scheme_name, isin_growth, lookup_caches):
+        """Find existing scheme using AMFI-optimized search methods"""
         
-    except Exception as e:
-        self.failed_rows += 1
-        error_message = f"Row processing error: {str(e)}"
+        # Method 1: Search by ISIN Growth (most reliable for AMFI)
+        if isin_growth:
+            isin_key = isin_growth.strip().upper()
+            if isin_key in lookup_caches['isin_to_scheme']:
+                return lookup_caches['isin_to_scheme'][isin_key], f"ISIN: {isin_growth}"
         
-        self.create_log(row_number, 'error', error_message,
-            amc_name if 'amc_name' in locals() else '',
-            scheme_name if 'scheme_name' in locals() else '')
+        # Method 2: Search by exact Scheme NAV Name
+        name_key = scheme_name.strip().lower()
+        if name_key in lookup_caches['name_to_scheme']:
+            return lookup_caches['name_to_scheme'][name_key], f"Name: {scheme_name}"
         
-        logger.error(f"Error processing row {row_number}: {e}")
-
-def _fuzzy_search_by_scheme_name(self, scheme_name, similarity_threshold=0.8):
-    """
-    Perform fuzzy search on scheme names using string similarity
-    Returns list of matching schemes ordered by similarity
-    """
-    from difflib import SequenceMatcher
-    
-    # Get all schemes to compare against
-    all_schemes = MutualFundScheme.objects.all()
-    matches = []
-    
-    for scheme in all_schemes:
-        # Calculate similarity ratio
-        similarity = SequenceMatcher(None, scheme_name.lower(), scheme.scheme_name.lower()).ratio()
+        # Method 3: Search by AMC Name + Scheme NAV Name combination
+        amc_key = amc_name.strip().lower()
+        if amc_key in lookup_caches['amc_name_to_schemes']:
+            if name_key in lookup_caches['amc_name_to_schemes'][amc_key]:
+                scheme = lookup_caches['amc_name_to_schemes'][amc_key][name_key]
+                return scheme, f"AMC+Name: {amc_name} - {scheme_name}"
         
-        if similarity >= similarity_threshold:
-            matches.append((scheme, similarity))
+        return None, ""
     
-    # Sort by similarity (highest first)
-    matches.sort(key=lambda x: x[1], reverse=True)
-    
-    # Return just the scheme objects
-    return [match[0] for match in matches]
-
-def _safe_string_convert(self, value):
-    """Safely convert values to string, handling NaN and None"""
-    if value is None:
-        return ''
-    
-    if pd.isna(value):
-        return ''
-    
-    # Convert to string and strip whitespace
-    result = str(value).strip()
-    
-    # Handle 'nan' string
-    if result.lower() == 'nan':
-        return ''
-        
-    return result
-
-def _apply_scheme_nav_name_filter(self, queryset, search_term):
-    """
-    Apply search filter based on Scheme NAV Name column
-    Supports exact match, partial match, and case-insensitive search
-    """
-    if not search_term:
-        return queryset
-    
-    # Clean the search term
-    search_term = search_term.strip()
-    
-    # Apply multiple search strategies
-    return queryset.filter(
-        Q(scheme_name__icontains=search_term) |  # Partial match (case-insensitive)
-        Q(scheme_name__iexact=search_term) |     # Exact match (case-insensitive)
-        Q(scheme_name__istartswith=search_term) | # Starts with (case-insensitive)
-        Q(scheme_name__iendswith=search_term)     # Ends with (case-insensitive)
-    ).distinct()
-
-def get_filtered_schemes_by_nav_name(self, nav_name_filter=None):
-    """
-    Get schemes filtered by Scheme NAV Name
-    """
-    queryset = MutualFundScheme.objects.all()
-    
-    if nav_name_filter:
-        queryset = self._apply_scheme_nav_name_filter(queryset, nav_name_filter)
-    
-    return queryset.order_by('amc_name', 'scheme_name')
-    
-    def _categorize_scheme_type(self, category):
-        """Categorize scheme type based on category"""
+    def _categorize_amfi_scheme_type(self, category):
+        """Categorize scheme type based on AMFI category"""
         if not category:
             return 'other'
         
         category_lower = category.lower()
-        if 'equity' in category_lower:
+        
+        # AMFI-specific categorization
+        if category_lower.startswith('equity'):
             return 'equity'
-        elif 'debt' in category_lower:
+        elif category_lower.startswith('debt'):
             return 'debt'
-        elif 'hybrid' in category_lower:
+        elif category_lower.startswith('hybrid'):
             return 'hybrid'
         elif 'liquid' in category_lower:
             return 'liquid'
+        elif 'overnight' in category_lower:
+            return 'overnight'
         elif 'ultra short' in category_lower:
             return 'ultra_short'
         elif 'elss' in category_lower:
             return 'elss'
-        elif 'index' in category_lower:
-            return 'index'
-        elif 'etf' in category_lower:
-            return 'etf'
         elif 'arbitrage' in category_lower:
             return 'arbitrage'
+        elif 'fof' in category_lower:
+            return 'fund_of_funds'
+        elif 'etf' in category_lower:
+            return 'etf'
+        elif 'index' in category_lower:
+            return 'index'
         else:
             return 'other'
     
-    def _generate_scheme_code(self, amc_name, scheme_name, isin=None):
-        """Generate unique scheme code"""
+    def _generate_amfi_scheme_code(self, amc_name, scheme_name, isin, scheme_codes_used):
+        """Generate unique scheme code for AMFI schemes"""
+        
+        # Use ISIN as scheme code if available
         if isin:
+            scheme_codes_used.add(isin)
             return isin
         
-        # Create from AMC and scheme name
-        amc_prefix = ''.join([c for c in amc_name.upper() if c.isalnum()])[:4]
-        scheme_suffix = ''.join([c for c in scheme_name.upper() if c.isalnum()])[:8]
-        base_code = f"{amc_prefix}_{scheme_suffix}"
+        # Generate from AMC and scheme name with hash for uniqueness
+        amc_clean = ''.join(c for c in amc_name.upper() if c.isalnum())[:4]
+        scheme_clean = ''.join(c for c in scheme_name.upper() if c.isalnum())[:8]
+        
+        # Create hash for uniqueness
+        content = f"{amc_name}|{scheme_name}".encode('utf-8')
+        hash_suffix = hashlib.md5(content).hexdigest()[:4].upper()
+        
+        base_code = f"{amc_clean}_{scheme_clean}_{hash_suffix}"
         
         # Ensure uniqueness
         counter = 1
-        code = base_code
-        while MutualFundScheme.objects.filter(scheme_code=code).exists():
-            code = f"{base_code}_{counter}"
+        final_code = base_code
+        while final_code in scheme_codes_used:
+            final_code = f"{base_code}_{counter}"
             counter += 1
         
-        return code
+        scheme_codes_used.add(final_code)
+        return final_code
+    
+    def _execute_amfi_batch_operations(self, schemes_to_create, schemes_to_update, logs_to_create):
+        """Execute database operations for AMFI batch"""
+        
+        try:
+            with transaction.atomic():
+                # Bulk create new schemes
+                if schemes_to_create:
+                    scheme_objects = [MutualFundScheme(**data) for data in schemes_to_create]
+                    MutualFundScheme.objects.bulk_create(scheme_objects, batch_size=1000)
+                
+                # Bulk update existing schemes
+                for update_data in schemes_to_update:
+                    scheme_data = update_data['scheme_data']
+                    existing_scheme = update_data['existing_scheme']
+                    
+                    for field, value in scheme_data.items():
+                        if field != 'upload_batch':  # Don't change upload_batch for existing
+                            setattr(existing_scheme, field, value)
+                    existing_scheme.save()
+                
+                # Bulk create logs
+                if logs_to_create:
+                    self.create_log_batch(logs_to_create)
+                
+        except Exception as e:
+            logger.error(f"AMFI batch operation failed: {e}")
+            # Fall back to individual operations if bulk fails
+            self._fallback_individual_operations(schemes_to_create, schemes_to_update, logs_to_create)
+    
+    def _fallback_individual_operations(self, schemes_to_create, schemes_to_update, logs_to_create):
+        """Fallback to individual operations if bulk operations fail"""
+        
+        for scheme_data in schemes_to_create:
+            try:
+                MutualFundScheme.objects.create(**scheme_data)
+            except Exception as e:
+                logger.error(f"Individual create failed: {e}")
+        
+        for update_data in schemes_to_update:
+            try:
+                scheme_data = update_data['scheme_data']
+                existing_scheme = update_data['existing_scheme']
+                for field, value in scheme_data.items():
+                    if field != 'upload_batch':
+                        setattr(existing_scheme, field, value)
+                existing_scheme.save()
+            except Exception as e:
+                logger.error(f"Individual update failed: {e}")
+    
+    def _finalize_processing(self):
+        """Finalize AMFI processing"""
+        
+        if self.failed_rows == 0:
+            self.status = 'completed'
+        else:
+            self.status = 'partial'
+        
+        self.processed_at = timezone.now()
+        self.save()
+        
+        # Create final summary
+        summary = (
+            f"AMFI processing completed. "
+            f"Total: {self.total_rows}, "
+            f"Created: {self.successful_rows}, "
+            f"Updated: {self.updated_rows}, "
+            f"Failed: {self.failed_rows}, "
+            f"Empty Categories: {self.empty_categories_count}, "
+            f"Empty ISINs: {self.empty_isins_count}, "
+            f"Duplicate ISINs: {self.duplicate_isins_found}"
+        )
+        self.create_log(0, 'success', summary)
+    
+    def _safe_string_convert(self, value):
+        """Safely convert values to string, handling NaN and None"""
+        if value is None:
+            return ''
+        
+        if pd.isna(value):
+            return ''
+        
+        # Convert to string and strip whitespace
+        result = str(value).strip()
+        
+        # Handle various empty representations
+        if result.lower() in ['nan', 'none', '-', '']:
+            return ''
+            
+        return result
     
     def _mark_missing_schemes_inactive(self):
         """Mark schemes not in current upload as inactive"""
         if self.successful_rows > 0:
-            # Get all scheme codes from this upload
             upload_logs = self.processing_logs.filter(
                 status='success',
                 scheme__isnull=False
             ).values_list('scheme__scheme_code', flat=True)
             
-            # Mark others as inactive
             inactive_count = MutualFundScheme.objects.exclude(
                 scheme_code__in=upload_logs
             ).update(is_active=False)
             
             self.create_log(0, 'success', 
-                f"Marked {inactive_count} schemes as inactive (not in current upload)")
+                f"Marked {inactive_count} schemes as inactive (not in current AMFI upload)")
     
-    # Archive and delete methods
+    # Archive and delete methods (unchanged)
     def archive(self, user):
         """Archive instead of delete"""
         self.is_archived = True
@@ -781,7 +955,6 @@ def get_filtered_schemes_by_nav_name(self, nav_name_filter=None):
         self.status = 'archived'
         self.save()
         
-        # Clear upload_batch reference from schemes
         MutualFundScheme.objects.filter(upload_batch=self).update(upload_batch=None)
         return True
     
@@ -798,27 +971,6 @@ def get_filtered_schemes_by_nav_name(self, nav_name_filter=None):
         else:
             self.archive(user)
             return False, "Upload archived (schemes still reference this upload)"
-    
-    def delete(self, using=None, keep_parents=False):
-        """Override delete to handle large datasets safely"""
-        from django.db import transaction
-        
-        # Clear foreign key references first in batches
-        with transaction.atomic():
-            batch_size = 1000
-            while True:
-                scheme_batch = list(
-                    self.uploaded_schemes.all()[:batch_size]
-                )
-                if not scheme_batch:
-                    break
-                
-                scheme_ids = [scheme.id for scheme in scheme_batch]
-                MutualFundScheme.objects.filter(
-                    id__in=scheme_ids
-                ).update(upload_batch=None)
-        
-        return super().delete(using=using, keep_parents=keep_parents)
 
 
 @receiver(post_save, sender=SchemeUpload)
@@ -826,10 +978,9 @@ def auto_process_scheme_upload(sender, instance, created, **kwargs):
     """Safely process uploads without transaction conflicts"""
     if created and instance.status == 'pending':
         try:
-            # Use transaction.on_commit to defer processing until after the current transaction
             transaction.on_commit(lambda: process_upload_deferred(instance.id))
         except Exception as e:
-            logger.error(f"Error scheduling upload processing for {instance.upload_id}: {e}")
+            logger.error(f"Error scheduling AMFI upload processing for {instance.upload_id}: {e}")
 
 def process_upload_deferred(upload_id):
     """Process upload after transaction commit"""
@@ -3054,7 +3205,7 @@ class MutualFundScheme(models.Model):
     """Enhanced mutual fund scheme model with upload support"""
     scheme_name = models.CharField(max_length=500)  # Increased length for long scheme names
     amc_name = models.CharField(max_length=200)     # Increased length for AMC names
-    scheme_code = models.CharField(max_length=50, unique=True)
+    scheme_code = models.CharField(max_length=50)
     
     # ISIN fields based on Excel structure
     isin_growth = models.CharField(

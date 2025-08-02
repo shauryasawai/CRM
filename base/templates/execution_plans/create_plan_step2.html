@@ -714,58 +714,109 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     <script>
         // Global variables
         let plannedActions = [];
         let currentTargetField = null;
+        let hasUnsavedChanges = false;
+        let lastSearchResults = [];
 
         // Initialize when page loads
         $(document).ready(function() {
+            console.log('Initializing execution plan step 2...');
+            
+            // Setup CSRF token first
+            setupCSRFToken();
+            
+            // Initialize components
             updateActionsSummary();
             initializeAssetAllocation();
+            setupEventHandlers();
+            setupKeyboardShortcuts();
             
-            // Set up search URL from template data
+            // Set client ID from template
+            window.clientId = {{ client.id }};
+            
+            // Setup search configuration
             setupSearchConfiguration();
             
-            // Setup scheme search on enter key
-            $('#scheme-search-input').on('keypress', function(e) {
-                if (e.which === 13) {
-                    searchSchemes();
+            // Cache portfolio schemes for offline search
+            cachePortfolioSchemes();
+            
+            // Load draft if available
+            loadDraftFromStorage();
+            
+            console.log('Initialization complete');
+        });
+
+        function setupCSRFToken() {
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+            
+            // Get CSRF token from cookie
+            const csrftoken = getCookie('csrftoken');
+            
+            // Also try to get from meta tag or hidden input as fallback
+            let csrfTokenFinal = csrftoken;
+            if (!csrfTokenFinal) {
+                const metaToken = $('meta[name=csrf-token]').attr('content');
+                if (metaToken) {
+                    csrfTokenFinal = metaToken;
+                } else {
+                    const inputToken = $('[name=csrfmiddlewaretoken]').val();
+                    if (inputToken) {
+                        csrfTokenFinal = inputToken;
+                    }
+                }
+            }
+            
+            console.log('CSRF Token found:', csrfTokenFinal ? 'Yes' : 'No');
+            console.log('CSRF Token length:', csrfTokenFinal ? csrfTokenFinal.length : 0);
+            
+            // Store globally for use in AJAX calls
+            window.csrfToken = csrfTokenFinal;
+            
+            // Setup AJAX defaults
+            $.ajaxSetup({
+                beforeSend: function(xhr, settings) {
+                    if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                        if (csrfTokenFinal) {
+                            xhr.setRequestHeader("X-CSRFToken", csrfTokenFinal);
+                        }
+                    }
                 }
             });
-            
-            // Setup real-time search with debounce
-            let searchTimeout;
-            $('#scheme-search-input').on('input', function() {
-                clearTimeout(searchTimeout);
-                const query = $(this).val().trim();
-                
-                if (query.length >= 2) {
-                    searchTimeout = setTimeout(() => {
-                        searchSchemes();
-                    }, 300); // 300ms debounce
-                } else if (query.length === 0) {
-                    resetSearchResults();
-                }
-            });
-            
-            // FIXED: Setup action type selection with proper event handling
-            $('.action-type-selector').off('click').on('click', function() {
+        }
+
+        function setupEventHandlers() {
+            // Action type selection buttons
+            $(document).on('click', '.action-type-selector', function() {
                 const actionType = $(this).data('action');
                 console.log('Modal action type selected:', actionType);
                 selectActionType(actionType);
             });
 
-            // FIXED: Setup quick action buttons with proper event handling
-            $('button[data-action-type]').off('click').on('click', function() {
+            // Quick action buttons
+            $(document).on('click', 'button[data-action-type]', function() {
                 const actionType = $(this).data('action-type');
                 console.log('Quick action button clicked:', actionType);
                 openActionModal(actionType, '', 0, 0, null);
             });
             
-            // Setup source scheme change handler
+            // Source scheme change handler
             $('#source-scheme').on('change', function() {
                 const selectedScheme = $(this).val();
                 if (selectedScheme) {
@@ -773,12 +824,12 @@
                 }
             });
             
-            // Setup purchase type change handler
+            // Purchase type change handler
             $('#purchase-type').on('change', function() {
                 togglePurchaseFields();
             });
             
-            // Setup redeem/switch by change handlers
+            // Redeem/switch by change handlers
             $('#redeem-by').on('change', function() {
                 toggleAmountField('redeem');
             });
@@ -787,56 +838,56 @@
                 toggleAmountField('switch');
             });
             
-            // Load draft if available
-            loadDraftFromStorage();
+            // Scheme search functionality
+            $('#scheme-search-input').on('keypress', function(e) {
+                if (e.which === 13) {
+                    e.preventDefault();
+                    searchSchemes();
+                }
+            });
             
-            // Setup CSRF token for AJAX requests
-            setupCSRFToken();
+            // Real-time search with debounce
+            let searchTimeout;
+            $('#scheme-search-input').on('input', function() {
+                clearTimeout(searchTimeout);
+                const query = $(this).val().trim();
+                
+                if (query.length >= 2) {
+                    searchTimeout = setTimeout(() => {
+                        searchSchemes();
+                    }, 300);
+                } else if (query.length === 0) {
+                    resetSearchResults();
+                }
+            });
             
-            // Setup keyboard shortcuts
-            setupKeyboardShortcuts();
-            
-            // Set client ID from template
-            if (typeof window.templateClientId !== 'undefined') {
-                window.clientId = window.templateClientId;
-            }
-            
-            // Update unsaved changes status periodically
-            setInterval(updateUnsavedChangesStatus, 1000);
-            
-            // Cache portfolio schemes for offline search
-            cachePortfolioSchemes();
-        });
+            // Modal event handlers
+            $('#schemeSearchModal').on('shown.bs.modal', function() {
+                $('#scheme-search-input').focus();
+            });
+
+            // Plan name modal handlers
+            $('#planNameModal').on('shown.bs.modal', function() {
+                $('#plan-name').focus();
+                // Set default plan name
+                if (!$('#plan-name').val()) {
+                    const clientName = '{{ client.name|escapejs }}';
+                    const currentDate = new Date().toLocaleDateString();
+                    $('#plan-name').val(`Execution Plan for ${clientName} - ${currentDate}`);
+                }
+            });
+        }
 
         function setupSearchConfiguration() {
-            // Try to get the search URL from different possible sources
-            window.schemeSearchUrl = window.schemeSearchUrl || 
-                                     $('#scheme-search-input').data('search-url') ||
-                                     '/execution-plans/api/schemes/search/' ||
-                                     '{% url "search_schemes_ajax" %}'; // Django template fallback
-            
-            // Log for debugging
+            // Set up the search URL for scheme search
+            window.schemeSearchUrl = '{% url "search_schemes_ajax" %}';
             console.log('Search URL configured:', window.schemeSearchUrl);
         }
 
         function cachePortfolioSchemes() {
-            // Extract schemes from the portfolio data already loaded on the page
             window.portfolioSchemes = [];
             
-            // Try to extract from portfolio table
-            $('#planned-actions table tbody tr').each(function() {
-                const schemeName = $(this).data('scheme-name');
-                if (schemeName) {
-                    window.portfolioSchemes.push({
-                        scheme_name: schemeName,
-                        id: $(this).data('portfolio-id'),
-                        current_value: $(this).data('current-value'),
-                        units: $(this).data('units')
-                    });
-                }
-            });
-            
-            // Try to extract from source scheme dropdown
+            // Extract from source scheme dropdown
             $('#source-scheme option').each(function() {
                 const schemeName = $(this).val();
                 if (schemeName && schemeName !== '') {
@@ -845,7 +896,7 @@
                         id: $(this).data('portfolio-id'),
                         current_value: $(this).data('current-value'),
                         units: $(this).data('units'),
-                        amc_name: 'From Portfolio' // Placeholder since we don't have AMC data
+                        amc_name: 'From Portfolio'
                     });
                 }
             });
@@ -860,25 +911,31 @@
 
         // Initialize asset allocation visualization
         function initializeAssetAllocation() {
-            // This function remains the same as in original code
+            // Get asset allocation data from template context
+            {% if asset_allocation %}
             const allocation = {
-                total_aum: parseFloat($('#asset-allocation-bar').attr('data-total-aum') || 0),
-                total_equity: parseFloat($('#asset-allocation-bar').attr('data-total-equity') || 0),
-                total_debt: parseFloat($('#asset-allocation-bar').attr('data-total-debt') || 0),
-                total_hybrid: parseFloat($('#asset-allocation-bar').attr('data-total-hybrid') || 0),
-                total_liquid: parseFloat($('#asset-allocation-bar').attr('data-total-liquid') || 0),
-                total_other: parseFloat($('#asset-allocation-bar').attr('data-total-other') || 0),
-                total_arbitrage: parseFloat($('#asset-allocation-bar').attr('data-total-arbitrage') || 0)
+                total_aum: {{ asset_allocation.total_aum|default:0 }},
+                total_equity: {{ asset_allocation.total_equity|default:0 }},
+                total_debt: {{ asset_allocation.total_debt|default:0 }},
+                total_hybrid: {{ asset_allocation.total_hybrid|default:0 }},
+                total_liquid: {{ asset_allocation.total_liquid|default:0 }},
+                total_other: {{ asset_allocation.total_other|default:0 }},
+                total_arbitrage: {{ asset_allocation.total_arbitrage|default:0 }}
             };
             
             if (allocation.total_aum > 0) {
                 displayAssetAllocation(allocation);
             }
+            {% endif %}
         }
 
         function displayAssetAllocation(allocation) {
             const barContainer = $('#asset-allocation-bar');
             const legendContainer = $('#asset-allocation-legend');
+            
+            if (barContainer.length === 0 || legendContainer.length === 0) {
+                return;
+            }
             
             let barHtml = '';
             let legendHtml = '';
@@ -896,10 +953,8 @@
                 if (segment.value > 0) {
                     const percentage = (segment.value / allocation.total_aum) * 100;
                     
-                    // Add to bar
                     barHtml += `<div class="allocation-segment ${segment.class}" style="width: ${percentage}%"></div>`;
                     
-                    // Add to legend
                     legendHtml += `
                         <div class="col-2">
                             <span class="${segment.class} d-inline-block" style="width: 12px; height: 12px; border-radius: 2px;"></span> 
@@ -913,7 +968,7 @@
             legendContainer.html(legendHtml);
         }
 
-        // FIXED: Action Modal Functions with proper field visibility
+        // Action Modal Functions
         function openActionModal(actionType, schemeName = '', currentValue = 0, currentUnits = 0, portfolioId = null) {
             console.log('Opening action modal for:', actionType);
             
@@ -925,13 +980,13 @@
             $('#current-units').val(currentUnits);
             $('#portfolio-id').val(portfolioId);
             
-            // Set source scheme if provided (for existing portfolio schemes)
+            // Set source scheme if provided
             if (schemeName && actionType !== 'sip' && actionType !== 'purchase') {
                 $('#source-scheme').val(schemeName);
                 updatePortfolioData(schemeName);
             }
             
-            // For purchase actions with existing scheme, set the scheme in the source field
+            // For purchase actions with existing scheme
             if (actionType === 'purchase' && schemeName) {
                 $('#source-scheme').val(schemeName);
                 updatePortfolioData(schemeName);
@@ -939,7 +994,7 @@
                 togglePurchaseFields();
             }
             
-            // CRITICAL FIX: Always call selectActionType to ensure proper field visibility
+            // Select action type and show relevant fields
             selectActionType(actionType);
             
             // Set modal title
@@ -958,7 +1013,6 @@
         }
 
         function updatePortfolioData(schemeName) {
-            // Find the selected option and update hidden fields
             const selectedOption = $(`#source-scheme option[value="${schemeName}"]`);
             if (selectedOption.length > 0) {
                 $('#portfolio-id').val(selectedOption.data('portfolio-id'));
@@ -967,7 +1021,6 @@
             }
         }
 
-        // FIXED: Enhanced selectActionType function to ensure proper field visibility
         function selectActionType(actionType) {
             console.log('Selecting action type:', actionType);
             
@@ -994,11 +1047,10 @@
             // Set hidden field
             $('#action-type').val(actionType);
             
-            // CRITICAL FIX: Always call showRelevantFields to ensure proper field visibility
+            // Show relevant fields
             showRelevantFields(actionType);
         }
 
-        // FIXED: Enhanced showRelevantFields function with better field management
         function showRelevantFields(actionType) {
             console.log('Showing relevant fields for:', actionType);
             
@@ -1025,8 +1077,8 @@
                     break;
                 case 'sip':
                     $('#target-scheme-group, #sip-amount-group, #sip-frequency-group, #sip-date-group').addClass('show').show();
-                    $('#source-scheme-group').hide(); // SIP doesn't need source scheme
-                    $('#source-scheme').val(''); // Clear source scheme for SIP
+                    $('#source-scheme-group').hide();
+                    $('#source-scheme').val('');
                     break;
                 case 'swp':
                     $('#swp-amount-group, #swp-frequency-group, #swp-date-group').addClass('show').show();
@@ -1034,9 +1086,8 @@
                     break;
             }
 
-            // Force a small delay to ensure DOM updates are complete
+            // Trigger additional field-specific logic
             setTimeout(() => {
-                // Trigger any additional field-specific logic
                 if (actionType === 'purchase') {
                     togglePurchaseFields();
                 }
@@ -1054,7 +1105,7 @@
                 $('#source-scheme-group').hide();
                 $('#target-scheme-group').addClass('show').show();
                 $('#folio-group').removeClass('show').hide();
-                $('#source-scheme').val(''); // Clear source scheme
+                $('#source-scheme').val('');
             } else {
                 $('#source-scheme-group').hide();
                 $('#target-scheme-group').removeClass('show').hide();
@@ -1086,57 +1137,16 @@
             $('#target-scheme').removeAttr('data-scheme-id data-scheme-code data-amc-name data-min-investment data-min-sip data-scheme-type data-risk-category');
         }
 
-        // Enhanced Scheme Search Functions
+        // Scheme Search Functions
         function openSchemeSearchModal() {
             $('#schemeSearchModal').modal('show');
             resetSearchResults();
-            
-            // Test the search URL when modal opens
-            testSearchEndpoint();
-        }
-
-        function testSearchEndpoint() {
-            // Quick test to see if the search endpoint is working
-            $.ajax({
-                url: window.schemeSearchUrl,
-                method: 'GET',
-                data: { q: 'test', limit: 1 },
-                timeout: 5000,
-                success: function(response) {
-                    console.log('Search endpoint test successful:', response);
-                },
-                error: function(xhr, textStatus, errorThrown) {
-                    console.warn('Search endpoint test failed:', {
-                        url: window.schemeSearchUrl,
-                        status: xhr.status,
-                        statusText: xhr.statusText,
-                        textStatus: textStatus
-                    });
-                    
-                    // Show a warning in the search modal
-                    if (xhr.status === 404) {
-                        $('#scheme-search-results').html(`
-                            <div class="alert alert-warning">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                <strong>Search endpoint not configured properly.</strong><br>
-                                URL: ${window.schemeSearchUrl}<br>
-                                <small>Please check your Django URL configuration.</small>
-                            </div>
-                        `);
-                    }
-                }
-            });
         }
 
         function openSchemeSearch(targetFieldId) {
             currentTargetField = targetFieldId;
             $('#schemeSearchModal').modal('show');
             resetSearchResults();
-            
-            // Focus on search input when modal opens
-            $('#schemeSearchModal').on('shown.bs.modal', function() {
-                $('#scheme-search-input').focus();
-            });
         }
 
         function resetSearchResults() {
@@ -1161,36 +1171,25 @@
             $('.loading-spinner').show();
             $('#scheme-search-results').hide();
             
-            // Get the search URL from the template or use fallback
-            const searchUrl = window.schemeSearchUrl || '/execution-plans/api/schemes/search/';
-            
-            // Make AJAX request to search schemes with enhanced search parameters
+            // Make AJAX request to search schemes
             $.ajax({
-                url: searchUrl,
+                url: window.schemeSearchUrl,
                 method: 'GET',
+                headers: {
+                    'X-CSRFToken': window.csrfToken
+                },
                 data: { 
                     q: query,
-                    search_by: 'scheme_nav_name', // Specify NAV name search
-                    include_inactive: false, // Only active schemes
-                    limit: 50 // Limit results
+                    limit: 50
                 },
-                timeout: 10000, // 10 second timeout
+                timeout: 10000,
                 success: function(response) {
                     $('.loading-spinner').hide();
                     $('#scheme-search-results').show();
                     
-                    // Handle different response formats
-                    if (response && (response.success === true || response.schemes)) {
-                        const schemes = response.schemes || response.data || response;
-                        if (Array.isArray(schemes) && schemes.length > 0) {
-                            // Store results globally for scheme selection
-                            window.lastSearchResults = schemes;
-                            displayEnhancedSchemeResults(schemes, query);
-                        } else {
-                            displayNoResultsMessage(query);
-                        }
-                    } else if (response && response.success === false) {
-                        displayErrorMessage(response.error || 'Search failed');
+                    if (response && response.success && response.schemes && response.schemes.length > 0) {
+                        lastSearchResults = response.schemes;
+                        displaySchemeResults(response.schemes, query);
                     } else {
                         displayNoResultsMessage(query);
                     }
@@ -1204,63 +1203,42 @@
                     if (textStatus === 'timeout') {
                         errorMessage += 'Request timed out. Please try again.';
                     } else if (xhr.status === 404) {
-                        errorMessage += 'Search endpoint not found. Please contact support.';
+                        errorMessage += 'Search endpoint not found.';
                     } else if (xhr.status === 403) {
-                        errorMessage += 'Access denied. Please check your permissions.';
+                        errorMessage += 'Access denied.';
                     } else if (xhr.status === 500) {
                         errorMessage += 'Server error. Please try again later.';
-                    } else if (textStatus === 'parsererror') {
-                        errorMessage += 'Invalid response format.';
                     } else {
                         errorMessage += 'Please check your connection and try again.';
                     }
                     
-                    displayErrorMessage(errorMessage, xhr.status);
-                    
-                    // Log error for debugging
-                    console.error('Search error:', {
-                        status: xhr.status,
-                        statusText: xhr.statusText,
-                        textStatus: textStatus,
-                        errorThrown: errorThrown,
-                        responseText: xhr.responseText
-                    });
+                    displayErrorMessage(errorMessage);
+                    console.error('Search error:', xhr);
                 }
             });
         }
 
-        function displayEnhancedSchemeResults(schemes, query) {
+        function displaySchemeResults(schemes, query) {
             let html = '<div class="list-group">';
             
-            // Sort schemes by relevance (exact matches first, then partial matches)
+            // Sort schemes by relevance
             const sortedSchemes = schemes.sort((a, b) => {
                 const aName = (a.scheme_name || '').toLowerCase();
                 const bName = (b.scheme_name || '').toLowerCase();
                 const queryLower = query.toLowerCase();
                 
-                // Exact matches first
-                if (aName === queryLower && bName !== queryLower) return -1;
-                if (bName === queryLower && aName !== queryLower) return 1;
-                
-                // Starts with query
-                if (aName.startsWith(queryLower) && !bName.startsWith(queryLower)) return -1;
-                if (bName.startsWith(queryLower) && !aName.startsWith(queryLower)) return 1;
-                
-                // Contains query
                 if (aName.includes(queryLower) && !bName.includes(queryLower)) return -1;
                 if (bName.includes(queryLower) && !aName.includes(queryLower)) return 1;
                 
-                // Alphabetical order
                 return aName.localeCompare(bName);
             });
             
             sortedSchemes.forEach(function(scheme) {
-                html += createEnhancedSchemeResultCard(scheme, query);
+                html += createSchemeResultCard(scheme, query);
             });
             
             html += '</div>';
             
-            // Add search summary
             const summaryHtml = `
                 <div class="alert alert-info mb-3">
                     <i class="fas fa-info-circle"></i> 
@@ -1272,7 +1250,7 @@
             $('#scheme-search-results').html(summaryHtml + html);
         }
 
-        function createEnhancedSchemeResultCard(scheme, query) {
+        function createSchemeResultCard(scheme, query) {
             const schemeName = scheme.scheme_name || '';
             const amcName = scheme.amc_name || 'Unknown AMC';
             const category = scheme.category || 'Unknown Category';
@@ -1280,89 +1258,39 @@
             const riskCategory = scheme.risk_category || 'moderate';
             const minInvestment = scheme.minimum_investment || 500;
             const minSip = scheme.minimum_sip || 500;
-            
-            const isinGrowth = scheme.isin_growth || '';
-            const isinDiv = scheme.isin_div_reinvestment || '';
             const schemeCode = scheme.scheme_code || '';
-            
-            const lastNavPrice = scheme.last_nav_price ? parseFloat(scheme.last_nav_price).toFixed(4) : null;
-            const lastNavDate = scheme.last_nav_date || '';
-            
             const isActive = scheme.is_active !== false;
             
             // Highlight matching text
             const highlightedName = highlightMatchingText(schemeName, query);
             const highlightedAMC = highlightMatchingText(amcName, query);
-            const highlightedCategory = highlightMatchingText(category, query);
             
             const typeColors = {
                 'equity': 'success',
                 'debt': 'primary', 
                 'hybrid': 'warning',
                 'liquid': 'info',
-                'ultra_short': 'info',
-                'elss': 'success',
-                'index': 'secondary',
-                'etf': 'dark',
-                'arbitrage': 'danger',
                 'other': 'secondary'
             };
             
-            const riskColors = {
-                'low': 'success',
-                'moderate': 'warning',
-                'high': 'danger',
-                'very_high': 'danger'
-            };
-            
             const typeColor = typeColors[schemeType] || 'secondary';
-            const riskColor = riskColors[riskCategory] || 'warning';
-            
-            // Calculate match score for sorting indication
-            const matchScore = calculateMatchScore(scheme, query);
-            const matchIndicator = matchScore > 90 ? '<i class="fas fa-star text-warning" title="Exact match"></i>' : 
-                                  matchScore > 70 ? '<i class="fas fa-star-half-alt text-warning" title="Good match"></i>' : '';
             
             return `
                 <div class="scheme-search-result list-group-item list-group-item-action" onclick="selectScheme('${schemeName.replace(/'/g, "\\'")}', '${amcName.replace(/'/g, "\\'")}', '${scheme.id}', '${schemeCode.replace(/'/g, "\\'")}')">
                     <div class="d-flex w-100 justify-content-between align-items-start">
                         <div class="flex-grow-1">
-                            <div class="d-flex align-items-center mb-2">
-                                <h6 class="mb-0 text-primary flex-grow-1">${highlightedName}</h6>
-                                <div class="ms-2">
-                                    ${matchIndicator}
-                                    ${isActive ? '<span class="badge bg-success ms-1">Active</span>' : '<span class="badge bg-danger ms-1">Inactive</span>'}
-                                </div>
-                            </div>
-                            
-                            <div class="row mb-2">
-                                <div class="col-md-8">
-                                    <p class="mb-1">
-                                        <strong>AMC:</strong> ${highlightedAMC}
-                                    </p>
-                                    <p class="mb-1">
-                                        <strong>Category:</strong> ${highlightedCategory}
-                                        <span class="badge bg-${typeColor} ms-2">${schemeType.toUpperCase()}</span>
-                                        <span class="badge bg-${riskColor} ms-1">${riskCategory.replace('_', ' ').toUpperCase()}</span>
-                                    </p>
-                                </div>
-                                <div class="col-md-4 text-end">
-                                    ${lastNavPrice ? `<div class="text-success"><strong>NAV:</strong> ₹${lastNavPrice}</div>` : ''}
-                                    ${lastNavDate ? `<small class="text-muted">${lastNavDate}</small>` : ''}
-                                </div>
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-6">
-                                    ${isinGrowth ? `<small class="text-muted d-block"><strong>ISIN Growth:</strong> ${isinGrowth}</small>` : ''}
-                                    ${isinDiv ? `<small class="text-muted d-block"><strong>ISIN Div Reinv:</strong> ${isinDiv}</small>` : ''}
-                                    ${schemeCode ? `<small class="text-muted d-block"><strong>Code:</strong> ${schemeCode}</small>` : ''}
-                                </div>
-                                <div class="col-md-6">
-                                    <small class="text-muted d-block"><strong>Min Investment:</strong> ₹${minInvestment.toLocaleString()}</small>
-                                    <small class="text-muted d-block"><strong>Min SIP:</strong> ₹${minSip.toLocaleString()}</small>
-                                </div>
-                            </div>
+                            <h6 class="mb-1 text-primary">${highlightedName}</h6>
+                            <p class="mb-1">
+                                <strong>AMC:</strong> ${highlightedAMC} | 
+                                <strong>Category:</strong> ${category}
+                                <span class="badge bg-${typeColor} ms-2">${schemeType.toUpperCase()}</span>
+                                ${isActive ? '<span class="badge bg-success ms-1">Active</span>' : '<span class="badge bg-danger ms-1">Inactive</span>'}
+                            </p>
+                            <small class="text-muted">
+                                Min Investment: ₹${minInvestment.toLocaleString()} | 
+                                Min SIP: ₹${minSip.toLocaleString()}
+                                ${schemeCode ? ` | Code: ${schemeCode}` : ''}
+                            </small>
                         </div>
                     </div>
                 </div>
@@ -1376,126 +1304,38 @@
             return text.replace(regex, '<mark>$1</mark>');
         }
 
-        function calculateMatchScore(scheme, query) {
-            const queryLower = query.toLowerCase();
-            const schemeName = (scheme.scheme_name || '').toLowerCase();
-            const amcName = (scheme.amc_name || '').toLowerCase();
-            const category = (scheme.category || '').toLowerCase();
-            
-            // Exact match gets highest score
-            if (schemeName === queryLower) return 100;
-            
-            // Starts with query gets high score
-            if (schemeName.startsWith(queryLower)) return 90;
-            
-            // Contains query in scheme name
-            if (schemeName.includes(queryLower)) return 80;
-            
-            // AMC name match
-            if (amcName.includes(queryLower)) return 70;
-            
-            // Category match
-            if (category.includes(queryLower)) return 60;
-            
-            return 50; // Default score
-        }
-
         function displayNoResultsMessage(query) {
             $('#scheme-search-results').html(`
                 <div class="text-center text-muted py-4">
                     <i class="fas fa-search fa-2x mb-3"></i>
                     <p>No schemes found for "<strong>${query}</strong>"</p>
-                    <div class="mt-3">
-                        <small class="text-muted">
-                            <strong>Search Tips:</strong><br>
-                            • Try different keywords (AMC name, scheme type, category)<br>
-                            • Use partial scheme names<br>
-                            • Search by ISIN or scheme code<br>
-                            • Check spelling and try variations
-                        </small>
-                    </div>
+                    <small class="text-muted">Try different keywords or check spelling</small>
                 </div>
             `);
         }
 
-        function displayErrorMessage(message, statusCode) {
-            const defaultMessage = message || 'Error searching schemes. Please try again.';
-            
+        function displayErrorMessage(message) {
             $('#scheme-search-results').html(`
                 <div class="text-center text-danger py-4">
                     <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
-                    <p class="mb-3">${defaultMessage}</p>
-                    ${statusCode ? `<small class="text-muted">Error Code: ${statusCode}</small><br>` : ''}
-                    <div class="mt-3">
-                        <button type="button" class="btn btn-outline-primary me-2" onclick="searchSchemes()">
-                            <i class="fas fa-redo"></i> Retry Search
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="tryOfflineSearch()">
-                            <i class="fas fa-database"></i> Search Offline
-                        </button>
-                    </div>
-                    <div class="mt-3">
-                        <small class="text-muted">
-                            <strong>Troubleshooting:</strong><br>
-                            • Check your internet connection<br>
-                            • Try a different search term<br>
-                            • Contact support if the issue persists
-                        </small>
-                    </div>
+                    <p class="mb-3">${message}</p>
+                    <button type="button" class="btn btn-outline-primary" onclick="searchSchemes()">
+                        <i class="fas fa-redo"></i> Retry Search
+                    </button>
                 </div>
             `);
         }
 
-        // Fallback search function for when AJAX fails
-        function tryOfflineSearch() {
-            const query = $('#scheme-search-input').val().trim();
-            
-            if (query.length < 2) {
-                showWarningMessage('Please enter at least 2 characters to search');
-                return;
-            }
-            
-            // Check if we have any cached schemes data
-            if (window.portfolioSchemes && window.portfolioSchemes.length > 0) {
-                const filteredSchemes = window.portfolioSchemes.filter(scheme => {
-                    const schemeName = (scheme.scheme_name || '').toLowerCase();
-                    const amcName = (scheme.amc_name || '').toLowerCase();
-                    const queryLower = query.toLowerCase();
-                    
-                    return schemeName.includes(queryLower) || 
-                           amcName.includes(queryLower) ||
-                           schemeName.startsWith(queryLower);
-                });
-                
-                if (filteredSchemes.length > 0) {
-                    displayEnhancedSchemeResults(filteredSchemes, query);
-                    showInfoMessage(`Found ${filteredSchemes.length} schemes from your portfolio`);
-                } else {
-                    displayNoResultsMessage(query);
-                }
-            } else {
-                $('#scheme-search-results').html(`
-                    <div class="text-center text-warning py-4">
-                        <i class="fas fa-wifi fa-2x mb-3"></i>
-                        <p>Offline search not available</p>
-                        <small class="text-muted">Please check your connection and try the online search</small>
-                    </div>
-                `);
-            }
-        }
-
         function selectScheme(schemeName, amcName, schemeId, schemeCode) {
-            const fullSchemeName = schemeName;
-            
             if (currentTargetField) {
-                // If target field is specified, populate that field
-                $(`#${currentTargetField}`).val(fullSchemeName);
+                // Populate target field
+                $(`#${currentTargetField}`).val(schemeName);
                 $(`#${currentTargetField}`).attr('data-scheme-id', schemeId);
                 $(`#${currentTargetField}`).attr('data-scheme-code', schemeCode);
                 $(`#${currentTargetField}`).attr('data-amc-name', amcName);
                 
-                // Store additional scheme data for validation
-                const selectedScheme = window.lastSearchResults?.find(s => s.id == schemeId);
+                // Store additional scheme data
+                const selectedScheme = lastSearchResults?.find(s => s.id == schemeId);
                 if (selectedScheme) {
                     $(`#${currentTargetField}`).attr('data-min-investment', selectedScheme.minimum_investment || 500);
                     $(`#${currentTargetField}`).attr('data-min-sip', selectedScheme.minimum_sip || 500);
@@ -1505,9 +1345,9 @@
                 
                 currentTargetField = null;
             } else {
-                // If no target field, open purchase modal for new scheme
+                // Open purchase modal for new scheme
                 openActionModal('purchase', '', 0, 0, null);
-                $('#target-scheme').val(fullSchemeName);
+                $('#target-scheme').val(schemeName);
                 $('#target-scheme').attr('data-scheme-id', schemeId);
                 $('#target-scheme').attr('data-scheme-code', schemeCode);
                 $('#target-scheme').attr('data-amc-name', amcName);
@@ -1564,14 +1404,6 @@
                     } else if (formData.get('purchase_type') === 'existing_scheme' && !formData.get('source_scheme')) {
                         errorMessage = 'Please select an existing scheme';
                         isValid = false;
-                    } else {
-                        // Validate minimum investment
-                        const minInvestment = parseFloat($('#target-scheme').attr('data-min-investment') || $('#source-scheme option:selected').attr('data-min-investment') || 500);
-                        const purchaseAmount = parseFloat(formData.get('purchase_amount'));
-                        if (purchaseAmount < minInvestment) {
-                            errorMessage = `Purchase amount must be at least ₹${minInvestment.toLocaleString()} for the selected scheme`;
-                            isValid = false;
-                        }
                     }
                     break;
                     
@@ -1596,25 +1428,11 @@
                         errorMessage = 'Please select a source scheme';
                         isValid = false;
                     } else if (!formData.get('target_scheme')) {
-                        errorMessage = 'Target scheme is required. Please search and select a scheme.';
+                        errorMessage = 'Target scheme is required';
                         isValid = false;
                     } else if (!formData.get('switch_by')) {
                         errorMessage = 'Please select switch method';
                         isValid = false;
-                    } else if (formData.get('switch_by') === 'specific_amount' && !formData.get('switch_amount')) {
-                        errorMessage = 'Switch amount is required';
-                        isValid = false;
-                    } else if (formData.get('switch_by') === 'specific_units' && !formData.get('switch_units')) {
-                        errorMessage = 'Switch units is required';
-                        isValid = false;
-                    } else {
-                        // Validate minimum investment for switch
-                        const minInvestment = parseFloat($('#target-scheme').attr('data-min-investment')) || 500;
-                        const switchAmount = parseFloat(formData.get('switch_amount'));
-                        if (formData.get('switch_by') === 'specific_amount' && switchAmount < minInvestment) {
-                            errorMessage = `Switch amount must be at least ₹${minInvestment.toLocaleString()} for the selected scheme`;
-                            isValid = false;
-                        }
                     }
                     break;
                     
@@ -1623,7 +1441,7 @@
                         errorMessage = 'Please select a source scheme';
                         isValid = false;
                     } else if (!formData.get('target_scheme')) {
-                        errorMessage = 'Target scheme is required. Please search and select a scheme.';
+                        errorMessage = 'Target scheme is required';
                         isValid = false;
                     } else if (!formData.get('stp_amount')) {
                         errorMessage = 'STP amount is required';
@@ -1631,20 +1449,12 @@
                     } else if (!formData.get('stp_frequency')) {
                         errorMessage = 'STP frequency is required';
                         isValid = false;
-                    } else {
-                        // Validate minimum STP amount
-                        const minInvestment = parseFloat($('#target-scheme').attr('data-min-investment')) || 500;
-                        const stpAmount = parseFloat(formData.get('stp_amount'));
-                        if (stpAmount < minInvestment) {
-                            errorMessage = `STP amount must be at least ₹${minInvestment.toLocaleString()} for the selected scheme`;
-                            isValid = false;
-                        }
                     }
                     break;
                     
                 case 'sip':
                     if (!formData.get('target_scheme')) {
-                        errorMessage = 'Target scheme is required. Please search and select a scheme.';
+                        errorMessage = 'Target scheme is required';
                         isValid = false;
                     } else if (!formData.get('sip_amount')) {
                         errorMessage = 'SIP amount is required';
@@ -1655,14 +1465,6 @@
                     } else if (!formData.get('sip_date')) {
                         errorMessage = 'SIP date is required';
                         isValid = false;
-                    } else {
-                        // Validate minimum SIP amount
-                        const minSip = parseFloat($('#target-scheme').attr('data-min-sip')) || 500;
-                        const sipAmount = parseFloat(formData.get('sip_amount'));
-                        if (sipAmount < minSip) {
-                            errorMessage = `SIP amount must be at least ₹${minSip.toLocaleString()} for the selected scheme`;
-                            isValid = false;
-                        }
                     }
                     break;
                     
@@ -1693,23 +1495,32 @@
         function createActionObject(formData) {
             const actionType = formData.get('action_type');
             const action = {
-                id: Date.now() + Math.random(), // Unique ID
+                id: Date.now() + Math.random(),
                 action_type: actionType,
                 source_scheme: formData.get('source_scheme') || '',
                 target_scheme: formData.get('target_scheme') || '',
                 notes: formData.get('notes') || '',
                 portfolio_id: formData.get('portfolio_id') || null,
-                // Add scheme IDs and codes for backend processing
-                source_scheme_id: $('#source-scheme option:selected').data('portfolio-id') || null,
-                target_scheme_id: $('#target-scheme').attr('data-scheme-id') || null,
-                target_scheme_code: $('#target-scheme').attr('data-scheme-code') || null,
-                // Add minimum investment validation data
-                target_scheme_min_investment: $('#target-scheme').attr('data-min-investment') || null,
-                target_scheme_min_sip: $('#target-scheme').attr('data-min-sip') || null,
                 created_at: new Date().toISOString()
             };
             
-            // Add type-specific fields with validation
+            // Get source scheme information from portfolio
+            const sourceSchemeOption = $('#source-scheme option:selected');
+            if (sourceSchemeOption.length > 0 && sourceSchemeOption.val()) {
+                action.source_portfolio_id = sourceSchemeOption.data('portfolio-id') || null;
+                // For portfolio-based actions, we'll use the scheme name to find the actual scheme ID on the backend
+                action.source_scheme_name = sourceSchemeOption.val();
+            }
+            
+            // Get target scheme information
+            const targetSchemeElement = $('#target-scheme');
+            if (targetSchemeElement.val()) {
+                action.target_scheme_id = targetSchemeElement.attr('data-scheme-id') || null;
+                action.target_scheme_code = targetSchemeElement.attr('data-scheme-code') || null;
+                action.target_scheme_name = targetSchemeElement.val();
+            }
+            
+            // Add type-specific fields
             switch(actionType) {
                 case 'purchase':
                     action.purchase_type = formData.get('purchase_type');
@@ -1717,35 +1528,45 @@
                     action.investment_option = formData.get('investment_option');
                     action.plan_type = formData.get('plan_type');
                     action.folio_number = formData.get('folio_number');
-                    // Set the scheme field based on purchase type
+                    
+                    // For purchase actions, determine which scheme to use
                     if (action.purchase_type === 'existing_scheme') {
                         action.scheme = action.source_scheme;
-                        action.scheme_id = action.source_scheme_id;
+                        action.scheme_name = action.source_scheme_name;
+                        action.scheme_id = null; // Will be resolved by scheme name on backend
                     } else {
                         action.scheme = action.target_scheme;
+                        action.scheme_name = action.target_scheme_name;
                         action.scheme_id = action.target_scheme_id;
                     }
                     break;
+                    
                 case 'redeem':
                     action.redeem_by = formData.get('redeem_by');
                     action.redeem_amount = formData.get('redeem_amount');
                     action.redeem_units = formData.get('redeem_units');
                     action.scheme = action.source_scheme;
-                    action.scheme_id = action.source_scheme_id;
+                    action.scheme_name = action.source_scheme_name;
+                    action.scheme_id = null; // Will be resolved by scheme name on backend
                     break;
+                    
                 case 'switch':
                     action.switch_by = formData.get('switch_by');
                     action.switch_amount = formData.get('switch_amount');
                     action.switch_units = formData.get('switch_units');
                     action.scheme = action.source_scheme;
-                    action.scheme_id = action.source_scheme_id;
+                    action.scheme_name = action.source_scheme_name;
+                    action.scheme_id = null; // Will be resolved by scheme name on backend
                     break;
+                    
                 case 'stp':
                     action.stp_amount = formData.get('stp_amount');
                     action.stp_frequency = formData.get('stp_frequency');
                     action.scheme = action.source_scheme;
-                    action.scheme_id = action.source_scheme_id;
+                    action.scheme_name = action.source_scheme_name;
+                    action.scheme_id = null; // Will be resolved by scheme name on backend
                     break;
+                    
                 case 'sip':
                     action.sip_amount = formData.get('sip_amount');
                     action.sip_frequency = formData.get('sip_frequency');
@@ -1753,14 +1574,17 @@
                     action.investment_option = formData.get('investment_option') || 'growth';
                     action.plan_type = formData.get('plan_type') || 'direct';
                     action.scheme = action.target_scheme;
+                    action.scheme_name = action.target_scheme_name;
                     action.scheme_id = action.target_scheme_id;
                     break;
+                    
                 case 'swp':
                     action.swp_amount = formData.get('swp_amount');
                     action.swp_frequency = formData.get('swp_frequency');
                     action.swp_date = formData.get('swp_date');
                     action.scheme = action.source_scheme;
-                    action.scheme_id = action.source_scheme_id;
+                    action.scheme_name = action.source_scheme_name;
+                    action.scheme_id = null; // Will be resolved by scheme name on backend
                     break;
             }
             
@@ -1835,7 +1659,6 @@
                                 </div>
                                 ${action.notes ? `<div class="mt-2"><small class="text-muted"><i class="fas fa-sticky-note"></i> ${action.notes}</small></div>` : ''}
                                 
-                                <!-- Action Summary -->
                                 <div class="mt-2 p-2 bg-light rounded">
                                     <small class="text-muted">
                                         <strong>Impact:</strong> ${getActionImpact(action)}
@@ -2020,8 +1843,6 @@
             if (action.target_scheme_id) {
                 $('#target-scheme').attr('data-scheme-id', action.target_scheme_id);
                 $('#target-scheme').attr('data-scheme-code', action.target_scheme_code);
-                $('#target-scheme').attr('data-min-investment', action.target_scheme_min_investment);
-                $('#target-scheme').attr('data-min-sip', action.target_scheme_min_sip);
             }
             
             // Set type-specific fields
@@ -2098,7 +1919,6 @@
                         break;
                     case 'sip':
                         if (action.sip_amount) {
-                            // For SIP, we'll show monthly amount in summary
                             totalInvestment += parseFloat(action.sip_amount);
                             sipCount++;
                         }
@@ -2121,7 +1941,7 @@
             
             const netInvestment = totalInvestment - totalRedemption;
             
-            // Update summary display with enhanced formatting
+            // Update summary display
             $('#total-investment').text(`₹${totalInvestment.toLocaleString()}`);
             $('#total-redemption').text(`₹${totalRedemption.toLocaleString()}`);
             $('#net-investment').text(`₹${netInvestment.toLocaleString()}`);
@@ -2189,12 +2009,10 @@
             plannedActions.forEach((action, index) => {
                 const actionNum = index + 1;
                 
-                // Basic validation
                 if (!action.action_type) {
                     errors.push(`Action ${actionNum}: Missing action type`);
                 }
                 
-                // Type-specific validation
                 switch(action.action_type) {
                     case 'purchase':
                         if (!action.purchase_amount || parseFloat(action.purchase_amount) <= 0) {
@@ -2212,66 +2030,172 @@
                             errors.push(`Action ${actionNum}: Missing target scheme for SIP`);
                         }
                         break;
-                    // Add more validations as needed
                 }
             });
             
             return errors;
         }
 
-        // Helper function to sanitize action data
+        function submitPlan(submitForApproval) {
+            const planName = $('#plan-name').val().trim();
+            
+            if (!planName) {
+                showErrorMessage('Plan name is required.');
+                return;
+            }
+            
+            // Sanitize all actions before sending
+            const sanitizedActions = plannedActions.map(action => sanitizeActionData(action));
+            
+            const planData = {
+                client_id: window.clientId,
+                plan_name: planName,
+                description: $('#plan-description').val(),
+                actions: sanitizedActions,
+                submit_for_approval: submitForApproval
+            };
+            
+            console.log('Submitting plan data:', planData);
+            
+            // Show loading state
+            const saveBtn = submitForApproval ? $('#submit-approval-btn') : $('#save-draft-btn');
+            const originalText = saveBtn.html();
+            saveBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+            
+            // Submit to server
+            $.ajax({
+                url: '{% url "save_execution_plan" %}',
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': window.csrfToken,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify(planData),
+                success: function(response) {
+                    if (response.success) {
+                        showSuccessMessage(response.message);
+                        // Clear draft after successful save
+                        clearDraft();
+                        // Redirect to plan detail page
+                        if (response.plan_url) {
+                            window.location.href = response.plan_url;
+                        } else {
+                            // Fallback redirect
+                            window.location.href = '/execution-plans/';
+                        }
+                    } else {
+                        showErrorMessage('Error: ' + (response.error || 'Unknown error occurred'));
+                        saveBtn.prop('disabled', false).html(originalText);
+                        
+                        // Show detailed error information if available
+                        if (response.failed_actions && response.failed_actions.length > 0) {
+                            console.error('Failed actions:', response.failed_actions);
+                            showErrorMessage('Some actions failed to save: ' + response.failed_actions.join(', '));
+                        }
+                    }
+                },
+                error: function(xhr, textStatus, errorThrown) {
+                    let errorMessage = 'An error occurred while saving the plan.';
+                    
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMessage = response.error || errorMessage;
+                        
+                        // Show specific validation errors if available
+                        if (response.failed_actions) {
+                            errorMessage += '\n\nFailed actions: ' + response.failed_actions.join('\n');
+                        }
+                    } catch(e) {
+                        errorMessage = `Error ${xhr.status}: ${xhr.statusText}`;
+                        if (xhr.responseText) {
+                            console.error('Server response:', xhr.responseText);
+                        }
+                    }
+                    
+                    console.error('Save plan error:', xhr);
+                    showErrorMessage(errorMessage);
+                    saveBtn.prop('disabled', false).html(originalText);
+                }
+            });
+        }
+
         function sanitizeActionData(action) {
             const sanitized = { ...action };
             
-            // Convert string numbers to actual numbers and ensure required fields are not null
-            if (sanitized.portfolio_id) {
-                sanitized.portfolio_id = typeof sanitized.portfolio_id === 'string' ? parseInt(sanitized.portfolio_id) : sanitized.portfolio_id;
-            }
-            if (sanitized.purchase_amount) {
-                sanitized.purchase_amount = typeof sanitized.purchase_amount === 'string' ? parseFloat(sanitized.purchase_amount) : sanitized.purchase_amount;
-            }
-            if (sanitized.source_scheme_id) {
-                sanitized.source_scheme_id = typeof sanitized.source_scheme_id === 'string' ? parseInt(sanitized.source_scheme_id) : sanitized.source_scheme_id;
-            }
-            if (sanitized.scheme_id) {
-                sanitized.scheme_id = typeof sanitized.scheme_id === 'string' ? parseInt(sanitized.scheme_id) : sanitized.scheme_id;
+            // Convert string numbers to actual numbers for specific fields
+            const numberFields = ['portfolio_id', 'source_portfolio_id', 'target_scheme_id'];
+            numberFields.forEach(field => {
+                if (sanitized[field] && typeof sanitized[field] === 'string') {
+                    const num = parseInt(sanitized[field]);
+                    sanitized[field] = isNaN(num) ? null : num;
+                }
+            });
+            
+            // Convert amount fields to float
+            const amountFields = ['purchase_amount', 'redeem_amount', 'switch_amount', 'stp_amount', 'sip_amount', 'swp_amount'];
+            amountFields.forEach(field => {
+                if (sanitized[field] && typeof sanitized[field] === 'string') {
+                    const num = parseFloat(sanitized[field]);
+                    sanitized[field] = isNaN(num) ? null : num;
+                }
+            });
+            
+            // Convert unit fields to float
+            const unitFields = ['redeem_units', 'switch_units'];
+            unitFields.forEach(field => {
+                if (sanitized[field] && typeof sanitized[field] === 'string') {
+                    const num = parseFloat(sanitized[field]);
+                    sanitized[field] = isNaN(num) ? null : num;
+                }
+            });
+            
+            // Convert date fields to integer
+            const dateFields = ['sip_date', 'swp_date'];
+            dateFields.forEach(field => {
+                if (sanitized[field] && typeof sanitized[field] === 'string') {
+                    const num = parseInt(sanitized[field]);
+                    sanitized[field] = isNaN(num) ? null : num;
+                }
+            });
+            
+            // Ensure scheme identification is set properly
+            // For portfolio-based actions, use scheme_name for backend lookup
+            if (!sanitized.scheme_id && sanitized.scheme_name) {
+                // Backend will resolve scheme by name
+                sanitized.scheme_lookup_by_name = true;
             }
             
-            // Ensure scheme_id is set - if source_scheme_id exists but scheme_id doesn't, use source_scheme_id
-            if (!sanitized.scheme_id && sanitized.source_scheme_id) {
-                sanitized.scheme_id = sanitized.source_scheme_id;
-            }
-            
-            // Convert string 'null' to actual null and empty strings to null
-            // BUT keep required fields as empty strings if they can't be null
+            // Convert string 'null', 'undefined', empty strings to actual null
             Object.keys(sanitized).forEach(key => {
-                if (sanitized[key] === 'null' || sanitized[key] === 'None') {
-                    // Special handling for fields that can't be null
-                    if (key === 'notes' || key === 'folio_number') {
+                if (sanitized[key] === 'null' || 
+                    sanitized[key] === 'undefined' || 
+                    sanitized[key] === 'None' ||
+                    sanitized[key] === '') {
+                    
+                    // Keep certain fields as empty strings instead of null
+                    if (['notes', 'folio_number'].includes(key)) {
                         sanitized[key] = '';
                     } else {
                         sanitized[key] = null;
                     }
                 }
-                // Ensure empty strings stay as empty strings for required fields
-                if (sanitized[key] === '' && (key === 'notes' || key === 'folio_number')) {
-                    sanitized[key] = '';
-                }
             });
             
-            // Validate required fields - ensure they're not null/undefined
-            const requiredFields = ['scheme_id', 'portfolio_id', 'action_type', 'purchase_amount'];
-            requiredFields.forEach(field => {
-                if (sanitized[field] === null || sanitized[field] === undefined || sanitized[field] === '') {
-                    console.error(`Required field ${field} is missing or null:`, sanitized[field]);
-                    throw new Error(`Required field ${field} cannot be null or empty`);
-                }
+            // Remove unnecessary fields that shouldn't be sent to backend
+            const fieldsToRemove = [
+                'id', // Frontend-only ID
+                'created_at', // Backend will set this
+                'source_scheme_id', // This was portfolio ID, not scheme ID
+            ];
+            
+            fieldsToRemove.forEach(field => {
+                delete sanitized[field];
             });
             
             // Remove fields that should not be sent if they're null or undefined
             const fieldsToRemoveIfNull = [
-                'target_scheme', 'target_scheme_id', 'target_scheme_code', 
-                'target_scheme_min_investment', 'target_scheme_min_sip'
+                'target_scheme_code', 
+                'source_portfolio_id'
             ];
             
             fieldsToRemoveIfNull.forEach(field => {
@@ -2283,82 +2207,6 @@
             return sanitized;
         }
 
-        function submitPlan(submitForApproval) {
-            const planName = $('#plan-name').val().trim();
-            
-            if (!planName) {
-                alert('Plan name is required.');
-                return;
-            }
-            
-            // Sanitize all actions before sending
-            const sanitizedActions = plannedActions.map(action => sanitizeActionData(action));
-            
-            const planData = {
-                client_id: {{ client.id }},
-                plan_name: planName,
-                description: $('#plan-description').val(),
-                actions: sanitizedActions,
-                submit_for_approval: submitForApproval
-            };
-            
-            // Debug: Log the sanitized data
-            console.log('Sanitized plan data:', JSON.stringify(planData, null, 2));
-            
-            // Show loading state
-            const saveBtn = submitForApproval ? $('#submit-approval-btn') : $('#save-draft-btn');
-            const originalText = saveBtn.html();
-            saveBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
-            
-            // Submit to server
-            $.ajaxSetup({
-                beforeSend: function(xhr, settings) {
-                    if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
-                        xhr.setRequestHeader("X-CSRFToken", $('[name=csrfmiddlewaretoken]').val());
-                    }
-                }
-            });
-            
-            $.ajax({
-                url: '{% url "save_execution_plan" %}',
-                method: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(planData),
-                success: function(response) {
-                    if (response.success) {
-                        alert(response.message);
-                        // Redirect to plan detail page
-                        window.location.href = response.plan_url;
-                    } else {
-                        alert('Error: ' + response.error);
-                        saveBtn.prop('disabled', false).html(originalText);
-                    }
-                },
-                error: function(xhr) {
-                    let errorMessage = 'An error occurred while saving the plan.';
-                    try {
-                        const response = JSON.parse(xhr.responseText);
-                        errorMessage = response.error || errorMessage;
-                    } catch(e) {
-                        // If response is not JSON, show more details
-                        errorMessage = `Error ${xhr.status}: ${xhr.statusText}`;
-                        if (xhr.responseText) {
-                            errorMessage += ` - ${xhr.responseText}`;
-                        }
-                    }
-                    
-                    console.error('Save plan error:', xhr);
-                    alert(errorMessage);
-                    saveBtn.prop('disabled', false).html(originalText);
-                }
-            });
-        }
-
-        // Template Functions
-        function loadTemplate() {
-            showInfoMessage('Template functionality will be implemented in the next phase.');
-        }
-
         // Draft Management Functions
         function clearDraft() {
             localStorage.removeItem('executionPlanDraft');
@@ -2367,10 +2215,10 @@
         function saveDraftToStorage() {
             if (plannedActions.length > 0) {
                 const draft = {
-                    client_id: window.clientId || null,
+                    client_id: window.clientId,
                     actions: plannedActions,
                     timestamp: new Date().toISOString(),
-                    version: '1.1' // Version for future compatibility
+                    version: '1.1'
                 };
                 localStorage.setItem('executionPlanDraft', JSON.stringify(draft));
             } else {
@@ -2386,7 +2234,7 @@
                     if (data.client_id === window.clientId && data.actions && data.actions.length > 0) {
                         // Check if draft is not too old (24 hours)
                         const draftAge = new Date() - new Date(data.timestamp);
-                        const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+                        const maxAge = 24 * 60 * 60 * 1000;
                         
                         if (draftAge < maxAge) {
                             if (confirm(`A draft plan from ${new Date(data.timestamp).toLocaleString()} was found for this client. Would you like to restore it?`)) {
@@ -2396,13 +2244,12 @@
                                 showInfoMessage(`Draft plan with ${data.actions.length} actions restored successfully!`);
                             }
                         } else {
-                            // Clean up old draft
                             clearDraft();
                         }
                     }
                 } catch(e) {
                     console.error('Error loading draft:', e);
-                    clearDraft(); // Clear corrupted draft
+                    clearDraft();
                 }
             }
         }
@@ -2414,21 +2261,16 @@
             autoSaveTimer = setTimeout(function() {
                 saveDraftToStorage();
                 console.log('Draft auto-saved at', new Date().toLocaleString());
-            }, 30000); // Auto-save every 30 seconds
+            }, 30000);
         }
 
-        // Schedule auto-save whenever actions are modified
         function onActionsModified() {
             updateActionsSummary();
             scheduleAutoSave();
+            hasUnsavedChanges = true;
         }
 
         // Warning before leaving page with unsaved changes
-        let hasUnsavedChanges = false;
-        function updateUnsavedChangesStatus() {
-            hasUnsavedChanges = plannedActions.length > 0;
-        }
-
         window.addEventListener('beforeunload', function(e) {
             if (hasUnsavedChanges && plannedActions.length > 0) {
                 e.preventDefault();
@@ -2436,6 +2278,12 @@
                 return 'You have unsaved changes. Are you sure you want to leave?';
             }
         });
+
+        // Template and Load Functions
+        function loadTemplate() {
+            // Show template selection modal or load predefined templates
+            showInfoMessage('Template functionality will be implemented based on your template system.');
+        }
 
         // Utility Functions for User Feedback
         function showSuccessMessage(message) {
@@ -2509,34 +2357,6 @@
             return icons[type] || 'fa-info-circle';
         }
 
-        // CSRF Token Setup
-        function setupCSRFToken() {
-            function getCookie(name) {
-                let cookieValue = null;
-                if (document.cookie && document.cookie !== '') {
-                    const cookies = document.cookie.split(';');
-                    for (let i = 0; i < cookies.length; i++) {
-                        const cookie = cookies[i].trim();
-                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                            break;
-                        }
-                    }
-                }
-                return cookieValue;
-            }
-            
-            const csrftoken = getCookie('csrftoken');
-            
-            $.ajaxSetup({
-                beforeSend: function(xhr, settings) {
-                    if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
-                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                    }
-                }
-            });
-        }
-
         // Keyboard Shortcuts
         function setupKeyboardShortcuts() {
             $(document).keydown(function(e) {
@@ -2562,13 +2382,89 @@
                 }
             });
         }
+
+        // Global error handler for AJAX requests
+        $(document).ajaxError(function(event, xhr, settings, error) {
+            if (xhr.status === 403) {
+                showErrorMessage('Access denied. Please check your permissions.');
+            } else if (xhr.status === 404) {
+                showErrorMessage('The requested resource was not found.');
+            } else if (xhr.status >= 500) {
+                showErrorMessage('Server error. Please try again later.');
+            }
+        });
+
+        // Export functions to global scope for inline onclick handlers
+        window.openActionModal = openActionModal;
+        window.openSchemeSearchModal = openSchemeSearchModal;
+        window.openSchemeSearch = openSchemeSearch;
+        window.selectScheme = selectScheme;
+        window.searchSchemes = searchSchemes;
+        window.addAction = addAction;
+        window.editAction = editAction;
+        window.duplicateAction = duplicateAction;
+        window.removeAction = removeAction;
+        window.savePlan = savePlan;
+        window.submitPlan = submitPlan;
+        window.loadTemplate = loadTemplate;
+        window.togglePurchaseFields = togglePurchaseFields;
+        window.toggleAmountField = toggleAmountField;
     </script>
 
     <!-- Add CSRF token for AJAX requests -->
     {% csrf_token %}
     <script>
-        // Make CSRF token available to JavaScript
-        window.csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        // Make CSRF token available to JavaScript with multiple fallbacks
+        $(document).ready(function() {
+            // Try multiple methods to get CSRF token
+            let csrfToken = null;
+            
+            // Method 1: From hidden input (most reliable)
+            const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfInput && csrfInput.value) {
+                csrfToken = csrfInput.value;
+                console.log('CSRF token from input:', csrfToken.substring(0, 8) + '...');
+            }
+            
+            // Method 2: From meta tag (if available)
+            if (!csrfToken) {
+                const metaToken = document.querySelector('meta[name=csrf-token]');
+                if (metaToken && metaToken.getAttribute('content')) {
+                    csrfToken = metaToken.getAttribute('content');
+                    console.log('CSRF token from meta:', csrfToken.substring(0, 8) + '...');
+                }
+            }
+            
+            // Method 3: From cookie (fallback)
+            if (!csrfToken) {
+                function getCookie(name) {
+                    let cookieValue = null;
+                    if (document.cookie && document.cookie !== '') {
+                        const cookies = document.cookie.split(';');
+                        for (let i = 0; i < cookies.length; i++) {
+                            const cookie = cookies[i].trim();
+                            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                break;
+                            }
+                        }
+                    }
+                    return cookieValue;
+                }
+                csrfToken = getCookie('csrftoken');
+                if (csrfToken) {
+                    console.log('CSRF token from cookie:', csrfToken.substring(0, 8) + '...');
+                }
+            }
+            
+            // Store globally
+            if (csrfToken) {
+                window.csrfToken = csrfToken;
+                console.log('CSRF token set successfully, length:', csrfToken.length);
+            } else {
+                console.error('No CSRF token found!');
+            }
+        });
     </script>
 
     <!-- Additional CSS for responsiveness -->

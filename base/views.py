@@ -6280,6 +6280,7 @@ def create_plan_step2(request, client_id):
         portfolio_data = []
         total_portfolio_value = 0.0
         asset_allocation = None
+        isin_list_in_portfolio = []
         
         if client_profile:
             portfolio = ClientPortfolio.objects.filter(
@@ -6305,17 +6306,20 @@ def create_plan_step2(request, client_id):
                 )
                 
                 # Convert all Decimal results to float safely
-                asset_allocation = {}
-                for key, value in aggregation.items():
-                    if value is not None:
-                        asset_allocation[key] = float(value)
-                    else:
-                        asset_allocation[key] = 0.0
-                
+                asset_allocation = {key: float(value or 0.0) for key, value in aggregation.items()}
                 total_portfolio_value = asset_allocation.get('total_aum', 0.0)
                 
                 # Prepare portfolio data for action planning
                 for holding in portfolio:
+                    isin = holding.isin_number or ''
+                    mapped_scheme = None
+                    if isin:
+                        isin_list_in_portfolio.append(isin)
+                        try:
+                            mapped_scheme = MutualFundScheme.objects.get(isin_growth=isin)
+                        except MutualFundScheme.DoesNotExist:
+                            mapped_scheme = None
+                            
                     # Convert Decimal fields to float consistently
                     total_value = float(holding.total_value) if holding.total_value else 0.0
                     units = float(holding.units) if holding.units else 0.0
@@ -6328,14 +6332,8 @@ def create_plan_step2(request, client_id):
                     allocation_percentage = float(holding.allocation_percentage) if holding.allocation_percentage else 0.0
                     cost_value = float(holding.cost_value) if holding.cost_value else 0.0
                     nav_price = float(holding.nav_price) if holding.nav_price else 0.0
-                    
-                    # Calculate gain/loss safely
-                    gain_loss = None
-                    gain_loss_percentage = None
-                    if holding.gain_loss is not None:
-                        gain_loss = float(holding.gain_loss)
-                    if holding.gain_loss_percentage is not None:
-                        gain_loss_percentage = float(holding.gain_loss_percentage)
+                    gain_loss = float(holding.gain_loss) if holding.gain_loss is not None else None
+                    gain_loss_percentage = float(holding.gain_loss_percentage) if holding.gain_loss_percentage is not None else None
                     
                     portfolio_data.append({
                         'id': holding.id,
@@ -6485,8 +6483,7 @@ def create_plan_step2(request, client_id):
         }
         
         # Scheme categories for SIP (available schemes not in current portfolio)
-        current_scheme_names = [p['scheme_name'] for p in portfolio_data]
-        available_sip_schemes = all_schemes.exclude(scheme_name__in=current_scheme_names)
+        available_sip_schemes = all_schemes.exclude(isin_growth__in=isin_list_in_portfolio)
         
         # Prepare client data for template
         client_data = {
@@ -6807,68 +6804,67 @@ def save_execution_plan(request):
 
 
 def process_action_data(action_data, execution_plan, client, priority):
-    """Process individual action data and create appropriate action record - FIXED VERSION"""
+    """Process individual action data and create appropriate action record - ENHANCED VERSION"""
     action_type = action_data.get('action_type')
     
     if not action_type:
         logger.error(f"No action type specified for action: {action_data}")
         return None
     
-    # Find the scheme object - this is the key fix
+    # Find the scheme object - FIXED VERSION
     scheme_obj = None
     scheme_id = action_data.get('scheme_id')
-    source_scheme_id = action_data.get('source_scheme_id')
+    scheme_name = action_data.get('scheme_name')
     target_scheme_id = action_data.get('target_scheme_id')
+    target_scheme_name = action_data.get('target_scheme_name')
     
-    # For purchase/SIP actions, use target_scheme_id or scheme_id
+    # For purchase/SIP actions, use target scheme
     if action_type in ['purchase', 'sip_start', 'sip_modify']:
-        scheme_lookup_id = target_scheme_id or scheme_id
-        if scheme_lookup_id:
+        if target_scheme_id:
             try:
-                scheme_obj = MutualFundScheme.objects.get(id=scheme_lookup_id)
+                scheme_obj = MutualFundScheme.objects.get(id=target_scheme_id)
             except MutualFundScheme.DoesNotExist:
-                logger.error(f"Target scheme with ID {scheme_lookup_id} not found")
-                # Try to create a basic scheme record if scheme name is provided
-                scheme_name = action_data.get('target_scheme') or action_data.get('scheme')
-                if scheme_name:
-                    scheme_obj = MutualFundScheme.objects.create(
-                        scheme_name=scheme_name,
-                        amc_name='Unknown',
-                        scheme_code=f"TEMP_{scheme_lookup_id}",
-                        scheme_type='other',
-                        is_active=True,
-                        minimum_investment=500,
-                        minimum_sip=500
-                    )
-                else:
-                    raise ValueError(f"Scheme with ID {scheme_lookup_id} not found and no scheme name provided")
+                logger.error(f"Target scheme with ID {target_scheme_id} not found")
+                raise ValueError(f"Scheme with ID {target_scheme_id} not found")
+        elif target_scheme_name:
+            # Try to find by name
+            scheme_obj = MutualFundScheme.objects.filter(
+                scheme_name__iexact=target_scheme_name
+            ).first()
+            if not scheme_obj:
+                # Try partial match
+                scheme_obj = MutualFundScheme.objects.filter(
+                    scheme_name__icontains=target_scheme_name
+                ).first()
+            if not scheme_obj:
+                logger.error(f"Target scheme with name '{target_scheme_name}' not found")
+                raise ValueError(f"Scheme with name '{target_scheme_name}' not found")
     
-    # For redemption/switch actions, use source_scheme_id
+    # For redemption/switch/STP/SWP actions, use source scheme
     elif action_type in ['redemption', 'switch', 'stp_start', 'swp_start']:
-        scheme_lookup_id = source_scheme_id or scheme_id
-        if scheme_lookup_id:
+        if scheme_id:
             try:
-                scheme_obj = MutualFundScheme.objects.get(id=scheme_lookup_id)
+                scheme_obj = MutualFundScheme.objects.get(id=scheme_id)
             except MutualFundScheme.DoesNotExist:
-                logger.error(f"Source scheme with ID {scheme_lookup_id} not found")
-                # Try to find by name
-                scheme_name = action_data.get('source_scheme') or action_data.get('scheme')
-                if scheme_name:
-                    scheme_obj = MutualFundScheme.objects.filter(
-                        scheme_name__icontains=scheme_name
-                    ).first()
-                    if not scheme_obj:
-                        scheme_obj = MutualFundScheme.objects.create(
-                            scheme_name=scheme_name,
-                            amc_name='Unknown',
-                            scheme_code=f"TEMP_{scheme_lookup_id}",
-                            scheme_type='other',
-                            is_active=True,
-                            minimum_investment=500,
-                            minimum_sip=500
-                        )
-                else:
-                    raise ValueError(f"Scheme with ID {scheme_lookup_id} not found and no scheme name provided")
+                logger.error(f"Source scheme with ID {scheme_id} not found")
+                # Fall back to name lookup
+                scheme_obj = None
+        
+        if not scheme_obj and scheme_name:
+            # Try to find by exact name match first
+            scheme_obj = MutualFundScheme.objects.filter(
+                scheme_name__iexact=scheme_name
+            ).first()
+            
+            if not scheme_obj:
+                # Try partial match
+                scheme_obj = MutualFundScheme.objects.filter(
+                    scheme_name__icontains=scheme_name.split('(')[0].strip()  # Remove plan type suffix
+                ).first()
+            
+            if not scheme_obj:
+                logger.error(f"Source scheme with name '{scheme_name}' not found")
+                raise ValueError(f"Scheme with name '{scheme_name}' not found")
     
     # If still no scheme found, this is a critical error
     if not scheme_obj:
@@ -6882,28 +6878,19 @@ def process_action_data(action_data, execution_plan, client, priority):
         try:
             target_scheme_obj = MutualFundScheme.objects.get(id=target_scheme_id)
         except MutualFundScheme.DoesNotExist:
-            target_scheme_name = action_data.get('target_scheme')
             if target_scheme_name:
                 target_scheme_obj = MutualFundScheme.objects.filter(
                     scheme_name__icontains=target_scheme_name
                 ).first()
                 if not target_scheme_obj:
-                    target_scheme_obj = MutualFundScheme.objects.create(
-                        scheme_name=target_scheme_name,
-                        amc_name='Unknown',
-                        scheme_code=f"TEMP_TGT_{target_scheme_id}",
-                        scheme_type='other',
-                        is_active=True,
-                        minimum_investment=500,
-                        minimum_sip=500
-                    )
+                    raise ValueError(f"Target scheme '{target_scheme_name}' not found")
     
-    # Create the main plan action - THE CRITICAL FIX
+    # Create the main plan action
     try:
         action = PlanAction.objects.create(
             execution_plan=execution_plan,
             action_type=action_type,
-            scheme=scheme_obj,  # This must not be None
+            scheme=scheme_obj,  # This is now properly resolved
             target_scheme=target_scheme_obj,
             amount=safe_decimal(action_data.get('purchase_amount') or action_data.get('amount')),
             units=safe_decimal(action_data.get('units')),
@@ -6913,7 +6900,7 @@ def process_action_data(action_data, execution_plan, client, priority):
             status='pending'
         )
         
-        logger.info(f"Successfully created action {action.id} with scheme {scheme_obj.id}")
+        logger.info(f"Successfully created action {action.id} with scheme {scheme_obj.id} ({scheme_obj.scheme_name})")
         return action
         
     except Exception as e:
