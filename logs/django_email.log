@@ -165,3 +165,473 @@ INFO 2025-07-25 00:11:02,630 views 11676 24268 Found linked profile for client 9
 INFO 2025-07-25 00:11:02,717 views 11676 24268 Found 22 portfolio holdings for client 926
 WARNING 2025-07-30 11:56:00,960 views 32080 21120 Slow login for user ceo_admin: 22.172s
 ERROR 2025-07-30 11:56:02,799 views 32080 21120 Dashboard error for user 61: Failed lookup for key [rm_heads_count] in [{'True': True, 'False': False, 'None': None}, {}, {}, {'user': <SimpleLazyObject: <User: ceo_admin (Top Management)>>, 'total_aum': Decimal('1053678295.80'), 'total_sip': 0, 'total_clients': 567, 'total_leads': 7, 'total_tasks': 1, 'open_service_requests': 0, 'recent_leads': <QuerySet [<Lead: LD20250714155522 - Manisha Kumari (Contacted)>, <Lead: LD202507060006 - Neha Shah (Warm Lead)>, <Lead: LD202507060005 - Rohit Verma (Cold Lead)>, <Lead: LD202507060004 - Meera Saxena (Follow Up)>, <Lead: LD202507060003 - Deepak Joshi (Hot Lead)>]>, 'recent_notes': <QuerySet [<Note: my important notes - ceo_admin>, <Note: hihihhehe - ceo_admin>]>, 'execution_plans_stats': {'total_plans': 0, 'pending_approval': 0}}]
+INFO 2025-08-01 18:08:17,798 views 33960 29872 create_plan_step2 called with client_id: 1372 (type: <class 'str'>)
+INFO 2025-08-01 18:08:17,888 views 33960 29872 Found legacy client: JYOTI KUSUMAKAR BHISE (ID: 1372)
+INFO 2025-08-01 18:08:18,367 views 33960 29872 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-01 18:08:18,396 views 33960 29872 Found linked profile for client 1372
+INFO 2025-08-01 18:08:18,468 views 33960 29872 Found 9 portfolio holdings for client 1372
+INFO 2025-08-01 18:12:02,561 views 30912 23724 === EXECUTION PLAN SAVE REQUEST ===
+INFO 2025-08-01 18:12:02,561 views 30912 23724 User: narayan (RM Head)
+INFO 2025-08-01 18:12:02,561 views 30912 23724 Method: POST
+INFO 2025-08-01 18:12:02,567 views 30912 23724 Content-Type: application/x-www-form-urlencoded
+INFO 2025-08-01 18:12:02,567 views 30912 23724 Raw body length: 880
+INFO 2025-08-01 18:12:02,567 views 30912 23724 Raw body preview: client_id=1372&plan_name=SIP+START+HDFC&description=okay&actions%5B0%5D%5Bid%5D=1754051910956.2087&actions%5B0%5D%5Baction_type%5D=redeem&actions%5B0%5D%5Bsource_scheme%5D=JM+Focused+Fund+(G)&actions%5B0%5D%5Btarget_scheme%5D=&actions%5B0%5D%5Bnotes%5D=ok&actions%5B0%5D%5Bportfolio_id%5D=13933&actions%5B0%5D%5Bsource_scheme_id%5D=13933&actions%5B0%5D%5Btarget_scheme_id%5D=&actions%5B0%5D%5Btarget_scheme_code%5D=&actions%5B0%5D%5Btarget_scheme_min_investment%5D=&actions%5B0%5D%5Btarget_scheme_min
+ERROR 2025-08-01 18:12:02,567 views 30912 23724 JSON decode error: Expecting value: line 1 column 1 (char 0)
+ERROR 2025-08-01 18:12:02,567 views 30912 23724 Raw body: client_id=1372&plan_name=SIP+START+HDFC&description=okay&actions%5B0%5D%5Bid%5D=1754051910956.2087&actions%5B0%5D%5Baction_type%5D=redeem&actions%5B0%5D%5Bsource_scheme%5D=JM+Focused+Fund+(G)&actions%5B0%5D%5Btarget_scheme%5D=&actions%5B0%5D%5Bnotes%5D=ok&actions%5B0%5D%5Bportfolio_id%5D=13933&actions%5B0%5D%5Bsource_scheme_id%5D=13933&actions%5B0%5D%5Btarget_scheme_id%5D=&actions%5B0%5D%5Btarget_scheme_code%5D=&actions%5B0%5D%5Btarget_scheme_min_investment%5D=&actions%5B0%5D%5Btarget_scheme_min_sip%5D=&actions%5B0%5D%5Bcreated_at%5D=2025-08-01T12%3A38%3A30.959Z&actions%5B0%5D%5Bredeem_by%5D=specific_amount&actions%5B0%5D%5Bredeem_amount%5D=1000&actions%5B0%5D%5Bredeem_units%5D=&actions%5B0%5D%5Bscheme%5D=JM+Focused+Fund+(G)&actions%5B0%5D%5Bscheme_id%5D=13933&submit_for_approval=true&csrfmiddlewaretoken=Rwh0gWgyREywkz8AW0TSMDk8xSW32LkvFfro2CjRN2fMz2CJsD3xHsJ26nlPSRee
+INFO 2025-08-01 18:17:40,170 views 30912 33780 === EXECUTION PLAN SAVE REQUEST ===
+INFO 2025-08-01 18:17:40,170 views 30912 33780 User: narayan (RM Head)
+INFO 2025-08-01 18:17:40,170 views 30912 33780 Method: POST
+INFO 2025-08-01 18:17:40,170 views 30912 33780 Content-Type: application/x-www-form-urlencoded
+INFO 2025-08-01 18:17:40,170 views 30912 33780 Raw body length: 880
+INFO 2025-08-01 18:17:40,170 views 30912 33780 Raw body preview: client_id=1372&plan_name=SIP+START+HDFC&description=okay&actions%5B0%5D%5Bid%5D=1754051910956.2087&actions%5B0%5D%5Baction_type%5D=redeem&actions%5B0%5D%5Bsource_scheme%5D=JM+Focused+Fund+(G)&actions%5B0%5D%5Btarget_scheme%5D=&actions%5B0%5D%5Bnotes%5D=ok&actions%5B0%5D%5Bportfolio_id%5D=13933&actions%5B0%5D%5Bsource_scheme_id%5D=13933&actions%5B0%5D%5Btarget_scheme_id%5D=&actions%5B0%5D%5Btarget_scheme_code%5D=&actions%5B0%5D%5Btarget_scheme_min_investment%5D=&actions%5B0%5D%5Btarget_scheme_min
+ERROR 2025-08-01 18:17:40,170 views 30912 33780 JSON decode error: Expecting value: line 1 column 1 (char 0)
+ERROR 2025-08-01 18:17:40,170 views 30912 33780 Raw body: client_id=1372&plan_name=SIP+START+HDFC&description=okay&actions%5B0%5D%5Bid%5D=1754051910956.2087&actions%5B0%5D%5Baction_type%5D=redeem&actions%5B0%5D%5Bsource_scheme%5D=JM+Focused+Fund+(G)&actions%5B0%5D%5Btarget_scheme%5D=&actions%5B0%5D%5Bnotes%5D=ok&actions%5B0%5D%5Bportfolio_id%5D=13933&actions%5B0%5D%5Bsource_scheme_id%5D=13933&actions%5B0%5D%5Btarget_scheme_id%5D=&actions%5B0%5D%5Btarget_scheme_code%5D=&actions%5B0%5D%5Btarget_scheme_min_investment%5D=&actions%5B0%5D%5Btarget_scheme_min_sip%5D=&actions%5B0%5D%5Bcreated_at%5D=2025-08-01T12%3A38%3A30.959Z&actions%5B0%5D%5Bredeem_by%5D=specific_amount&actions%5B0%5D%5Bredeem_amount%5D=1000&actions%5B0%5D%5Bredeem_units%5D=&actions%5B0%5D%5Bscheme%5D=JM+Focused+Fund+(G)&actions%5B0%5D%5Bscheme_id%5D=13933&submit_for_approval=true&csrfmiddlewaretoken=Rwh0gWgyREywkz8AW0TSMDk8xSW32LkvFfro2CjRN2fMz2CJsD3xHsJ26nlPSRee
+INFO 2025-08-01 18:17:56,549 views 30912 33780 create_plan_step2 called with client_id: 1372 (type: <class 'str'>)
+INFO 2025-08-01 18:17:56,728 views 30912 33780 Found legacy client: JYOTI KUSUMAKAR BHISE (ID: 1372)
+INFO 2025-08-01 18:17:57,110 views 30912 33780 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-01 18:17:57,140 views 30912 33780 Found linked profile for client 1372
+INFO 2025-08-01 18:17:57,229 views 30912 33780 Found 9 portfolio holdings for client 1372
+INFO 2025-08-01 18:18:30,139 views 30912 33780 create_plan_step2 called with client_id: 1372 (type: <class 'str'>)
+INFO 2025-08-01 18:18:30,209 views 30912 33780 Found legacy client: JYOTI KUSUMAKAR BHISE (ID: 1372)
+INFO 2025-08-01 18:18:30,556 views 30912 33780 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-01 18:18:30,562 views 30912 33780 Found linked profile for client 1372
+INFO 2025-08-01 18:18:30,667 views 30912 33780 Found 9 portfolio holdings for client 1372
+INFO 2025-08-01 18:18:54,376 views 30912 33780 create_plan_step2 called with client_id: 1372 (type: <class 'str'>)
+INFO 2025-08-01 18:18:54,453 views 30912 33780 Found legacy client: JYOTI KUSUMAKAR BHISE (ID: 1372)
+INFO 2025-08-01 18:18:54,841 views 30912 33780 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-01 18:18:54,851 views 30912 33780 Found linked profile for client 1372
+INFO 2025-08-01 18:18:54,923 views 30912 33780 Found 9 portfolio holdings for client 1372
+INFO 2025-08-01 18:27:18,975 views 24764 24008 create_plan_step2 called with client_id: 1372 (type: <class 'str'>)
+INFO 2025-08-01 18:27:19,057 views 24764 24008 Found legacy client: JYOTI KUSUMAKAR BHISE (ID: 1372)
+INFO 2025-08-01 18:27:19,376 views 24764 24008 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-01 18:27:19,421 views 24764 24008 Found linked profile for client 1372
+INFO 2025-08-01 18:27:19,537 views 24764 24008 Found 9 portfolio holdings for client 1372
+INFO 2025-08-01 18:27:34,423 views 24764 24008 === EXECUTION PLAN SAVE REQUEST ===
+INFO 2025-08-01 18:27:34,424 views 24764 24008 User: narayan (RM Head)
+INFO 2025-08-01 18:27:34,424 views 24764 24008 Content-Type: application/x-www-form-urlencoded
+INFO 2025-08-01 18:27:34,424 views 24764 24008 Using form-encoded data
+INFO 2025-08-01 18:27:34,424 views 24764 24008 Parsed data keys: ['client_id', 'plan_name', 'description', 'actions[0][id]', 'actions[0][action_type]', 'actions[0][source_scheme]', 'actions[0][target_scheme]', 'actions[0][notes]', 'actions[0][portfolio_id]', 'actions[0][source_scheme_id]', 'actions[0][target_scheme_id]', 'actions[0][target_scheme_code]', 'actions[0][target_scheme_min_investment]', 'actions[0][target_scheme_min_sip]', 'actions[0][created_at]', 'actions[0][redeem_by]', 'actions[0][redeem_amount]', 'actions[0][redeem_units]', 'actions[0][scheme]', 'actions[0][scheme_id]', 'submit_for_approval', 'csrfmiddlewaretoken', 'actions']
+INFO 2025-08-01 18:27:34,424 views 24764 24008 Actions count: 1
+INFO 2025-08-01 18:27:34,424 views 24764 24008 Extracted data:
+INFO 2025-08-01 18:27:34,424 views 24764 24008   client_id: 1372
+INFO 2025-08-01 18:27:34,424 views 24764 24008   plan_name: 'start sip'
+INFO 2025-08-01 18:27:34,424 views 24764 24008   actions_data: 1 actions
+INFO 2025-08-01 18:27:34,424 views 24764 24008   submit_for_approval: True
+INFO 2025-08-01 18:27:34,495 views 24764 24008 Found client: 1372
+INFO 2025-08-01 18:27:34,910 views 24764 24008 Created execution plan EP202508010001 for client 1372
+INFO 2025-08-01 18:27:34,910 views 24764 24008 Processing action 1: {'id': '1754053049977.779', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T12:57:29.979Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+ERROR 2025-08-01 18:27:34,910 views 24764 24008 No valid scheme found for action type redeem. Action data: {'id': '1754053049977.779', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T12:57:29.979Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+ERROR 2025-08-01 18:27:34,910 views 24764 24008 Error creating action 1: No valid scheme found for action type redeem. Action data: {'id': '1754053049977.779', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T12:57:29.979Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+ERROR 2025-08-01 18:27:34,910 views 24764 24008 Action data: {'id': '1754053049977.779', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T12:57:29.979Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:30:16,678 views 20624 28156 create_plan_step2 called with client_id: 1372 (type: <class 'str'>)
+INFO 2025-08-01 18:30:16,803 views 20624 28156 Found legacy client: JYOTI KUSUMAKAR BHISE (ID: 1372)
+INFO 2025-08-01 18:30:17,171 views 20624 28156 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-01 18:30:17,192 views 20624 28156 Found linked profile for client 1372
+INFO 2025-08-01 18:30:17,283 views 20624 28156 Found 9 portfolio holdings for client 1372
+INFO 2025-08-01 18:30:17,623 views 20624 26616 create_plan_step2 called with client_id: 1372 (type: <class 'str'>)
+INFO 2025-08-01 18:30:17,713 views 20624 26616 Found legacy client: JYOTI KUSUMAKAR BHISE (ID: 1372)
+INFO 2025-08-01 18:30:18,129 views 20624 26616 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-01 18:30:18,138 views 20624 26616 Found linked profile for client 1372
+INFO 2025-08-01 18:30:18,229 views 20624 26616 Found 9 portfolio holdings for client 1372
+INFO 2025-08-01 18:30:34,762 views 20624 26616 === EXECUTION PLAN SAVE REQUEST ===
+INFO 2025-08-01 18:30:34,762 views 20624 26616 User: narayan (RM Head)
+INFO 2025-08-01 18:30:34,762 views 20624 26616 Content-Type: application/x-www-form-urlencoded
+INFO 2025-08-01 18:30:34,762 views 20624 26616 Using form-encoded data
+INFO 2025-08-01 18:30:34,762 views 20624 26616 Parsed data keys: ['client_id', 'plan_name', 'description', 'actions[0][id]', 'actions[0][action_type]', 'actions[0][source_scheme]', 'actions[0][target_scheme]', 'actions[0][notes]', 'actions[0][portfolio_id]', 'actions[0][source_scheme_id]', 'actions[0][target_scheme_id]', 'actions[0][target_scheme_code]', 'actions[0][target_scheme_min_investment]', 'actions[0][target_scheme_min_sip]', 'actions[0][created_at]', 'actions[0][redeem_by]', 'actions[0][redeem_amount]', 'actions[0][redeem_units]', 'actions[0][scheme]', 'actions[0][scheme_id]', 'submit_for_approval', 'csrfmiddlewaretoken', 'actions']
+INFO 2025-08-01 18:30:34,762 views 20624 26616 Actions count: 1
+INFO 2025-08-01 18:30:34,762 views 20624 26616 Extracted data:
+INFO 2025-08-01 18:30:34,762 views 20624 26616   client_id: 1372
+INFO 2025-08-01 18:30:34,762 views 20624 26616   plan_name: 'start sip'
+INFO 2025-08-01 18:30:34,762 views 20624 26616   actions_data: 1 actions
+INFO 2025-08-01 18:30:34,762 views 20624 26616   submit_for_approval: True
+INFO 2025-08-01 18:30:34,852 views 20624 26616 Found client: 1372
+INFO 2025-08-01 18:30:35,359 views 20624 26616 Created execution plan EP202508010002 for client 1372
+INFO 2025-08-01 18:30:35,359 views 20624 26616 Processing action 1: {'id': '1754053228464.0852', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:00:28.466Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:30:35,359 views 20624 26616 Processing action 1: {'id': '1754053228464.0852', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:00:28.466Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:30:35,359 views 20624 26616 Processed IDs - source_scheme_id: 13940, target_scheme_id: None, portfolio_id: 13940
+INFO 2025-08-01 18:30:35,359 views 20624 26616 Determined scheme - name: 'WhiteOak Capital Mid Cap Fund Reg (G)', id: 13940
+ERROR 2025-08-01 18:30:35,359 views 20624 26616 Error in process_action_data: Cannot resolve keyword 'client' into field. Choices are: action_plans, allocation_percentage, app_code, arbitrage_value, client_iwell_code, client_name, client_pan, client_profile, client_profile_id, cost_value, created_at, data_as_of_date, debt_value, equity_code, equity_value, family_head, family_head_iwell_code, folio_number, hybrid_value, id, is_active, is_mapped, isin_number, liquid_ultra_short_value, mapped_ops, mapped_ops_id, mapped_rm, mapped_rm_id, mapping_notes, nav_date, nav_price, operations_code, operations_personnel, other_value, relationship_manager, rm_code, scheme_name, sub_broker, sub_broker_code, total_value, units, updated_at, upload_batch, upload_batch_id, upload_logs
+ERROR 2025-08-01 18:30:35,359 views 20624 26616 Action data: {'id': '1754053228464.0852', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:00:28.466Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+ERROR 2025-08-01 18:30:35,359 views 20624 26616 Error creating action 1: Cannot resolve keyword 'client' into field. Choices are: action_plans, allocation_percentage, app_code, arbitrage_value, client_iwell_code, client_name, client_pan, client_profile, client_profile_id, cost_value, created_at, data_as_of_date, debt_value, equity_code, equity_value, family_head, family_head_iwell_code, folio_number, hybrid_value, id, is_active, is_mapped, isin_number, liquid_ultra_short_value, mapped_ops, mapped_ops_id, mapped_rm, mapped_rm_id, mapping_notes, nav_date, nav_price, operations_code, operations_personnel, other_value, relationship_manager, rm_code, scheme_name, sub_broker, sub_broker_code, total_value, units, updated_at, upload_batch, upload_batch_id, upload_logs
+ERROR 2025-08-01 18:30:35,359 views 20624 26616 Action data: {'id': '1754053228464.0852', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:00:28.466Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:30:57,631 views 20624 26616 === EXECUTION PLAN SAVE REQUEST ===
+INFO 2025-08-01 18:30:57,631 views 20624 26616 User: narayan (RM Head)
+INFO 2025-08-01 18:30:57,631 views 20624 26616 Content-Type: application/x-www-form-urlencoded
+INFO 2025-08-01 18:30:57,631 views 20624 26616 Using form-encoded data
+INFO 2025-08-01 18:30:57,631 views 20624 26616 Parsed data keys: ['client_id', 'plan_name', 'description', 'actions[0][id]', 'actions[0][action_type]', 'actions[0][source_scheme]', 'actions[0][target_scheme]', 'actions[0][notes]', 'actions[0][portfolio_id]', 'actions[0][source_scheme_id]', 'actions[0][target_scheme_id]', 'actions[0][target_scheme_code]', 'actions[0][target_scheme_min_investment]', 'actions[0][target_scheme_min_sip]', 'actions[0][created_at]', 'actions[0][redeem_by]', 'actions[0][redeem_amount]', 'actions[0][redeem_units]', 'actions[0][scheme]', 'actions[0][scheme_id]', 'submit_for_approval', 'csrfmiddlewaretoken', 'actions']
+INFO 2025-08-01 18:30:57,631 views 20624 26616 Actions count: 1
+INFO 2025-08-01 18:30:57,631 views 20624 26616 Extracted data:
+INFO 2025-08-01 18:30:57,631 views 20624 26616   client_id: 1372
+INFO 2025-08-01 18:30:57,631 views 20624 26616   plan_name: 'start sip'
+INFO 2025-08-01 18:30:57,631 views 20624 26616   actions_data: 1 actions
+INFO 2025-08-01 18:30:57,631 views 20624 26616   submit_for_approval: True
+INFO 2025-08-01 18:30:57,727 views 20624 26616 Found client: 1372
+INFO 2025-08-01 18:30:58,220 views 20624 26616 Created execution plan EP202508010003 for client 1372
+INFO 2025-08-01 18:30:58,220 views 20624 26616 Processing action 1: {'id': '1754053228464.0852', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:00:28.466Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:30:58,220 views 20624 26616 Processing action 1: {'id': '1754053228464.0852', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:00:28.466Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:30:58,220 views 20624 26616 Processed IDs - source_scheme_id: 13940, target_scheme_id: None, portfolio_id: 13940
+INFO 2025-08-01 18:30:58,228 views 20624 26616 Determined scheme - name: 'WhiteOak Capital Mid Cap Fund Reg (G)', id: 13940
+ERROR 2025-08-01 18:30:58,228 views 20624 26616 Error in process_action_data: Cannot resolve keyword 'client' into field. Choices are: action_plans, allocation_percentage, app_code, arbitrage_value, client_iwell_code, client_name, client_pan, client_profile, client_profile_id, cost_value, created_at, data_as_of_date, debt_value, equity_code, equity_value, family_head, family_head_iwell_code, folio_number, hybrid_value, id, is_active, is_mapped, isin_number, liquid_ultra_short_value, mapped_ops, mapped_ops_id, mapped_rm, mapped_rm_id, mapping_notes, nav_date, nav_price, operations_code, operations_personnel, other_value, relationship_manager, rm_code, scheme_name, sub_broker, sub_broker_code, total_value, units, updated_at, upload_batch, upload_batch_id, upload_logs
+ERROR 2025-08-01 18:30:58,228 views 20624 26616 Action data: {'id': '1754053228464.0852', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:00:28.466Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+ERROR 2025-08-01 18:30:58,228 views 20624 26616 Error creating action 1: Cannot resolve keyword 'client' into field. Choices are: action_plans, allocation_percentage, app_code, arbitrage_value, client_iwell_code, client_name, client_pan, client_profile, client_profile_id, cost_value, created_at, data_as_of_date, debt_value, equity_code, equity_value, family_head, family_head_iwell_code, folio_number, hybrid_value, id, is_active, is_mapped, isin_number, liquid_ultra_short_value, mapped_ops, mapped_ops_id, mapped_rm, mapped_rm_id, mapping_notes, nav_date, nav_price, operations_code, operations_personnel, other_value, relationship_manager, rm_code, scheme_name, sub_broker, sub_broker_code, total_value, units, updated_at, upload_batch, upload_batch_id, upload_logs
+ERROR 2025-08-01 18:30:58,228 views 20624 26616 Action data: {'id': '1754053228464.0852', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:00:28.466Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:30:59,276 views 20624 26616 === EXECUTION PLAN SAVE REQUEST ===
+INFO 2025-08-01 18:30:59,276 views 20624 26616 User: narayan (RM Head)
+INFO 2025-08-01 18:30:59,276 views 20624 26616 Content-Type: application/x-www-form-urlencoded
+INFO 2025-08-01 18:30:59,276 views 20624 26616 Using form-encoded data
+INFO 2025-08-01 18:30:59,276 views 20624 26616 Parsed data keys: ['client_id', 'plan_name', 'description', 'actions[0][id]', 'actions[0][action_type]', 'actions[0][source_scheme]', 'actions[0][target_scheme]', 'actions[0][notes]', 'actions[0][portfolio_id]', 'actions[0][source_scheme_id]', 'actions[0][target_scheme_id]', 'actions[0][target_scheme_code]', 'actions[0][target_scheme_min_investment]', 'actions[0][target_scheme_min_sip]', 'actions[0][created_at]', 'actions[0][redeem_by]', 'actions[0][redeem_amount]', 'actions[0][redeem_units]', 'actions[0][scheme]', 'actions[0][scheme_id]', 'submit_for_approval', 'csrfmiddlewaretoken', 'actions']
+INFO 2025-08-01 18:30:59,276 views 20624 26616 Actions count: 1
+INFO 2025-08-01 18:30:59,276 views 20624 26616 Extracted data:
+INFO 2025-08-01 18:30:59,276 views 20624 26616   client_id: 1372
+INFO 2025-08-01 18:30:59,276 views 20624 26616   plan_name: 'start sip'
+INFO 2025-08-01 18:30:59,276 views 20624 26616   actions_data: 1 actions
+INFO 2025-08-01 18:30:59,276 views 20624 26616   submit_for_approval: True
+INFO 2025-08-01 18:30:59,352 views 20624 26616 Found client: 1372
+INFO 2025-08-01 18:30:59,811 views 20624 26616 Created execution plan EP202508010004 for client 1372
+INFO 2025-08-01 18:30:59,811 views 20624 26616 Processing action 1: {'id': '1754053228464.0852', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:00:28.466Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:30:59,811 views 20624 26616 Processing action 1: {'id': '1754053228464.0852', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:00:28.466Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:30:59,811 views 20624 26616 Processed IDs - source_scheme_id: 13940, target_scheme_id: None, portfolio_id: 13940
+INFO 2025-08-01 18:30:59,811 views 20624 26616 Determined scheme - name: 'WhiteOak Capital Mid Cap Fund Reg (G)', id: 13940
+ERROR 2025-08-01 18:30:59,811 views 20624 26616 Error in process_action_data: Cannot resolve keyword 'client' into field. Choices are: action_plans, allocation_percentage, app_code, arbitrage_value, client_iwell_code, client_name, client_pan, client_profile, client_profile_id, cost_value, created_at, data_as_of_date, debt_value, equity_code, equity_value, family_head, family_head_iwell_code, folio_number, hybrid_value, id, is_active, is_mapped, isin_number, liquid_ultra_short_value, mapped_ops, mapped_ops_id, mapped_rm, mapped_rm_id, mapping_notes, nav_date, nav_price, operations_code, operations_personnel, other_value, relationship_manager, rm_code, scheme_name, sub_broker, sub_broker_code, total_value, units, updated_at, upload_batch, upload_batch_id, upload_logs
+ERROR 2025-08-01 18:30:59,811 views 20624 26616 Action data: {'id': '1754053228464.0852', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:00:28.466Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+ERROR 2025-08-01 18:30:59,811 views 20624 26616 Error creating action 1: Cannot resolve keyword 'client' into field. Choices are: action_plans, allocation_percentage, app_code, arbitrage_value, client_iwell_code, client_name, client_pan, client_profile, client_profile_id, cost_value, created_at, data_as_of_date, debt_value, equity_code, equity_value, family_head, family_head_iwell_code, folio_number, hybrid_value, id, is_active, is_mapped, isin_number, liquid_ultra_short_value, mapped_ops, mapped_ops_id, mapped_rm, mapped_rm_id, mapping_notes, nav_date, nav_price, operations_code, operations_personnel, other_value, relationship_manager, rm_code, scheme_name, sub_broker, sub_broker_code, total_value, units, updated_at, upload_batch, upload_batch_id, upload_logs
+ERROR 2025-08-01 18:30:59,811 views 20624 26616 Action data: {'id': '1754053228464.0852', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:00:28.466Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:32:20,260 views 5016 1820 create_plan_step2 called with client_id: 1372 (type: <class 'str'>)
+INFO 2025-08-01 18:32:20,393 views 5016 1820 Found legacy client: JYOTI KUSUMAKAR BHISE (ID: 1372)
+INFO 2025-08-01 18:32:24,643 views 5016 1820 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-01 18:32:24,659 views 5016 1820 Found linked profile for client 1372
+INFO 2025-08-01 18:32:26,467 views 5016 1820 Found 9 portfolio holdings for client 1372
+INFO 2025-08-01 18:32:52,270 views 5016 7436 === EXECUTION PLAN SAVE REQUEST ===
+INFO 2025-08-01 18:32:52,270 views 5016 7436 User: narayan (RM Head)
+INFO 2025-08-01 18:32:52,270 views 5016 7436 Content-Type: application/x-www-form-urlencoded
+INFO 2025-08-01 18:32:52,270 views 5016 7436 Using form-encoded data
+INFO 2025-08-01 18:32:52,270 views 5016 7436 Parsed data keys: ['client_id', 'plan_name', 'description', 'actions[0][id]', 'actions[0][action_type]', 'actions[0][source_scheme]', 'actions[0][target_scheme]', 'actions[0][notes]', 'actions[0][portfolio_id]', 'actions[0][source_scheme_id]', 'actions[0][target_scheme_id]', 'actions[0][target_scheme_code]', 'actions[0][target_scheme_min_investment]', 'actions[0][target_scheme_min_sip]', 'actions[0][created_at]', 'actions[0][redeem_by]', 'actions[0][redeem_amount]', 'actions[0][redeem_units]', 'actions[0][scheme]', 'actions[0][scheme_id]', 'submit_for_approval', 'csrfmiddlewaretoken', 'actions']
+INFO 2025-08-01 18:32:52,270 views 5016 7436 Actions count: 1
+INFO 2025-08-01 18:32:52,270 views 5016 7436 Extracted data:
+INFO 2025-08-01 18:32:52,270 views 5016 7436   client_id: 1372
+INFO 2025-08-01 18:32:52,270 views 5016 7436   plan_name: 'start sip'
+INFO 2025-08-01 18:32:52,270 views 5016 7436   actions_data: 1 actions
+INFO 2025-08-01 18:32:52,270 views 5016 7436   submit_for_approval: True
+INFO 2025-08-01 18:32:52,346 views 5016 7436 Found client: 1372
+INFO 2025-08-01 18:32:52,880 views 5016 7436 Created execution plan EP202508010005 for client 1372
+INFO 2025-08-01 18:32:52,880 views 5016 7436 Processing action 1: {'id': '1754053363259.3364', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:02:43.261Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:32:52,880 views 5016 7436 Processing action 1: {'id': '1754053363259.3364', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:02:43.261Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:32:52,880 views 5016 7436 Processed IDs - source_scheme_id: 13940, target_scheme_id: None, portfolio_id: 13940
+INFO 2025-08-01 18:32:52,880 views 5016 7436 Determined scheme - name: 'WhiteOak Capital Mid Cap Fund Reg (G)', id: 13940
+INFO 2025-08-01 18:32:53,325 views 5016 7436 Found portfolio holding: JYOTI KUSUMAKAR BHISE - WhiteOak Capital Mid Cap Fund Reg (G) (AHVPB5516G)
+WARNING 2025-08-01 18:32:53,325 views 5016 7436 Portfolio 13940 does not belong to client 1372
+INFO 2025-08-01 18:32:53,325 views 5016 7436 Attempting name-based scheme lookup for: 'WhiteOak Capital Mid Cap Fund Reg (G)'
+ERROR 2025-08-01 18:32:53,547 views 5016 7436 No valid scheme found for action type redeem. Details: {'action_type': 'redeem', 'scheme_name': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': 13940, 'source_scheme_id': 13940, 'target_scheme_id': None, 'portfolio_id': 13940, 'source_scheme_name': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme_name': ''}
+ERROR 2025-08-01 18:32:53,547 views 5016 7436 Error in process_action_data: No valid scheme found for action type redeem. Details: {'action_type': 'redeem', 'scheme_name': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': 13940, 'source_scheme_id': 13940, 'target_scheme_id': None, 'portfolio_id': 13940, 'source_scheme_name': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme_name': ''}
+ERROR 2025-08-01 18:32:53,547 views 5016 7436 Action data: {'id': '1754053363259.3364', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:02:43.261Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+ERROR 2025-08-01 18:32:53,547 views 5016 7436 Error creating action 1: No valid scheme found for action type redeem. Details: {'action_type': 'redeem', 'scheme_name': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': 13940, 'source_scheme_id': 13940, 'target_scheme_id': None, 'portfolio_id': 13940, 'source_scheme_name': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme_name': ''}
+ERROR 2025-08-01 18:32:53,554 views 5016 7436 Action data: {'id': '1754053363259.3364', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:02:43.261Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:33:14,297 views 5016 21704 === EXECUTION PLAN SAVE REQUEST ===
+INFO 2025-08-01 18:33:14,315 views 5016 21704 User: narayan (RM Head)
+INFO 2025-08-01 18:33:14,336 views 5016 21704 Content-Type: application/x-www-form-urlencoded
+INFO 2025-08-01 18:33:14,338 views 5016 21704 Using form-encoded data
+INFO 2025-08-01 18:33:14,338 views 5016 21704 Parsed data keys: ['client_id', 'plan_name', 'description', 'actions[0][id]', 'actions[0][action_type]', 'actions[0][source_scheme]', 'actions[0][target_scheme]', 'actions[0][notes]', 'actions[0][portfolio_id]', 'actions[0][source_scheme_id]', 'actions[0][target_scheme_id]', 'actions[0][target_scheme_code]', 'actions[0][target_scheme_min_investment]', 'actions[0][target_scheme_min_sip]', 'actions[0][created_at]', 'actions[0][redeem_by]', 'actions[0][redeem_amount]', 'actions[0][redeem_units]', 'actions[0][scheme]', 'actions[0][scheme_id]', 'submit_for_approval', 'csrfmiddlewaretoken', 'actions']
+INFO 2025-08-01 18:33:14,338 views 5016 21704 Actions count: 1
+INFO 2025-08-01 18:33:14,338 views 5016 21704 Extracted data:
+INFO 2025-08-01 18:33:14,338 views 5016 21704   client_id: 1372
+INFO 2025-08-01 18:33:14,340 views 5016 21704   plan_name: 'start sip'
+INFO 2025-08-01 18:33:14,340 views 5016 21704   actions_data: 1 actions
+INFO 2025-08-01 18:33:14,340 views 5016 21704   submit_for_approval: True
+INFO 2025-08-01 18:33:14,447 views 5016 21704 Found client: 1372
+INFO 2025-08-01 18:33:15,087 views 5016 21704 Created execution plan EP202508010006 for client 1372
+INFO 2025-08-01 18:33:15,088 views 5016 21704 Processing action 1: {'id': '1754053363259.3364', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:02:43.261Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:33:15,088 views 5016 21704 Processing action 1: {'id': '1754053363259.3364', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:02:43.261Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:33:15,088 views 5016 21704 Processed IDs - source_scheme_id: 13940, target_scheme_id: None, portfolio_id: 13940
+INFO 2025-08-01 18:33:15,088 views 5016 21704 Determined scheme - name: 'WhiteOak Capital Mid Cap Fund Reg (G)', id: 13940
+INFO 2025-08-01 18:33:15,222 views 5016 21704 Found portfolio holding: JYOTI KUSUMAKAR BHISE - WhiteOak Capital Mid Cap Fund Reg (G) (AHVPB5516G)
+WARNING 2025-08-01 18:33:15,222 views 5016 21704 Portfolio 13940 does not belong to client 1372
+INFO 2025-08-01 18:33:15,222 views 5016 21704 Attempting name-based scheme lookup for: 'WhiteOak Capital Mid Cap Fund Reg (G)'
+ERROR 2025-08-01 18:33:15,342 views 5016 21704 No valid scheme found for action type redeem. Details: {'action_type': 'redeem', 'scheme_name': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': 13940, 'source_scheme_id': 13940, 'target_scheme_id': None, 'portfolio_id': 13940, 'source_scheme_name': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme_name': ''}
+ERROR 2025-08-01 18:33:15,342 views 5016 21704 Error in process_action_data: No valid scheme found for action type redeem. Details: {'action_type': 'redeem', 'scheme_name': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': 13940, 'source_scheme_id': 13940, 'target_scheme_id': None, 'portfolio_id': 13940, 'source_scheme_name': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme_name': ''}
+ERROR 2025-08-01 18:33:15,342 views 5016 21704 Action data: {'id': '1754053363259.3364', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:02:43.261Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+ERROR 2025-08-01 18:33:15,342 views 5016 21704 Error creating action 1: No valid scheme found for action type redeem. Details: {'action_type': 'redeem', 'scheme_name': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': 13940, 'source_scheme_id': 13940, 'target_scheme_id': None, 'portfolio_id': 13940, 'source_scheme_name': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme_name': ''}
+ERROR 2025-08-01 18:33:15,342 views 5016 21704 Action data: {'id': '1754053363259.3364', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:02:43.261Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:36:36,548 views 32536 6164 create_plan_step2 called with client_id: 1372 (type: <class 'str'>)
+INFO 2025-08-01 18:36:36,626 views 32536 6164 Found legacy client: JYOTI KUSUMAKAR BHISE (ID: 1372)
+INFO 2025-08-01 18:36:36,889 views 32536 6164 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-01 18:36:36,903 views 32536 6164 Found linked profile for client 1372
+INFO 2025-08-01 18:36:36,974 views 32536 6164 Found 9 portfolio holdings for client 1372
+INFO 2025-08-01 18:36:52,161 views 32536 6164 === EXECUTION PLAN SAVE REQUEST ===
+INFO 2025-08-01 18:36:52,161 views 32536 6164 User: narayan (RM Head)
+INFO 2025-08-01 18:36:52,161 views 32536 6164 Content-Type: application/x-www-form-urlencoded
+INFO 2025-08-01 18:36:52,161 views 32536 6164 Using form-encoded data
+INFO 2025-08-01 18:36:52,161 views 32536 6164 Parsed data keys: ['client_id', 'plan_name', 'description', 'actions[0][id]', 'actions[0][action_type]', 'actions[0][source_scheme]', 'actions[0][target_scheme]', 'actions[0][notes]', 'actions[0][portfolio_id]', 'actions[0][source_scheme_id]', 'actions[0][target_scheme_id]', 'actions[0][target_scheme_code]', 'actions[0][target_scheme_min_investment]', 'actions[0][target_scheme_min_sip]', 'actions[0][created_at]', 'actions[0][redeem_by]', 'actions[0][redeem_amount]', 'actions[0][redeem_units]', 'actions[0][scheme]', 'actions[0][scheme_id]', 'submit_for_approval', 'csrfmiddlewaretoken', 'actions']
+INFO 2025-08-01 18:36:52,161 views 32536 6164 Actions count: 1
+INFO 2025-08-01 18:36:52,161 views 32536 6164 Extracted data:
+INFO 2025-08-01 18:36:52,161 views 32536 6164   client_id: 1372
+INFO 2025-08-01 18:36:52,161 views 32536 6164   plan_name: 'start sip'
+INFO 2025-08-01 18:36:52,161 views 32536 6164   actions_data: 1 actions
+INFO 2025-08-01 18:36:52,161 views 32536 6164   submit_for_approval: True
+INFO 2025-08-01 18:36:52,243 views 32536 6164 Found client: 1372
+INFO 2025-08-01 18:36:52,563 views 32536 6164 Created execution plan EP202508010007 for client 1372
+INFO 2025-08-01 18:36:52,569 views 32536 6164 Processing action 1: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:36:52,570 views 32536 6164 Processing action 1: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:36:52,570 views 32536 6164 Processed IDs - source_scheme_id: 13940, target_scheme_id: None, portfolio_id: 13940
+INFO 2025-08-01 18:36:52,570 views 32536 6164 Determined scheme - name: 'WhiteOak Capital Mid Cap Fund Reg (G)', id: 13940
+INFO 2025-08-01 18:36:52,654 views 32536 6164 Found portfolio holding: JYOTI KUSUMAKAR BHISE - WhiteOak Capital Mid Cap Fund Reg (G) (AHVPB5516G)
+INFO 2025-08-01 18:36:52,730 views 32536 6164 Portfolio validation result: True, methods: [True, True, True, False]
+ERROR 2025-08-01 18:36:52,730 views 32536 6164 Error in process_action_data: PlanAction() got unexpected keyword arguments: 'action_order', 'created_by', 'portfolio_holding', 'scheme_name', 'redeem_by', 'redeem_amount'
+ERROR 2025-08-01 18:36:52,730 views 32536 6164 Action data: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+ERROR 2025-08-01 18:36:52,730 views 32536 6164 Error creating action 1: PlanAction() got unexpected keyword arguments: 'action_order', 'created_by', 'portfolio_holding', 'scheme_name', 'redeem_by', 'redeem_amount'
+ERROR 2025-08-01 18:36:52,730 views 32536 6164 Action data: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:37:03,655 views 32536 23352 === EXECUTION PLAN SAVE REQUEST ===
+INFO 2025-08-01 18:37:03,655 views 32536 23352 User: narayan (RM Head)
+INFO 2025-08-01 18:37:03,655 views 32536 23352 Content-Type: application/x-www-form-urlencoded
+INFO 2025-08-01 18:37:03,655 views 32536 23352 Using form-encoded data
+INFO 2025-08-01 18:37:03,655 views 32536 23352 Parsed data keys: ['client_id', 'plan_name', 'description', 'actions[0][id]', 'actions[0][action_type]', 'actions[0][source_scheme]', 'actions[0][target_scheme]', 'actions[0][notes]', 'actions[0][portfolio_id]', 'actions[0][source_scheme_id]', 'actions[0][target_scheme_id]', 'actions[0][target_scheme_code]', 'actions[0][target_scheme_min_investment]', 'actions[0][target_scheme_min_sip]', 'actions[0][created_at]', 'actions[0][redeem_by]', 'actions[0][redeem_amount]', 'actions[0][redeem_units]', 'actions[0][scheme]', 'actions[0][scheme_id]', 'submit_for_approval', 'csrfmiddlewaretoken', 'actions']
+INFO 2025-08-01 18:37:03,655 views 32536 23352 Actions count: 1
+INFO 2025-08-01 18:37:03,655 views 32536 23352 Extracted data:
+INFO 2025-08-01 18:37:03,655 views 32536 23352   client_id: 1372
+INFO 2025-08-01 18:37:03,655 views 32536 23352   plan_name: 'start sip'
+INFO 2025-08-01 18:37:03,655 views 32536 23352   actions_data: 1 actions
+INFO 2025-08-01 18:37:03,655 views 32536 23352   submit_for_approval: True
+INFO 2025-08-01 18:37:03,718 views 32536 23352 Found client: 1372
+INFO 2025-08-01 18:37:04,108 views 32536 23352 Created execution plan EP202508010008 for client 1372
+INFO 2025-08-01 18:37:04,108 views 32536 23352 Processing action 1: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:37:04,108 views 32536 23352 Processing action 1: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:37:04,108 views 32536 23352 Processed IDs - source_scheme_id: 13940, target_scheme_id: None, portfolio_id: 13940
+INFO 2025-08-01 18:37:04,108 views 32536 23352 Determined scheme - name: 'WhiteOak Capital Mid Cap Fund Reg (G)', id: 13940
+INFO 2025-08-01 18:37:04,194 views 32536 23352 Found portfolio holding: JYOTI KUSUMAKAR BHISE - WhiteOak Capital Mid Cap Fund Reg (G) (AHVPB5516G)
+INFO 2025-08-01 18:37:04,267 views 32536 23352 Portfolio validation result: True, methods: [True, True, True, False]
+ERROR 2025-08-01 18:37:04,267 views 32536 23352 Error in process_action_data: PlanAction() got unexpected keyword arguments: 'action_order', 'created_by', 'portfolio_holding', 'scheme_name', 'redeem_by', 'redeem_amount'
+ERROR 2025-08-01 18:37:04,267 views 32536 23352 Action data: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+ERROR 2025-08-01 18:37:04,270 views 32536 23352 Error creating action 1: PlanAction() got unexpected keyword arguments: 'action_order', 'created_by', 'portfolio_holding', 'scheme_name', 'redeem_by', 'redeem_amount'
+ERROR 2025-08-01 18:37:04,271 views 32536 23352 Action data: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:39:00,670 views 2732 14720 === EXECUTION PLAN SAVE REQUEST ===
+INFO 2025-08-01 18:39:00,677 views 2732 14720 User: narayan (RM Head)
+INFO 2025-08-01 18:39:00,677 views 2732 14720 Content-Type: application/x-www-form-urlencoded
+INFO 2025-08-01 18:39:00,677 views 2732 14720 Using form-encoded data
+INFO 2025-08-01 18:39:00,677 views 2732 14720 Parsed data keys: ['client_id', 'plan_name', 'description', 'actions[0][id]', 'actions[0][action_type]', 'actions[0][source_scheme]', 'actions[0][target_scheme]', 'actions[0][notes]', 'actions[0][portfolio_id]', 'actions[0][source_scheme_id]', 'actions[0][target_scheme_id]', 'actions[0][target_scheme_code]', 'actions[0][target_scheme_min_investment]', 'actions[0][target_scheme_min_sip]', 'actions[0][created_at]', 'actions[0][redeem_by]', 'actions[0][redeem_amount]', 'actions[0][redeem_units]', 'actions[0][scheme]', 'actions[0][scheme_id]', 'submit_for_approval', 'csrfmiddlewaretoken', 'actions']
+INFO 2025-08-01 18:39:00,677 views 2732 14720 Actions count: 1
+INFO 2025-08-01 18:39:00,677 views 2732 14720 Extracted data:
+INFO 2025-08-01 18:39:00,677 views 2732 14720   client_id: 1372
+INFO 2025-08-01 18:39:00,677 views 2732 14720   plan_name: 'start sip'
+INFO 2025-08-01 18:39:00,677 views 2732 14720   actions_data: 1 actions
+INFO 2025-08-01 18:39:00,677 views 2732 14720   submit_for_approval: True
+INFO 2025-08-01 18:39:00,781 views 2732 14720 Found client: 1372
+INFO 2025-08-01 18:39:01,385 views 2732 14720 Created execution plan EP202508010009 for client 1372
+INFO 2025-08-01 18:39:01,385 views 2732 14720 Processing action 1: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:39:01,385 views 2732 14720 Processing action 1: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:39:01,385 views 2732 14720 Processed IDs - source_scheme_id: 13940, target_scheme_id: None, portfolio_id: 13940
+INFO 2025-08-01 18:39:01,385 views 2732 14720 Determined scheme - name: 'WhiteOak Capital Mid Cap Fund Reg (G)', id: 13940
+INFO 2025-08-01 18:39:01,600 views 2732 14720 Found portfolio holding: JYOTI KUSUMAKAR BHISE - WhiteOak Capital Mid Cap Fund Reg (G) (AHVPB5516G)
+INFO 2025-08-01 18:39:01,746 views 2732 14720 Portfolio validation result: True, methods: [True, True, True, False]
+ERROR 2025-08-01 18:39:01,746 views 2732 14720 Error in process_action_data: Cannot assign "<ClientPortfolio: JYOTI KUSUMAKAR BHISE - WhiteOak Capital Mid Cap Fund Reg (G) (AHVPB5516G)>": "PlanAction.scheme" must be a "MutualFundScheme" instance.
+ERROR 2025-08-01 18:39:01,746 views 2732 14720 Action data: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+ERROR 2025-08-01 18:39:01,746 views 2732 14720 Error creating action 1: Cannot assign "<ClientPortfolio: JYOTI KUSUMAKAR BHISE - WhiteOak Capital Mid Cap Fund Reg (G) (AHVPB5516G)>": "PlanAction.scheme" must be a "MutualFundScheme" instance.
+ERROR 2025-08-01 18:39:01,746 views 2732 14720 Action data: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:41:09,635 views 31408 30620 === EXECUTION PLAN SAVE REQUEST ===
+INFO 2025-08-01 18:41:09,635 views 31408 30620 User: narayan (RM Head)
+INFO 2025-08-01 18:41:09,638 views 31408 30620 Content-Type: application/x-www-form-urlencoded
+INFO 2025-08-01 18:41:09,638 views 31408 30620 Using form-encoded data
+INFO 2025-08-01 18:41:09,638 views 31408 30620 Parsed data keys: ['client_id', 'plan_name', 'description', 'actions[0][id]', 'actions[0][action_type]', 'actions[0][source_scheme]', 'actions[0][target_scheme]', 'actions[0][notes]', 'actions[0][portfolio_id]', 'actions[0][source_scheme_id]', 'actions[0][target_scheme_id]', 'actions[0][target_scheme_code]', 'actions[0][target_scheme_min_investment]', 'actions[0][target_scheme_min_sip]', 'actions[0][created_at]', 'actions[0][redeem_by]', 'actions[0][redeem_amount]', 'actions[0][redeem_units]', 'actions[0][scheme]', 'actions[0][scheme_id]', 'submit_for_approval', 'csrfmiddlewaretoken', 'actions']
+INFO 2025-08-01 18:41:09,638 views 31408 30620 Actions count: 1
+INFO 2025-08-01 18:41:09,638 views 31408 30620 Extracted data:
+INFO 2025-08-01 18:41:09,638 views 31408 30620   client_id: 1372
+INFO 2025-08-01 18:41:09,638 views 31408 30620   plan_name: 'start sip'
+INFO 2025-08-01 18:41:09,638 views 31408 30620   actions_data: 1 actions
+INFO 2025-08-01 18:41:09,638 views 31408 30620   submit_for_approval: True
+INFO 2025-08-01 18:41:09,726 views 31408 30620 Found client: 1372
+INFO 2025-08-01 18:41:10,225 views 31408 30620 Created execution plan EP202508010010 for client 1372
+INFO 2025-08-01 18:41:10,226 views 31408 30620 Processing action 1: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:41:10,226 views 31408 30620 Processing action 1: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:41:10,226 views 31408 30620 Processed IDs - source_scheme_id: 13940, target_scheme_id: None, portfolio_id: 13940
+INFO 2025-08-01 18:41:10,226 views 31408 30620 Determined scheme - name: 'WhiteOak Capital Mid Cap Fund Reg (G)', id: 13940
+INFO 2025-08-01 18:41:10,323 views 31408 30620 Found portfolio holding: JYOTI KUSUMAKAR BHISE - WhiteOak Capital Mid Cap Fund Reg (G) (AHVPB5516G)
+INFO 2025-08-01 18:41:10,441 views 31408 30620 Portfolio validation result: True, methods: [True, True, True, False]
+WARNING 2025-08-01 18:41:10,930 views 31408 30620 No MutualFundScheme found for portfolio scheme: WhiteOak Capital Mid Cap Fund Reg (G)
+WARNING 2025-08-01 18:41:10,934 views 31408 30620 Field mapping error: PlanAction() got unexpected keyword arguments: 'source_scheme', 'transaction_type'
+ERROR 2025-08-01 18:41:10,934 views 31408 30620 Error in process_action_data: PlanAction() got unexpected keyword arguments: 'transaction_type', 'source_scheme'
+ERROR 2025-08-01 18:41:10,934 views 31408 30620 Action data: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+ERROR 2025-08-01 18:41:10,934 views 31408 30620 Error creating action 1: PlanAction() got unexpected keyword arguments: 'transaction_type', 'source_scheme'
+ERROR 2025-08-01 18:41:10,934 views 31408 30620 Action data: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:42:30,345 views 28792 16540 === EXECUTION PLAN SAVE REQUEST ===
+INFO 2025-08-01 18:42:30,345 views 28792 16540 User: narayan (RM Head)
+INFO 2025-08-01 18:42:30,345 views 28792 16540 Content-Type: application/x-www-form-urlencoded
+INFO 2025-08-01 18:42:30,345 views 28792 16540 Using form-encoded data
+INFO 2025-08-01 18:42:30,345 views 28792 16540 Parsed data keys: ['client_id', 'plan_name', 'description', 'actions[0][id]', 'actions[0][action_type]', 'actions[0][source_scheme]', 'actions[0][target_scheme]', 'actions[0][notes]', 'actions[0][portfolio_id]', 'actions[0][source_scheme_id]', 'actions[0][target_scheme_id]', 'actions[0][target_scheme_code]', 'actions[0][target_scheme_min_investment]', 'actions[0][target_scheme_min_sip]', 'actions[0][created_at]', 'actions[0][redeem_by]', 'actions[0][redeem_amount]', 'actions[0][redeem_units]', 'actions[0][scheme]', 'actions[0][scheme_id]', 'submit_for_approval', 'csrfmiddlewaretoken', 'actions']
+INFO 2025-08-01 18:42:30,345 views 28792 16540 Actions count: 1
+INFO 2025-08-01 18:42:30,345 views 28792 16540 Extracted data:
+INFO 2025-08-01 18:42:30,345 views 28792 16540   client_id: 1372
+INFO 2025-08-01 18:42:30,345 views 28792 16540   plan_name: 'start sip'
+INFO 2025-08-01 18:42:30,345 views 28792 16540   actions_data: 1 actions
+INFO 2025-08-01 18:42:30,345 views 28792 16540   submit_for_approval: True
+INFO 2025-08-01 18:42:30,415 views 28792 16540 Found client: 1372
+INFO 2025-08-01 18:42:30,792 views 28792 16540 Created execution plan EP202508010011 for client 1372
+INFO 2025-08-01 18:42:30,792 views 28792 16540 Processing action 1: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:42:30,792 views 28792 16540 Processing action 1: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:42:30,792 views 28792 16540 Processed IDs - source_scheme_id: 13940, target_scheme_id: None, portfolio_id: 13940
+INFO 2025-08-01 18:42:30,792 views 28792 16540 Determined scheme - name: 'WhiteOak Capital Mid Cap Fund Reg (G)', id: 13940
+INFO 2025-08-01 18:42:30,866 views 28792 16540 Found portfolio holding: JYOTI KUSUMAKAR BHISE - WhiteOak Capital Mid Cap Fund Reg (G) (AHVPB5516G)
+INFO 2025-08-01 18:42:30,953 views 28792 16540 Portfolio validation result: True, methods: [True, True, True, False]
+WARNING 2025-08-01 18:42:31,117 views 28792 16540 No MutualFundScheme found for portfolio scheme: WhiteOak Capital Mid Cap Fund Reg (G)
+WARNING 2025-08-01 18:42:31,117 views 28792 16540 Field mapping error: PlanAction() got unexpected keyword arguments: 'source_scheme', 'transaction_type'
+ERROR 2025-08-01 18:42:31,206 views 28792 16540 Minimal creation also failed: null value in column "scheme_id" of relation "base_planaction" violates not-null constraint
+DETAIL:  Failing row contains (18, redeem, 1000.00, null, null, pending, 1, null, , null, null, null, Action: REDEEM | Notes: ok | Scheme: WhiteOak Capital Mid Cap Fu..., , 2025-08-01 13:12:31.117158+00, 2025-08-01 13:12:31.117158+00, null, 39, null, null).
+
+ERROR 2025-08-01 18:42:31,206 views 28792 16540 Error in process_action_data: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.
+ERROR 2025-08-01 18:42:31,206 views 28792 16540 Action data: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+ERROR 2025-08-01 18:42:31,206 views 28792 16540 Error creating action 1: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.
+ERROR 2025-08-01 18:42:31,206 views 28792 16540 Action data: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:42:44,828 views 28792 26956 === EXECUTION PLAN SAVE REQUEST ===
+INFO 2025-08-01 18:42:44,829 views 28792 26956 User: narayan (RM Head)
+INFO 2025-08-01 18:42:44,829 views 28792 26956 Content-Type: application/x-www-form-urlencoded
+INFO 2025-08-01 18:42:44,831 views 28792 26956 Using form-encoded data
+INFO 2025-08-01 18:42:44,833 views 28792 26956 Parsed data keys: ['client_id', 'plan_name', 'description', 'actions[0][id]', 'actions[0][action_type]', 'actions[0][source_scheme]', 'actions[0][target_scheme]', 'actions[0][notes]', 'actions[0][portfolio_id]', 'actions[0][source_scheme_id]', 'actions[0][target_scheme_id]', 'actions[0][target_scheme_code]', 'actions[0][target_scheme_min_investment]', 'actions[0][target_scheme_min_sip]', 'actions[0][created_at]', 'actions[0][redeem_by]', 'actions[0][redeem_amount]', 'actions[0][redeem_units]', 'actions[0][scheme]', 'actions[0][scheme_id]', 'submit_for_approval', 'csrfmiddlewaretoken', 'actions']
+INFO 2025-08-01 18:42:44,836 views 28792 26956 Actions count: 1
+INFO 2025-08-01 18:42:44,836 views 28792 26956 Extracted data:
+INFO 2025-08-01 18:42:44,838 views 28792 26956   client_id: 1372
+INFO 2025-08-01 18:42:44,838 views 28792 26956   plan_name: 'start sip'
+INFO 2025-08-01 18:42:44,840 views 28792 26956   actions_data: 1 actions
+INFO 2025-08-01 18:42:44,841 views 28792 26956   submit_for_approval: True
+INFO 2025-08-01 18:42:44,923 views 28792 26956 Found client: 1372
+INFO 2025-08-01 18:42:45,345 views 28792 26956 Created execution plan EP202508010011 for client 1372
+INFO 2025-08-01 18:42:45,345 views 28792 26956 Processing action 1: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:42:45,345 views 28792 26956 Processing action 1: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:42:45,346 views 28792 26956 Processed IDs - source_scheme_id: 13940, target_scheme_id: None, portfolio_id: 13940
+INFO 2025-08-01 18:42:45,346 views 28792 26956 Determined scheme - name: 'WhiteOak Capital Mid Cap Fund Reg (G)', id: 13940
+INFO 2025-08-01 18:42:45,446 views 28792 26956 Found portfolio holding: JYOTI KUSUMAKAR BHISE - WhiteOak Capital Mid Cap Fund Reg (G) (AHVPB5516G)
+INFO 2025-08-01 18:42:45,538 views 28792 26956 Portfolio validation result: True, methods: [True, True, True, False]
+WARNING 2025-08-01 18:42:45,746 views 28792 26956 No MutualFundScheme found for portfolio scheme: WhiteOak Capital Mid Cap Fund Reg (G)
+WARNING 2025-08-01 18:42:45,746 views 28792 26956 Field mapping error: PlanAction() got unexpected keyword arguments: 'source_scheme', 'transaction_type'
+ERROR 2025-08-01 18:42:45,834 views 28792 26956 Minimal creation also failed: null value in column "scheme_id" of relation "base_planaction" violates not-null constraint
+DETAIL:  Failing row contains (19, redeem, 1000.00, null, null, pending, 1, null, , null, null, null, Action: REDEEM | Notes: ok | Scheme: WhiteOak Capital Mid Cap Fu..., , 2025-08-01 13:12:45.746405+00, 2025-08-01 13:12:45.746405+00, null, 40, null, null).
+
+ERROR 2025-08-01 18:42:45,835 views 28792 26956 Error in process_action_data: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.
+ERROR 2025-08-01 18:42:45,836 views 28792 26956 Action data: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+ERROR 2025-08-01 18:42:45,836 views 28792 26956 Error creating action 1: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.
+ERROR 2025-08-01 18:42:45,836 views 28792 26956 Action data: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:44:17,437 views 19008 19672 === EXECUTION PLAN SAVE REQUEST ===
+INFO 2025-08-01 18:44:17,437 views 19008 19672 User: narayan (RM Head)
+INFO 2025-08-01 18:44:17,437 views 19008 19672 Content-Type: application/x-www-form-urlencoded
+INFO 2025-08-01 18:44:17,437 views 19008 19672 Using form-encoded data
+INFO 2025-08-01 18:44:17,437 views 19008 19672 Parsed data keys: ['client_id', 'plan_name', 'description', 'actions[0][id]', 'actions[0][action_type]', 'actions[0][source_scheme]', 'actions[0][target_scheme]', 'actions[0][notes]', 'actions[0][portfolio_id]', 'actions[0][source_scheme_id]', 'actions[0][target_scheme_id]', 'actions[0][target_scheme_code]', 'actions[0][target_scheme_min_investment]', 'actions[0][target_scheme_min_sip]', 'actions[0][created_at]', 'actions[0][redeem_by]', 'actions[0][redeem_amount]', 'actions[0][redeem_units]', 'actions[0][scheme]', 'actions[0][scheme_id]', 'submit_for_approval', 'csrfmiddlewaretoken', 'actions']
+INFO 2025-08-01 18:44:17,437 views 19008 19672 Actions count: 1
+INFO 2025-08-01 18:44:17,437 views 19008 19672 Extracted data:
+INFO 2025-08-01 18:44:17,437 views 19008 19672   client_id: 1372
+INFO 2025-08-01 18:44:17,437 views 19008 19672   plan_name: 'start sip'
+INFO 2025-08-01 18:44:17,437 views 19008 19672   actions_data: 1 actions
+INFO 2025-08-01 18:44:17,437 views 19008 19672   submit_for_approval: True
+INFO 2025-08-01 18:44:17,519 views 19008 19672 Found client: 1372
+INFO 2025-08-01 18:44:18,012 views 19008 19672 Created execution plan EP202508010011 for client 1372
+INFO 2025-08-01 18:44:18,013 views 19008 19672 Processing action 1: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:44:18,013 views 19008 19672 Processing action 1: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:44:18,013 views 19008 19672 Processed IDs - source_scheme_id: 13940, target_scheme_id: None, portfolio_id: 13940
+INFO 2025-08-01 18:44:18,013 views 19008 19672 Determined scheme - name: 'WhiteOak Capital Mid Cap Fund Reg (G)', id: 13940
+INFO 2025-08-01 18:44:18,124 views 19008 19672 Found portfolio holding: JYOTI KUSUMAKAR BHISE - WhiteOak Capital Mid Cap Fund Reg (G) (AHVPB5516G)
+INFO 2025-08-01 18:44:18,207 views 19008 19672 Portfolio validation result: True, methods: [True, True, True, False]
+WARNING 2025-08-01 18:44:18,447 views 19008 19672 No MutualFundScheme found for portfolio scheme: WhiteOak Capital Mid Cap Fund Reg (G)
+INFO 2025-08-01 18:44:18,447 views 19008 19672 Creating placeholder MutualFundScheme for portfolio scheme
+ERROR 2025-08-01 18:44:18,543 views 19008 19672 Error handling MutualFundScheme: duplicate key value violates unique constraint "base_mutualfundscheme_scheme_code_key"
+DETAIL:  Key (scheme_code)=() already exists.
+
+ERROR 2025-08-01 18:44:18,545 views 19008 19672 Cannot find any MutualFundScheme: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.
+ERROR 2025-08-01 18:44:18,545 views 19008 19672 Error in process_action_data: Cannot create action without valid scheme_id: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.
+ERROR 2025-08-01 18:44:18,547 views 19008 19672 Action data: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+ERROR 2025-08-01 18:44:18,547 views 19008 19672 Error creating action 1: Cannot create action without valid scheme_id: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.
+ERROR 2025-08-01 18:44:18,547 views 19008 19672 Action data: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:44:43,716 views 19008 19672 === EXECUTION PLAN SAVE REQUEST ===
+INFO 2025-08-01 18:44:43,716 views 19008 19672 User: narayan (RM Head)
+INFO 2025-08-01 18:44:43,716 views 19008 19672 Content-Type: application/x-www-form-urlencoded
+INFO 2025-08-01 18:44:43,716 views 19008 19672 Using form-encoded data
+INFO 2025-08-01 18:44:43,716 views 19008 19672 Parsed data keys: ['client_id', 'plan_name', 'description', 'actions[0][id]', 'actions[0][action_type]', 'actions[0][source_scheme]', 'actions[0][target_scheme]', 'actions[0][notes]', 'actions[0][portfolio_id]', 'actions[0][source_scheme_id]', 'actions[0][target_scheme_id]', 'actions[0][target_scheme_code]', 'actions[0][target_scheme_min_investment]', 'actions[0][target_scheme_min_sip]', 'actions[0][created_at]', 'actions[0][redeem_by]', 'actions[0][redeem_amount]', 'actions[0][redeem_units]', 'actions[0][scheme]', 'actions[0][scheme_id]', 'submit_for_approval', 'csrfmiddlewaretoken', 'actions']
+INFO 2025-08-01 18:44:43,722 views 19008 19672 Actions count: 1
+INFO 2025-08-01 18:44:43,722 views 19008 19672 Extracted data:
+INFO 2025-08-01 18:44:43,723 views 19008 19672   client_id: 1372
+INFO 2025-08-01 18:44:43,723 views 19008 19672   plan_name: 'no'
+INFO 2025-08-01 18:44:43,723 views 19008 19672   actions_data: 1 actions
+INFO 2025-08-01 18:44:43,723 views 19008 19672   submit_for_approval: True
+INFO 2025-08-01 18:44:43,826 views 19008 19672 Found client: 1372
+INFO 2025-08-01 18:44:44,369 views 19008 19672 Created execution plan EP202508010011 for client 1372
+INFO 2025-08-01 18:44:44,369 views 19008 19672 Processing action 1: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:44:44,369 views 19008 19672 Processing action 1: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+INFO 2025-08-01 18:44:44,369 views 19008 19672 Processed IDs - source_scheme_id: 13940, target_scheme_id: None, portfolio_id: 13940
+INFO 2025-08-01 18:44:44,369 views 19008 19672 Determined scheme - name: 'WhiteOak Capital Mid Cap Fund Reg (G)', id: 13940
+INFO 2025-08-01 18:44:44,473 views 19008 19672 Found portfolio holding: JYOTI KUSUMAKAR BHISE - WhiteOak Capital Mid Cap Fund Reg (G) (AHVPB5516G)
+INFO 2025-08-01 18:44:44,563 views 19008 19672 Portfolio validation result: True, methods: [True, True, True, False]
+WARNING 2025-08-01 18:44:44,779 views 19008 19672 No MutualFundScheme found for portfolio scheme: WhiteOak Capital Mid Cap Fund Reg (G)
+INFO 2025-08-01 18:44:44,779 views 19008 19672 Creating placeholder MutualFundScheme for portfolio scheme
+ERROR 2025-08-01 18:44:44,862 views 19008 19672 Error handling MutualFundScheme: duplicate key value violates unique constraint "base_mutualfundscheme_scheme_code_key"
+DETAIL:  Key (scheme_code)=() already exists.
+
+ERROR 2025-08-01 18:44:44,862 views 19008 19672 Cannot find any MutualFundScheme: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.
+ERROR 2025-08-01 18:44:44,864 views 19008 19672 Error in process_action_data: Cannot create action without valid scheme_id: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.
+ERROR 2025-08-01 18:44:44,864 views 19008 19672 Action data: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+ERROR 2025-08-01 18:44:44,864 views 19008 19672 Error creating action 1: Cannot create action without valid scheme_id: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.
+ERROR 2025-08-01 18:44:44,864 views 19008 19672 Action data: {'id': '1754053606527.8154', 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': '13940', 'target_scheme_id': '', 'target_scheme_code': '', 'target_scheme_min_investment': '', 'target_scheme_min_sip': '', 'created_at': '2025-08-01T13:06:46.530Z', 'redeem_by': 'specific_amount', 'redeem_amount': '1000', 'redeem_units': '', 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': '13940'}
+ERROR 2025-08-01 18:55:26,336 views 16976 28524 JSON decode error: Expecting value: line 1 column 1 (char 0)
+ERROR 2025-08-01 18:57:44,289 views 16976 20696 JSON decode error: Expecting value: line 1 column 1 (char 0)
+ERROR 2025-08-01 18:59:49,754 views 16976 20696 JSON decode error: Expecting value: line 1 column 1 (char 0)
+ERROR 2025-08-01 19:00:53,497 views 8928 27892 JSON decode error: Expecting value: line 1 column 1 (char 0)
+ERROR 2025-08-01 19:05:24,650 views 27636 33104 JSON decode error: Expecting value: line 1 column 1 (char 0)
+INFO 2025-08-01 19:13:48,536 views 32164 20200 create_plan_step2 called with client_id: 1554 (type: <class 'str'>)
+INFO 2025-08-01 19:13:48,629 views 32164 20200 Found legacy client: RAJESH BACHUBHAI JHAVERI (ID: 1554)
+INFO 2025-08-01 19:13:49,406 views 32164 20200 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-01 19:13:49,442 views 32164 20200 Found linked profile for client 1554
+INFO 2025-08-01 19:13:49,539 views 32164 20200 Found 17 portfolio holdings for client 1554
+INFO 2025-08-01 19:17:02,600 views 32164 27480 create_plan_step2 called with client_id: 1554 (type: <class 'str'>)
+INFO 2025-08-01 19:17:02,708 views 32164 27480 Found legacy client: RAJESH BACHUBHAI JHAVERI (ID: 1554)
+INFO 2025-08-01 19:17:03,124 views 32164 27480 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-01 19:17:03,124 views 32164 27480 Found linked profile for client 1554
+INFO 2025-08-01 19:17:03,232 views 32164 27480 Found 17 portfolio holdings for client 1554
+INFO 2025-08-01 19:18:03,063 views 32164 27480 create_plan_step2 called with client_id: 1554 (type: <class 'str'>)
+INFO 2025-08-01 19:18:03,168 views 32164 27480 Found legacy client: RAJESH BACHUBHAI JHAVERI (ID: 1554)
+INFO 2025-08-01 19:18:03,988 views 32164 27480 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-01 19:18:03,988 views 32164 27480 Found linked profile for client 1554
+INFO 2025-08-01 19:18:04,065 views 32164 27480 Found 17 portfolio holdings for client 1554
+INFO 2025-08-01 19:24:09,846 views 32164 20148 create_plan_step2 called with client_id: 1554 (type: <class 'str'>)
+INFO 2025-08-01 19:24:09,914 views 32164 20148 Found legacy client: RAJESH BACHUBHAI JHAVERI (ID: 1554)
+INFO 2025-08-01 19:24:10,195 views 32164 20148 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-01 19:24:10,204 views 32164 20148 Found linked profile for client 1554
+INFO 2025-08-01 19:24:10,301 views 32164 20148 Found 17 portfolio holdings for client 1554
+INFO 2025-08-01 19:24:24,281 views 32164 8632 create_plan_step2 called with client_id: 1554 (type: <class 'str'>)
+INFO 2025-08-01 19:24:24,954 views 32164 8632 Found legacy client: RAJESH BACHUBHAI JHAVERI (ID: 1554)
+INFO 2025-08-01 19:24:25,280 views 32164 8632 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-01 19:24:25,280 views 32164 8632 Found linked profile for client 1554
+INFO 2025-08-01 19:24:25,363 views 32164 8632 Found 17 portfolio holdings for client 1554
+INFO 2025-08-01 19:25:04,522 views 32164 8632 create_plan_step2 called with client_id: 1554 (type: <class 'str'>)
+INFO 2025-08-01 19:25:04,794 views 32164 8632 Found legacy client: RAJESH BACHUBHAI JHAVERI (ID: 1554)
+INFO 2025-08-01 19:25:05,247 views 32164 8632 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-01 19:25:05,258 views 32164 8632 Found linked profile for client 1554
+INFO 2025-08-01 19:25:05,377 views 32164 8632 Found 17 portfolio holdings for client 1554
+INFO 2025-08-01 19:25:36,884 views 32164 8632 create_plan_step2 called with client_id: 1554 (type: <class 'str'>)
+INFO 2025-08-01 19:25:37,003 views 32164 8632 Found legacy client: RAJESH BACHUBHAI JHAVERI (ID: 1554)
+INFO 2025-08-01 19:25:37,362 views 32164 8632 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-01 19:25:37,373 views 32164 8632 Found linked profile for client 1554
+INFO 2025-08-01 19:25:37,461 views 32164 8632 Found 17 portfolio holdings for client 1554
+INFO 2025-08-01 19:28:08,638 views 32164 8632 create_plan_step2 called with client_id: 1523 (type: <class 'str'>)
+INFO 2025-08-01 19:28:08,701 views 32164 8632 Found legacy client: PRASHANT TIWARI (ID: 1523)
+INFO 2025-08-01 19:28:08,970 views 32164 8632 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-01 19:28:08,971 views 32164 8632 Found linked profile for client 1523
+INFO 2025-08-01 19:28:09,042 views 32164 8632 Found 22 portfolio holdings for client 1523
+INFO 2025-08-01 19:29:24,005 views 30828 4256 create_plan_step2 called with client_id: 1372 (type: <class 'str'>)
+INFO 2025-08-01 19:29:24,080 views 30828 4256 Found legacy client: JYOTI KUSUMAKAR BHISE (ID: 1372)
+INFO 2025-08-01 19:29:24,414 views 30828 4256 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-01 19:29:24,437 views 30828 4256 Found linked profile for client 1372
+INFO 2025-08-01 19:29:24,505 views 30828 4256 Found 9 portfolio holdings for client 1372
+INFO 2025-08-01 19:32:16,478 views 30828 30736 create_plan_step2 called with client_id: 1372 (type: <class 'str'>)
+INFO 2025-08-01 19:32:16,596 views 30828 30736 Found legacy client: JYOTI KUSUMAKAR BHISE (ID: 1372)
+INFO 2025-08-01 19:32:22,964 views 30828 30736 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-01 19:32:22,964 views 30828 30736 Found linked profile for client 1372
+INFO 2025-08-01 19:32:24,020 views 30828 30736 Found 9 portfolio holdings for client 1372
+INFO 2025-08-01 19:32:42,965 views 30828 30736 Created execution plan EP202508010011 for client 1372
+INFO 2025-08-01 19:32:42,971 views 30828 30736 Processing action 1: {'id': 1754056956285.0334, 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': 13940, 'target_scheme_id': None, 'target_scheme_code': None, 'target_scheme_min_investment': None, 'target_scheme_min_sip': None, 'redeem_by': 'all_units', 'redeem_amount': '', 'redeem_units': ''}
+ERROR 2025-08-01 19:32:42,972 views 30828 30736 No valid scheme found for action type redeem. Action data: {'id': 1754056956285.0334, 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': 13940, 'target_scheme_id': None, 'target_scheme_code': None, 'target_scheme_min_investment': None, 'target_scheme_min_sip': None, 'redeem_by': 'all_units', 'redeem_amount': '', 'redeem_units': ''}
+ERROR 2025-08-01 19:32:42,972 views 30828 30736 Error creating action 1: No valid scheme found for action type redeem. Action data: {'id': 1754056956285.0334, 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': 13940, 'target_scheme_id': None, 'target_scheme_code': None, 'target_scheme_min_investment': None, 'target_scheme_min_sip': None, 'redeem_by': 'all_units', 'redeem_amount': '', 'redeem_units': ''}
+ERROR 2025-08-01 19:32:42,972 views 30828 30736 Action data: {'id': 1754056956285.0334, 'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': '', 'notes': 'ok', 'portfolio_id': '13940', 'source_scheme_id': 13940, 'target_scheme_id': None, 'target_scheme_code': None, 'target_scheme_min_investment': None, 'target_scheme_min_sip': None, 'redeem_by': 'all_units', 'redeem_amount': '', 'redeem_units': ''}
+INFO 2025-08-01 19:34:58,177 views 30944 27576 create_plan_step2 called with client_id: 1399 (type: <class 'str'>)
+INFO 2025-08-01 19:34:58,253 views 30944 27576 Found legacy client: KUSUMAKAR BALKRISHNA BHISE (ID: 1399)
+INFO 2025-08-01 19:34:58,580 views 30944 27576 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-01 19:34:58,605 views 30944 27576 Found linked profile for client 1399
+INFO 2025-08-01 19:34:58,691 views 30944 27576 Found 9 portfolio holdings for client 1399
+ERROR 2025-08-02 09:56:37,716 views 20992 11792 Dashboard error for user 61: Failed lookup for key [rm_heads_count] in [{'True': True, 'False': False, 'None': None}, {}, {}, {'user_role': 'top_management', 'user_name': 'John CEO', 'total_clients': 567, 'total_leads': 7, 'pending_tasks': 1, 'open_service_requests': 0, 'team_count': 9}]
+ERROR 2025-08-02 09:57:15,177 views 11516 19892 Dashboard error for user 61: Failed lookup for key [rm_heads_count] in [{'True': True, 'False': False, 'None': None}, {}, {}, {'user_role': 'top_management', 'user_name': 'John CEO', 'total_clients': 567, 'total_leads': 7, 'pending_tasks': 1, 'open_service_requests': 0, 'team_count': 9}]
+ERROR 2025-08-02 09:57:29,435 views 11516 25924 Dashboard error for user 61: Failed lookup for key [rm_heads_count] in [{'True': True, 'False': False, 'None': None}, {}, {}, {'user_role': 'top_management', 'user_name': 'John CEO', 'total_clients': 567, 'total_leads': 7, 'pending_tasks': 1, 'open_service_requests': 0, 'team_count': 9}]
+ERROR 2025-08-02 10:02:49,790 views 33648 8036 Dashboard error for user 61: Failed lookup for key [rm_heads_count] in [{'True': True, 'False': False, 'None': None}, {}, {}, {'user_role': 'top_management', 'user_name': 'John CEO', 'total_clients': 567, 'total_leads': 7, 'pending_tasks': 1, 'open_service_requests': 0, 'team_count': 9}]
+ERROR 2025-08-02 10:07:24,244 views 29552 33872 Dashboard error for user 61: Failed lookup for key [rm_heads_count] in [{'True': True, 'False': False, 'None': None}, {}, {}, {'user_role': 'top_management', 'user_name': 'John CEO', 'total_clients': 567, 'total_leads': 7, 'pending_tasks': 1, 'open_service_requests': 0, 'team_count': 9}]
+ERROR 2025-08-02 10:08:34,807 views 3876 20876 Dashboard error for user 61: Failed lookup for key [rm_heads_count] in [{'True': True, 'False': False, 'None': None}, {}, {}, {'user_role': 'top_management', 'user_name': 'John CEO', 'total_clients': 567, 'total_leads': 7, 'pending_tasks': 1, 'open_service_requests': 0, 'team_count': 9}]

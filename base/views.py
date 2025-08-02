@@ -85,48 +85,70 @@ from functools import lru_cache
 
 # Role constants for faster comparisons
 MANAGEMENT_ROLES = {'top_management', 'business_head'}
-RM_HEAD_ROLE = 'rm_head'
+HIGH_PRIVILEGE_ROLES = MANAGEMENT_ROLES | {'rm_head'}
+OPS_ROLES = {'ops_team_lead', 'ops_exec'}
 
 @never_cache
 @ensure_csrf_cookie
 def user_login(request):
-    """Optimized login view for Vercel deployment"""
-    # Fast check for already authenticated users
+    """Ultra-fast login view optimized for minimal processing"""
+    # Fast bypass for already authenticated users (no DB hit)
     if request.user.is_authenticated:
         return redirect('dashboard')
 
     if request.method == 'POST':
-        # Minimal input processing
-        username = request.POST.get('username', '')[:150]  # Limit to max username length
-        password = request.POST.get('password', '')[:128]  # Reasonable password length limit
+        # Get raw POST data directly (avoid MultiValueDict overhead)
+        post_data = request.POST
+        username = post_data.get('username', '')[:150]  # Truncate to max username length
+        password = post_data.get('password', '')[:128]  # Reasonable password length limit
         
-        # Fast validation without strip() to save cycles
+        # Fast empty check (no strip() to save cycles)
         if not username or not password:
             return render(request, 'base/login.html', {'error': 'Please enter both username and password'})
         
         try:
-            # Authenticate with minimal database queries
+            # Authenticate with minimal DB queries
             user = authenticate(request, username=username, password=password)
             
             if user is not None and user.is_active:
-                # Login without session processing if not needed
+                # Pre-cache user role data before login
+                _cache_user_data(user)
+                
+                # Login with minimal session processing
                 login(request, user)
                 
-                # Cache only essential user data
-                cache.set(f"user_{user.id}_role", user.role, 300)  # 5 minutes cache
-                
-                # Immediate redirect without additional processing
+                # Fast redirect without additional processing
                 return redirect('dashboard')
             
             # Generic error message to prevent username enumeration
             return render(request, 'base/login.html', {'error': 'Invalid credentials'})
             
         except Exception as e:
-            logger.error(f"Login error for {username}: {str(e)}")
+            logger.error(f"Login error for {username}: {str(e)}", exc_info=True)
             return render(request, 'base/login.html', {'error': 'Login service unavailable'})
     
-    # GET request - minimal context
+    # GET request - minimal template rendering
     return render(request, 'base/login.html')
+
+def _cache_user_data(user):
+    """Cache all essential user data in one atomic operation"""
+    from django.core.cache import caches
+    role = getattr(user, 'role', '')
+    
+    cache_data = {
+        'role': role,
+        'is_management': role in MANAGEMENT_ROLES,
+        'is_high_privilege': role in HIGH_PRIVILEGE_ROLES,
+        'is_ops': role in OPS_ROLES,
+        'permissions_hash': hash(getattr(user, 'permissions_hash', ''))
+    }
+    
+    # Use direct cache access for maximum speed
+    cache_backend = caches['default']
+    cache_backend.set_many({
+        f"user_{user.id}_data": cache_data,
+        f"user_{user.id}_role": role,
+    }, timeout=3600)  # Cache for 1 hour
 
 def _cache_user_role_data(user):
     """Cache user role data to speed up subsequent requests"""
@@ -134,16 +156,26 @@ def _cache_user_role_data(user):
     role_data = {
         'role': user.role,
         'is_management': user.role in MANAGEMENT_ROLES,
-        'is_rm_head': user.role == RM_HEAD_ROLE,
+        'is_rm_head': user.role == HIGH_PRIVILEGE_ROLES,
     }
     # Cache for 30 minutes
     cache.set(cache_key, role_data, 1800)
 
 @login_required
 def user_logout(request):
-    """Fast logout with minimal cache clearing"""
-    # Only clear essential cached data
-    cache.delete(f"user_{request.user.id}_role")
+    """Optimized logout with bulk cache clearing"""
+    user_id = request.user.id
+    cache.delete_many([
+        f"user_{user_id}_data",
+        f"user_{user_id}_role",
+        f"accessible_users_{user_id}",
+        f"accessible_data_{user_id}_*"  # Wildcard delete
+    ])
+    
+    # Clear LRU caches
+    _get_cached_user_role.cache_clear()
+    _is_team_member.cache_clear()
+    
     logout(request)
     return redirect('login')
 
@@ -152,7 +184,7 @@ def _get_cached_user_role(user_id, role):
     """LRU cache for user role checks"""
     return {
         'is_management': role in MANAGEMENT_ROLES,
-        'is_rm_head': role == RM_HEAD_ROLE,
+        'is_rm_head': role == HIGH_PRIVILEGE_ROLES,
         'role': role
     }
 
