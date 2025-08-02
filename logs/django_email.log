@@ -764,3 +764,9 @@ INFO 2025-08-02 14:42:52,117 views 17528 10920 Excel file generated successfully
 INFO 2025-08-02 14:42:52,117 views 17528 10920 File saved at: /tmp\execution_plan_EP202508020006_20250802_144252.xlsx
 INFO 2025-08-02 14:42:52,117 views 17528 10920 Total actions exported: 1
 ERROR 2025-08-02 14:42:52,124 views 17528 10920 Error downloading Excel file for plan 49: 'dict' object has no attribute '_committed'
+INFO 2025-08-02 14:55:04,625 views 25492 31708 Found 1 actions for execution plan 49
+INFO 2025-08-02 14:55:04,833 views 25492 31708 Excel generated in memory for plan 49
+INFO 2025-08-02 14:55:04,833 views 25492 31708 Total actions exported: 1
+INFO 2025-08-02 14:55:10,673 views 25492 31708 Found 1 actions for execution plan 49
+INFO 2025-08-02 14:55:10,862 views 25492 31708 Excel generated in memory for plan 49
+INFO 2025-08-02 14:55:10,862 views 25492 31708 Total actions exported: 1
