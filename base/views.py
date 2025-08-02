@@ -8140,7 +8140,7 @@ def mark_action_failed(request, action_id):
 
 @login_required
 def download_excel(request, plan_id):
-    """Download execution plan Excel file - Enhanced version"""
+    """Download execution plan Excel file - Vercel compatible version"""
     execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
     
     # Check access permission
@@ -8148,45 +8148,341 @@ def download_excel(request, plan_id):
         raise Http404("Access denied")
     
     try:
-        # Check if Excel file exists
-        if execution_plan.excel_file and os.path.exists(execution_plan.excel_file.path):
-            file_path = execution_plan.excel_file.path
-            filename = f"{execution_plan.plan_id}_execution_plan.xlsx"
-        else:
-            # Generate Excel file if it doesn't exist
-            excel_file_path = generate_execution_plan_excel(execution_plan)
-            if excel_file_path:
-                execution_plan.excel_file = excel_file_path
-                execution_plan.save()
-                file_path = os.path.join(settings.MEDIA_ROOT, excel_file_path)
-                filename = f"{execution_plan.plan_id}_execution_plan.xlsx"
-            else:
-                return JsonResponse({'error': 'Unable to generate Excel file'}, status=500)
+        # Generate Excel in memory instead of saving to disk
+        excel_data = generate_execution_plan_excel_in_memory(execution_plan)
         
-        # Serve the file
-        with open(file_path, 'rb') as f:
-            response = HttpResponse(
-                f.read(),
-                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            )
-            response['Content-Disposition'] = f'attachment; filename="{filename}"'
-            
-            # Add additional headers
-            response['Content-Length'] = os.path.getsize(file_path)
-            response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-            response['Pragma'] = 'no-cache'
-            response['Expires'] = '0'
-            
-            return response
+        if not excel_data:
+            return JsonResponse({'error': 'Unable to generate Excel file'}, status=500)
+        
+        # Create HTTP response with Excel data
+        filename = f"{execution_plan.plan_id}_execution_plan.xlsx"
+        
+        response = HttpResponse(
+            excel_data,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        response['Content-Length'] = len(excel_data)
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+        
+        return response
             
     except Exception as e:
         logger.error(f"Error downloading Excel file for plan {plan_id}: {str(e)}")
         return JsonResponse({'error': f'Error downloading file: {str(e)}'}, status=500)
 
+
+def generate_execution_plan_excel_in_memory(execution_plan):
+    """
+    Generate Excel file in memory without saving to disk - Vercel compatible
+    Returns bytes data that can be directly sent in HTTP response
+    """
+    try:
+        from io import BytesIO
+        
+        # Initialize plan_actions
+        plan_actions = []
+        
+        # Get plan actions
+        try:
+            if hasattr(execution_plan, 'actions'):
+                plan_actions = list(execution_plan.actions.all().order_by('priority', 'id'))
+                logger.info(f"Found {len(plan_actions)} actions for execution plan {execution_plan.id}")
+        except Exception as e:
+            logger.error(f"Error getting plan actions: {str(e)}")
+            plan_actions = []
+        
+        # Create workbook in memory
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Execution Plan"
+        
+        # Set column widths
+        column_widths = {
+            'A': 8, 'B': 35, 'C': 15, 'D': 15, 'E': 15, 'F': 15,
+            'G': 12, 'H': 12, 'I': 15, 'J': 15, 'K': 20
+        }
+        for col, width in column_widths.items():
+            ws.column_dimensions[col].width = width
+        
+        # Create header style
+        header_style = NamedStyle(name="header")
+        header_style.font = Font(name='Arial', size=11, bold=True, color='FFFFFF')
+        header_style.fill = PatternFill(start_color='366092', end_color='366092', fill_type='solid')
+        header_style.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        header_style.border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin')
+        )
+        
+        # Plan header information
+        row = 1
+        ws.merge_cells(f'A{row}:K{row}')
+        plan_id = getattr(execution_plan, 'plan_id', f"Plan #{execution_plan.id}")
+        ws[f'A{row}'] = f"EXECUTION PLAN - {plan_id}"
+        ws[f'A{row}'].font = Font(name='Arial', size=16, bold=True)
+        ws[f'A{row}'].alignment = Alignment(horizontal='center')
+        row += 1
+        
+        # Plan details
+        client_name = "Unknown Client"
+        if hasattr(execution_plan, 'client') and execution_plan.client:
+            if hasattr(execution_plan.client, 'name'):
+                client_name = execution_plan.client.name
+            elif hasattr(execution_plan.client, 'client_full_name'):
+                client_name = execution_plan.client.client_full_name
+        
+        ws[f'A{row}'] = "Client:"
+        ws[f'B{row}'] = client_name
+        ws[f'F{row}'] = "Date:"
+        ws[f'G{row}'] = execution_plan.created_at.strftime('%Y-%m-%d') if hasattr(execution_plan, 'created_at') else "N/A"
+        row += 1
+        
+        # Calculate total amount
+        total_amount = 0
+        if plan_actions:
+            total_amount = sum(float(action.amount) for action in plan_actions if action.amount)
+        
+        ws[f'A{row}'] = "Total Amount:"
+        ws[f'B{row}'] = f"₹{total_amount:,.2f}"
+        ws[f'F{row}'] = "Status:"
+        ws[f'G{row}'] = execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else (execution_plan.status if hasattr(execution_plan, 'status') else "N/A")
+        row += 1
+        
+        # Add additional details
+        if hasattr(execution_plan, 'created_by') and execution_plan.created_by:
+            ws[f'A{row}'] = "Created By:"
+            ws[f'B{row}'] = execution_plan.created_by.get_full_name() or execution_plan.created_by.username
+            row += 1
+        
+        if hasattr(execution_plan, 'plan_name') and execution_plan.plan_name:
+            ws[f'A{row}'] = "Plan Name:"
+            ws[f'B{row}'] = execution_plan.plan_name
+            row += 1
+        
+        row += 1  # Empty row
+        
+        # Table headers
+        headers = [
+            'Sr. No.', 'Scheme Name', 'ISIN', 'Transaction Type', 'Amount (₹)',
+            'SIP Amount (₹)', 'SIP Date', 'Frequency', 'Status', 'Priority', 'Remarks'
+        ]
+        
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=row, column=col)
+            cell.value = header
+            cell.style = header_style
+        
+        row += 1
+        
+        # Data rows
+        for idx, action in enumerate(plan_actions, 1):
+            # Get scheme information
+            scheme_name = "Unknown Scheme"
+            isin_value = "N/A"
+            
+            if hasattr(action, 'scheme') and action.scheme:
+                scheme = action.scheme
+                if hasattr(scheme, 'scheme_name'):
+                    scheme_name = scheme.scheme_name
+                
+                if hasattr(scheme, 'isin_growth'):
+                    isin_value = scheme.isin_growth or "N/A"
+                elif hasattr(scheme, 'isin_number'):
+                    isin_value = scheme.isin_number or "N/A"
+            
+            # Get action details
+            action_type = "N/A"
+            if hasattr(action, 'action_type'):
+                if hasattr(action, 'get_action_type_display'):
+                    action_type = action.get_action_type_display()
+                else:
+                    action_type = action.action_type
+            
+            amount = 0
+            if hasattr(action, 'amount') and action.amount:
+                amount = float(action.amount)
+            
+            # Build row data
+            data = [
+                idx,
+                scheme_name,
+                isin_value,
+                action_type,
+                f"₹{amount:,.2f}" if amount > 0 else "N/A",
+                getattr(action, 'sip_amount', 'N/A'),
+                getattr(action, 'sip_date', 'N/A'),
+                getattr(action, 'frequency', 'N/A'),
+                getattr(action, 'status', 'N/A'),
+                getattr(action, 'priority', 'N/A'),
+                getattr(action, 'notes', '')
+            ]
+            
+            # Write row data
+            for col, value in enumerate(data, 1):
+                cell = ws.cell(row=row, column=col)
+                cell.value = value
+                cell.alignment = Alignment(
+                    horizontal='center' if col in [1, 3, 5, 7, 9, 10] else 'left', 
+                    vertical='center'
+                )
+                cell.border = Border(
+                    left=Side(style='thin'), right=Side(style='thin'),
+                    top=Side(style='thin'), bottom=Side(style='thin')
+                )
+            
+            row += 1
+        
+        # Add summary
+        if plan_actions:
+            row += 1
+            ws[f'A{row}'] = "TOTAL"
+            ws[f'A{row}'].font = Font(bold=True)
+            ws[f'E{row}'] = f"₹{total_amount:,.2f}"
+            ws[f'E{row}'].font = Font(bold=True)
+        
+        # Add generation timestamp
+        row += 3
+        ws[f'A{row}'] = f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        
+        # Save to BytesIO buffer instead of disk
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        
+        logger.info(f"Excel generated in memory for plan {execution_plan.id}")
+        logger.info(f"Total actions exported: {len(plan_actions)}")
+        logger.info(f"Total amount: ₹{total_amount:,.2f}")
+        
+        return buffer.getvalue()
+        
+    except Exception as e:
+        logger.error(f"Error generating Excel in memory: {str(e)}")
+        return None
+
+
+def attach_excel_file_from_memory(email, execution_plan):
+    """
+    Attach Excel file to email from memory - Vercel compatible
+    """
+    try:
+        # Generate Excel in memory
+        excel_data = generate_execution_plan_excel_in_memory(execution_plan)
+        
+        if excel_data:
+            filename = f"{execution_plan.plan_id}_execution_plan.xlsx"
+            email.attach(
+                filename, 
+                excel_data, 
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            return True
+        
+        return False
+        
+    except Exception as e:
+        logger.error(f"Error attaching Excel from memory: {str(e)}")
+        return False
+
+
+# Update the email sending function to use in-memory Excel generation
+@login_required
+@require_http_methods(["POST"])
+def send_to_client_enhanced_vercel(request, plan_id):
+    """Enhanced send to client with Vercel-compatible Excel handling"""
+    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+    
+    # Check access permission
+    if not can_access_plan(request.user, execution_plan):
+        return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+    
+    try:
+        # Get form data
+        email_to = request.POST.get('email_to', '').strip()
+        subject = request.POST.get('subject', '').strip()
+        message = request.POST.get('message', '').strip()
+        include_excel = request.POST.get('include_excel', 'false').lower() == 'true'
+        copy_to_rm = request.POST.get('copy_to_rm', 'false').lower() == 'true'
+        
+        # Auto-detect client email if not provided
+        if not email_to:
+            email_to = get_client_email(execution_plan)
+            if not email_to:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'No client email provided or found in database.'
+                })
+        
+        # Validate email
+        from django.core.validators import validate_email
+        try:
+            validate_email(email_to)
+        except ValidationError:
+            return JsonResponse({
+                'success': False, 
+                'error': f'Invalid email address: {email_to}'
+            })
+        
+        # Set defaults
+        if not subject:
+            subject = f"📋 Investment Plan - {execution_plan.plan_name}"
+        
+        if not message:
+            client_name = execution_plan.client.name if hasattr(execution_plan.client, 'name') else 'Valued Client'
+            message = f"Dear {client_name},\n\nPlease find attached your investment execution plan.\n\nBest regards,\n{execution_plan.created_by.get_full_name() or execution_plan.created_by.username}"
+        
+        # Prepare recipients
+        recipients = [email_to]
+        cc_recipients = []
+        
+        if copy_to_rm and execution_plan.created_by and execution_plan.created_by.email:
+            if execution_plan.created_by.email not in recipients:
+                cc_recipients.append(execution_plan.created_by.email)
+        
+        # Create email
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=message,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@yourcompany.com'),
+            to=recipients,
+            cc=cc_recipients if cc_recipients else None,
+            reply_to=[execution_plan.created_by.email] if execution_plan.created_by and execution_plan.created_by.email else None
+        )
+        
+        # Attach Excel from memory if requested
+        excel_attached = False
+        if include_excel:
+            excel_attached = attach_excel_file_from_memory(email, execution_plan)
+        
+        # Send email
+        email.send(fail_silently=False)
+        
+        # Create audit record
+        attachment_note = " with Excel attachment" if excel_attached else ""
+        PlanComment.objects.create(
+            execution_plan=execution_plan,
+            comment=f"Plan sent to client: {email_to}{attachment_note}",
+            commented_by=request.user,
+            is_internal=True
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Email sent successfully to {email_to}',
+            'excel_attached': excel_attached
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in send_to_client_enhanced_vercel: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
 @login_required
 @require_http_methods(["POST"])
 def generate_excel(request, plan_id):
-    """Generate fresh Excel file for execution plan"""
+    """Generate fresh Excel file for execution plan - Vercel compatible"""
     execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
     
     # Check access permission
@@ -8194,46 +8490,23 @@ def generate_excel(request, plan_id):
         return JsonResponse({'error': 'Access denied'}, status=403)
     
     try:
-        # Debug: Check the execution plan structure
-        debug_execution_plan_structure(execution_plan)
+        # Generate Excel in memory
+        excel_data = generate_execution_plan_excel_in_memory(execution_plan)
         
-        # Debug: Check the first scheme's attributes if items exist
-        plan_items = []
-        if hasattr(execution_plan, 'execution_plan_items'):
-            plan_items = execution_plan.execution_plan_items.all()
-        elif hasattr(execution_plan, 'executionplanitem_set'):
-            plan_items = execution_plan.executionplanitem_set.all()
-        elif hasattr(execution_plan, 'items'):
-            plan_items = execution_plan.items.all()
-        elif hasattr(execution_plan, 'plan_items'):
-            plan_items = execution_plan.plan_items.all()
-        
-        first_item = plan_items.first() if plan_items else None
-        if first_item and hasattr(first_item, 'scheme') and first_item.scheme:
-            debug_scheme_attributes(first_item.scheme)
-        
-        # Generate new Excel file
-        excel_file_path = generate_execution_plan_excel(execution_plan)
-        
-        if excel_file_path:
-            # Update the execution plan with new file
-            execution_plan.excel_file = excel_file_path
-            execution_plan.save()
-            
+        if excel_data:
             filename = f"{execution_plan.plan_id}_execution_plan.xlsx"
             
             return JsonResponse({
                 'success': True,
                 'message': 'Excel file generated successfully',
                 'filename': filename,
-                'file_path': excel_file_path
+                'download_url': reverse('download_excel', args=[plan_id])
             })
         else:
             return JsonResponse({'error': 'Failed to generate Excel file'}, status=500)
             
     except Exception as e:
         logger.error(f"Error generating Excel for plan {plan_id}: {str(e)}")
-        logger.error(f"Error traceback: {traceback.format_exc()}")
         return JsonResponse({'error': f'Error generating Excel: {str(e)}'}, status=500)
     
     

@@ -745,3 +745,22 @@ INFO 2025-08-02 13:53:22,961 views 27192 31760 Excel file generated successfully
 INFO 2025-08-02 13:53:22,962 views 27192 31760 Total actions exported: 1
 INFO 2025-08-02 13:53:23,079 views 27192 31760 Generated Excel file for plan EP202508020006
 INFO 2025-08-02 13:53:23,353 views 27192 31760 Plan EP202508020006 submitted for approval
+INFO 2025-08-02 14:31:46,671 views 25472 34188 Excel file created: execution_plan_EP202508020006_20250802_143146.xlsx at /tmp\execution_plan_EP202508020006_20250802_143146.xlsx
+ERROR 2025-08-02 14:31:46,748 views 25472 34188 Error downloading Excel file for plan 49: [Errno 2] No such file or directory: 'C:\\Users\\sawai\\OneDrive - National Institute of Technology, Rourkela\\Desktop\\CRM_1\\media\\execution_plan_EP202508020006_20250802_143146.xlsx'
+INFO 2025-08-02 14:31:46,874 views 25472 33536 Excel file created: execution_plan_EP202508020006_20250802_143146.xlsx at /tmp\execution_plan_EP202508020006_20250802_143146.xlsx
+ERROR 2025-08-02 14:31:46,943 views 25472 33536 Error downloading Excel file for plan 49: [Errno 2] No such file or directory: 'C:\\Users\\sawai\\OneDrive - National Institute of Technology, Rourkela\\Desktop\\CRM_1\\media\\execution_plan_EP202508020006_20250802_143146.xlsx'
+INFO 2025-08-02 14:42:42,018 views 17528 10920 Found 1 actions for execution plan 49
+INFO 2025-08-02 14:42:42,311 views 17528 10920 Excel file generated successfully: execution_plan_EP202508020006_20250802_144242.xlsx
+INFO 2025-08-02 14:42:42,311 views 17528 10920 File saved at: /tmp\execution_plan_EP202508020006_20250802_144242.xlsx
+INFO 2025-08-02 14:42:42,312 views 17528 10920 Total actions exported: 1
+ERROR 2025-08-02 14:42:42,319 views 17528 10920 Error downloading Excel file for plan 49: 'dict' object has no attribute '_committed'
+INFO 2025-08-02 14:42:44,534 views 17528 10920 Found 1 actions for execution plan 49
+INFO 2025-08-02 14:42:44,708 views 17528 10920 Excel file generated successfully: execution_plan_EP202508020006_20250802_144244.xlsx
+INFO 2025-08-02 14:42:44,708 views 17528 10920 File saved at: /tmp\execution_plan_EP202508020006_20250802_144244.xlsx
+INFO 2025-08-02 14:42:44,708 views 17528 10920 Total actions exported: 1
+ERROR 2025-08-02 14:42:44,708 views 17528 10920 Error downloading Excel file for plan 49: 'dict' object has no attribute '_committed'
+INFO 2025-08-02 14:42:51,792 views 17528 10920 Found 1 actions for execution plan 49
+INFO 2025-08-02 14:42:52,117 views 17528 10920 Excel file generated successfully: execution_plan_EP202508020006_20250802_144252.xlsx
+INFO 2025-08-02 14:42:52,117 views 17528 10920 File saved at: /tmp\execution_plan_EP202508020006_20250802_144252.xlsx
+INFO 2025-08-02 14:42:52,117 views 17528 10920 Total actions exported: 1
+ERROR 2025-08-02 14:42:52,124 views 17528 10920 Error downloading Excel file for plan 49: 'dict' object has no attribute '_committed'
