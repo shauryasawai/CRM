@@ -7393,17 +7393,13 @@ def generate_execution_plan_excel(execution_plan):
         # Generate filename
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         plan_id_clean = str(plan_id).replace('#', '').replace(' ', '_')
-        filename = f"execution_plans/execution_plan_{plan_id_clean}_{timestamp}.xlsx"
+        filename = f"execution_plan_{plan_id_clean}_{timestamp}.xlsx"
+        file_path = os.path.join('/tmp', filename)
         
         # Get media root path with fallback
-        if hasattr(settings, 'MEDIA_ROOT') and settings.MEDIA_ROOT:
-            media_root = settings.MEDIA_ROOT
-        elif hasattr(settings, 'BASE_DIR'):
-            # Fallback to BASE_DIR/media
-            media_root = os.path.join(settings.BASE_DIR, 'media')
-        else:
-            # Last resort fallback
-            media_root = os.path.join(os.getcwd(), 'media')
+        # Use /tmp directory for serverless-safe temporary file writing
+        media_root = "/tmp"
+
         
         # Create directory if it doesn't exist
         file_path = os.path.join(media_root, filename)
