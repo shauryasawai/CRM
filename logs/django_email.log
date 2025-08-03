@@ -770,3 +770,159 @@ INFO 2025-08-02 14:55:04,833 views 25492 31708 Total actions exported: 1
 INFO 2025-08-02 14:55:10,673 views 25492 31708 Found 1 actions for execution plan 49
 INFO 2025-08-02 14:55:10,862 views 25492 31708 Excel generated in memory for plan 49
 INFO 2025-08-02 14:55:10,862 views 25492 31708 Total actions exported: 1
+INFO 2025-08-03 12:27:47,481 views 29740 25632 Approval notification sent to narayan@gmail.com
+INFO 2025-08-03 13:38:31,368 views 29740 24792 Found 1 actions for execution plan 49
+INFO 2025-08-03 13:38:31,718 views 29740 24792 Excel generated in memory for plan 49
+INFO 2025-08-03 13:38:31,718 views 29740 24792 Total actions exported: 1
+INFO 2025-08-03 14:35:38,725 views 29740 28004 Found 1 actions for execution plan 49
+INFO 2025-08-03 14:35:38,806 views 29740 12872 Found 1 actions for execution plan 49
+INFO 2025-08-03 14:35:39,082 views 29740 12872 Excel generated in memory for plan 49
+INFO 2025-08-03 14:35:39,084 views 29740 28004 Excel generated in memory for plan 49
+INFO 2025-08-03 14:35:39,084 views 29740 12872 Total actions exported: 1
+INFO 2025-08-03 14:35:39,085 views 29740 28004 Total actions exported: 1
+INFO 2025-08-03 14:37:55,189 views 29740 27728 create_plan_step2 called with client_id: 1372 (type: <class 'str'>)
+INFO 2025-08-03 14:37:55,267 views 29740 27728 Found legacy client: JYOTI KUSUMAKAR BHISE (ID: 1372)
+INFO 2025-08-03 14:37:55,591 views 29740 27728 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-03 14:37:55,594 views 29740 27728 Found linked profile for client 1372
+INFO 2025-08-03 14:37:55,675 views 29740 27728 Found 9 portfolio holdings for client 1372
+INFO 2025-08-03 14:38:25,476 views 29740 22720 Created execution plan EP202508030001 for client 1372
+INFO 2025-08-03 14:38:25,476 views 29740 22720 Processing action 1: {'action_type': 'stp', 'source_scheme': 'Nippon India Consumption Fund (G)', 'target_scheme': 'Aditya Birla Sun Life US Treasury 1-3 Year Bond ETFs Fund Of Funds-Direct Growth', 'notes': 'ok', 'portfolio_id': 13935, 'source_portfolio_id': 13935, 'source_scheme_name': 'Nippon India Consumption Fund (G)', 'target_scheme_id': 12985, 'target_scheme_code': 'INF209KB16W7', 'target_scheme_name': 'Aditya Birla Sun Life US Treasury 1-3 Year Bond ETFs Fund Of Funds-Direct Growth', 'stp_amount': 1000, 'stp_frequency': 'monthly', 'scheme': 'Nippon India Consumption Fund (G)', 'scheme_name': 'Nippon India Consumption Fund (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+ERROR 2025-08-03 14:38:25,483 views 29740 22720 No valid scheme found for action type stp. Action data: {'action_type': 'stp', 'source_scheme': 'Nippon India Consumption Fund (G)', 'target_scheme': 'Aditya Birla Sun Life US Treasury 1-3 Year Bond ETFs Fund Of Funds-Direct Growth', 'notes': 'ok', 'portfolio_id': 13935, 'source_portfolio_id': 13935, 'source_scheme_name': 'Nippon India Consumption Fund (G)', 'target_scheme_id': 12985, 'target_scheme_code': 'INF209KB16W7', 'target_scheme_name': 'Aditya Birla Sun Life US Treasury 1-3 Year Bond ETFs Fund Of Funds-Direct Growth', 'stp_amount': 1000, 'stp_frequency': 'monthly', 'scheme': 'Nippon India Consumption Fund (G)', 'scheme_name': 'Nippon India Consumption Fund (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+ERROR 2025-08-03 14:38:25,483 views 29740 22720 Error creating action 1: No valid scheme found for action type stp. Action data: {'action_type': 'stp', 'source_scheme': 'Nippon India Consumption Fund (G)', 'target_scheme': 'Aditya Birla Sun Life US Treasury 1-3 Year Bond ETFs Fund Of Funds-Direct Growth', 'notes': 'ok', 'portfolio_id': 13935, 'source_portfolio_id': 13935, 'source_scheme_name': 'Nippon India Consumption Fund (G)', 'target_scheme_id': 12985, 'target_scheme_code': 'INF209KB16W7', 'target_scheme_name': 'Aditya Birla Sun Life US Treasury 1-3 Year Bond ETFs Fund Of Funds-Direct Growth', 'stp_amount': 1000, 'stp_frequency': 'monthly', 'scheme': 'Nippon India Consumption Fund (G)', 'scheme_name': 'Nippon India Consumption Fund (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+ERROR 2025-08-03 14:38:25,483 views 29740 22720 Action data: {'action_type': 'stp', 'source_scheme': 'Nippon India Consumption Fund (G)', 'target_scheme': 'Aditya Birla Sun Life US Treasury 1-3 Year Bond ETFs Fund Of Funds-Direct Growth', 'notes': 'ok', 'portfolio_id': 13935, 'source_portfolio_id': 13935, 'source_scheme_name': 'Nippon India Consumption Fund (G)', 'target_scheme_id': 12985, 'target_scheme_code': 'INF209KB16W7', 'target_scheme_name': 'Aditya Birla Sun Life US Treasury 1-3 Year Bond ETFs Fund Of Funds-Direct Growth', 'stp_amount': 1000, 'stp_frequency': 'monthly', 'scheme': 'Nippon India Consumption Fund (G)', 'scheme_name': 'Nippon India Consumption Fund (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-03 14:39:24,248 views 29740 10788 Created execution plan EP202508030002 for client 1372
+INFO 2025-08-03 14:39:24,248 views 29740 10788 Processing action 1: {'action_type': 'stp', 'source_scheme': 'Quant ELSS Tax Saver Fund (G)', 'target_scheme': 'Motilal Oswal Balanced Advantage Fund (MOFDYNAMIC) - Regular Plan - Annual Dividend Payout Option', 'notes': 'ok', 'portfolio_id': 13937, 'source_portfolio_id': 13937, 'source_scheme_name': 'Quant ELSS Tax Saver Fund (G)', 'target_scheme_id': 12028, 'target_scheme_code': 'INF247L01601', 'target_scheme_name': 'Motilal Oswal Balanced Advantage Fund (MOFDYNAMIC) - Regular Plan - Annual Dividend Payout Option', 'stp_amount': 1000, 'stp_frequency': 'monthly', 'scheme': 'Quant ELSS Tax Saver Fund (G)', 'scheme_name': 'Quant ELSS Tax Saver Fund (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+ERROR 2025-08-03 14:39:24,248 views 29740 10788 No valid scheme found for action type stp. Action data: {'action_type': 'stp', 'source_scheme': 'Quant ELSS Tax Saver Fund (G)', 'target_scheme': 'Motilal Oswal Balanced Advantage Fund (MOFDYNAMIC) - Regular Plan - Annual Dividend Payout Option', 'notes': 'ok', 'portfolio_id': 13937, 'source_portfolio_id': 13937, 'source_scheme_name': 'Quant ELSS Tax Saver Fund (G)', 'target_scheme_id': 12028, 'target_scheme_code': 'INF247L01601', 'target_scheme_name': 'Motilal Oswal Balanced Advantage Fund (MOFDYNAMIC) - Regular Plan - Annual Dividend Payout Option', 'stp_amount': 1000, 'stp_frequency': 'monthly', 'scheme': 'Quant ELSS Tax Saver Fund (G)', 'scheme_name': 'Quant ELSS Tax Saver Fund (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+ERROR 2025-08-03 14:39:24,255 views 29740 10788 Error creating action 1: No valid scheme found for action type stp. Action data: {'action_type': 'stp', 'source_scheme': 'Quant ELSS Tax Saver Fund (G)', 'target_scheme': 'Motilal Oswal Balanced Advantage Fund (MOFDYNAMIC) - Regular Plan - Annual Dividend Payout Option', 'notes': 'ok', 'portfolio_id': 13937, 'source_portfolio_id': 13937, 'source_scheme_name': 'Quant ELSS Tax Saver Fund (G)', 'target_scheme_id': 12028, 'target_scheme_code': 'INF247L01601', 'target_scheme_name': 'Motilal Oswal Balanced Advantage Fund (MOFDYNAMIC) - Regular Plan - Annual Dividend Payout Option', 'stp_amount': 1000, 'stp_frequency': 'monthly', 'scheme': 'Quant ELSS Tax Saver Fund (G)', 'scheme_name': 'Quant ELSS Tax Saver Fund (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+ERROR 2025-08-03 14:39:24,255 views 29740 10788 Action data: {'action_type': 'stp', 'source_scheme': 'Quant ELSS Tax Saver Fund (G)', 'target_scheme': 'Motilal Oswal Balanced Advantage Fund (MOFDYNAMIC) - Regular Plan - Annual Dividend Payout Option', 'notes': 'ok', 'portfolio_id': 13937, 'source_portfolio_id': 13937, 'source_scheme_name': 'Quant ELSS Tax Saver Fund (G)', 'target_scheme_id': 12028, 'target_scheme_code': 'INF247L01601', 'target_scheme_name': 'Motilal Oswal Balanced Advantage Fund (MOFDYNAMIC) - Regular Plan - Annual Dividend Payout Option', 'stp_amount': 1000, 'stp_frequency': 'monthly', 'scheme': 'Quant ELSS Tax Saver Fund (G)', 'scheme_name': 'Quant ELSS Tax Saver Fund (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-03 14:41:03,106 views 29740 24640 Created execution plan EP202508030003 for client 1372
+INFO 2025-08-03 14:41:03,106 views 29740 24640 Processing action 1: {'action_type': 'switch', 'source_scheme': 'Invesco India Equity Savings Fund IDCW', 'target_scheme': 'quant ELSS Tax Saver Fund - IDCW Option - Direct Plan', 'notes': '9i', 'portfolio_id': 13932, 'source_portfolio_id': 13932, 'source_scheme_name': 'Invesco India Equity Savings Fund IDCW', 'target_scheme_id': 9157, 'target_scheme_code': 'INF966L01960', 'target_scheme_name': 'quant ELSS Tax Saver Fund - IDCW Option - Direct Plan', 'switch_by': 'all_units', 'switch_amount': None, 'switch_units': None, 'scheme': 'Invesco India Equity Savings Fund IDCW', 'scheme_name': 'Invesco India Equity Savings Fund IDCW', 'scheme_id': None, 'scheme_lookup_by_name': True}
+ERROR 2025-08-03 14:41:03,620 views 29740 24640 Source scheme with name 'Invesco India Equity Savings Fund IDCW' not found
+ERROR 2025-08-03 14:41:03,620 views 29740 24640 Error creating action 1: Scheme with name 'Invesco India Equity Savings Fund IDCW' not found
+ERROR 2025-08-03 14:41:03,620 views 29740 24640 Action data: {'action_type': 'switch', 'source_scheme': 'Invesco India Equity Savings Fund IDCW', 'target_scheme': 'quant ELSS Tax Saver Fund - IDCW Option - Direct Plan', 'notes': '9i', 'portfolio_id': 13932, 'source_portfolio_id': 13932, 'source_scheme_name': 'Invesco India Equity Savings Fund IDCW', 'target_scheme_id': 9157, 'target_scheme_code': 'INF966L01960', 'target_scheme_name': 'quant ELSS Tax Saver Fund - IDCW Option - Direct Plan', 'switch_by': 'all_units', 'switch_amount': None, 'switch_units': None, 'scheme': 'Invesco India Equity Savings Fund IDCW', 'scheme_name': 'Invesco India Equity Savings Fund IDCW', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-03 14:42:38,421 views 29740 25980 Created execution plan EP202508030004 for client 1372
+INFO 2025-08-03 14:42:38,421 views 29740 25980 Processing action 1: {'action_type': 'switch', 'source_scheme': 'Invesco India Equity Savings Fund IDCW', 'target_scheme': 'quant ELSS Tax Saver Fund - IDCW Option - Direct Plan', 'notes': '9i', 'portfolio_id': 13932, 'source_portfolio_id': 13932, 'source_scheme_name': 'Invesco India Equity Savings Fund IDCW', 'target_scheme_id': 9157, 'target_scheme_code': 'INF966L01960', 'target_scheme_name': 'quant ELSS Tax Saver Fund - IDCW Option - Direct Plan', 'switch_by': 'all_units', 'switch_amount': None, 'switch_units': None, 'scheme': 'Invesco India Equity Savings Fund IDCW', 'scheme_name': 'Invesco India Equity Savings Fund IDCW', 'scheme_id': None, 'scheme_lookup_by_name': True}
+ERROR 2025-08-03 14:42:38,629 views 29740 25980 Source scheme with name 'Invesco India Equity Savings Fund IDCW' not found
+ERROR 2025-08-03 14:42:38,637 views 29740 25980 Error creating action 1: Scheme with name 'Invesco India Equity Savings Fund IDCW' not found
+ERROR 2025-08-03 14:42:38,637 views 29740 25980 Action data: {'action_type': 'switch', 'source_scheme': 'Invesco India Equity Savings Fund IDCW', 'target_scheme': 'quant ELSS Tax Saver Fund - IDCW Option - Direct Plan', 'notes': '9i', 'portfolio_id': 13932, 'source_portfolio_id': 13932, 'source_scheme_name': 'Invesco India Equity Savings Fund IDCW', 'target_scheme_id': 9157, 'target_scheme_code': 'INF966L01960', 'target_scheme_name': 'quant ELSS Tax Saver Fund - IDCW Option - Direct Plan', 'switch_by': 'all_units', 'switch_amount': None, 'switch_units': None, 'scheme': 'Invesco India Equity Savings Fund IDCW', 'scheme_name': 'Invesco India Equity Savings Fund IDCW', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-03 14:58:01,369 views 20460 33880 create_plan_step2 called with client_id: 1372 (type: <class 'str'>)
+INFO 2025-08-03 14:58:01,473 views 20460 33880 Found legacy client: JYOTI KUSUMAKAR BHISE (ID: 1372)
+INFO 2025-08-03 14:58:01,909 views 20460 33880 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-03 14:58:01,938 views 20460 33880 Found linked profile for client 1372
+INFO 2025-08-03 14:58:02,034 views 20460 33880 Found 9 portfolio holdings for client 1372
+INFO 2025-08-03 14:58:16,591 views 20460 21236 Created execution plan EP202508030005 for client 1372
+INFO 2025-08-03 14:58:16,596 views 20460 21236 Processing action 1: {'action_type': 'switch', 'source_scheme': 'Invesco India Equity Savings Fund IDCW', 'target_scheme': 'quant ELSS Tax Saver Fund - IDCW Option - Direct Plan', 'notes': '9i', 'portfolio_id': 13932, 'source_portfolio_id': 13932, 'source_scheme_name': 'Invesco India Equity Savings Fund IDCW', 'target_scheme_id': 9157, 'target_scheme_code': 'INF966L01960', 'target_scheme_name': 'quant ELSS Tax Saver Fund - IDCW Option - Direct Plan', 'switch_by': 'all_units', 'switch_amount': None, 'switch_units': None, 'scheme': 'Invesco India Equity Savings Fund IDCW', 'scheme_name': 'Invesco India Equity Savings Fund IDCW', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-03 14:58:16,806 views 20460 21236 Successfully created action 21 for scheme 'Invesco India Equity Savings Fund IDCW' (portfolio action: True)
+INFO 2025-08-03 14:58:16,806 views 20460 21236 Successfully created action 21
+INFO 2025-08-03 14:58:17,007 views 20460 21236 Found 1 actions for execution plan 54
+INFO 2025-08-03 14:58:17,055 views 20460 21236 Excel file generated successfully: execution_plan_EP202508030005_20250803_145817.xlsx
+INFO 2025-08-03 14:58:17,055 views 20460 21236 File saved at: /tmp\execution_plan_EP202508030005_20250803_145817.xlsx
+INFO 2025-08-03 14:58:17,055 views 20460 21236 Total actions exported: 1
+WARNING 2025-08-03 14:58:17,062 views 20460 21236 Could not generate Excel file: 'dict' object has no attribute '_committed'
+ERROR 2025-08-03 14:58:17,125 views 20460 21236 Error saving execution plan: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.
+INFO 2025-08-03 14:58:49,757 views 20460 18240 Created execution plan EP202508030005 for client 1372
+INFO 2025-08-03 14:58:49,758 views 20460 18240 Processing action 1: {'action_type': 'switch', 'source_scheme': 'Invesco India Equity Savings Fund IDCW', 'target_scheme': 'quant ELSS Tax Saver Fund - IDCW Option - Direct Plan', 'notes': '9i', 'portfolio_id': 13932, 'source_portfolio_id': 13932, 'source_scheme_name': 'Invesco India Equity Savings Fund IDCW', 'target_scheme_id': 9157, 'target_scheme_code': 'INF966L01960', 'target_scheme_name': 'quant ELSS Tax Saver Fund - IDCW Option - Direct Plan', 'switch_by': 'all_units', 'switch_amount': None, 'switch_units': None, 'scheme': 'Invesco India Equity Savings Fund IDCW', 'scheme_name': 'Invesco India Equity Savings Fund IDCW', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-03 14:58:49,952 views 20460 18240 Successfully created action 22 for scheme 'Invesco India Equity Savings Fund IDCW' (portfolio action: True)
+INFO 2025-08-03 14:58:49,952 views 20460 18240 Successfully created action 22
+INFO 2025-08-03 14:58:50,035 views 20460 18240 Found 1 actions for execution plan 55
+INFO 2025-08-03 14:58:50,049 views 20460 18240 Excel file generated successfully: execution_plan_EP202508030005_20250803_145850.xlsx
+INFO 2025-08-03 14:58:50,056 views 20460 18240 File saved at: /tmp\execution_plan_EP202508030005_20250803_145850.xlsx
+INFO 2025-08-03 14:58:50,056 views 20460 18240 Total actions exported: 1
+WARNING 2025-08-03 14:58:50,057 views 20460 18240 Could not generate Excel file: 'dict' object has no attribute '_committed'
+ERROR 2025-08-03 14:58:50,126 views 20460 18240 Error saving execution plan: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.
+INFO 2025-08-03 14:59:09,654 views 20460 5572 Created execution plan EP202508030005 for client 1372
+INFO 2025-08-03 14:59:09,654 views 20460 5572 Processing action 1: {'action_type': 'switch', 'source_scheme': 'Invesco India Equity Savings Fund IDCW', 'target_scheme': 'quant ELSS Tax Saver Fund - IDCW Option - Direct Plan', 'notes': '9i', 'portfolio_id': 13932, 'source_portfolio_id': 13932, 'source_scheme_name': 'Invesco India Equity Savings Fund IDCW', 'target_scheme_id': 9157, 'target_scheme_code': 'INF966L01960', 'target_scheme_name': 'quant ELSS Tax Saver Fund - IDCW Option - Direct Plan', 'switch_by': 'all_units', 'switch_amount': None, 'switch_units': None, 'scheme': 'Invesco India Equity Savings Fund IDCW', 'scheme_name': 'Invesco India Equity Savings Fund IDCW', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-03 14:59:09,786 views 20460 5572 Successfully created action 23 for scheme 'Invesco India Equity Savings Fund IDCW' (portfolio action: True)
+INFO 2025-08-03 14:59:09,786 views 20460 5572 Successfully created action 23
+INFO 2025-08-03 14:59:09,786 views 20460 5572 Processing action 2: {'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': None, 'notes': 'ok', 'portfolio_id': 13940, 'source_portfolio_id': 13940, 'source_scheme_name': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'redeem_by': 'all_units', 'redeem_amount': None, 'redeem_units': None, 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_name': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-03 14:59:09,850 views 20460 5572 Successfully created action 24 for scheme 'WhiteOak Capital Mid Cap Fund Reg (G)' (portfolio action: False)
+INFO 2025-08-03 14:59:09,850 views 20460 5572 Successfully created action 24
+INFO 2025-08-03 14:59:09,932 views 20460 5572 Found 2 actions for execution plan 56
+INFO 2025-08-03 14:59:09,954 views 20460 5572 Excel file generated successfully: execution_plan_EP202508030005_20250803_145909.xlsx
+INFO 2025-08-03 14:59:09,955 views 20460 5572 File saved at: /tmp\execution_plan_EP202508030005_20250803_145909.xlsx
+INFO 2025-08-03 14:59:09,955 views 20460 5572 Total actions exported: 2
+WARNING 2025-08-03 14:59:09,963 views 20460 5572 Could not generate Excel file: 'dict' object has no attribute '_committed'
+ERROR 2025-08-03 14:59:10,061 views 20460 5572 Error saving execution plan: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.
+INFO 2025-08-03 14:59:14,682 views 20460 5572 Created execution plan EP202508030005 for client 1372
+INFO 2025-08-03 14:59:14,682 views 20460 5572 Processing action 1: {'action_type': 'switch', 'source_scheme': 'Invesco India Equity Savings Fund IDCW', 'target_scheme': 'quant ELSS Tax Saver Fund - IDCW Option - Direct Plan', 'notes': '9i', 'portfolio_id': 13932, 'source_portfolio_id': 13932, 'source_scheme_name': 'Invesco India Equity Savings Fund IDCW', 'target_scheme_id': 9157, 'target_scheme_code': 'INF966L01960', 'target_scheme_name': 'quant ELSS Tax Saver Fund - IDCW Option - Direct Plan', 'switch_by': 'all_units', 'switch_amount': None, 'switch_units': None, 'scheme': 'Invesco India Equity Savings Fund IDCW', 'scheme_name': 'Invesco India Equity Savings Fund IDCW', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-03 14:59:14,855 views 20460 5572 Successfully created action 25 for scheme 'Invesco India Equity Savings Fund IDCW' (portfolio action: True)
+INFO 2025-08-03 14:59:14,862 views 20460 5572 Successfully created action 25
+INFO 2025-08-03 14:59:14,862 views 20460 5572 Processing action 2: {'action_type': 'redeem', 'source_scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'target_scheme': None, 'notes': 'ok', 'portfolio_id': 13940, 'source_portfolio_id': 13940, 'source_scheme_name': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'redeem_by': 'all_units', 'redeem_amount': None, 'redeem_units': None, 'scheme': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_name': 'WhiteOak Capital Mid Cap Fund Reg (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-03 14:59:14,939 views 20460 5572 Successfully created action 26 for scheme 'WhiteOak Capital Mid Cap Fund Reg (G)' (portfolio action: False)
+INFO 2025-08-03 14:59:14,939 views 20460 5572 Successfully created action 26
+INFO 2025-08-03 14:59:15,015 views 20460 5572 Found 2 actions for execution plan 57
+INFO 2025-08-03 14:59:15,036 views 20460 5572 Excel file generated successfully: execution_plan_EP202508030005_20250803_145915.xlsx
+INFO 2025-08-03 14:59:15,036 views 20460 5572 File saved at: /tmp\execution_plan_EP202508030005_20250803_145915.xlsx
+INFO 2025-08-03 14:59:15,036 views 20460 5572 Total actions exported: 2
+WARNING 2025-08-03 14:59:15,036 views 20460 5572 Could not generate Excel file: 'dict' object has no attribute '_committed'
+ERROR 2025-08-03 14:59:15,119 views 20460 5572 Error saving execution plan: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.
+INFO 2025-08-03 15:09:12,882 views 5732 21384 create_plan_step2 called with client_id: 1523 (type: <class 'str'>)
+INFO 2025-08-03 15:09:12,998 views 5732 21384 Found legacy client: PRASHANT TIWARI (ID: 1523)
+INFO 2025-08-03 15:09:13,364 views 5732 21384 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-03 15:09:13,393 views 5732 21384 Found linked profile for client 1523
+INFO 2025-08-03 15:09:13,477 views 5732 21384 Found 22 portfolio holdings for client 1523
+INFO 2025-08-03 15:09:29,945 views 5732 21384 Created execution plan EP202508030005 for client 1523
+INFO 2025-08-03 15:09:29,945 views 5732 21384 Processing action 1: {'action_type': 'redeem', 'source_scheme': 'Mahindra Manulife Manufacturing Fund Reg (G)', 'target_scheme': None, 'notes': '1000', 'portfolio_id': 15029, 'source_portfolio_id': 15029, 'source_scheme_name': 'Mahindra Manulife Manufacturing Fund Reg (G)', 'redeem_by': 'all_units', 'redeem_amount': None, 'redeem_units': None, 'scheme': 'Mahindra Manulife Manufacturing Fund Reg (G)', 'scheme_name': 'Mahindra Manulife Manufacturing Fund Reg (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+ERROR 2025-08-03 15:09:29,945 views 5732 21384 Error creating action 1: Either scheme ID (for new investments) or portfolio holding (for portfolio actions) required for redeem
+ERROR 2025-08-03 15:09:29,945 views 5732 21384 Action data: {'action_type': 'redeem', 'source_scheme': 'Mahindra Manulife Manufacturing Fund Reg (G)', 'target_scheme': None, 'notes': '1000', 'portfolio_id': 15029, 'source_portfolio_id': 15029, 'source_scheme_name': 'Mahindra Manulife Manufacturing Fund Reg (G)', 'redeem_by': 'all_units', 'redeem_amount': None, 'redeem_units': None, 'scheme': 'Mahindra Manulife Manufacturing Fund Reg (G)', 'scheme_name': 'Mahindra Manulife Manufacturing Fund Reg (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-03 15:13:10,605 views 27048 20188 Created execution plan EP202508030006 for client 1523
+INFO 2025-08-03 15:13:10,611 views 27048 20188 Processing action 1: {'action_type': 'redeem', 'source_scheme': 'Mahindra Manulife Manufacturing Fund Reg (G)', 'target_scheme': None, 'notes': '1000', 'portfolio_id': 15029, 'source_portfolio_id': 15029, 'source_scheme_name': 'Mahindra Manulife Manufacturing Fund Reg (G)', 'redeem_by': 'all_units', 'redeem_amount': None, 'redeem_units': None, 'scheme': 'Mahindra Manulife Manufacturing Fund Reg (G)', 'scheme_name': 'Mahindra Manulife Manufacturing Fund Reg (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-03 15:13:10,611 views 27048 20188 Action data analysis - Type: redeem, Portfolio ID: 15029, Scheme: Mahindra Manulife Manufacturing Fund Reg (G)
+ERROR 2025-08-03 15:13:11,042 views 27048 20188 Error creating PlanAction: 'PlanAction' object has no attribute 'get_action_summary'
+ERROR 2025-08-03 15:13:11,042 views 27048 20188 Action data: {'action_type': 'redeem', 'source_scheme': 'Mahindra Manulife Manufacturing Fund Reg (G)', 'target_scheme': None, 'notes': '1000', 'portfolio_id': 15029, 'source_portfolio_id': 15029, 'source_scheme_name': 'Mahindra Manulife Manufacturing Fund Reg (G)', 'redeem_by': 'all_units', 'redeem_amount': None, 'redeem_units': None, 'scheme': 'Mahindra Manulife Manufacturing Fund Reg (G)', 'scheme_name': 'Mahindra Manulife Manufacturing Fund Reg (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+ERROR 2025-08-03 15:13:11,045 views 27048 20188 Processed values - Mode: portfolio, Scheme: None, Portfolio: Mahindra Manulife Manufacturing Fund Reg (G)
+ERROR 2025-08-03 15:13:11,045 views 27048 20188 Error creating action 1: Failed to create action: 'PlanAction' object has no attribute 'get_action_summary'
+ERROR 2025-08-03 15:13:11,045 views 27048 20188 Action data: {'action_type': 'redeem', 'source_scheme': 'Mahindra Manulife Manufacturing Fund Reg (G)', 'target_scheme': None, 'notes': '1000', 'portfolio_id': 15029, 'source_portfolio_id': 15029, 'source_scheme_name': 'Mahindra Manulife Manufacturing Fund Reg (G)', 'redeem_by': 'all_units', 'redeem_amount': None, 'redeem_units': None, 'scheme': 'Mahindra Manulife Manufacturing Fund Reg (G)', 'scheme_name': 'Mahindra Manulife Manufacturing Fund Reg (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-03 15:18:24,966 views 10260 31584 Created execution plan EP202508030007 for client 1523
+INFO 2025-08-03 15:18:24,968 views 10260 31584 Processing action 1: {'action_type': 'redeem', 'source_scheme': 'Mahindra Manulife Manufacturing Fund Reg (G)', 'target_scheme': None, 'notes': '1000', 'portfolio_id': 15029, 'source_portfolio_id': 15029, 'source_scheme_name': 'Mahindra Manulife Manufacturing Fund Reg (G)', 'redeem_by': 'all_units', 'redeem_amount': None, 'redeem_units': None, 'scheme': 'Mahindra Manulife Manufacturing Fund Reg (G)', 'scheme_name': 'Mahindra Manulife Manufacturing Fund Reg (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-03 15:18:25,058 views 10260 31584 Portfolio action for holding 15029: Mahindra Manulife Manufacturing Fund Reg (G)
+INFO 2025-08-03 15:18:25,058 views 10260 31584 Processed values - Mode: portfolio, Scheme: None, Portfolio: Mahindra Manulife Manufacturing Fund Reg (G)
+INFO 2025-08-03 15:18:25,364 views 10260 31584 Created portfolio mapping for action 28
+INFO 2025-08-03 15:18:25,364 views 10260 31584 Created Portfolio action 28: redemption - Mahindra Manulife Manufacturing Fund Reg (G) (Portfolio)
+INFO 2025-08-03 15:18:25,364 views 10260 31584 Successfully created action 28
+INFO 2025-08-03 15:18:25,614 views 10260 31584 Plan EP202508030007 submitted for approval
+INFO 2025-08-03 15:18:31,207 views 10260 31584 Found 1 actions for execution plan 60
+INFO 2025-08-03 15:18:31,285 views 10260 31584 Portfolio-independent Excel generated in memory for plan 60
+INFO 2025-08-03 15:18:31,286 views 10260 31584 Portfolio actions: 1, New investments: 0
+INFO 2025-08-03 15:18:31,287 views 10260 31584 Generated Excel data for plan EP202508030007
+INFO 2025-08-03 15:18:46,170 views 10260 6916 create_plan_step2 called with client_id: 1523 (type: <class 'str'>)
+INFO 2025-08-03 15:18:46,260 views 10260 6916 Found legacy client: PRASHANT TIWARI (ID: 1523)
+INFO 2025-08-03 15:18:46,573 views 10260 6916 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-03 15:18:46,604 views 10260 6916 Found linked profile for client 1523
+INFO 2025-08-03 15:18:46,701 views 10260 6916 Found 22 portfolio holdings for client 1523
+INFO 2025-08-03 15:19:08,118 views 10260 26160 Found 1 actions for execution plan 60
+INFO 2025-08-03 15:19:08,219 views 10260 26160 Portfolio-independent Excel generated in memory for plan 60
+INFO 2025-08-03 15:19:08,219 views 10260 26160 Portfolio actions: 1, New investments: 0
+INFO 2025-08-03 15:26:50,221 views 10260 17448 Found 1 actions for execution plan 60
+INFO 2025-08-03 15:26:50,700 views 10260 17448 Portfolio-independent Excel generated in memory for plan 60
+INFO 2025-08-03 15:26:50,700 views 10260 17448 Portfolio actions: 1, New investments: 0
+INFO 2025-08-03 15:37:52,525 views 10260 16532 Approval notification sent to narayan@gmail.com
+INFO 2025-08-03 15:41:31,040 views 10260 34052 create_plan_step2 called with client_id: 1554 (type: <class 'str'>)
+INFO 2025-08-03 15:41:31,110 views 10260 34052 Found legacy client: RAJESH BACHUBHAI JHAVERI (ID: 1554)
+INFO 2025-08-03 15:41:31,393 views 10260 34052 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-03 15:41:31,421 views 10260 34052 Found linked profile for client 1554
+INFO 2025-08-03 15:41:31,504 views 10260 34052 Found 17 portfolio holdings for client 1554
+INFO 2025-08-03 15:41:47,446 views 10260 28828 create_plan_step2 called with client_id: 1218 (type: <class 'str'>)
+INFO 2025-08-03 15:41:47,536 views 10260 28828 Found legacy client: AMITA SAMIR KAPADIA (ID: 1218)
+INFO 2025-08-03 15:41:47,839 views 10260 28828 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-03 15:41:47,845 views 10260 28828 Found linked profile for client 1218
+INFO 2025-08-03 15:41:47,914 views 10260 28828 Found 18 portfolio holdings for client 1218
+INFO 2025-08-03 15:45:22,326 views 29180 33488 Search query: 'axis', action_type: ''
+INFO 2025-08-03 15:45:22,471 views 29180 33488 Total schemes matching search (before active filter): 391
+INFO 2025-08-03 15:45:22,666 views 29180 33488 Final schemes count: 100
+INFO 2025-08-03 15:45:22,985 views 29180 33488 Returning 100 schemes for query 'axis'
+INFO 2025-08-03 15:45:36,846 views 29180 16944 Search query: 'axis', action_type: ''
+INFO 2025-08-03 15:45:36,989 views 29180 16944 Total schemes matching search (before active filter): 391
+INFO 2025-08-03 15:45:37,180 views 29180 16944 Final schemes count: 100
+INFO 2025-08-03 15:45:37,547 views 29180 16944 Returning 100 schemes for query 'axis'
+INFO 2025-08-03 15:45:59,199 views 29180 27700 Created execution plan EP202508030008 for client 1218
+INFO 2025-08-03 15:45:59,199 views 29180 27700 Processing action 1: {'action_type': 'sip', 'source_scheme': None, 'target_scheme': 'Axis Aggressive Hybrid Fund - Direct Plan - Monthly IDCW', 'notes': '', 'portfolio_id': None, 'target_scheme_id': 11426, 'target_scheme_code': 'INF846K01E33', 'target_scheme_name': 'Axis Aggressive Hybrid Fund - Direct Plan - Monthly IDCW', 'sip_amount': 1000, 'sip_frequency': 'daily', 'sip_date': 14, 'investment_option': 'growth', 'plan_type': 'direct', 'scheme': 'Axis Aggressive Hybrid Fund - Direct Plan - Monthly IDCW', 'scheme_name': 'Axis Aggressive Hybrid Fund - Direct Plan - Monthly IDCW', 'scheme_id': '11426'}
+INFO 2025-08-03 15:45:59,273 views 29180 27700 New investment scheme: Axis Aggressive Hybrid Fund - Direct Plan - Monthly IDCW
+INFO 2025-08-03 15:45:59,273 views 29180 27700 Processed values - Mode: new_investment, Scheme: Axis - Axis Aggressive Hybrid Fund - Direct Plan - Monthly IDCW, Portfolio: None
+INFO 2025-08-03 15:45:59,339 views 29180 27700 Created New Investment action 29: sip_start - Axis Aggressive Hybrid Fund - Direct Plan - Monthly IDCW (New Investment)
+INFO 2025-08-03 15:45:59,339 views 29180 27700 Successfully created action 29
+INFO 2025-08-03 15:45:59,576 views 29180 27700 Plan EP202508030008 submitted for approval
+INFO 2025-08-03 15:46:04,841 views 29180 27700 Found 1 actions for execution plan 61
+INFO 2025-08-03 15:46:04,963 views 29180 27700 Portfolio-independent Excel generated in memory for plan 61
+INFO 2025-08-03 15:46:04,963 views 29180 27700 Portfolio actions: 0, New investments: 1
+INFO 2025-08-03 15:46:04,964 views 29180 27700 Generated Excel data for plan EP202508030008

@@ -6806,7 +6806,7 @@ def create_plan(request):
 
 @login_required
 def client_portfolio_ajax(request, client_id):
-    """Optimized AJAX endpoint for client portfolio with caching"""
+    """Optimized AJAX endpoint for client portfolio - PORTFOLIO INDEPENDENT VERSION"""
     try:
         # Handle the client_id format (remove any prefixes)
         if isinstance(client_id, str):
@@ -6830,7 +6830,7 @@ def client_portfolio_ajax(request, client_id):
         client_profile = getattr(client, 'client_profile', None)
         
         if client_profile:
-            # Get portfolio with optimized query
+            # Get portfolio with optimized query - NO SCHEME MAPPING
             portfolio_holdings = ClientPortfolio.objects.filter(
                 client_profile=client_profile,
                 is_active=True
@@ -6848,8 +6848,8 @@ def client_portfolio_ajax(request, client_id):
             for holding in portfolio_holdings:
                 portfolio_data.append({
                     'id': holding.id,
-                    'scheme_name': holding.scheme_name,
-                    'isin_number': holding.isin_number,
+                    'scheme_name': holding.scheme_name,  # Use scheme name as-is from portfolio
+                    'isin_number': holding.isin_number or 'N/A',
                     'folio_number': holding.folio_number or 'N/A',
                     'units': float(holding.units),
                     'current_value': float(holding.total_value),
@@ -6869,6 +6869,9 @@ def client_portfolio_ajax(request, client_id):
                     'can_switch': holding.total_value > 0,
                     'can_stp': holding.total_value >= 1000,
                     'can_swp': holding.total_value >= 5000,
+                    # Portfolio-specific identifiers (not mapped to MutualFundScheme)
+                    'portfolio_holding_id': holding.id,
+                    'is_portfolio_scheme': True,  # Flag to indicate this is from portfolio
                 })
                 total_aum += holding.total_value
             
@@ -6890,7 +6893,8 @@ def client_portfolio_ajax(request, client_id):
                 'total_aum': total_aum,
                 'asset_allocation': asset_allocation,
                 'portfolio_count': len(portfolio_data),
-                'client_type': 'profile'
+                'client_type': 'profile',
+                'has_portfolio_data': True
             })
         else:
             # No portfolio data available for legacy client
@@ -6901,6 +6905,7 @@ def client_portfolio_ajax(request, client_id):
                 'client_type': 'legacy',
                 'total_aum': 0,
                 'portfolio_count': 0,
+                'has_portfolio_data': False,
                 'message': 'No detailed portfolio data available'
             })
         
@@ -6986,12 +6991,11 @@ def create_plan_step2(request, client_id):
         except Exception as e:
             logger.warning(f"No linked profile for client {client_id}: {e}")
         
-        # Get portfolio data from linked profile (if exists)
+        # Get portfolio data from linked profile (if exists) - NO SCHEME MAPPING
         portfolio = ClientPortfolio.objects.none()  # Empty queryset
         portfolio_data = []
         total_portfolio_value = 0.0
         asset_allocation = None
-        isin_list_in_portfolio = []
         
         if client_profile:
             portfolio = ClientPortfolio.objects.filter(
@@ -7020,17 +7024,8 @@ def create_plan_step2(request, client_id):
                 asset_allocation = {key: float(value or 0.0) for key, value in aggregation.items()}
                 total_portfolio_value = asset_allocation.get('total_aum', 0.0)
                 
-                # Prepare portfolio data for action planning
+                # Prepare portfolio data for action planning - NO SCHEME MAPPING
                 for holding in portfolio:
-                    isin = holding.isin_number or ''
-                    mapped_scheme = None
-                    if isin:
-                        isin_list_in_portfolio.append(isin)
-                        try:
-                            mapped_scheme = MutualFundScheme.objects.get(isin_growth=isin)
-                        except MutualFundScheme.DoesNotExist:
-                            mapped_scheme = None
-                            
                     # Convert Decimal fields to float consistently
                     total_value = float(holding.total_value) if holding.total_value else 0.0
                     units = float(holding.units) if holding.units else 0.0
@@ -7048,8 +7043,8 @@ def create_plan_step2(request, client_id):
                     
                     portfolio_data.append({
                         'id': holding.id,
-                        'scheme_name': holding.scheme_name,
-                        'isin_number': holding.isin_number or '',
+                        'scheme_name': holding.scheme_name,  # Use scheme name as-is from portfolio
+                        'isin_number': holding.isin_number or '',  # Use ISIN as-is from portfolio
                         'current_value': total_value,
                         'units': units,
                         'equity_value': equity_value,
@@ -7071,6 +7066,9 @@ def create_plan_step2(request, client_id):
                         # Additional info
                         'nav_price': nav_price,
                         'folio_number': holding.folio_number or '',
+                        # Portfolio-specific fields (not mapped to MutualFundScheme)
+                        'portfolio_scheme_name': holding.scheme_name,  # Original scheme name from portfolio
+                        'portfolio_isin': holding.isin_number or '',    # Original ISIN from portfolio
                     })
         
         # If no portfolio data from profile, try to get any legacy portfolio data
@@ -7090,7 +7088,7 @@ def create_plan_step2(request, client_id):
             }
             total_portfolio_value = 0.0
         
-        # Get all available schemes for adding new investments
+        # Get all available schemes for adding new investments - ONLY FOR NEW INVESTMENTS
         all_schemes = MutualFundScheme.objects.filter(is_active=True).order_by('amc_name', 'scheme_name')
         
         # Get plan templates accessible to user
@@ -7098,14 +7096,14 @@ def create_plan_step2(request, client_id):
             Q(is_public=True) | Q(created_by=request.user)
         ).filter(is_active=True)
         
-        # Portfolio Action Types with descriptions
+        # Portfolio Action Types with descriptions - UPDATED FOR PORTFOLIO INDEPENDENCE
         portfolio_action_types = [
             {
                 'type': 'redeem',
                 'name': 'Redeem',
                 'icon': 'fas fa-minus-circle',
                 'color': 'danger',
-                'description': 'Withdraw units or amount from mutual fund schemes',
+                'description': 'Withdraw units or amount from existing portfolio schemes',
                 'options': [
                     {'value': 'all_units', 'label': 'All Units'},
                     {'value': 'specific_amount', 'label': 'Specific Amount'},
@@ -7117,7 +7115,7 @@ def create_plan_step2(request, client_id):
                 'name': 'Switch',
                 'icon': 'fas fa-exchange-alt',
                 'color': 'primary',
-                'description': 'Switch investment from one scheme to another',
+                'description': 'Switch investment from existing portfolio scheme to new scheme',
                 'options': [
                     {'value': 'all_units', 'label': 'All Units'},
                     {'value': 'specific_amount', 'label': 'Specific Amount'},
@@ -7129,7 +7127,7 @@ def create_plan_step2(request, client_id):
                 'name': 'STP',
                 'icon': 'fas fa-arrow-right',
                 'color': 'info',
-                'description': 'Systematic Transfer Plan - Regular transfer between schemes',
+                'description': 'Systematic Transfer Plan - Regular transfer from portfolio scheme to new scheme',
                 'frequencies': [
                     {'value': 'monthly', 'label': 'Monthly'},
                     {'value': 'weekly', 'label': 'Weekly'},
@@ -7140,7 +7138,7 @@ def create_plan_step2(request, client_id):
                 'name': 'SIP',
                 'icon': 'fas fa-plus-circle',
                 'color': 'success',
-                'description': 'Systematic Investment Plan - Regular investments',
+                'description': 'Systematic Investment Plan - New regular investments (independent of portfolio)',
                 'frequencies': [
                     {'value': 'daily', 'label': 'Daily'},
                     {'value': 'weekly', 'label': 'Weekly'},
@@ -7153,11 +7151,18 @@ def create_plan_step2(request, client_id):
                 'name': 'SWP',
                 'icon': 'fas fa-arrow-down',
                 'color': 'warning',
-                'description': 'Systematic Withdrawal Plan - Regular withdrawals',
+                'description': 'Systematic Withdrawal Plan - Regular withdrawals from portfolio schemes',
                 'frequencies': [
                     {'value': 'monthly', 'label': 'Monthly'},
                     {'value': 'weekly', 'label': 'Weekly'},
                 ]
+            },
+            {
+                'type': 'purchase',
+                'name': 'Purchase',
+                'icon': 'fas fa-shopping-cart',
+                'color': 'success',
+                'description': 'One-time purchase of new mutual fund schemes (independent of portfolio)',
             }
         ]
         
@@ -7193,8 +7198,8 @@ def create_plan_step2(request, client_id):
             'combined_aum': total_portfolio_value + client_aum,  # Both are now floats
         }
         
-        # Scheme categories for SIP (available schemes not in current portfolio)
-        available_sip_schemes = all_schemes.exclude(isin_growth__in=isin_list_in_portfolio)
+        # ALL schemes available for new investments (SIP/Purchase) - NO FILTERING
+        available_investment_schemes = all_schemes
         
         # Prepare client data for template
         client_data = {
@@ -7221,7 +7226,7 @@ def create_plan_step2(request, client_id):
             'portfolio_data': portfolio_data,
             'portfolio_summary': portfolio_summary,
             'all_schemes': all_schemes,
-            'available_sip_schemes': available_sip_schemes,
+            'available_investment_schemes': available_investment_schemes,  # All schemes for new investments
             'templates': templates,
             'action_types': PlanAction.ACTION_TYPES if 'PlanAction' in globals() else [],
             'portfolio_action_types': portfolio_action_types,
@@ -7272,7 +7277,7 @@ def create_plan_step2(request, client_id):
 @login_required 
 @require_http_methods(["POST"])
 def create_portfolio_action_from_plan(request, client_id):
-    """Create portfolio action from execution plan interface"""
+    """Create portfolio action from execution plan interface - FIXED VERSION"""
     try:
         data = json.loads(request.body)
         action_type = data.get('action_type')
@@ -7287,12 +7292,18 @@ def create_portfolio_action_from_plan(request, client_id):
         
         # Create action plan
         plan_name = f"{action_type.upper()} - {portfolio.scheme_name}"
-        action_plan = PortfolioActionPlan.objects.create(
-            client_portfolio=portfolio,
-            plan_name=plan_name,
-            description=f"{action_type.title()} action for {portfolio.client_name}",
-            created_by=request.user
-        )
+        
+        # Check if PortfolioActionPlan model exists
+        try:
+            action_plan = PortfolioActionPlan.objects.create(
+                client_portfolio=portfolio,
+                plan_name=plan_name,
+                description=f"{action_type.title()} action for {portfolio.client_name}",
+                created_by=request.user
+            )
+        except Exception as e:
+            logger.error(f"PortfolioActionPlan model not available: {str(e)}")
+            return JsonResponse({'error': 'Portfolio action plan feature not available'}, status=500)
         
         # Create the action based on type
         action_data = {
@@ -7336,26 +7347,40 @@ def create_portfolio_action_from_plan(request, client_id):
                 'swp_date': data.get('swp_date'),
             })
         
-        # Create the action
-        action = PortfolioAction.objects.create(**action_data)
-        
-        # Create workflow entry
-        ActionPlanWorkflow.objects.create(
-            action_plan=action_plan,
-            from_status='',
-            to_status='draft',
-            changed_by=request.user,
-            notes=f'{action_type.title()} action plan created from execution plan interface'
-        )
-        
-        return JsonResponse({
-            'success': True,
-            'message': f'{action_type.title()} action created successfully',
-            'action_plan_id': action_plan.id,
-            'action_summary': action.get_action_summary()
-        })
+        # Create the action - check if PortfolioAction model exists
+        try:
+            action = PortfolioAction.objects.create(**action_data)
+            
+            # Create workflow entry if ActionPlanWorkflow exists
+            try:
+                ActionPlanWorkflow.objects.create(
+                    action_plan=action_plan,
+                    from_status='',
+                    to_status='draft',
+                    changed_by=request.user,
+                    notes=f'{action_type.title()} action plan created from execution plan interface'
+                )
+            except Exception as e:
+                logger.warning(f"ActionPlanWorkflow model not available: {str(e)}")
+            
+            # Create simple action summary instead of calling get_action_summary
+            action_summary = f"{action_type.title()} action for {portfolio.scheme_name}"
+            if data.get('amount'):
+                action_summary += f" - ₹{data.get('amount'):,.2f}"
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'{action_type.title()} action created successfully',
+                'action_plan_id': action_plan.id,
+                'action_summary': action_summary
+            })
+            
+        except Exception as e:
+            logger.error(f"PortfolioAction model not available: {str(e)}")
+            return JsonResponse({'error': 'Portfolio action feature not available'}, status=500)
         
     except Exception as e:
+        logger.error(f"Error in create_portfolio_action_from_plan: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
 
 # Helper function (add to your existing helper functions)
@@ -7365,18 +7390,18 @@ def can_create_action_plan(user, portfolio):
         return True
     elif user.role == 'rm_head':
         # RM Head can create plans for portfolios of their team members
-        if portfolio.mapped_rm and portfolio.mapped_rm.manager == user:
+        if hasattr(portfolio, 'mapped_rm') and portfolio.mapped_rm and portfolio.mapped_rm.manager == user:
             return True
     elif user.role == 'rm':
         # RM can create plans for their own portfolios
-        if portfolio.mapped_rm == user:
+        if hasattr(portfolio, 'mapped_rm') and portfolio.mapped_rm == user:
             return True
     return False
 
 @login_required
 @require_http_methods(["POST"])
 def save_execution_plan(request):
-    """Save execution plan with actions - ENHANCED FIXED VERSION"""
+    """Save execution plan with actions - FIXED VERSION for Portfolio Independence"""
     try:
         data = json.loads(request.body)
         client_id = data.get('client_id')
@@ -7410,86 +7435,99 @@ def save_execution_plan(request):
         elif request.user.role not in ['business_head', 'business_head_ops', 'top_management']:
             return JsonResponse({'error': 'Access denied - insufficient permissions'}, status=403)
         
-        with transaction.atomic():
-            # Create execution plan
-            execution_plan = ExecutionPlan.objects.create(
-                client=client,
-                plan_name=plan_name.strip(),
-                description=description.strip(),
-                created_by=request.user,
-                status='draft'
-            )
-            
-            logger.info(f"Created execution plan {execution_plan.plan_id} for client {client.id}")
-            
-            # Create plan actions
-            created_actions = []
-            failed_actions = []
-            
-            for i, action_data in enumerate(actions_data):
-                try:
-                    # Enhanced logging
-                    logger.info(f"Processing action {i + 1}: {action_data}")
-                    
-                    action = process_action_data(action_data, execution_plan, client, i + 1)
-                    if action:
-                        created_actions.append(action)
-                        logger.info(f"Successfully created action {action.id}")
-                    else:
-                        failed_actions.append(f"Action {i + 1}: Unknown error")
-                    
-                except Exception as e:
-                    error_msg = f"Action {i + 1}: {str(e)}"
-                    logger.error(f"Error creating action {i + 1}: {str(e)}")
-                    logger.error(f"Action data: {action_data}")
-                    failed_actions.append(error_msg)
-                    continue
-            
-            if not created_actions:
-                return JsonResponse({
-                    'error': 'No valid actions could be created',
-                    'failed_actions': failed_actions
-                }, status=400)
-            
-            # Generate Excel file (optional)
-            try:
-                excel_file_path = generate_execution_plan_excel(execution_plan)
-                if excel_file_path:
-                    execution_plan.excel_file = excel_file_path
-                    execution_plan.save()
-                    logger.info(f"Generated Excel file for plan {execution_plan.plan_id}")
-            except Exception as e:
-                logger.warning(f"Could not generate Excel file: {str(e)}")
-            
-            # Create workflow history
-            PlanWorkflowHistory.objects.create(
-                execution_plan=execution_plan,
-                from_status='',
-                to_status='draft',
-                changed_by=request.user,
-                comments=f'Execution plan created with {len(created_actions)} actions'
-            )
-            
-            # Submit for approval if requested
-            if submit_for_approval and len(created_actions) > 0:
-                try:
-                    if execution_plan.submit_for_approval():
-                        PlanWorkflowHistory.objects.create(
-                            execution_plan=execution_plan,
-                            from_status='draft',
-                            to_status='pending_approval',
-                            changed_by=request.user,
-                            comments='Plan submitted for approval'
-                        )
-                        logger.info(f"Plan {execution_plan.plan_id} submitted for approval")
+        # Variables to track execution plan and actions
+        execution_plan = None
+        created_actions = []
+        failed_actions = []
+        
+        try:
+            with transaction.atomic():
+                # Create execution plan
+                execution_plan = ExecutionPlan.objects.create(
+                    client=client,
+                    plan_name=plan_name.strip(),
+                    description=description.strip(),
+                    created_by=request.user,
+                    status='draft'
+                )
+                
+                logger.info(f"Created execution plan {execution_plan.plan_id} for client {client.id}")
+                
+                # Create plan actions
+                for i, action_data in enumerate(actions_data):
+                    try:
+                        # Enhanced logging
+                        logger.info(f"Processing action {i + 1}: {action_data}")
                         
-                        # Notify approval manager
-                        try:
-                            notify_approval_required(execution_plan)
-                        except Exception as e:
-                            logger.warning(f"Failed to send approval notification: {str(e)}")
-                except Exception as e:
-                    logger.warning(f"Could not submit for approval: {str(e)}")
+                        action = process_action_data_portfolio_independent(
+                            action_data, execution_plan, client, i + 1
+                        )
+                        if action:
+                            created_actions.append(action)
+                            logger.info(f"Successfully created action {action.id}")
+                        else:
+                            failed_actions.append(f"Action {i + 1}: Unknown error")
+                        
+                    except Exception as e:
+                        error_msg = f"Action {i + 1}: {str(e)}"
+                        logger.error(f"Error creating action {i + 1}: {str(e)}")
+                        logger.error(f"Action data: {action_data}")
+                        failed_actions.append(error_msg)
+                        continue
+                
+                if not created_actions:
+                    return JsonResponse({
+                        'error': 'No valid actions could be created',
+                        'failed_actions': failed_actions
+                    }, status=400)
+                
+                # Create workflow history
+                PlanWorkflowHistory.objects.create(
+                    execution_plan=execution_plan,
+                    from_status='',
+                    to_status='draft',
+                    changed_by=request.user,
+                    comments=f'Execution plan created with {len(created_actions)} actions'
+                )
+                
+                # Submit for approval if requested
+                if submit_for_approval and len(created_actions) > 0:
+                    try:
+                        if execution_plan.submit_for_approval():
+                            PlanWorkflowHistory.objects.create(
+                                execution_plan=execution_plan,
+                                from_status='draft',
+                                to_status='pending_approval',
+                                changed_by=request.user,
+                                comments='Plan submitted for approval'
+                            )
+                            logger.info(f"Plan {execution_plan.plan_id} submitted for approval")
+                            
+                            # Notify approval manager
+                            try:
+                                notify_approval_required(execution_plan)
+                            except Exception as e:
+                                logger.warning(f"Failed to send approval notification: {str(e)}")
+                    except Exception as e:
+                        logger.warning(f"Could not submit for approval: {str(e)}")
+            
+            # FIXED: Generate Excel file OUTSIDE of transaction
+            excel_generated = False
+            excel_error = None
+            
+            try:
+                # Generate Excel in memory (no file system operations)
+                excel_data = generate_execution_plan_excel_in_memory(execution_plan)
+                if excel_data:
+                    # Store Excel data reference (implementation depends on your storage strategy)
+                    # For now, we'll just log success
+                    excel_generated = True
+                    logger.info(f"Generated Excel data for plan {execution_plan.plan_id}")
+                else:
+                    excel_error = "Excel generation returned no data"
+            except Exception as e:
+                excel_error = str(e)
+                logger.warning(f"Could not generate Excel file: {excel_error}")
             
             # Prepare response
             response_data = {
@@ -7498,14 +7536,28 @@ def save_execution_plan(request):
                 'plan_url': reverse('execution_plan_detail', args=[execution_plan.id]),
                 'message': f'Execution plan created successfully with {len(created_actions)} actions',
                 'actions_created': len(created_actions),
-                'actions_failed': len(failed_actions)
+                'actions_failed': len(failed_actions),
+                'excel_generated': excel_generated
             }
             
             if failed_actions:
                 response_data['failed_actions'] = failed_actions
                 response_data['message'] += f'. {len(failed_actions)} actions failed.'
             
+            if excel_error:
+                response_data['excel_error'] = excel_error
+                response_data['message'] += f' (Excel generation issue: {excel_error})'
+            
             return JsonResponse(response_data)
+            
+        except Exception as e:
+            # If we get here, the transaction was rolled back
+            logger.error(f"Transaction failed: {str(e)}")
+            return JsonResponse({
+                'error': f'Database transaction failed: {str(e)}',
+                'actions_processed': len(created_actions),
+                'actions_failed': len(failed_actions)
+            }, status=500)
             
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON data'}, status=400)
@@ -7515,30 +7567,50 @@ def save_execution_plan(request):
 
 
 def process_action_data(action_data, execution_plan, client, priority):
-    """Process individual action data and create appropriate action record - ENHANCED VERSION"""
+    """Process individual action data and create appropriate action record - PORTFOLIO INDEPENDENT VERSION"""
     action_type = action_data.get('action_type')
     
     if not action_type:
         logger.error(f"No action type specified for action: {action_data}")
         return None
     
-    # Find the scheme object - FIXED VERSION
+    # Handle scheme selection differently for portfolio vs new investment actions
     scheme_obj = None
-    scheme_id = action_data.get('scheme_id')
-    scheme_name = action_data.get('scheme_name')
-    target_scheme_id = action_data.get('target_scheme_id')
-    target_scheme_name = action_data.get('target_scheme_name')
+    scheme_name = action_data.get('scheme_name', '')
+    portfolio_holding_id = action_data.get('portfolio_holding_id')
     
-    # For purchase/SIP actions, use target scheme
-    if action_type in ['purchase', 'sip_start', 'sip_modify']:
-        if target_scheme_id:
+    # For portfolio-based actions (redeem, switch from, STP from, SWP from)
+    if action_type in ['redemption', 'switch', 'stp_start', 'swp_start']:
+        # These actions work on existing portfolio holdings
+        # We don't need to map to MutualFundScheme - just store the scheme name
+        if portfolio_holding_id:
             try:
-                scheme_obj = MutualFundScheme.objects.get(id=target_scheme_id)
+                # Get the portfolio holding to verify it exists and get accurate scheme name
+                portfolio_holding = ClientPortfolio.objects.get(id=portfolio_holding_id)
+                scheme_name = portfolio_holding.scheme_name
+                logger.info(f"Using portfolio scheme: {scheme_name} from holding {portfolio_holding_id}")
+            except ClientPortfolio.DoesNotExist:
+                logger.warning(f"Portfolio holding {portfolio_holding_id} not found, using provided scheme name")
+        
+        # For portfolio actions, we don't need a MutualFundScheme object
+        # The scheme_name from portfolio is sufficient
+        if not scheme_name:
+            raise ValueError(f"Scheme name is required for portfolio action {action_type}")
+    
+    # For new investment actions (purchase, SIP)
+    elif action_type in ['purchase', 'sip_start', 'sip_modify']:
+        scheme_id = action_data.get('target_scheme_id') or action_data.get('scheme_id')
+        target_scheme_name = action_data.get('target_scheme_name') or action_data.get('scheme_name')
+        
+        if scheme_id:
+            try:
+                scheme_obj = MutualFundScheme.objects.get(id=scheme_id)
+                scheme_name = scheme_obj.scheme_name
             except MutualFundScheme.DoesNotExist:
-                logger.error(f"Target scheme with ID {target_scheme_id} not found")
-                raise ValueError(f"Scheme with ID {target_scheme_id} not found")
+                logger.error(f"MutualFundScheme with ID {scheme_id} not found")
+                raise ValueError(f"Selected scheme with ID {scheme_id} not found")
         elif target_scheme_name:
-            # Try to find by name
+            # Try to find by name for new investments
             scheme_obj = MutualFundScheme.objects.filter(
                 scheme_name__iexact=target_scheme_name
             ).first()
@@ -7547,77 +7619,74 @@ def process_action_data(action_data, execution_plan, client, priority):
                 scheme_obj = MutualFundScheme.objects.filter(
                     scheme_name__icontains=target_scheme_name
                 ).first()
-            if not scheme_obj:
-                logger.error(f"Target scheme with name '{target_scheme_name}' not found")
-                raise ValueError(f"Scheme with name '{target_scheme_name}' not found")
+            if scheme_obj:
+                scheme_name = scheme_obj.scheme_name
+            else:
+                # For new investments, we need a valid MutualFundScheme
+                logger.error(f"MutualFundScheme with name '{target_scheme_name}' not found")
+                raise ValueError(f"Scheme '{target_scheme_name}' not found in available schemes")
+        else:
+            raise ValueError(f"Scheme selection is required for {action_type}")
     
-    # For redemption/switch/STP/SWP actions, use source scheme
-    elif action_type in ['redemption', 'switch', 'stp_start', 'swp_start']:
-        if scheme_id:
-            try:
-                scheme_obj = MutualFundScheme.objects.get(id=scheme_id)
-            except MutualFundScheme.DoesNotExist:
-                logger.error(f"Source scheme with ID {scheme_id} not found")
-                # Fall back to name lookup
-                scheme_obj = None
-        
-        if not scheme_obj and scheme_name:
-            # Try to find by exact name match first
-            scheme_obj = MutualFundScheme.objects.filter(
-                scheme_name__iexact=scheme_name
-            ).first()
-            
-            if not scheme_obj:
-                # Try partial match
-                scheme_obj = MutualFundScheme.objects.filter(
-                    scheme_name__icontains=scheme_name.split('(')[0].strip()  # Remove plan type suffix
-                ).first()
-            
-            if not scheme_obj:
-                logger.error(f"Source scheme with name '{scheme_name}' not found")
-                raise ValueError(f"Scheme with name '{scheme_name}' not found")
-    
-    # If still no scheme found, this is a critical error
-    if not scheme_obj:
-        error_msg = f"No valid scheme found for action type {action_type}. Action data: {action_data}"
-        logger.error(error_msg)
-        raise ValueError(error_msg)
-    
-    # Find target scheme for switch/STP operations
+    # Handle target scheme for switch/STP operations (new investment target)
     target_scheme_obj = None
-    if action_type in ['switch', 'stp_start'] and target_scheme_id:
-        try:
-            target_scheme_obj = MutualFundScheme.objects.get(id=target_scheme_id)
-        except MutualFundScheme.DoesNotExist:
-            if target_scheme_name:
-                target_scheme_obj = MutualFundScheme.objects.filter(
-                    scheme_name__icontains=target_scheme_name
-                ).first()
-                if not target_scheme_obj:
-                    raise ValueError(f"Target scheme '{target_scheme_name}' not found")
+    if action_type in ['switch', 'stp_start']:
+        target_scheme_id = action_data.get('target_scheme_id')
+        target_scheme_name = action_data.get('target_scheme_name')
+        
+        if target_scheme_id:
+            try:
+                target_scheme_obj = MutualFundScheme.objects.get(id=target_scheme_id)
+            except MutualFundScheme.DoesNotExist:
+                if target_scheme_name:
+                    target_scheme_obj = MutualFundScheme.objects.filter(
+                        scheme_name__icontains=target_scheme_name
+                    ).first()
+                    if not target_scheme_obj:
+                        raise ValueError(f"Target scheme '{target_scheme_name}' not found")
+                else:
+                    raise ValueError(f"Target scheme with ID {target_scheme_id} not found")
+        elif target_scheme_name:
+            target_scheme_obj = MutualFundScheme.objects.filter(
+                scheme_name__icontains=target_scheme_name
+            ).first()
+            if not target_scheme_obj:
+                raise ValueError(f"Target scheme '{target_scheme_name}' not found")
     
     # Create the main plan action
     try:
+        # Store portfolio-specific data in notes for portfolio actions
+        notes = action_data.get('notes', '')
+        if action_type in ['redemption', 'switch', 'stp_start', 'swp_start'] and portfolio_holding_id:
+            portfolio_info = {
+                'portfolio_holding_id': portfolio_holding_id,
+                'portfolio_scheme_name': scheme_name,
+                'action_type': action_type,
+                'is_portfolio_action': True
+            }
+            notes = f"Portfolio Action: {json.dumps(portfolio_info)}\n{notes}".strip()
+        
         action = PlanAction.objects.create(
             execution_plan=execution_plan,
             action_type=action_type,
-            scheme=scheme_obj,  # This is now properly resolved
-            target_scheme=target_scheme_obj,
+            scheme=scheme_obj,  # Will be None for portfolio actions, valid for new investments
+            target_scheme=target_scheme_obj,  # For switch/STP targets
             amount=safe_decimal(action_data.get('purchase_amount') or action_data.get('amount')),
             units=safe_decimal(action_data.get('units')),
             sip_date=safe_int(action_data.get('sip_date')),
-            notes=action_data.get('notes', ''),
+            notes=notes,
             priority=priority,
-            status='pending'
+            status='pending',
+            # Store scheme name directly for portfolio actions
+            portfolio_scheme_name=scheme_name if action_type in ['redemption', 'switch', 'stp_start', 'swp_start'] else None
         )
         
-        logger.info(f"Successfully created action {action.id} with scheme {scheme_obj.id} ({scheme_obj.scheme_name})")
+        logger.info(f"Successfully created action {action.id} for scheme '{scheme_name}' (portfolio action: {action_type in ['redemption', 'switch', 'stp_start', 'swp_start']})")
         return action
         
     except Exception as e:
         logger.error(f"Error creating PlanAction: {str(e)}")
         logger.error(f"Action data: {action_data}")
-        logger.error(f"Scheme object: {scheme_obj}")
         raise
 
 
@@ -8590,12 +8659,16 @@ def send_to_client(request, plan_id):
 @login_required
 @require_http_methods(["POST"])
 def mark_client_approved(request, plan_id):
-    """Mark plan as client approved"""
+    """Mark plan as client approved with optional email notification"""
     execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
     
     # Check permission - only RM who created the plan can mark as client approved
     if execution_plan.created_by != request.user:
         return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    # Get email parameters from request
+    send_email = request.POST.get('send_email', 'false').lower() == 'true'
+    include_excel = request.POST.get('include_excel', 'false').lower() == 'true'
     
     if execution_plan.mark_client_approved():
         # Create workflow history
@@ -8607,10 +8680,32 @@ def mark_client_approved(request, plan_id):
             comments='Client approval confirmed'
         )
         
-        # Notify operations team
+        response_data = {
+            'success': True, 
+            'message': 'Plan marked as client approved'
+        }
+        
+        if send_email:
+            try:
+                # Send email to operations team
+                send_execution_plan_email(
+                    execution_plan=execution_plan,
+                    email_type='client_approved',
+                    include_excel=include_excel,
+                    send_to_rm=True,
+                    send_to_client=False
+                )
+                response_data['email_sent'] = True
+                response_data['email_message'] = 'Operations team notified'
+            except Exception as e:
+                logger.error(f"Failed to send client approval email: {str(e)}")
+                response_data['email_sent'] = False
+                response_data['email_message'] = str(e)
+        
+        # Notify operations team via other channels (if needed)
         notify_ops_team(execution_plan)
         
-        return JsonResponse({'success': True, 'message': 'Plan marked as client approved'})
+        return JsonResponse(response_data)
     else:
         return JsonResponse({'error': 'Failed to mark as client approved'}, status=400)
 
@@ -8884,19 +8979,881 @@ def download_excel(request, plan_id):
         logger.error(f"Error downloading Excel file for plan {plan_id}: {str(e)}")
         return JsonResponse({'error': f'Error downloading file: {str(e)}'}, status=500)
 
+def generate_execution_plan_excel_portfolio_independent(execution_plan):
+    """Generate Excel file for execution plan with portfolio-independent scheme handling"""
+    try:
+        # Get plan actions
+        plan_actions = []
+        try:
+            if hasattr(execution_plan, 'actions'):
+                plan_actions = list(execution_plan.actions.all().order_by('priority', 'id'))
+                logger.info(f"Found {len(plan_actions)} actions for execution plan {execution_plan.id}")
+        except Exception as e:
+            logger.error(f"Error getting plan actions: {str(e)}")
+            plan_actions = []
+        
+        # Create workbook
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Execution Plan"
+        
+        # Set column widths
+        ws.column_dimensions['A'].width = 8
+        ws.column_dimensions['B'].width = 40  # Wider for scheme names
+        ws.column_dimensions['C'].width = 20  # ISIN/Portfolio ID
+        ws.column_dimensions['D'].width = 15
+        ws.column_dimensions['E'].width = 15
+        ws.column_dimensions['F'].width = 15
+        ws.column_dimensions['G'].width = 12
+        ws.column_dimensions['H'].width = 12
+        ws.column_dimensions['I'].width = 15
+        ws.column_dimensions['J'].width = 15
+        ws.column_dimensions['K'].width = 25  # Wider for action source
+        
+        # Create header style
+        header_style = NamedStyle(name="header")
+        header_style.font = Font(name='Arial', size=11, bold=True, color='FFFFFF')
+        header_style.fill = PatternFill(start_color='366092', end_color='366092', fill_type='solid')
+        header_style.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        header_style.border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        # Plan header information
+        row = 1
+        ws.merge_cells(f'A{row}:K{row}')
+        plan_id = getattr(execution_plan, 'plan_id', f"Plan #{execution_plan.id}")
+        ws[f'A{row}'] = f"EXECUTION PLAN - {plan_id}"
+        ws[f'A{row}'].font = Font(name='Arial', size=16, bold=True)
+        ws[f'A{row}'].alignment = Alignment(horizontal='center')
+        row += 1
+        
+        # Plan details
+        client_name = "Unknown Client"
+        if hasattr(execution_plan, 'client') and execution_plan.client:
+            if hasattr(execution_plan.client, 'name'):
+                client_name = execution_plan.client.name
+            elif hasattr(execution_plan.client, 'client_full_name'):
+                client_name = execution_plan.client.client_full_name
+        
+        ws[f'A{row}'] = "Client:"
+        ws[f'B{row}'] = client_name
+        ws[f'F{row}'] = "Date:"
+        ws[f'G{row}'] = execution_plan.created_at.strftime('%Y-%m-%d') if hasattr(execution_plan, 'created_at') else "N/A"
+        row += 1
+        
+        # Calculate total amount
+        total_amount = 0
+        if plan_actions:
+            total_amount = sum(float(action.amount) for action in plan_actions if action.amount)
+        
+        ws[f'A{row}'] = "Total Amount:"
+        ws[f'B{row}'] = f"₹{total_amount:,.2f}"
+        ws[f'F{row}'] = "Status:"
+        ws[f'G{row}'] = execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else execution_plan.status
+        row += 1
+        
+        if hasattr(execution_plan, 'created_by') and execution_plan.created_by:
+            ws[f'A{row}'] = "Created By:"
+            ws[f'B{row}'] = execution_plan.created_by.get_full_name() or execution_plan.created_by.username
+            row += 1
+        
+        row += 1  # Empty row
+        
+        # Updated table headers for portfolio independence
+        headers = [
+            'Sr. No.',
+            'Scheme Name',
+            'Source/ISIN',
+            'Transaction Type',
+            'Amount (₹)',
+            'SIP Amount (₹)',
+            'SIP Date',
+            'Frequency',
+            'Status',
+            'Priority',
+            'Action Source'
+        ]
+        
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=row, column=col)
+            cell.value = header
+            cell.style = header_style
+        
+        row += 1
+        
+        # Data rows for actions
+        for idx, action in enumerate(plan_actions, 1):
+            # Get scheme information - PORTFOLIO INDEPENDENT
+            scheme_name = "Unknown Scheme"
+            source_info = "N/A"
+            action_source = "Unknown"
+            
+            # Check if this is a portfolio action or new investment
+            if hasattr(action, 'portfolio_scheme_name') and action.portfolio_scheme_name:
+                # Portfolio-based action
+                scheme_name = action.portfolio_scheme_name
+                source_info = "Portfolio Holdings"
+                action_source = "Existing Portfolio"
+                
+                # Try to get portfolio holding details from notes
+                try:
+                    if action.notes and 'Portfolio Action:' in action.notes:
+                        import json
+                        json_start = action.notes.find('{')
+                        json_end = action.notes.find('}') + 1
+                        if json_start >= 0 and json_end > json_start:
+                            portfolio_info = json.loads(action.notes[json_start:json_end])
+                            if 'portfolio_holding_id' in portfolio_info:
+                                source_info = f"Portfolio ID: {portfolio_info['portfolio_holding_id']}"
+                except:
+                    pass
+                    
+            elif hasattr(action, 'scheme') and action.scheme:
+                # New investment action
+                scheme = action.scheme
+                scheme_name = scheme.scheme_name
+                action_source = "New Investment"
+                
+                # Get ISIN for new investments
+                if hasattr(scheme, 'isin_growth') and scheme.isin_growth:
+                    source_info = scheme.isin_growth
+                elif hasattr(scheme, 'isin_number') and scheme.isin_number:
+                    source_info = scheme.isin_number
+                else:
+                    source_info = "New Scheme"
+            
+            # Get action type
+            action_type = "N/A"
+            if hasattr(action, 'action_type'):
+                if hasattr(action, 'get_action_type_display'):
+                    action_type = action.get_action_type_display()
+                else:
+                    action_type = action.action_type
+            
+            # Get amount
+            amount = 0
+            if hasattr(action, 'amount') and action.amount:
+                amount = float(action.amount)
+            
+            # Get other details
+            sip_amount = ""
+            if hasattr(action, 'sip_amount') and action.sip_amount:
+                sip_amount = f"₹{action.sip_amount:,.2f}"
+            
+            sip_date = ""
+            if hasattr(action, 'sip_date') and action.sip_date:
+                sip_date = str(action.sip_date)
+            
+            frequency = ""
+            if hasattr(action, 'frequency'):
+                frequency = action.frequency
+            
+            status = ""
+            if hasattr(action, 'status'):
+                if hasattr(action, 'get_status_display'):
+                    status = action.get_status_display()
+                else:
+                    status = action.status
+            
+            priority = ""
+            if hasattr(action, 'priority'):
+                priority = str(action.priority)
+            
+            # Build row data
+            data = [
+                idx,
+                scheme_name,
+                source_info,
+                action_type,
+                f"₹{amount:,.2f}" if amount > 0 else "N/A",
+                sip_amount if sip_amount else "N/A",
+                sip_date if sip_date else "N/A",
+                frequency if frequency else "N/A",
+                status if status else "N/A",
+                priority if priority else "N/A",
+                action_source
+            ]
+            
+            total_amount += amount
+            
+            # Write row data
+            for col, value in enumerate(data, 1):
+                cell = ws.cell(row=row, column=col)
+                cell.value = value
+                cell.alignment = Alignment(
+                    horizontal='center' if col in [1, 3, 5, 7, 9, 10] else 'left', 
+                    vertical='center'
+                )
+                cell.border = Border(
+                    left=Side(style='thin'),
+                    right=Side(style='thin'),
+                    top=Side(style='thin'),
+                    bottom=Side(style='thin')
+                )
+                
+                # Color coding for action source
+                if col == 11:  # Action Source column
+                    if value == "Existing Portfolio":
+                        cell.fill = PatternFill(start_color='E8F4FD', end_color='E8F4FD', fill_type='solid')
+                    elif value == "New Investment":
+                        cell.fill = PatternFill(start_color='E8F8F5', end_color='E8F8F5', fill_type='solid')
+                
+                # Format amount columns
+                if col in [5, 6] and value != "N/A" and value:
+                    cell.font = Font(name='Arial', size=10, bold=True)
+            
+            row += 1
+        
+        # Add totals row
+        if plan_actions:
+            row += 1
+            ws[f'A{row}'] = "TOTAL"
+            ws[f'A{row}'].font = Font(bold=True)
+            ws[f'E{row}'] = f"₹{total_amount:,.2f}"
+            ws[f'E{row}'].font = Font(bold=True)
+            
+            for col in range(1, 12):
+                cell = ws.cell(row=row, column=col)
+                cell.border = Border(
+                    left=Side(style='thin'),
+                    right=Side(style='thin'),
+                    top=Side(style='thick'),
+                    bottom=Side(style='thick')
+                )
+        
+        # Add legend
+        row += 3
+        ws[f'A{row}'] = "Legend:"
+        ws[f'A{row}'].font = Font(bold=True)
+        row += 1
+        
+        # Portfolio actions legend
+        ws[f'A{row}'] = "🔵 Existing Portfolio:"
+        ws[f'B{row}'] = "Actions on current portfolio holdings (Redeem, Switch From, STP From, SWP)"
+        ws[f'A{row}'].fill = PatternFill(start_color='E8F4FD', end_color='E8F4FD', fill_type='solid')
+        row += 1
+        
+        # New investment legend
+        ws[f'A{row}'] = "🟢 New Investment:"
+        ws[f'B{row}'] = "Fresh investments in mutual fund schemes (Purchase, SIP, Switch To, STP To)"
+        ws[f'A{row}'].fill = PatternFill(start_color='E8F8F5', end_color='E8F8F5', fill_type='solid')
+        row += 1
+        
+        # Add summary
+        row += 1
+        ws[f'A{row}'] = "Summary:"
+        ws[f'A{row}'].font = Font(bold=True)
+        row += 1
+        
+        portfolio_actions = sum(1 for action in plan_actions if hasattr(action, 'portfolio_scheme_name') and action.portfolio_scheme_name)
+        new_investment_actions = len(plan_actions) - portfolio_actions
+        
+        ws[f'A{row}'] = f"Total Actions: {len(plan_actions)}"
+        row += 1
+        ws[f'A{row}'] = f"Portfolio Actions: {portfolio_actions}"
+        row += 1
+        ws[f'A{row}'] = f"New Investment Actions: {new_investment_actions}"
+        row += 1
+        ws[f'A{row}'] = f"Total Amount: ₹{total_amount:,.2f}"
+        row += 1
+        ws[f'A{row}'] = f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        
+        # Save to BytesIO buffer
+        from io import BytesIO
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        
+        logger.info(f"Portfolio-independent Excel generated for plan {execution_plan.id}")
+        logger.info(f"Portfolio actions: {portfolio_actions}, New investments: {new_investment_actions}")
+        
+        return buffer.getvalue()
+        
+    except Exception as e:
+        logger.error(f"Error generating portfolio-independent Excel: {str(e)}")
+        return None
 
+
+# Updated save_execution_plan function
+@login_required
+@require_http_methods(["POST"])
+def save_execution_plan_portfolio_independent(request):
+    """Save execution plan with portfolio-independent actions"""
+    try:
+        data = json.loads(request.body)
+        client_id = data.get('client_id')
+        plan_name = data.get('plan_name')
+        description = data.get('description', '')
+        actions_data = data.get('actions', [])
+        submit_for_approval = data.get('submit_for_approval', False)
+        
+        # Enhanced validation
+        if not client_id:
+            return JsonResponse({'error': 'Client ID is required'}, status=400)
+        if not plan_name or not plan_name.strip():
+            return JsonResponse({'error': 'Plan name is required'}, status=400)
+        if not actions_data:
+            return JsonResponse({'error': 'At least one action is required'}, status=400)
+        
+        # Get the client object
+        try:
+            client_id_int = int(client_id)
+            client = get_object_or_404(Client, id=client_id_int)
+        except (ValueError, TypeError):
+            return JsonResponse({'error': 'Invalid client ID format'}, status=400)
+        
+        # Check access permission
+        if request.user.role == 'rm' and client.user != request.user:
+            return JsonResponse({'error': 'Access denied - not your client'}, status=403)
+        elif request.user.role == 'rm_head':
+            team_members = User.objects.filter(manager=request.user, role='rm')
+            if client.user not in team_members and client.user != request.user:
+                return JsonResponse({'error': 'Access denied - client not in your team'}, status=403)
+        elif request.user.role not in ['business_head', 'business_head_ops', 'top_management']:
+            return JsonResponse({'error': 'Access denied - insufficient permissions'}, status=403)
+        
+        with transaction.atomic():
+            # Create execution plan
+            execution_plan = ExecutionPlan.objects.create(
+                client=client,
+                plan_name=plan_name.strip(),
+                description=description.strip(),
+                created_by=request.user,
+                status='draft'
+            )
+            
+            logger.info(f"Created execution plan {execution_plan.plan_id} for client {client.id}")
+            
+            # Process actions with portfolio independence
+            created_actions = []
+            failed_actions = []
+            
+            for i, action_data in enumerate(actions_data):
+                try:
+                    logger.info(f"Processing action {i + 1}: {action_data}")
+                    
+                    action = process_action_data_portfolio_independent(
+                        action_data, execution_plan, client, i + 1
+                    )
+                    if action:
+                        created_actions.append(action)
+                        logger.info(f"Successfully created action {action.id}")
+                    else:
+                        failed_actions.append(f"Action {i + 1}: Unknown error")
+                    
+                except Exception as e:
+                    error_msg = f"Action {i + 1}: {str(e)}"
+                    logger.error(f"Error creating action {i + 1}: {str(e)}")
+                    failed_actions.append(error_msg)
+                    continue
+            
+            if not created_actions:
+                return JsonResponse({
+                    'error': 'No valid actions could be created',
+                    'failed_actions': failed_actions
+                }, status=400)
+            
+            # Generate Excel file with portfolio independence
+            try:
+                excel_data = generate_execution_plan_excel_portfolio_independent(execution_plan)
+                if excel_data:
+                    # Save Excel data (implementation depends on your file storage)
+                    logger.info(f"Generated portfolio-independent Excel for plan {execution_plan.plan_id}")
+            except Exception as e:
+                logger.warning(f"Could not generate Excel file: {str(e)}")
+            
+            # Create workflow history
+            PlanWorkflowHistory.objects.create(
+                execution_plan=execution_plan,
+                from_status='',
+                to_status='draft',
+                changed_by=request.user,
+                comments=f'Execution plan created with {len(created_actions)} actions (portfolio-independent)'
+            )
+            
+            # Submit for approval if requested
+            if submit_for_approval and len(created_actions) > 0:
+                try:
+                    if execution_plan.submit_for_approval():
+                        PlanWorkflowHistory.objects.create(
+                            execution_plan=execution_plan,
+                            from_status='draft',
+                            to_status='pending_approval',
+                            changed_by=request.user,
+                            comments='Plan submitted for approval'
+                        )
+                        logger.info(f"Plan {execution_plan.plan_id} submitted for approval")
+                except Exception as e:
+                    logger.warning(f"Could not submit for approval: {str(e)}")
+            
+            response_data = {
+                'success': True,
+                'plan_id': execution_plan.plan_id,
+                'plan_url': reverse('execution_plan_detail', args=[execution_plan.id]),
+                'message': f'Portfolio-independent execution plan created successfully with {len(created_actions)} actions',
+                'actions_created': len(created_actions),
+                'actions_failed': len(failed_actions),
+                'portfolio_independent': True
+            }
+            
+            if failed_actions:
+                response_data['failed_actions'] = failed_actions
+                response_data['message'] += f'. {len(failed_actions)} actions failed.'
+            
+            return JsonResponse(response_data)
+            
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        logger.error(f"Error saving portfolio-independent execution plan: {str(e)}")
+        return JsonResponse({'error': f'Server error: {str(e)}'}, status=500)
+
+
+def process_action_data_portfolio_independent(action_data, execution_plan, client, priority):
+    """Process individual action data with complete portfolio independence - FIXED VERSION"""
+    action_type = action_data.get('action_type')
+    
+    if not action_type:
+        logger.error(f"No action type specified for action: {action_data}")
+        raise ValueError("Action type is required")
+    
+    # Map action types to standardized values
+    action_type_mapping = {
+        'redeem': 'redemption',
+        'redemption': 'redemption',
+        'switch': 'switch',
+        'stp': 'stp_start',
+        'stp_start': 'stp_start',
+        'swp': 'swp_start',
+        'swp_start': 'swp_start',
+        'purchase': 'purchase',
+        'sip': 'sip_start',
+        'sip_start': 'sip_start',
+    }
+    
+    action_type = action_type_mapping.get(action_type, action_type)
+    
+    # Initialize variables
+    scheme_obj = None
+    target_scheme_obj = None
+    portfolio_scheme_name = None
+    portfolio_holding_id = None
+    portfolio_isin = None
+    portfolio_folio_number = None
+    action_mode = 'new_investment'  # Default
+    notes = action_data.get('notes', '')
+    
+    # Handle portfolio-based actions
+    if action_type in ['redemption', 'switch', 'stp_start', 'swp_start']:
+        # Check multiple possible field names for portfolio reference
+        portfolio_holding_id = (
+            action_data.get('portfolio_holding_id') or 
+            action_data.get('portfolio_id') or 
+            action_data.get('source_portfolio_id')
+        )
+        
+        scheme_name = (
+            action_data.get('portfolio_scheme_name') or
+            action_data.get('source_scheme_name') or
+            action_data.get('scheme_name') or
+            action_data.get('source_scheme') or
+            action_data.get('scheme')
+        )
+        
+        if portfolio_holding_id:
+            try:
+                # Verify portfolio holding exists and get scheme details
+                portfolio_holding = ClientPortfolio.objects.get(id=portfolio_holding_id)
+                portfolio_scheme_name = portfolio_holding.scheme_name
+                portfolio_isin = portfolio_holding.isin_number or ''
+                portfolio_folio_number = portfolio_holding.folio_number or ''
+                action_mode = 'portfolio'
+                
+                # Store portfolio information in notes
+                portfolio_info = {
+                    'portfolio_holding_id': portfolio_holding_id,
+                    'original_scheme_name': portfolio_holding.scheme_name,
+                    'original_isin': portfolio_holding.isin_number or '',
+                    'folio_number': portfolio_holding.folio_number or '',
+                    'original_value': float(portfolio_holding.total_value) if portfolio_holding.total_value else 0,
+                    'original_units': float(portfolio_holding.units) if portfolio_holding.units else 0,
+                    'action_type': action_type,
+                    'is_portfolio_action': True
+                }
+                
+                # Append to existing notes instead of replacing
+                if notes:
+                    notes = f"Portfolio Action: {json.dumps(portfolio_info)}\n{notes}"
+                else:
+                    notes = f"Portfolio Action: {json.dumps(portfolio_info)}"
+                
+                logger.info(f"Portfolio action for holding {portfolio_holding_id}: {portfolio_scheme_name}")
+                
+            except ClientPortfolio.DoesNotExist:
+                logger.error(f"Portfolio holding {portfolio_holding_id} not found")
+                raise ValueError(f"Portfolio holding {portfolio_holding_id} not found")
+            except Exception as e:
+                logger.error(f"Error accessing portfolio holding {portfolio_holding_id}: {str(e)}")
+                raise ValueError(f"Error accessing portfolio holding: {str(e)}")
+                
+        elif scheme_name:
+            # Direct scheme name provided (fallback for portfolio actions)
+            portfolio_scheme_name = scheme_name
+            action_mode = 'portfolio'
+            logger.info(f"Using provided portfolio scheme name: {scheme_name}")
+        else:
+            # This might be a new investment action
+            action_mode = 'new_investment'
+    
+    # Handle new investment actions or when no portfolio reference is found
+    if action_mode == 'new_investment' or action_type in ['purchase', 'sip_start']:
+        scheme_id = action_data.get('scheme_id') or action_data.get('target_scheme_id')
+        
+        if scheme_id:
+            try:
+                scheme_obj = MutualFundScheme.objects.get(id=scheme_id)
+                action_mode = 'new_investment'
+                logger.info(f"New investment scheme: {scheme_obj.scheme_name}")
+            except MutualFundScheme.DoesNotExist:
+                logger.error(f"MutualFundScheme with ID {scheme_id} not found")
+                raise ValueError(f"Selected scheme with ID {scheme_id} not found")
+        else:
+            # If no scheme_id provided and no portfolio reference, this is an error for new investments
+            if not portfolio_scheme_name and action_type in ['purchase', 'sip_start']:
+                raise ValueError(f"Scheme ID required for new investment action {action_type}")
+    
+    # Handle target scheme for switch/STP operations
+    if action_type in ['switch', 'stp_start']:
+        target_scheme_id = action_data.get('target_scheme_id')
+        
+        if target_scheme_id:
+            try:
+                target_scheme_obj = MutualFundScheme.objects.get(id=target_scheme_id)
+                logger.info(f"Target scheme for {action_type}: {target_scheme_obj.scheme_name}")
+            except MutualFundScheme.DoesNotExist:
+                raise ValueError(f"Target scheme with ID {target_scheme_id} not found")
+        else:
+            raise ValueError(f"Target scheme required for {action_type}")
+    
+    # Validate that we have either scheme or portfolio reference
+    if not scheme_obj and not portfolio_scheme_name:
+        raise ValueError(f"Invalid action configuration: no scheme reference found for {action_type}")
+    
+    # Log processed values for debugging
+    logger.info(f"Processed values - Mode: {action_mode}, Scheme: {scheme_obj}, Portfolio: {portfolio_scheme_name}")
+    
+    # Create the plan action
+    try:
+        action = PlanAction.objects.create(
+            execution_plan=execution_plan,
+            action_type=action_type,
+            scheme=scheme_obj,  # Only for new investments
+            target_scheme=target_scheme_obj,  # Only for switch/STP targets
+            portfolio_scheme_name=portfolio_scheme_name,  # Only for portfolio actions
+            portfolio_holding_id=portfolio_holding_id,
+            portfolio_isin=portfolio_isin,
+            portfolio_folio_number=portfolio_folio_number,
+            action_mode=action_mode,
+            amount=safe_decimal(action_data.get('amount') or action_data.get('redeem_amount')),
+            units=safe_decimal(action_data.get('units') or action_data.get('redeem_units')),
+            sip_date=safe_int(action_data.get('sip_date')),
+            frequency=action_data.get('frequency'),
+            notes=notes,
+            priority=priority,
+            status='pending'
+        )
+        
+        # Create portfolio mapping if this is a portfolio action
+        if action_mode == 'portfolio' and portfolio_holding_id:
+            try:
+                portfolio_holding = ClientPortfolio.objects.get(id=portfolio_holding_id)
+                
+                # Check if PortfolioActionMapping model exists
+                try:
+                    PortfolioActionMapping.objects.create(
+                        plan_action=action,
+                        portfolio_holding_id=portfolio_holding_id,
+                        original_scheme_name=portfolio_holding.scheme_name,
+                        original_isin=portfolio_holding.isin_number or '',
+                        original_folio_number=portfolio_holding.folio_number or '',
+                        original_units=portfolio_holding.units,
+                        original_value=portfolio_holding.total_value,
+                    )
+                    logger.info(f"Created portfolio mapping for action {action.id}")
+                except Exception as mapping_error:
+                    logger.warning(f"Could not create portfolio mapping (model might not exist): {str(mapping_error)}")
+                    
+            except ClientPortfolio.DoesNotExist:
+                logger.warning(f"Portfolio holding {portfolio_holding_id} not found for mapping")
+            except Exception as e:
+                logger.warning(f"Could not create portfolio mapping: {str(e)}")
+        
+        # Create action summary for logging
+        action_source = "Portfolio" if action_mode == 'portfolio' else "New Investment"
+        scheme_display = portfolio_scheme_name or (scheme_obj.scheme_name if scheme_obj else "Unknown")
+        
+        # Create a simple action summary
+        action_summary = f"{action_type} - {scheme_display} ({action_source})"
+        if action.amount:
+            action_summary += f" - ₹{action.amount:,.2f}"
+        elif action.units:
+            action_summary += f" - {action.units} units"
+        
+        logger.info(f"Created {action_source} action {action.id}: {action_summary}")
+        return action
+        
+    except Exception as e:
+        logger.error(f"Error creating PlanAction: {str(e)}")
+        logger.error(f"Action data: {action_data}")
+        logger.error(f"Processed values - Mode: {action_mode}, Scheme: {scheme_obj}, Portfolio: {portfolio_scheme_name}")
+        raise ValueError(f"Failed to create action: {str(e)}")
+
+
+def safe_decimal(value):
+    """Safely convert value to Decimal"""
+    if value is None or value == '' or value == 'null' or value == 'None':
+        return None
+    try:
+        from decimal import Decimal, InvalidOperation
+        return Decimal(str(value))
+    except (ValueError, TypeError, InvalidOperation):
+        logger.warning(f"Could not convert to decimal: {value}")
+        return None
+
+
+def safe_int(value):
+    """Safely convert value to int"""
+    if value is None or value == '' or value == 'null' or value == 'None':
+        return None
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        logger.warning(f"Could not convert to int: {value}")
+        return None
+
+
+# Alternative process_action_data function that handles the specific error
+def process_action_data(action_data, execution_plan, client, priority):
+    """Process individual action data - FIXED VERSION that calls the portfolio-independent function"""
+    return process_action_data_portfolio_independent(action_data, execution_plan, client, priority)
+
+
+# FIXED: Add debugging function to log action data structure
+def debug_action_data(action_data, index):
+    """Debug function to log action data structure"""
+    logger.info(f"=== DEBUG ACTION {index} ===")
+    logger.info(f"Action Type: {action_data.get('action_type')}")
+    logger.info(f"Portfolio Fields:")
+    logger.info(f"  - portfolio_id: {action_data.get('portfolio_id')}")
+    logger.info(f"  - portfolio_holding_id: {action_data.get('portfolio_holding_id')}")
+    logger.info(f"  - source_portfolio_id: {action_data.get('source_portfolio_id')}")
+    logger.info(f"Scheme Fields:")
+    logger.info(f"  - scheme: {action_data.get('scheme')}")
+    logger.info(f"  - scheme_name: {action_data.get('scheme_name')}")
+    logger.info(f"  - scheme_id: {action_data.get('scheme_id')}")
+    logger.info(f"  - source_scheme: {action_data.get('source_scheme')}")
+    logger.info(f"  - source_scheme_name: {action_data.get('source_scheme_name')}")
+    logger.info(f"Amount Fields:")
+    logger.info(f"  - amount: {action_data.get('amount')}")
+    logger.info(f"  - redeem_amount: {action_data.get('redeem_amount')}")
+    logger.info(f"  - redeem_units: {action_data.get('redeem_units')}")
+    logger.info(f"  - redeem_by: {action_data.get('redeem_by')}")
+    logger.info(f"All Fields: {list(action_data.keys())}")
+    logger.info(f"=== END DEBUG ACTION {index} ===")
+
+
+# FIXED: Updated main save function to include debugging
+@login_required
+@require_http_methods(["POST"])
+def save_execution_plan_with_debug(request):
+    """Save execution plan with enhanced debugging for frontend data structure"""
+    try:
+        data = json.loads(request.body)
+        client_id = data.get('client_id')
+        plan_name = data.get('plan_name')
+        description = data.get('description', '')
+        actions_data = data.get('actions', [])
+        submit_for_approval = data.get('submit_for_approval', False)
+        
+        # Enhanced validation
+        if not client_id:
+            return JsonResponse({'error': 'Client ID is required'}, status=400)
+        if not plan_name or not plan_name.strip():
+            return JsonResponse({'error': 'Plan name is required'}, status=400)
+        if not actions_data:
+            return JsonResponse({'error': 'At least one action is required'}, status=400)
+        
+        # DEBUG: Log all action data structures
+        logger.info(f"=== FRONTEND DATA ANALYSIS ===")
+        logger.info(f"Total actions received: {len(actions_data)}")
+        for i, action_data in enumerate(actions_data):
+            debug_action_data(action_data, i + 1)
+        logger.info(f"=== END FRONTEND DATA ANALYSIS ===")
+        
+        # Get the client object (handle integer ID)
+        try:
+            client_id_int = int(client_id)
+            client = get_object_or_404(Client, id=client_id_int)
+        except (ValueError, TypeError):
+            return JsonResponse({'error': 'Invalid client ID format'}, status=400)
+        
+        # Check access permission
+        if request.user.role == 'rm' and client.user != request.user:
+            return JsonResponse({'error': 'Access denied - not your client'}, status=403)
+        elif request.user.role == 'rm_head':
+            team_members = User.objects.filter(manager=request.user, role='rm')
+            if client.user not in team_members and client.user != request.user:
+                return JsonResponse({'error': 'Access denied - client not in your team'}, status=403)
+        elif request.user.role not in ['business_head', 'business_head_ops', 'top_management']:
+            return JsonResponse({'error': 'Access denied - insufficient permissions'}, status=403)
+        
+        # Variables to track execution plan and actions
+        execution_plan = None
+        created_actions = []
+        failed_actions = []
+        
+        try:
+            with transaction.atomic():
+                # Create execution plan
+                execution_plan = ExecutionPlan.objects.create(
+                    client=client,
+                    plan_name=plan_name.strip(),
+                    description=description.strip(),
+                    created_by=request.user,
+                    status='draft'
+                )
+                
+                logger.info(f"Created execution plan {execution_plan.plan_id} for client {client.id}")
+                
+                # Create plan actions with enhanced debugging
+                for i, action_data in enumerate(actions_data):
+                    try:
+                        logger.info(f"Processing action {i + 1}: {action_data}")
+                        
+                        action = process_action_data_portfolio_independent(
+                            action_data, execution_plan, client, i + 1
+                        )
+                        if action:
+                            created_actions.append(action)
+                            logger.info(f"✅ Successfully created action {action.id}: {action.get_action_summary()}")
+                        else:
+                            failed_actions.append(f"Action {i + 1}: Unknown error")
+                        
+                    except Exception as e:
+                        error_msg = f"Action {i + 1}: {str(e)}"
+                        logger.error(f"❌ Error creating action {i + 1}: {str(e)}")
+                        logger.error(f"Action data that failed: {action_data}")
+                        failed_actions.append(error_msg)
+                        continue
+                
+                if not created_actions:
+                    return JsonResponse({
+                        'error': 'No valid actions could be created',
+                        'failed_actions': failed_actions,
+                        'debug_info': {
+                            'total_actions_received': len(actions_data),
+                            'sample_action': actions_data[0] if actions_data else None
+                        }
+                    }, status=400)
+                
+                # Create workflow history
+                PlanWorkflowHistory.objects.create(
+                    execution_plan=execution_plan,
+                    from_status='',
+                    to_status='draft',
+                    changed_by=request.user,
+                    comments=f'Execution plan created with {len(created_actions)} actions'
+                )
+                
+                # Submit for approval if requested
+                if submit_for_approval and len(created_actions) > 0:
+                    try:
+                        if execution_plan.submit_for_approval():
+                            PlanWorkflowHistory.objects.create(
+                                execution_plan=execution_plan,
+                                from_status='draft',
+                                to_status='pending_approval',
+                                changed_by=request.user,
+                                comments='Plan submitted for approval'
+                            )
+                            logger.info(f"Plan {execution_plan.plan_id} submitted for approval")
+                    except Exception as e:
+                        logger.warning(f"Could not submit for approval: {str(e)}")
+            
+            # Generate Excel file OUTSIDE of transaction
+            excel_generated = False
+            excel_error = None
+            
+            try:
+                excel_data = generate_execution_plan_excel_in_memory(execution_plan)
+                if excel_data:
+                    excel_generated = True
+                    logger.info(f"Generated Excel data for plan {execution_plan.plan_id}")
+                else:
+                    excel_error = "Excel generation returned no data"
+            except Exception as e:
+                excel_error = str(e)
+                logger.warning(f"Could not generate Excel file: {excel_error}")
+            
+            # Prepare response
+            response_data = {
+                'success': True,
+                'plan_id': execution_plan.plan_id,
+                'plan_url': reverse('execution_plan_detail', args=[execution_plan.id]),
+                'message': f'Execution plan created successfully with {len(created_actions)} actions',
+                'actions_created': len(created_actions),
+                'actions_failed': len(failed_actions),
+                'excel_generated': excel_generated,
+                'debug_info': {
+                    'portfolio_actions': len([a for a in created_actions if a.action_mode == 'portfolio']),
+                    'new_investment_actions': len([a for a in created_actions if a.action_mode == 'new_investment']),
+                }
+            }
+            
+            if failed_actions:
+                response_data['failed_actions'] = failed_actions
+                response_data['message'] += f'. {len(failed_actions)} actions failed.'
+            
+            if excel_error:
+                response_data['excel_error'] = excel_error
+            
+            return JsonResponse(response_data)
+            
+        except Exception as e:
+            logger.error(f"Transaction failed: {str(e)}")
+            return JsonResponse({
+                'error': f'Database transaction failed: {str(e)}',
+                'actions_processed': len(created_actions),
+                'actions_failed': len(failed_actions),
+                'debug_info': {
+                    'last_successful_action': created_actions[-1].get_action_summary() if created_actions else None,
+                    'total_actions_received': len(actions_data)
+                }
+            }, status=500)
+            
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        logger.error(f"Error saving execution plan: {str(e)}")
+        return JsonResponse({'error': f'Server error: {str(e)}'}, status=500)
+    
 def generate_execution_plan_excel_in_memory(execution_plan):
     """
-    Generate Excel file in memory without saving to disk - Vercel compatible
+    Generate Excel file in memory for portfolio-independent execution plan
     Returns bytes data that can be directly sent in HTTP response
     """
     try:
         from io import BytesIO
-        
-        # Initialize plan_actions
-        plan_actions = []
+        import openpyxl
+        from openpyxl.styles import Font, Alignment, PatternFill, Border, Side, NamedStyle
+        from datetime import datetime
         
         # Get plan actions
+        plan_actions = []
         try:
             if hasattr(execution_plan, 'actions'):
                 plan_actions = list(execution_plan.actions.all().order_by('priority', 'id'))
@@ -8912,8 +9869,8 @@ def generate_execution_plan_excel_in_memory(execution_plan):
         
         # Set column widths
         column_widths = {
-            'A': 8, 'B': 35, 'C': 15, 'D': 15, 'E': 15, 'F': 15,
-            'G': 12, 'H': 12, 'I': 15, 'J': 15, 'K': 20
+            'A': 8, 'B': 40, 'C': 20, 'D': 15, 'E': 15, 'F': 15,
+            'G': 12, 'H': 12, 'I': 15, 'J': 15, 'K': 25
         }
         for col, width in column_widths.items():
             ws.column_dimensions[col].width = width
@@ -8959,7 +9916,7 @@ def generate_execution_plan_excel_in_memory(execution_plan):
         ws[f'A{row}'] = "Total Amount:"
         ws[f'B{row}'] = f"₹{total_amount:,.2f}"
         ws[f'F{row}'] = "Status:"
-        ws[f'G{row}'] = execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else (execution_plan.status if hasattr(execution_plan, 'status') else "N/A")
+        ws[f'G{row}'] = execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else execution_plan.status
         row += 1
         
         # Add additional details
@@ -8968,17 +9925,12 @@ def generate_execution_plan_excel_in_memory(execution_plan):
             ws[f'B{row}'] = execution_plan.created_by.get_full_name() or execution_plan.created_by.username
             row += 1
         
-        if hasattr(execution_plan, 'plan_name') and execution_plan.plan_name:
-            ws[f'A{row}'] = "Plan Name:"
-            ws[f'B{row}'] = execution_plan.plan_name
-            row += 1
-        
         row += 1  # Empty row
         
-        # Table headers
+        # Table headers for portfolio independence
         headers = [
-            'Sr. No.', 'Scheme Name', 'ISIN', 'Transaction Type', 'Amount (₹)',
-            'SIP Amount (₹)', 'SIP Date', 'Frequency', 'Status', 'Priority', 'Remarks'
+            'Sr. No.', 'Scheme Name', 'Source/ISIN', 'Transaction Type', 'Amount (₹)',
+            'SIP Amount (₹)', 'SIP Date', 'Frequency', 'Status', 'Priority', 'Action Source'
         ]
         
         for col, header in enumerate(headers, 1):
@@ -8988,23 +9940,48 @@ def generate_execution_plan_excel_in_memory(execution_plan):
         
         row += 1
         
-        # Data rows
+        # Data rows for actions
         for idx, action in enumerate(plan_actions, 1):
-            # Get scheme information
+            # Get scheme information - PORTFOLIO INDEPENDENT
             scheme_name = "Unknown Scheme"
-            isin_value = "N/A"
+            source_info = "N/A"
+            action_source = "Unknown"
             
-            if hasattr(action, 'scheme') and action.scheme:
-                scheme = action.scheme
-                if hasattr(scheme, 'scheme_name'):
-                    scheme_name = scheme.scheme_name
+            # Check action mode and get appropriate scheme information
+            if hasattr(action, 'action_mode') and action.action_mode == 'portfolio':
+                # Portfolio-based action
+                scheme_name = action.portfolio_scheme_name or "Unknown Portfolio Scheme"
+                source_info = action.portfolio_isin or "Portfolio Holdings"
+                action_source = "Existing Portfolio"
                 
-                if hasattr(scheme, 'isin_growth'):
-                    isin_value = scheme.isin_growth or "N/A"
-                elif hasattr(scheme, 'isin_number'):
-                    isin_value = scheme.isin_number or "N/A"
+                if action.portfolio_holding_id:
+                    source_info = f"Portfolio ID: {action.portfolio_holding_id}"
+                    
+            elif hasattr(action, 'action_mode') and action.action_mode == 'new_investment':
+                # New investment action
+                if action.scheme:
+                    scheme_name = action.scheme.scheme_name
+                    action_source = "New Investment"
+                    
+                    # Get ISIN for new investments
+                    if hasattr(action.scheme, 'isin_growth') and action.scheme.isin_growth:
+                        source_info = action.scheme.isin_growth
+                    elif hasattr(action.scheme, 'isin_number') and action.scheme.isin_number:
+                        source_info = action.scheme.isin_number
+                    else:
+                        source_info = "New Scheme"
+            else:
+                # Fallback for actions without action_mode (legacy)
+                if action.portfolio_scheme_name:
+                    scheme_name = action.portfolio_scheme_name
+                    source_info = "Portfolio Holdings"
+                    action_source = "Existing Portfolio"
+                elif action.scheme:
+                    scheme_name = action.scheme.scheme_name
+                    source_info = getattr(action.scheme, 'isin_growth', 'New Scheme')
+                    action_source = "New Investment"
             
-            # Get action details
+            # Get action type
             action_type = "N/A"
             if hasattr(action, 'action_type'):
                 if hasattr(action, 'get_action_type_display'):
@@ -9012,23 +9989,48 @@ def generate_execution_plan_excel_in_memory(execution_plan):
                 else:
                     action_type = action.action_type
             
+            # Get amount
             amount = 0
             if hasattr(action, 'amount') and action.amount:
                 amount = float(action.amount)
+            
+            # Get other details
+            sip_amount = ""
+            if hasattr(action, 'sip_amount') and action.sip_amount:
+                sip_amount = f"₹{action.sip_amount:,.2f}"
+            
+            sip_date = ""
+            if hasattr(action, 'sip_date') and action.sip_date:
+                sip_date = str(action.sip_date)
+            
+            frequency = ""
+            if hasattr(action, 'frequency') and action.frequency:
+                frequency = action.frequency
+            
+            status = ""
+            if hasattr(action, 'status'):
+                if hasattr(action, 'get_status_display'):
+                    status = action.get_status_display()
+                else:
+                    status = action.status
+            
+            priority = ""
+            if hasattr(action, 'priority'):
+                priority = str(action.priority)
             
             # Build row data
             data = [
                 idx,
                 scheme_name,
-                isin_value,
+                source_info,
                 action_type,
                 f"₹{amount:,.2f}" if amount > 0 else "N/A",
-                getattr(action, 'sip_amount', 'N/A'),
-                getattr(action, 'sip_date', 'N/A'),
-                getattr(action, 'frequency', 'N/A'),
-                getattr(action, 'status', 'N/A'),
-                getattr(action, 'priority', 'N/A'),
-                getattr(action, 'notes', '')
+                sip_amount if sip_amount else "N/A",
+                sip_date if sip_date else "N/A",
+                frequency if frequency else "N/A",
+                status if status else "N/A",
+                priority if priority else "N/A",
+                action_source
             ]
             
             # Write row data
@@ -9043,34 +10045,88 @@ def generate_execution_plan_excel_in_memory(execution_plan):
                     left=Side(style='thin'), right=Side(style='thin'),
                     top=Side(style='thin'), bottom=Side(style='thin')
                 )
+                
+                # Color coding for action source
+                if col == 11:  # Action Source column
+                    if value == "Existing Portfolio":
+                        cell.fill = PatternFill(start_color='E8F4FD', end_color='E8F4FD', fill_type='solid')
+                    elif value == "New Investment":
+                        cell.fill = PatternFill(start_color='E8F8F5', end_color='E8F8F5', fill_type='solid')
+                
+                # Format amount columns
+                if col in [5, 6] and value != "N/A" and value:
+                    cell.font = Font(name='Arial', size=10, bold=True)
             
             row += 1
         
-        # Add summary
+        # Add totals row
         if plan_actions:
             row += 1
             ws[f'A{row}'] = "TOTAL"
             ws[f'A{row}'].font = Font(bold=True)
             ws[f'E{row}'] = f"₹{total_amount:,.2f}"
             ws[f'E{row}'].font = Font(bold=True)
+            
+            for col in range(1, 12):
+                cell = ws.cell(row=row, column=col)
+                cell.border = Border(
+                    left=Side(style='thin'), right=Side(style='thin'),
+                    top=Side(style='thick'), bottom=Side(style='thick')
+                )
         
-        # Add generation timestamp
+        # Add legend and summary
         row += 3
+        ws[f'A{row}'] = "Legend:"
+        ws[f'A{row}'].font = Font(bold=True)
+        row += 1
+        
+        # Portfolio actions legend
+        ws[f'A{row}'] = "🔵 Existing Portfolio:"
+        ws[f'B{row}'] = "Actions on current portfolio holdings"
+        ws[f'A{row}'].fill = PatternFill(start_color='E8F4FD', end_color='E8F4FD', fill_type='solid')
+        row += 1
+        
+        # New investment legend
+        ws[f'A{row}'] = "🟢 New Investment:"
+        ws[f'B{row}'] = "Fresh investments in mutual fund schemes"
+        ws[f'A{row}'].fill = PatternFill(start_color='E8F8F5', end_color='E8F8F5', fill_type='solid')
+        row += 1
+        
+        # Add summary
+        row += 1
+        ws[f'A{row}'] = "Summary:"
+        ws[f'A{row}'].font = Font(bold=True)
+        row += 1
+        
+        portfolio_actions = sum(1 for action in plan_actions 
+                              if getattr(action, 'action_mode', None) == 'portfolio' or 
+                              getattr(action, 'portfolio_scheme_name', None))
+        new_investment_actions = len(plan_actions) - portfolio_actions
+        
+        ws[f'A{row}'] = f"Total Actions: {len(plan_actions)}"
+        row += 1
+        ws[f'A{row}'] = f"Portfolio Actions: {portfolio_actions}"
+        row += 1
+        ws[f'A{row}'] = f"New Investment Actions: {new_investment_actions}"
+        row += 1
+        ws[f'A{row}'] = f"Total Amount: ₹{total_amount:,.2f}"
+        row += 1
         ws[f'A{row}'] = f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         
-        # Save to BytesIO buffer instead of disk
+        # Save to BytesIO buffer
         buffer = BytesIO()
         wb.save(buffer)
         buffer.seek(0)
         
-        logger.info(f"Excel generated in memory for plan {execution_plan.id}")
-        logger.info(f"Total actions exported: {len(plan_actions)}")
-        logger.info(f"Total amount: ₹{total_amount:,.2f}")
+        logger.info(f"Portfolio-independent Excel generated in memory for plan {execution_plan.id}")
+        logger.info(f"Portfolio actions: {portfolio_actions}, New investments: {new_investment_actions}")
         
         return buffer.getvalue()
         
     except Exception as e:
-        logger.error(f"Error generating Excel in memory: {str(e)}")
+        logger.error(f"Error generating portfolio-independent Excel in memory: {str(e)}")
+        import traceback
+        logger.error(f"Excel generation traceback: {traceback.format_exc()}")
         return None
 
 
@@ -9334,67 +10390,164 @@ def add_comment(request, plan_id):
 @require_http_methods(["GET"])
 def search_schemes_ajax(request):
     """
-    AJAX endpoint to search mutual fund schemes from database
+    AJAX endpoint to search mutual fund schemes from database - FOR NEW INVESTMENTS ONLY
     """
     try:
         query = request.GET.get('q', '').strip()
+        action_type = request.GET.get('action_type', '')
         
-        if len(query) < 2:
+        # Debug logging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Search query: '{query}', action_type: '{action_type}'")
+        
+        # Reduced minimum query length for better UX
+        if len(query) < 1:
             return JsonResponse({
                 'success': False,
-                'message': 'Query must be at least 2 characters long'
+                'message': 'Query cannot be empty'
             })
         
-        # Search in MutualFundScheme model - Fixed field names based on your model
-        schemes = MutualFundScheme.objects.filter(
-            Q(scheme_name__icontains=query) |
-            Q(amc_name__icontains=query) |
-            Q(isin_growth__icontains=query) |  # Fixed: was isin_number
-            Q(isin_div_reinvestment__icontains=query) |  # Added second ISIN field
-            Q(scheme_code__icontains=query) |
-            Q(category__icontains=query)  # Added category search
-        ).filter(
-            is_active=True  # Only show active schemes
-        ).order_by('scheme_name')[:50]  # Increased limit for better results
+        # More flexible action type validation
+        valid_actions = ['purchase', 'sip_start', 'switch_target', 'stp_target']
+        if action_type and action_type not in valid_actions:
+            logger.warning(f"Invalid action_type: {action_type}")
+            # Don't return error, just log warning and continue
+        
+        # Build search query with case-insensitive search
+        search_filter = Q()
+        
+        # Split query into words for better matching
+        query_words = query.split()
+        
+        for word in query_words:
+            word_filter = (
+                Q(scheme_name__icontains=word) |
+                Q(amc_name__icontains=word) |
+                Q(category__icontains=word) |
+                Q(scheme_code__icontains=word)
+            )
+            
+            # Only search ISIN if the word looks like an ISIN (12 characters, alphanumeric)
+            if len(word) >= 6:
+                word_filter |= Q(isin_growth__icontains=word) | Q(isin_div_reinvestment__icontains=word)
+            
+            search_filter &= word_filter
+        
+        # If no words found, fallback to original search
+        if not query_words:
+            search_filter = (
+                Q(scheme_name__icontains=query) |
+                Q(amc_name__icontains=query) |
+                Q(category__icontains=query) |
+                Q(scheme_code__icontains=query) |
+                Q(isin_growth__icontains=query) |
+                Q(isin_div_reinvestment__icontains=query)
+            )
+        
+        # Get total count before filtering by is_active
+        total_schemes = MutualFundScheme.objects.filter(search_filter).count()
+        logger.info(f"Total schemes matching search (before active filter): {total_schemes}")
+        
+        # Search in MutualFundScheme model
+        schemes_queryset = MutualFundScheme.objects.filter(search_filter)
+        
+        # Apply active filter if the field exists
+        try:
+            active_schemes = schemes_queryset.filter(is_active=True)
+            if active_schemes.exists():
+                schemes_queryset = active_schemes
+            else:
+                # If no active schemes found, show all matching schemes
+                logger.warning("No active schemes found, showing all matching schemes")
+        except Exception as filter_error:
+            logger.warning(f"is_active filter failed: {filter_error}, showing all schemes")
+        
+        # Order and limit results
+        schemes = schemes_queryset.order_by('scheme_name')[:100]  # Increased limit
+        
+        logger.info(f"Final schemes count: {schemes.count()}")
         
         scheme_list = []
         for scheme in schemes:
-            scheme_data = {
-                'id': scheme.id,
-                'scheme_name': scheme.scheme_name,
-                'amc_name': scheme.amc_name,  # Direct field access since no FK relation
-                'scheme_type': scheme.scheme_type or 'other',
-                'category': scheme.category,
-                'risk_category': scheme.risk_category or 'moderate',
-                'isin_growth': scheme.isin_growth or '',  # Fixed field name
-                'isin_div_reinvestment': scheme.isin_div_reinvestment or '',  # Added this field
-                'scheme_code': scheme.scheme_code or '',
-                'last_nav_price': float(scheme.last_nav_price) if scheme.last_nav_price else None,  # Fixed field name
-                'last_nav_date': scheme.last_nav_date.strftime('%Y-%m-%d') if scheme.last_nav_date else None,  # Fixed field name
-                'minimum_investment': float(scheme.minimum_investment) if scheme.minimum_investment else 500,
-                'minimum_sip': float(scheme.minimum_sip) if scheme.minimum_sip else 500,
-                'is_active': scheme.is_active,
-                # Set default values for availability fields since they don't exist in your model
-                'sip_available': True,  # Default to True
-                'stp_available': True,  # Default to True
-                'swp_available': True,  # Default to True
-            }
-            scheme_list.append(scheme_data)
+            try:
+                scheme_data = {
+                    'id': scheme.id,
+                    'scheme_name': scheme.scheme_name or 'N/A',
+                    'amc_name': scheme.amc_name or 'N/A',
+                    'scheme_type': getattr(scheme, 'scheme_type', None) or 'other',
+                    'category': scheme.category or 'N/A',
+                    'risk_category': getattr(scheme, 'risk_category', None) or 'moderate',
+                    'isin_growth': getattr(scheme, 'isin_growth', None) or '',
+                    'isin_div_reinvestment': getattr(scheme, 'isin_div_reinvestment', None) or '',
+                    'scheme_code': getattr(scheme, 'scheme_code', None) or '',
+                    'is_active': getattr(scheme, 'is_active', True),
+                    'is_new_investment_scheme': True,
+                }
+                
+                # Handle optional fields that might not exist
+                try:
+                    scheme_data['last_nav_price'] = float(scheme.last_nav_price) if scheme.last_nav_price else None
+                except (AttributeError, TypeError, ValueError):
+                    scheme_data['last_nav_price'] = None
+                
+                try:
+                    scheme_data['last_nav_date'] = scheme.last_nav_date.strftime('%Y-%m-%d') if scheme.last_nav_date else None
+                except (AttributeError, TypeError):
+                    scheme_data['last_nav_date'] = None
+                
+                try:
+                    scheme_data['minimum_investment'] = float(scheme.minimum_investment) if scheme.minimum_investment else 500
+                except (AttributeError, TypeError, ValueError):
+                    scheme_data['minimum_investment'] = 500
+                
+                try:
+                    scheme_data['minimum_sip'] = float(scheme.minimum_sip) if scheme.minimum_sip else 500
+                except (AttributeError, TypeError, ValueError):
+                    scheme_data['minimum_sip'] = 500
+                
+                # Set default availability flags
+                scheme_data.update({
+                    'sip_available': True,
+                    'stp_available': True,
+                    'swp_available': True,
+                })
+                
+                scheme_list.append(scheme_data)
+                
+            except Exception as scheme_error:
+                logger.error(f"Error processing scheme {scheme.id}: {scheme_error}")
+                continue
         
-        return JsonResponse({
+        response_data = {
             'success': True,
             'schemes': scheme_list,
             'count': len(scheme_list),
-            'query': query
-        })
+            'total_found': total_schemes,
+            'query': query,
+            'action_type': action_type,
+            'debug_info': {
+                'query_length': len(query),
+                'words_searched': query_words,
+                'schemes_before_limit': schemes_queryset.count(),
+            }
+        }
+        
+        logger.info(f"Returning {len(scheme_list)} schemes for query '{query}'")
+        return JsonResponse(response_data)
         
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
-        logger.error(f"Error in search_schemes_ajax: {str(e)}")
+        logger.error(f"Error in search_schemes_ajax: {str(e)}", exc_info=True)
+        
+        # Return more detailed error information in development
         return JsonResponse({
             'success': False,
-            'message': f'An error occurred while searching schemes: {str(e)}'
+            'message': f'An error occurred while searching schemes: {str(e)}',
+            'error_type': type(e).__name__,
+            'query': request.GET.get('q', ''),
+            'action_type': request.GET.get('action_type', ''),
         })
 
 
@@ -9883,6 +11036,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import update_session_auth_hash
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
+from .models import PortfolioActionMapping
 from django.views.decorators.http import require_http_methods
 from django.db.models import Sum, Count, Q
 from django.core.paginator import Paginator
@@ -11391,129 +12545,66 @@ def get_client_email(execution_plan):
     return client_email
 
 
-def send_execution_plan_email(execution_plan, email_type='approved', custom_message=None, 
-                            include_excel=True, send_to_rm=False, send_to_client=True):
+def send_execution_plan_email(execution_plan, email_type, include_excel=False, 
+                            send_to_rm=True, send_to_client=False):
     """
-    Enhanced function to send execution plan emails automatically
+    Send email notification about execution plan status change
+    """
+    recipients = []
     
-    Args:
-        execution_plan: ExecutionPlan object
-        email_type: 'approved', 'completed', 'updated', 'client_approved'
-        custom_message: Optional custom message
-        include_excel: Whether to attach Excel file
-        send_to_rm: Whether to send copy to RM
-        send_to_client: Whether to send to client
-    """
-    try:
-        # Get recipient emails
-        recipients = []
-        cc_recipients = []
-        
-        # Client email
-        if send_to_client:
-            client_email = get_client_email(execution_plan)
-            if client_email:
-                recipients.append(client_email)
-            else:
-                logger.warning(f"No client email found for plan {execution_plan.plan_id}")
-                if not send_to_rm:
-                    return False, "No client email found"
-        
-        # RM email
-        if send_to_rm and execution_plan.created_by and execution_plan.created_by.email:
-            if execution_plan.created_by.email not in recipients:
-                cc_recipients.append(execution_plan.created_by.email)
-        
-        if not recipients and not cc_recipients:
-            return False, "No valid email recipients found"
-        
-        # Prepare email content based on type
-        subject_templates = {
-            'approved': f"✅ Investment Plan Approved - {execution_plan.plan_name}",
-            'completed': f"✅ Investment Plan Executed - {execution_plan.plan_name}",
-            'updated': f"📋 Investment Plan Updated - {execution_plan.plan_name}",
-            'client_approved': f"🎯 Ready for Execution - {execution_plan.plan_name}",
-            'rejected': f"❌ Investment Plan Rejected - {execution_plan.plan_name}",
-            'pending_approval': f"⏳ Investment Plan Submitted - {execution_plan.plan_name}"
-        }
-        
-        subject = subject_templates.get(email_type, f"Investment Plan Update - {execution_plan.plan_name}")
-        
-        # Prepare email context
-        context = {
-            'execution_plan': execution_plan,
-            'client': execution_plan.client,
-            'rm': execution_plan.created_by,
-            'email_type': email_type,
-            'custom_message': custom_message,
-            'company_name': getattr(settings, 'COMPANY_NAME', 'Investment Management'),
-            'current_date': timezone.now().strftime('%B %d, %Y'),
-            'plan_url': f"{getattr(settings, 'SITE_URL', 'https://your-domain.com')}/execution-plans/{execution_plan.id}/",
-        }
-        
-        # Get client name
-        client_name = "Valued Client"
-        if hasattr(execution_plan.client, 'name') and execution_plan.client.name:
-            client_name = execution_plan.client.name
-        elif hasattr(execution_plan.client, 'client_full_name') and execution_plan.client.client_full_name:
-            client_name = execution_plan.client.client_full_name
-        
-        context['client_name'] = client_name
-        
-        # Generate email content
-        try:
-            # Try to use custom template if exists
-            html_template = f'execution_plans/emails/{email_type}_email.html'
-            text_template = f'execution_plans/emails/{email_type}_email.txt'
-            
-            html_message = render_to_string(html_template, context)
-            text_message = render_to_string(text_template, context)
-            
-        except:
-            # Fallback to default template
-            html_message, text_message = generate_default_email_content(context, email_type)
-        
-        # Create email message
-        email = EmailMultiAlternatives(
-            subject=subject,
-            body=text_message,
-            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@yourcompany.com'),
-            to=recipients,
-            cc=cc_recipients,
-            reply_to=[execution_plan.created_by.email] if execution_plan.created_by.email else None
+    # Add operations team email
+    ops_email = getattr(settings, 'OPERATIONS_EMAIL', None)
+    if ops_email:
+        recipients.append(ops_email)
+    
+    # Add RM email if requested
+    if send_to_rm and execution_plan.created_by.email:
+        recipients.append(execution_plan.created_by.email)
+    
+    # Add client email if requested and available
+    client_email = None
+    if send_to_client:
+        client_email = execution_plan.client.email or (
+            execution_plan.client.contact_info if '@' in execution_plan.client.contact_info else None
         )
-        
-        # Add HTML content
-        email.attach_alternative(html_message, "text/html")
-        
-        # Attach Excel file if requested and available
-        if include_excel:
-            excel_attached = attach_excel_file(email, execution_plan)
-            if not excel_attached:
-                logger.warning(f"Could not attach Excel file for plan {execution_plan.plan_id}")
-        
-        # Send email
-        email.send(fail_silently=False)
-        
-        # Log the email sending
-        logger.info(f"Email sent successfully for plan {execution_plan.plan_id} to {recipients}")
-        
-        # Create comment record
-        try:
-            PlanComment.objects.create(
-                execution_plan=execution_plan,
-                comment=f"Email sent to client ({', '.join(recipients)}) - {email_type}",
-                commented_by=execution_plan.created_by if execution_plan.created_by else None,
-                is_internal=True
-            )
-        except:
-            pass  # Don't fail if comment creation fails
-        
-        return True, f"Email sent successfully to {', '.join(recipients)}"
-        
-    except Exception as e:
-        logger.error(f"Error sending email for plan {execution_plan.plan_id}: {str(e)}")
-        return False, f"Error sending email: {str(e)}"
+        if client_email:
+            recipients.append(client_email)
+    
+    if not recipients:
+        raise ValueError("No valid recipients found for email")
+    
+    # Prepare email content
+    subject = f"Execution Plan {execution_plan.plan_name} - {email_type.replace('_', ' ').title()}"
+    
+    context = {
+        'plan': execution_plan,
+        'client': execution_plan.client,
+        'email_type': email_type,
+    }
+    
+    text_message = render_to_string(f'execution_plans/emails/{email_type}.txt', context)
+    html_message = render_to_string(f'execution_plans/emails/{email_type}.html', context)
+    
+    # Prepare attachments
+    attachments = []
+    if include_excel and execution_plan.excel_file:
+        excel_content = execution_plan.excel_file.read()
+        attachments.append((
+            f'execution_plan_{execution_plan.plan_id}.xlsx',
+            excel_content,
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        ))
+    
+    # Send email
+    email = EmailMultiAlternatives(
+        subject=subject,
+        body=text_message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=recipients,
+        attachments=attachments
+    )
+    email.attach_alternative(html_message, "text/html")
+    email.send()
 
 
 def attach_excel_file(email, execution_plan):

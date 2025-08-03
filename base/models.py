@@ -3673,7 +3673,7 @@ class ExecutionPlan(models.Model):
         return f"{self.plan_id} - {self.plan_name} ({self.client.name})"
 
 class PlanAction(models.Model):
-    """Individual actions within an execution plan"""
+    """Individual actions within an execution plan - Portfolio Independent Version"""
     ACTION_TYPES = [
         ('purchase', 'Purchase'),
         ('redemption', 'Redemption'),
@@ -3701,10 +3701,40 @@ class PlanAction(models.Model):
         related_name='actions'
     )
     action_type = models.CharField(max_length=20, choices=ACTION_TYPES)
+    
+    # MODIFIED: Make scheme optional for portfolio-based actions
     scheme = models.ForeignKey(
         MutualFundScheme,
         on_delete=models.CASCADE,
-        related_name='plan_actions'
+        related_name='plan_actions',
+        null=True,
+        blank=True,
+        help_text="Mutual Fund Scheme (for new investments only)"
+    )
+    
+    # NEW: Portfolio scheme information for portfolio-based actions
+    portfolio_scheme_name = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text="Scheme name from client portfolio (for portfolio-based actions)"
+    )
+    portfolio_holding_id = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Reference to ClientPortfolio holding ID"
+    )
+    portfolio_isin = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text="ISIN from portfolio holding"
+    )
+    portfolio_folio_number = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Folio number from portfolio holding"
     )
     
     # Action Details
@@ -3728,14 +3758,39 @@ class PlanAction(models.Model):
         help_text="SIP date (1-28)"
     )
     
-    # For Switch/STP operations
+    # NEW: Additional action-specific fields
+    frequency = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        choices=[
+            ('daily', 'Daily'),
+            ('weekly', 'Weekly'),
+            ('fortnightly', 'Fortnightly'),
+            ('monthly', 'Monthly'),
+        ],
+        help_text="Frequency for SIP/STP/SWP"
+    )
+    
+    # For Switch/STP operations - target is always a new investment
     target_scheme = models.ForeignKey(
         MutualFundScheme,
         on_delete=models.CASCADE,
         null=True,
         blank=True,
         related_name='target_actions',
-        help_text="Target scheme for switch/STP"
+        help_text="Target scheme for switch/STP (always from MutualFundScheme)"
+    )
+    
+    # NEW: Action execution mode
+    action_mode = models.CharField(
+        max_length=20,
+        choices=[
+            ('portfolio', 'Portfolio Action'),
+            ('new_investment', 'New Investment'),
+        ],
+        default='new_investment',
+        help_text="Whether this action is on existing portfolio or new investment"
     )
     
     # Execution Details
@@ -3782,9 +3837,15 @@ class PlanAction(models.Model):
         ordering = ['priority', 'created_at']
         verbose_name = 'Plan Action'
         verbose_name_plural = 'Plan Actions'
+        indexes = [
+            models.Index(fields=['execution_plan', 'status']),
+            models.Index(fields=['action_mode', 'action_type']),
+            models.Index(fields=['portfolio_holding_id']),
+        ]
     
     def __str__(self):
-        return f"{self.get_action_type_display()} - {self.scheme.scheme_name}"
+        scheme_name = self.get_scheme_display_name()
+        return f"{self.get_action_type_display()} - {scheme_name}"
 
 class PlanWorkflowHistory(models.Model):
     """Track workflow history for audit trail"""
@@ -3812,6 +3873,79 @@ class PlanWorkflowHistory(models.Model):
     def __str__(self):
         return f"{self.execution_plan.plan_id}: {self.from_status} → {self.to_status}"
 
+class PortfolioActionMapping(models.Model):
+    """Track mapping between plan actions and portfolio holdings"""
+    plan_action = models.OneToOneField(
+        PlanAction,
+        on_delete=models.CASCADE,
+        related_name='portfolio_mapping'
+    )
+    
+    # Portfolio holding reference
+    portfolio_holding_id = models.PositiveIntegerField(
+        help_text="Reference to ClientPortfolio ID"
+    )
+    original_scheme_name = models.CharField(
+        max_length=500,
+        help_text="Original scheme name from portfolio"
+    )
+    original_isin = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Original ISIN from portfolio"
+    )
+    original_folio_number = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Original folio number from portfolio"
+    )
+    original_units = models.DecimalField(
+        max_digits=15,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        help_text="Original units in portfolio at time of action creation"
+    )
+    original_value = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Original value in portfolio at time of action creation"
+    )
+    
+    # Snapshot data
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Portfolio Action Mapping'
+        verbose_name_plural = 'Portfolio Action Mappings'
+        indexes = [
+            models.Index(fields=['portfolio_holding_id']),
+            models.Index(fields=['original_scheme_name']),
+        ]
+    
+    def __str__(self):
+        return f"Portfolio Mapping: {self.plan_action.get_action_type_display()} - {self.original_scheme_name}"
+    
+    @classmethod
+    def create_mapping(cls, plan_action, portfolio_holding):
+        """Create mapping from portfolio holding data"""
+        if not plan_action.is_portfolio_action():
+            return None
+        
+        mapping = cls.objects.create(
+            plan_action=plan_action,
+            portfolio_holding_id=portfolio_holding.id,
+            original_scheme_name=portfolio_holding.scheme_name,
+            original_isin=portfolio_holding.isin_number or '',
+            original_folio_number=portfolio_holding.folio_number or '',
+            original_units=portfolio_holding.units,
+            original_value=portfolio_holding.total_value,
+        )
+        
+        return mapping
+    
 class PlanComment(models.Model):
     """Comments and discussions on execution plans"""
     execution_plan = models.ForeignKey(

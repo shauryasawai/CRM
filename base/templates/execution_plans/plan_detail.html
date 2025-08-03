@@ -1,3 +1,4 @@
+
 {% extends 'execution_plans/base.html' %}
 
 {% block title %}{{ execution_plan.plan_name }}{% endblock %}
@@ -1476,7 +1477,7 @@ function updateLoadingMessage(message) {
     $('#loadingMessage').text(message);
 }
 
-// Auto-send e when plan status changes to specific states
+// Auto-send email when plan status changes to specific states
 $(document).ready(function() {
     // Monitor for status changes that should trigger emails
     const currentStatus = '{{ execution_plan.status }}';
