@@ -1,2041 +1,1047 @@
-
-{% extends 'execution_plans/base.html' %}
-
-{% block title %}{{ execution_plan.plan_name }}{% endblock %}
-
-{% block breadcrumb %}
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
-        <li class="breadcrumb-item"><a href="{% url 'ongoing_plans' %}">Execution Plans</a></li>
-        <li class="breadcrumb-item active">{{ execution_plan.plan_id }}</li>
-    </ol>
-</nav>
-{% endblock %}
-
-{% block extra_css %}
-<style>
-    .workflow-step {
-        text-align: center;
-        flex: 1;
-        padding: 10px;
-        position: relative;
-    }
-    
-    .workflow-step:not(:last-child)::after {
-        content: '';
-        position: absolute;
-        top: 50%;
-        right: -15px;
-        width: 30px;
-        height: 2px;
-        background-color: #dee2e6;
-        z-index: 1;
-    }
-    
-    .workflow-step.text-success:not(:last-child)::after {
-        background-color: #28a745;
-    }
-    
-    .action-row.completed {
-        background-color: rgba(40, 167, 69, 0.1);
-    }
-    
-    .action-row.failed {
-        background-color: rgba(220, 53, 69, 0.1);
-    }
-    
-    .action-row.pending {
-        background-color: rgba(255, 193, 7, 0.1);
-    }
-    
-    .progress-bar-animated {
-        animation: progress-bar-stripes 1s linear infinite;
-    }
-    
-    @keyframes progress-bar-stripes {
-        0% { background-position: 1rem 0; }
-        100% { background-position: 0 0; }
-    }
-    
-    .analytics-chart {
-        height: 300px;
-    }
-    
-    .metric-card {
-        transition: transform 0.2s ease-in-out;
-    }
-    
-    .metric-card:hover {
-        transform: translateY(-2px);
-    }
-
-    .email-status-indicator {
-        position: fixed;
-        top: 80px;
-        right: 20px;
-        z-index: 1050;
-        max-width: 300px;
-    }
-
-    .notification-toast {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 9999;
-        max-width: 400px;
-    }
-
-    @media print {
-        .btn, .modal, .card-header .dropdown, .workflow-step i {
-            display: none !important;
-        }
-        
-        .card {
-            border: 1px solid #000 !important;
-            box-shadow: none !important;
-            page-break-inside: avoid;
-        }
-        
-        .workflow-step {
-            font-size: 12px;
-        }
-        
-        .table {
-            font-size: 12px;
-        }
-        
-        @page {
-            margin: 1in;
-        }
-    }
-</style>
-{% endblock %}
-
-{% block content %}
-<!-- Plan Header with Enhanced Download Options -->
-<div class="d-flex justify-content-between align-items-start mb-4">
-    <div>
-        <h1 class="h3">
-            <i class="fas fa-file-alt text-primary me-2"></i>
-            {{ execution_plan.plan_name }}
-        </h1>
-        <p class="text-muted mb-2">
-            Plan ID: <strong>{{ execution_plan.plan_id }}</strong> | 
-            Client: <strong>{{ execution_plan.client.name }}</strong>
-            <!-- Email Status Badge -->
-            {% if execution_plan.client.email or execution_plan.client.contact_info %}
-                <span class="badge bg-success ms-2" id="emailStatusBadge">
-                    <i class="fas fa-envelope me-1"></i>Email Available
-                </span>
-            {% else %}
-                <span class="badge bg-warning ms-2" id="emailStatusBadge">
-                    <i class="fas fa-exclamation-triangle me-1"></i>No Email
-                </span>
-            {% endif %}
-        </p>
-        <div class="d-flex align-items-center gap-3">
-            {% if execution_plan.status == 'draft' %}
-                <span class="badge bg-secondary fs-6">Draft</span>
-            {% elif execution_plan.status == 'pending_approval' %}
-                <span class="badge bg-warning fs-6">Pending Approval</span>
-            {% elif execution_plan.status == 'approved' %}
-                <span class="badge bg-success fs-6">Approved</span>
-            {% elif execution_plan.status == 'client_approved' %}
-                <span class="badge bg-info fs-6">Client Approved</span>
-            {% elif execution_plan.status == 'in_execution' %}
-                <span class="badge bg-primary fs-6">In Execution</span>
-            {% elif execution_plan.status == 'completed' %}
-                <span class="badge bg-success fs-6">Completed</span>
-            {% elif execution_plan.status == 'rejected' %}
-                <span class="badge bg-danger fs-6">Rejected</span>
-            {% endif %}
+function confirmSendToClient() {
+            const email = document.getElementById('clientEmail').value.trim();
+            const attachExcel = document.getElementById('attachExcel').checked;
+            const message = document.getElementById('clientMessage').value.trim();
             
-            <small class="text-muted">
-                Created: {{ execution_plan.created_at|date:"M d, Y" }} by {{ execution_plan.created_by.get_full_name|default:execution_plan.created_by.username }}
-            </small>
-        </div>
-    </div>
-    
-    <!-- Enhanced Action Buttons with Download Options -->
-    <div class="btn-group">
-        <!-- Download Options Dropdown -->
-        <div class="btn-group" role="group">
-            <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="fas fa-download me-2"></i>Download
-            </button>
-            <ul class="dropdown-menu">
-                <li>
-                    <a class="dropdown-item" href="#" onclick="downloadExcel()">
-                        <i class="fas fa-file-excel text-success me-2"></i>Excel File
-                    </a>
-                </li>
-                <li><hr class="dropdown-divider"></li>
-                <li>
-                    <a class="dropdown-item" href="#" onclick="generateFreshExcel()">
-                        <i class="fas fa-sync-alt text-primary me-2"></i>Generate Fresh Excel
-                    </a>
-                </li>
-            </ul>
-        </div>
-        
-        <!-- Print Button -->
-        <button type="button" class="btn btn-outline-secondary" onclick="printPlan()">
-            <i class="fas fa-print me-2"></i>Print
-        </button>
-        
-        {% if can_edit %}
-        <a href="{% url 'create_plan_step2' execution_plan.client.id %}" class="btn btn-outline-secondary">
-            <i class="fas fa-edit me-2"></i>Edit Plan
-        </a>
-        {% endif %}
-        
-        <!-- Email Plan Button -->
-        {% if execution_plan.status in 'approved,client_approved,completed' %}
-        <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#emailPlanModal">
-            <i class="fas fa-envelope me-2"></i>Email Plan
-        </button>
-        {% endif %}
-    </div>
-</div>
-
-{% if execution_plan.description %}
-<div class="alert alert-light mb-4">
-    <h6><i class="fas fa-info-circle me-2"></i>Description</h6>
-    <p class="mb-0">{{ execution_plan.description }}</p>
-</div>
-{% endif %}
-
-<!-- Download Status Card (appears when files are ready) -->
-<div id="downloadStatusCard" class="alert alert-success alert-dismissible fade" role="alert" style="display: none;">
-    <div class="d-flex align-items-center">
-        <i class="fas fa-check-circle me-2 text-success"></i>
-        <div class="flex-grow-1">
-            <strong>Download Ready!</strong>
-            <p class="mb-0" id="downloadMessage">Your file has been generated successfully.</p>
-        </div>
-        <div class="ms-3">
-            <a href="#" id="downloadLink" class="btn btn-sm btn-success" download>
-                <i class="fas fa-download me-1"></i>Download
-            </a>
-        </div>
-    </div>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-
-<!-- Workflow Progress -->
-<div class="card shadow-sm mb-4">
-    <div class="card-header">
-        <h6 class="card-title mb-0">
-            <i class="fas fa-route me-2"></i>Workflow Progress
-        </h6>
-    </div>
-    <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
-            <div class="workflow-step {% if execution_plan.status == 'draft' %}text-primary{% else %}text-success{% endif %}">
-                <i class="fas fa-edit fa-2x mb-2"></i>
-                <div>Draft</div>
-                {% if execution_plan.created_at %}
-                    <small>{{ execution_plan.created_at|date:"M d" }}</small>
-                {% endif %}
-            </div>
+            // Validate email
+            if (!email) {
+                showAlert('warning', 'Please enter client email address');
+                return;
+            }
             
-            <div class="workflow-step {% if execution_plan.status == 'pending_approval' %}text-primary{% elif execution_plan.submitted_at %}text-success{% else %}text-muted{% endif %}">
-                <i class="fas fa-paper-plane fa-2x mb-2"></i>
-                <div>Submitted</div>
-                {% if execution_plan.submitted_at %}
-                    <small>{{ execution_plan.submitted_at|date:"M d" }}</small>
-                {% endif %}
-            </div>
+            // Basic email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                showAlert('warning', 'Please enter a valid email address');
+                return;
+            }
             
-            <div class="workflow-step {% if execution_plan.status == 'approved' %}text-primary{% elif execution_plan.approved_at %}text-success{% else %}text-muted{% endif %}">
-                <i class="fas fa-check-circle fa-2x mb-2"></i>
-                <div>Approved</div>
-                {% if execution_plan.approved_at %}
-                    <small>{{ execution_plan.approved_at|date:"M d" }}</small>
-                {% endif %}
-            </div>
+            // Debug log
+            console.log('Sending data:', {
+                client_email: email,
+                attach_excel: attachExcel,
+                message: message
+            });
             
-            <div class="workflow-step {% if execution_plan.status == 'client_approved' %}text-primary{% elif execution_plan.client_approved_at %}text-success{% else %}text-muted{% endif %}">
-                <i class="fas fa-user-check fa-2x mb-2"></i>
-                <div>Client OK</div>
-                {% if execution_plan.client_approved_at %}
-                    <small>{{ execution_plan.client_approved_at|date:"M d" }}</small>
-                {% endif %}
-            </div>
-            
-            <div class="workflow-step {% if execution_plan.status == 'in_execution' %}text-primary{% elif execution_plan.execution_started_at %}text-success{% else %}text-muted{% endif %}">
-                <i class="fas fa-cogs fa-2x mb-2"></i>
-                <div>Execution</div>
-                {% if execution_plan.execution_started_at %}
-                    <small>{{ execution_plan.execution_started_at|date:"M d" }}</small>
-                {% endif %}
-            </div>
-            
-            <div class="workflow-step {% if execution_plan.status == 'completed' %}text-success{% else %}text-muted{% endif %}">
-                <i class="fas fa-flag-checkered fa-2x mb-2"></i>
-                <div>Complete</div>
-                {% if execution_plan.completed_at %}
-                    <small>{{ execution_plan.completed_at|date:"M d" }}</small>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Action Buttons with Email Integration -->
-{% if execution_plan.status != 'completed' and execution_plan.status != 'rejected' %}
-<div class="card shadow-sm mb-4">
-    <div class="card-body">
-        <div class="d-flex flex-wrap gap-2">
-            {% if execution_plan.status == 'draft' and execution_plan.created_by == user %}
-                <button type="button" class="btn btn-primary" onclick="submitForApproval()">
-                    <i class="fas fa-paper-plane me-2"></i>Submit for Approval
-                </button>
-            {% endif %}
-            
-            {% if execution_plan.status == 'pending_approval' and can_approve %}
-                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#approvalModal">
-                    <i class="fas fa-check me-2"></i>Approve Plan
-                </button>
-                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectionModal">
-                    <i class="fas fa-times me-2"></i>Reject Plan
-                </button>
-            {% endif %}
-            
-            {% if execution_plan.status == 'approved' and execution_plan.created_by == user %}
-                <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#sendClientModal">
-                    <i class="fas fa-envelope me-2"></i>Send to Client
-                </button>
-                <button type="button" class="btn btn-success" onclick="markClientApproved()">
-                    <i class="fas fa-user-check me-2"></i>Mark Client Approved
-                </button>
-            {% endif %}
-            
-            {% if execution_plan.status == 'client_approved' and can_execute %}
-                <button type="button" class="btn btn-primary" onclick="startExecution()">
-                    <i class="fas fa-play me-2"></i>Start Execution
-                </button>
-            {% endif %}
-
-            {% if execution_plan.status == 'in_execution' and can_execute %}
-                <button type="button" class="btn btn-success" onclick="markExecutionComplete()">
-                    <i class="fas fa-flag-checkered me-2"></i>Mark Complete
-                </button>
-            {% endif %}
-        </div>
-    </div>
-</div>
-{% endif %}
-
-<div class="row">
-    <!-- Plan Actions -->
-    <div class="col-lg-8">
-        <div class="card shadow-sm mb-4">
-            <div class="card-header">
-                <h6 class="card-title mb-0">
-                    <i class="fas fa-list me-2"></i>Plan Actions ({{ actions.count }})
-                </h6>
-            </div>
-            <div class="card-body">
-                {% if actions %}
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Action</th>
-                                <th>Scheme</th>
-                                <th>Amount/Units</th>
-                                <th>Status</th>
-                                {% if execution_plan.status == 'in_execution' and can_execute %}
-                                <th>Actions</th>
-                                {% endif %}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for action in actions %}
-                            <tr class="action-row {% if action.status == 'completed' %}completed{% elif action.status == 'failed' %}failed{% elif action.status == 'pending' %}pending{% endif %}" data-action-id="{{ action.id }}">
-                                <td>{{ action.priority }}</td>
-                                <td>
-                                    <span class="badge bg-primary">{{ action.get_action_type_display }}</span>
-                                    {% if action.sip_date %}
-                                        <br><small class="text-muted">SIP Date: {{ action.sip_date }}</small>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <div>{{ action.scheme.scheme_name }}</div>
-                                    <small class="text-muted">{{ action.scheme.amc_name }}</small>
-                                    {% if action.target_scheme %}
-                                        <br><small class="text-info">→ {{ action.target_scheme.scheme_name }}</small>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if action.amount %}
-                                        <div>₹{{ action.amount|floatformat:2 }}</div>
-                                    {% endif %}
-                                    {% if action.units %}
-                                        <div>{{ action.units|floatformat:4 }} units</div>
-                                    {% endif %}
-                                    {% if action.executed_amount and action.executed_amount != action.amount %}
-                                        <small class="text-success">Executed: ₹{{ action.executed_amount|floatformat:2 }}</small>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if action.status == 'pending' %}
-                                        <span class="badge bg-warning">Pending</span>
-                                    {% elif action.status == 'in_progress' %}
-                                        <span class="badge bg-info">In Progress</span>
-                                    {% elif action.status == 'completed' %}
-                                        <span class="badge bg-success">Completed</span>
-                                        {% if action.executed_at %}
-                                            <br><small>{{ action.executed_at|date:"M d, H:i" }}</small>
-                                        {% endif %}
-                                    {% elif action.status == 'failed' %}
-                                        <span class="badge bg-danger">Failed</span>
-                                        {% if action.failure_reason %}
-                                            <br><small class="text-danger">{{ action.failure_reason|truncatechars:50 }}</small>
-                                        {% endif %}
-                                    {% endif %}
-                                </td>
-                                {% if execution_plan.status == 'in_execution' and can_execute %}
-                                <td>
-                                    {% if action.status == 'pending' %}
-                                        <button type="button" class="btn btn-sm btn-success execute-action-btn" 
-                                                data-action-id="{{ action.id }}">
-                                            <i class="fas fa-play"></i> Execute
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-danger mark-failed-btn" 
-                                                data-action-id="{{ action.id }}">
-                                            <i class="fas fa-times"></i> Failed
-                                        </button>
-                                    {% endif %}
-                                </td>
-                                {% endif %}
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+            // Send the email using enhanced endpoint
+            makeAjaxCall(`/execution-plans/${planId}/send-to-client-enhanced/`, 'POST', {
+                client_email: email,
+                attach_excel: attachExcel ? 'true' : 'false',
+                client_message: message,
+                mark_client_approved: 'false'
+            }).then(data => {
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('sendToClientModal')).hide();
+                }
+            });
+        }    <!-- Send to Client Modal -->
+    <div class="modal fade" id="sendToClientModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Send Plan to Client</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                {% else %}
-                <div class="text-center text-muted py-4">
-                    <i class="fas fa-clipboard-list fa-3x mb-3"></i>
-                    <h5>No Actions Found</h5>
-                    <p>This execution plan has no actions defined.</p>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    
-    <!-- Plan Summary & Comments -->
-    <div class="col-lg-4">
-        <!-- Plan Summary -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header">
-                <h6 class="card-title mb-0">
-                    <i class="fas fa-chart-pie me-2"></i>Plan Summary
-                </h6>
-            </div>
-            <div class="card-body">
-                {% if metrics %}
-                <div class="row text-center">
-                    <div class="col-6 mb-3">
-                        <h6 class="text-muted">Total Investment</h6>
-                        <div class="h5 text-success">₹{{ metrics.total_investment_amount|floatformat:0 }}</div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Client Email Address *</label>
+                        <input type="email" class="form-control" id="clientEmail" placeholder="Enter client's email address" required>
+                        <div class="form-text">Please enter the client's email address to send the execution plan</div>
                     </div>
-                    <div class="col-6 mb-3">
-                        <h6 class="text-muted">Total Redemption</h6>
-                        <div class="h5 text-danger">₹{{ metrics.total_redemption_amount|floatformat:0 }}</div>
-                    </div>
-                    <div class="col-6 mb-3">
-                        <h6 class="text-muted">Net Investment</h6>
-                        <div class="h5 text-primary">₹{{ metrics.net_investment|floatformat:0 }}</div>
-                    </div>
-                    <div class="col-6 mb-3">
-                        <h6 class="text-muted">Success Rate</h6>
-                        <div class="h5 text-info">{{ metrics.success_rate|floatformat:1 }}%</div>
-                    </div>
-                </div>
-                {% endif %}
-                
-                <div class="border-top pt-3">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Total Actions:</span>
-                        <strong>{{ actions.count }}</strong>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Completed:</span>
-                        <strong class="text-success">{{ actions|length }}</strong>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <span>Created By:</span>
-                        <strong>{{ execution_plan.created_by.get_full_name|default:execution_plan.created_by.username }}</strong>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Comments -->
-        <div class="card shadow-sm">
-            <div class="card-header">
-                <h6 class="card-title mb-0">
-                    <i class="fas fa-comments me-2"></i>Comments
-                </h6>
-            </div>
-            <div class="card-body">
-                <div id="commentsContainer" style="max-height: 300px; overflow-y: auto;">
-                    {% for comment in comments %}
-                    <div class="mb-3 pb-2 border-bottom">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <strong>{{ comment.commented_by.get_full_name|default:comment.commented_by.username }}</strong>
-                            <small class="text-muted">{{ comment.created_at|date:"M d, H:i" }}</small>
-                        </div>
-                        <p class="mb-1">{{ comment.comment }}</p>
-                        {% if comment.is_internal %}
-                            <span class="badge bg-warning">Internal</span>
-                        {% endif %}
-                    </div>
-                    {% empty %}
-                    <div class="text-center text-muted">
-                        <i class="fas fa-comment-slash fa-2x mb-2"></i>
-                        <p>No comments yet</p>
-                    </div>
-                    {% endfor %}
-                </div>
-                
-                <form id="commentForm" class="mt-3">
-                    {% csrf_token %}
-                    <div class="mb-2">
-                        <textarea class="form-control" id="commentText" rows="2" 
-                                  placeholder="Add a comment..." required></textarea>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="mb-3">
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="isInternal">
-                            <label class="form-check-label" for="isInternal">
-                                Internal comment
+                            <input class="form-check-input" type="checkbox" id="attachExcel" checked>
+                            <label class="form-check-label" for="attachExcel">
+                                <i class="fas fa-file-excel text-success me-2"></i>Attach Excel file with the plan
                             </label>
                         </div>
-                        <button type="submit" class="btn btn-sm btn-primary">
-                            <i class="fas fa-paper-plane me-1"></i>Add
-                        </button>
                     </div>
-                </form>
+                    <div class="mb-3">
+                        <label class="form-label">Additional Message (Optional)</label>
+                        <textarea class="form-control" id="clientMessage" rows="4" placeholder="Add any additional message for the client..."></textarea>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Note:</strong> The execution plan details will be included in the email body along with your message.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="confirmSendToClient()">
+                        <i class="fas fa-paper-plane me-2"></i>Send to Client
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
-</div>
-
-<!-- Enhanced Approval Modal with Email Options -->
-<div class="modal fade" id="approvalModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-check-circle text-success me-2"></i>
-                    Approve Execution Plan
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan Detail - {{ execution_plan.plan_name }}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .status-badge {
+            font-size: 0.875rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+        }
+        .status-draft { background: #e3f2fd; color: #1976d2; }
+        .status-pending { background: #fff3e0; color: #f57c00; }
+        .status-approved { background: #e8f5e8; color: #388e3c; }
+        .status-rejected { background: #ffebee; color: #d32f2f; }
+        .status-client-approved { background: #e1f5fe; color: #0277bd; }
+        .status-in-progress { background: #f3e5f5; color: #7b1fa2; }
+        .status-completed { background: #e8f5e8; color: #2e7d32; }
+        
+        .action-card {
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+            background: #fff;
+        }
+        
+        .action-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .action-header {
+            background: #f8f9fa;
+            border-radius: 12px 12px 0 0;
+            padding: 1rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .action-body {
+            padding: 1rem;
+        }
+        
+        .action-pending .action-header { 
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border-left: 4px solid #ffc107;
+        }
+        
+        .action-executed .action-header { 
+            background: linear-gradient(135deg, #d1edff 0%, #a7f3d0 100%);
+            border-left: 4px solid #28a745;
+        }
+        
+        .action-failed .action-header { 
+            background: linear-gradient(135deg, #f8d7da 0%, #ffb3b3 100%);
+            border-left: 4px solid #dc3545;
+        }
+        
+        .action-type-badge {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        
+        .action-amount {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        
+        .action-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: white;
+        }
+        
+        .action-icon.purchase { background: #28a745; }
+        .action-icon.redeem { background: #dc3545; }
+        .action-icon.switch { background: #17a2b8; }
+        .action-icon.stp { background: #6f42c1; }
+        .action-icon.sip { background: #fd7e14; }
+        
+        @media print {
+            .no-print { display: none !important; }
+            .action-card { break-inside: avoid; }
+            body { font-size: 12pt; }
+            .card { border: 1px solid #000 !important; }
+        }
+        
+        .workflow-item {
+            border-left: 3px solid #dee2e6;
+            padding-left: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .comment-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .btn-group-actions {
+            gap: 0.5rem;
+        }
+        
+        .metrics-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <!-- Header Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="mb-1">{{ execution_plan.plan_name }}</h2>
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-user me-2"></i>{{ execution_plan.client.name }}
+                            <span class="mx-2">|</span>
+                            <i class="fas fa-id-badge me-2"></i>{{ execution_plan.plan_id }}
+                        </p>
+                    </div>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="status-badge status-{{ execution_plan.status|lower }}">
+                            {{ execution_plan.get_status_display }}
+                        </span>
+                        <button class="btn btn-outline-info" onclick="printPage()">
+                            <i class="fas fa-print me-2"></i>Print Page
+                        </button>
+                        <a href="{% url 'ongoing_plans' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Plans
+                        </a>
+                    </div>
+                </div>
             </div>
-            <div class="modal-body">
-                <!-- Plan Summary -->
-                <div class="alert alert-info mb-4">
-                    <h6><i class="fas fa-info-circle me-2"></i>Plan Summary</h6>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <strong>Plan Name:</strong> {{ execution_plan.plan_name }}<br>
-                            <strong>Client:</strong> {{ execution_plan.client.name }}<br>
-                            <strong>Total Actions:</strong> {{ actions.count }}
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="row mb-4 no-print">
+            <div class="col-12">
+                <div class="d-flex flex-wrap btn-group-actions">
+                    {% if execution_plan.status == 'draft' and execution_plan.created_by == request.user %}
+                        <button class="btn btn-primary" onclick="submitForApproval()">
+                            <i class="fas fa-paper-plane me-2"></i>Submit for Approval
+                        </button>
+                        <button class="btn btn-info" onclick="submitWithEmail()">
+                            <i class="fas fa-envelope me-2"></i>Submit with Email
+                        </button>
+                    {% endif %}
+
+                    {% if execution_plan.status == 'pending_approval' and can_approve %}
+                        <button class="btn btn-success" onclick="approvePlan()">
+                            <i class="fas fa-check me-2"></i>Approve
+                        </button>
+                        <button class="btn btn-success" onclick="approveWithEmail()">
+                            <i class="fas fa-check-circle me-2"></i>Approve with Email
+                        </button>
+                        <button class="btn btn-danger" onclick="rejectPlan()">
+                            <i class="fas fa-times me-2"></i>Reject
+                        </button>
+                    {% endif %}
+
+                    {% if execution_plan.status == 'approved' %}
+                        <button class="btn btn-info" onclick="sendToClient()">
+                            <i class="fas fa-envelope me-2"></i>Send to Client
+                        </button>
+                        <button class="btn btn-success" onclick="sendToClientAndMarkApproved()">
+                            <i class="fas fa-paper-plane me-2"></i>Send + Mark Client Approved
+                        </button>
+                        {% if execution_plan.created_by == request.user %}
+                            <button class="btn btn-primary" onclick="markClientApproved()">
+                                <i class="fas fa-user-check me-2"></i>Mark Client Approved
+                            </button>
+                            <button class="btn btn-primary" onclick="markClientApprovedWithEmail()">
+                                <i class="fas fa-envelope-check me-2"></i>Client Approved + Email
+                            </button>
+                        {% endif %}
+                    {% endif %}
+
+                    {% if execution_plan.status == 'client_approved' and can_execute %}
+                        <button class="btn btn-warning" onclick="startExecution()">
+                            <i class="fas fa-play me-2"></i>Start Execution
+                        </button>
+                    {% endif %}
+
+                    {% if execution_plan.status == 'in_progress' and can_execute %}
+                        <button class="btn btn-success" onclick="completeWithEmail()">
+                            <i class="fas fa-flag-checkered me-2"></i>Complete with Email
+                        </button>
+                    {% endif %}
+
+                    <!-- Common Actions -->
+                    <button class="btn btn-outline-primary" onclick="downloadExcel()">
+                        <i class="fas fa-download me-2"></i>Download Excel
+                    </button>
+                    <button class="btn btn-outline-info" onclick="generateExcel()">
+                        <i class="fas fa-file-excel me-2"></i>Generate Excel
+                    </button>
+                    {% if can_edit %}
+                        <a href="{% url 'create_plan_step2' execution_plan.client.id %}?edit={{ execution_plan.id }}" class="btn btn-outline-warning">
+                            <i class="fas fa-edit me-2"></i>Edit
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Left Column - Plan Details -->
+            <div class="col-lg-8">
+                <!-- Plan Information -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-info-circle me-2"></i>Plan Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Created by:</strong> {{ execution_plan.created_by.get_full_name|default:execution_plan.created_by.username }}</p>
+                                <p><strong>Created on:</strong> {{ execution_plan.created_at|date:"M d, Y H:i" }}</p>
+                                {% if execution_plan.submitted_at %}
+                                    <p><strong>Submitted:</strong> {{ execution_plan.submitted_at|date:"M d, Y H:i" }}</p>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {% if execution_plan.approved_at %}
+                                    <p><strong>Approved:</strong> {{ execution_plan.approved_at|date:"M d, Y H:i" }}</p>
+                                    <p><strong>Approved by:</strong> {{ execution_plan.approved_by.get_full_name|default:execution_plan.approved_by.username }}</p>
+                                {% endif %}
+                                {% if execution_plan.rejected_at %}
+                                    <p><strong>Rejected:</strong> {{ execution_plan.rejected_at|date:"M d, Y H:i" }}</p>
+                                {% endif %}
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <strong>Created By:</strong> {{ execution_plan.created_by.get_full_name|default:execution_plan.created_by.username }}<br>
-                            <strong>Submitted:</strong> {{ execution_plan.submitted_at|date:"M d, Y H:i"|default:"Not submitted" }}<br>
-                            <strong>Plan ID:</strong> {{ execution_plan.plan_id }}
-                        </div>
+                        {% if execution_plan.description %}
+                            <hr>
+                            <p><strong>Description:</strong></p>
+                            <p>{{ execution_plan.description|linebreaks }}</p>
+                        {% endif %}
                     </div>
                 </div>
 
-                <!-- Approval Confirmation -->
-                <div class="mb-4">
-                    <p class="fw-bold">Are you sure you want to approve this execution plan?</p>
-                    <p class="text-muted">
-                        Once approved, the plan will be ready to send to the client for final approval.
-                    </p>
+                <!-- Actions List -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0"><i class="fas fa-tasks me-2"></i>Execution Actions</h5>
+                        <span class="badge bg-primary">{{ actions.count }} Actions</span>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if actions %}
+                            <div class="p-3">
+                                {% for action in actions %}
+                                    <div class="action-card action-{{ action.status|lower }}">
+                                        <div class="action-header">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="action-icon {{ action.action_type|lower }}">
+                                                        {% if action.action_type == 'purchase' %}
+                                                            <i class="fas fa-plus"></i>
+                                                        {% elif action.action_type == 'redeem' %}
+                                                            <i class="fas fa-minus"></i>
+                                                        {% elif action.action_type == 'switch' %}
+                                                            <i class="fas fa-exchange-alt"></i>
+                                                        {% elif action.action_type == 'stp' %}
+                                                            <i class="fas fa-arrow-right"></i>
+                                                        {% elif action.action_type == 'sip' %}
+                                                            <i class="fas fa-calendar-alt"></i>
+                                                        {% else %}
+                                                            <i class="fas fa-cog"></i>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="ms-3">
+                                                        <h6 class="mb-1 fw-bold">{{ action.action_type|title }}</h6>
+                                                        <span class="action-type-badge bg-primary text-white">
+                                                            Action #{{ forloop.counter }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div class="text-end">
+                                                    <span class="badge fs-6 
+                                                        {% if action.status == 'pending' %}bg-warning text-dark
+                                                        {% elif action.status == 'executed' %}bg-success
+                                                        {% elif action.status == 'failed' %}bg-danger
+                                                        {% else %}bg-secondary{% endif %}">
+                                                        {{ action.get_status_display }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="action-body">
+                                            <div class="row">
+                                                <div class="col-md-8">
+                                                    <div class="mb-3">
+                                                        {% if action.scheme %}
+                                                            <div class="d-flex align-items-center mb-2">
+                                                                <i class="fas fa-chart-line text-primary me-2"></i>
+                                                                <strong>From Scheme:</strong>
+                                                                <span class="ms-2">{{ action.scheme.name }}</span>
+                                                            </div>
+                                                        {% endif %}
+                                                        
+                                                        {% if action.target_scheme %}
+                                                            <div class="d-flex align-items-center mb-2">
+                                                                <i class="fas fa-bullseye text-success me-2"></i>
+                                                                <strong>To Scheme:</strong>
+                                                                <span class="ms-2">{{ action.target_scheme.name }}</span>
+                                                            </div>
+                                                        {% endif %}
+                                                        
+                                                        <div class="d-flex align-items-center mb-2">
+                                                            <i class="fas fa-rupee-sign text-warning me-2"></i>
+                                                            <strong>Amount:</strong>
+                                                            <span class="ms-2 action-amount">₹{{ action.amount|floatformat:0 }}</span>
+                                                        </div>
+                                                        
+                                                        {% if action.notes %}
+                                                            <div class="d-flex align-items-start mb-2">
+                                                                <i class="fas fa-sticky-note text-info me-2 mt-1"></i>
+                                                                <div>
+                                                                    <strong>Notes:</strong>
+                                                                    <p class="mb-0 ms-2 text-muted">{{ action.notes }}</p>
+                                                                </div>
+                                                            </div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="col-md-4">
+                                                    <div class="text-end">
+                                                        {% if action.executed_by %}
+                                                            <div class="mb-2">
+                                                                <small class="text-muted d-block">Executed by:</small>
+                                                                <strong>{{ action.executed_by.get_full_name|default:action.executed_by.username }}</strong>
+                                                            </div>
+                                                        {% endif %}
+                                                        
+                                                        {% if action.executed_at %}
+                                                            <div class="mb-2">
+                                                                <small class="text-muted d-block">Executed on:</small>
+                                                                <strong>{{ action.executed_at|date:"M d, Y H:i" }}</strong>
+                                                            </div>
+                                                        {% endif %}
+                                                        
+                                                        {% if execution_plan.status == 'in_progress' and can_execute and action.status == 'pending' %}
+                                                            <div class="btn-group-vertical no-print" role="group">
+                                                                <button class="btn btn-sm btn-success mb-1" onclick="executeAction({{ action.id }})" title="Mark as Executed">
+                                                                    <i class="fas fa-check me-1"></i>Execute
+                                                                </button>
+                                                                <button class="btn btn-sm btn-danger" onclick="markActionFailed({{ action.id }})" title="Mark as Failed">
+                                                                    <i class="fas fa-times me-1"></i>Failed
+                                                                </button>
+                                                            </div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            {% if action.failure_reason %}
+                                                <div class="alert alert-danger mt-3 mb-0">
+                                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                                    <strong>Failure Reason:</strong> {{ action.failure_reason }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5 text-muted">
+                                <i class="fas fa-tasks fa-4x mb-3 opacity-50"></i>
+                                <h5>No Actions Defined</h5>
+                                <p class="mb-0">No execution actions have been added to this plan yet.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Current Portfolio -->
+                {% if current_portfolio %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-briefcase me-2"></i>Current Portfolio</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Scheme</th>
+                                        <th>Units</th>
+                                        <th>Current Value</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for holding in current_portfolio %}
+                                        <tr>
+                                            <td>{{ holding.scheme_name }}</td>
+                                            <td>{{ holding.units|floatformat:3 }}</td>
+                                            <td>₹{{ holding.current_value|floatformat:0 }}</td>
+                                            <td>
+                                                <span class="badge bg-{% if holding.is_active %}success{% else %}secondary{% endif %}">
+                                                    {% if holding.is_active %}Active{% else %}Inactive{% endif %}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Right Column - Sidebar -->
+            <div class="col-lg-4">
+                <!-- Metrics (if completed) -->
+                {% if metrics %}
+                <div class="card metrics-card text-white mb-4">
+                    <div class="card-header border-0">
+                        <h5 class="card-title mb-0"><i class="fas fa-chart-line me-2"></i>Execution Metrics</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <h4>{{ metrics.success_rate|floatformat:1 }}%</h4>
+                                <small>Success Rate</small>
+                            </div>
+                            <div class="col-6">
+                                <h4>{{ metrics.total_actions }}</h4>
+                                <small>Total Actions</small>
+                            </div>
+                        </div>
+                        <hr class="border-light">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <h6>{{ metrics.completed_actions }}</h6>
+                                <small>Completed</small>
+                            </div>
+                            <div class="col-4">
+                                <h6>{{ metrics.failed_actions }}</h6>
+                                <small>Failed</small>
+                            </div>
+                            <div class="col-4">
+                                <h6>{{ metrics.pending_actions }}</h6>
+                                <small>Pending</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Workflow History -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-history me-2"></i>Workflow History</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if workflow_history %}
+                            {% for history in workflow_history %}
+                                <div class="workflow-item">
+                                    <div class="d-flex justify-content-between">
+                                        <strong>{{ history.get_to_status_display }}</strong>
+                                        <small class="text-muted">{{ history.changed_at|date:"M d, H:i" }}</small>
+                                    </div>
+                                    <p class="mb-1 small">By: {{ history.changed_by.get_full_name|default:history.changed_by.username }}</p>
+                                    {% if history.comments %}
+                                        <p class="mb-0 small text-muted">{{ history.comments }}</p>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">No workflow history available</p>
+                        {% endif %}
+                    </div>
                 </div>
 
                 <!-- Comments Section -->
-                <div class="mb-4">
-                    <label for="approvalComments" class="form-label">
-                        <i class="fas fa-comment me-2"></i>Approval Comments
-                    </label>
-                    <textarea class="form-control" id="approvalComments" rows="3" 
-                              placeholder="Add any comments or instructions for the client..."></textarea>
-                    <div class="form-text">These comments will be included in the client email if sent.</div>
-                </div>
-
-                <!-- Email Options -->
-                <div class="card border-primary">
-                    <div class="card-header bg-primary text-white">
-                        <h6 class="mb-0">
-                            <i class="fas fa-envelope me-2"></i>Email Notification Options
-                        </h6>
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-comments me-2"></i>Comments</h5>
                     </div>
                     <div class="card-body">
-                        <!-- Send Email Checkbox -->
-                        <div class="form-check form-switch mb-3">
-                            <input class="form-check-input" type="checkbox" id="sendEmailToClient" checked>
-                            <label class="form-check-label fw-bold" for="sendEmailToClient">
-                                Send approval notification to client
-                            </label>
-                        </div>
+                        <!-- Add Comment Form -->
+                        <form id="commentForm" class="mb-3">
+                            <div class="mb-2">
+                                <textarea class="form-control" id="commentText" placeholder="Add a comment..." rows="3"></textarea>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="isInternal">
+                                    <label class="form-check-label small" for="isInternal">
+                                        Internal comment
+                                    </label>
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-plus me-1"></i>Add
+                                </button>
+                            </div>
+                        </form>
 
-                        <!-- Client Email Detection -->
-                        <div id="clientEmailInfo" class="mb-3">
-                            {% if execution_plan.client.email or execution_plan.client.contact_info and '@' in execution_plan.client.contact_info %}
-                                <div class="alert alert-success py-2">
-                                    <i class="fas fa-check-circle me-2"></i>
-                                    <strong>Client Email:</strong> 
-                                    {% if execution_plan.client.email %}
-                                        {{ execution_plan.client.email }}
-                                    {% elif execution_plan.client.contact_info and '@' in execution_plan.client.contact_info %}
-                                        {{ execution_plan.client.contact_info }}
-                                    {% endif %}
-                                </div>
+                        <!-- Comments List -->
+                        <div id="commentsList">
+                            {% if comments %}
+                                {% for comment in comments %}
+                                    <div class="comment-card">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <strong>{{ comment.commented_by.get_full_name|default:comment.commented_by.username }}</strong>
+                                            <div>
+                                                {% if comment.is_internal %}
+                                                    <span class="badge bg-warning text-dark">Internal</span>
+                                                {% endif %}
+                                                <small class="text-muted">{{ comment.commented_at|date:"M d, H:i" }}</small>
+                                            </div>
+                                        </div>
+                                        <p class="mb-0">{{ comment.comment|linebreaks }}</p>
+                                    </div>
+                                {% endfor %}
                             {% else %}
-                                <div class="alert alert-warning py-2">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>
-                                    <strong>Warning:</strong> No email found for this client. You can still approve, but manual communication will be required.
-                                </div>
-                                <div class="mb-3">
-                                    <label for="manualClientEmail" class="form-label">Client Email (Optional)</label>
-                                    <input type="email" class="form-control" id="manualClientEmail" 
-                                           placeholder="Enter client's email address">
-                                    <div class="form-text">If provided, the approval email will be sent to this address.</div>
-                                </div>
+                                <p class="text-muted">No comments yet</p>
                             {% endif %}
                         </div>
-
-                        <!-- Additional Email Options -->
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="includeExcelAttachment" checked>
-                                    <label class="form-check-label" for="includeExcelAttachment">
-                                        Include Excel file
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="copyToRM" checked>
-                                    <label class="form-check-label" for="copyToRM">
-                                        Copy RM on email
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
-            </div>
-            
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" onclick="rejectPlan()">Reject Plan</button>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Enhanced Send to Client Modal -->
-<div class="modal fade" id="sendClientModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-paper-plane text-primary me-2"></i>
-                    Send Plan to Client
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <!-- Client Information -->
-                <div class="alert alert-info mb-4">
-                    <h6><i class="fas fa-user me-2"></i>Client Information</h6>
-                    <div class="row">
-                        <div class="col-md-8">
-                            <strong>Name:</strong> {{ execution_plan.client.name }}<br>
-                            <strong>Plan:</strong> {{ execution_plan.plan_name }}
-                        </div>
-                        <div class="col-md-4">
-                            <strong>Status:</strong> 
-                            <span class="badge bg-success">Approved</span>
-                        </div>
+    <!-- Modals -->
+    <!-- Approval Modal -->
+    <div class="modal fade" id="approvalModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Approve Execution Plan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Comments (Optional)</label>
+                        <textarea class="form-control" id="approvalComments" rows="3" placeholder="Add approval comments..."></textarea>
                     </div>
                 </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" onclick="confirmApproval()">Approve Plan</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                <!-- Email Configuration -->
-                <div class="row mb-4">
-                    <div class="col-md-8">
-                        <label for="clientEmailAddress" class="form-label">
-                            <i class="fas fa-envelope me-2"></i>Client Email Address *
-                        </label>
-                        <input type="email" class="form-control" id="clientEmailAddress" 
-                               value="{% if execution_plan.client.email %}{{ execution_plan.client.email }}{% elif '@' in execution_plan.client.contact_info|default:'' %}{{ execution_plan.client.contact_info }}{% endif %}" 
-                               required>
+    <!-- Rejection Modal -->
+    <div class="modal fade" id="rejectionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Reject Execution Plan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Rejection Reason *</label>
+                        <textarea class="form-control" id="rejectionReason" rows="3" placeholder="Please provide reason for rejection..." required></textarea>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Send Copy To</label>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmRejection()">Reject Plan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Email Options Modal -->
+    <div class="modal fade" id="emailOptionsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="emailModalTitle">Email Options</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="copyToRM" checked>
-                            <label class="form-check-label" for="copyToRM">
-                                Copy to RM
+                            <input class="form-check-input" type="checkbox" id="includeExcel" checked>
+                            <label class="form-check-label" for="includeExcel">
+                                Include Excel attachment
                             </label>
                         </div>
                     </div>
-                </div>
-
-                <!-- Email Subject -->
-                <div class="mb-3">
-                    <label for="emailSubject" class="form-label">Subject</label>
-                    <input type="text" class="form-control" id="emailSubject" 
-                           value="✅ Your Investment Plan is Ready for Review - {{ execution_plan.plan_name }}">
-                </div>
-
-                <!-- Message to Client -->
-                <div class="mb-4">
-                    <label for="clientEmailMessage" class="form-label">
-                        <i class="fas fa-comment me-2"></i>Message to Client
-                    </label>
-                    <textarea class="form-control" id="clientEmailMessage" rows="6">Dear {{ execution_plan.client.name }},
-
-I hope this email finds you well.
-
-I'm pleased to inform you that your investment execution plan "{{ execution_plan.plan_name }}" has been approved and is ready for your review.
-
-The plan includes {{ actions.count }} carefully selected action{{ actions.count|pluralize }} designed to optimize your investment portfolio based on our recent discussions and market analysis.
-
-Please review the attached execution plan details. Once you're satisfied with the plan, please confirm your approval so we can proceed with the execution.
-
-Key highlights of your plan:
-- Plan ID: {{ execution_plan.plan_id }}
-- Total Actions: {{ actions.count }}
-- Expected Timeline: As discussed
-
-If you have any questions or would like to discuss any aspect of the plan, please don't hesitate to reach out to me directly.
-
-Thank you for your continued trust in our services.
-
-Best regards,
-{{ execution_plan.created_by.get_full_name|default:execution_plan.created_by.username }}
-{{ execution_plan.created_by.email|default:"" }}</textarea>
-                    <div class="form-text">This message will be sent to the client along with the execution plan details.</div>
-                </div>
-
-                <!-- Attachment Options -->
-                <div class="card border-secondary">
-                    <div class="card-header">
-                        <h6 class="mb-0">
-                            <i class="fas fa-paperclip me-2"></i>Attachments
-                        </h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="includeExcelFile" checked>
-                                    <label class="form-check-label" for="includeExcelFile">
-                                        <i class="fas fa-file-excel text-success me-2"></i>
-                                        Include Excel File
-                                    </label>
-                                    <div class="form-text">Detailed execution plan with all actions</div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="generateFreshExcel">
-                                    <label class="form-check-label" for="generateFreshExcel">
-                                        Generate fresh Excel file
-                                    </label>
-                                    <div class="form-text">Create updated file with latest data</div>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="mb-3">
+                        <label class="form-label">Additional Comments</label>
+                        <textarea class="form-control" id="emailComments" rows="3" placeholder="Add any additional comments for the email..."></textarea>
                     </div>
                 </div>
-            </div>
-            
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-2"></i>Cancel
-                </button>
-                <button type="button" class="btn btn-primary" onclick="sendToClientWithEmail()">
-                    <i class="fas fa-paper-plane me-2"></i>Send to Client
-                </button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmEmailAction">Send Email</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Email Plan Modal (General Purpose) -->
-<div class="modal fade" id="emailPlanModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-envelope me-2"></i>Email Execution Plan
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="emailPlanForm">
-                    <div class="mb-3">
-                        <label for="emailTo" class="form-label">To Email Address *</label>
-                        <input type="email" class="form-control" id="emailTo" 
-                               value="{% if execution_plan.client.email %}{{ execution_plan.client.email }}{% elif '@' in execution_plan.client.contact_info|default:'' %}{{ execution_plan.client.contact_info }}{% endif %}" required>
-                        <div class="form-text">Client's email will be used if available</div>
+    <!-- Send to Client and Mark Approved Modal -->
+    <div class="modal fade" id="sendAndMarkApprovedModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Send to Client & Mark as Approved</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Combined Action:</strong> This will send the plan to client via email and immediately mark it as client approved.
                     </div>
                     
                     <div class="mb-3">
-                        <label for="emailCc" class="form-label">CC Email Address</label>
-                        <input type="email" class="form-control" id="emailCc" 
-                               placeholder="Additional email addresses (comma separated)">
+                        <label class="form-label">Client Email Address *</label>
+                        <input type="email" class="form-control" id="combinedClientEmail" placeholder="Enter client's email address" required>
+                        <div class="form-text">The execution plan will be sent to this email address</div>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="emailSubject" class="form-label">Subject</label>
-                        <input type="text" class="form-control" id="emailSubject" 
-                               value="Execution Plan - {{ execution_plan.plan_name }}">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="combinedAttachExcel" checked>
+                            <label class="form-check-label" for="combinedAttachExcel">
+                                <i class="fas fa-file-excel text-success me-2"></i>Attach Excel file with the plan
+                            </label>
+                        </div>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="emailMessage" class="form-label">Message</label>
-                        <textarea class="form-control" id="emailMessage" rows="4" 
-                                  placeholder="Enter your message to the client...">Dear {{ execution_plan.client.name }},
-
-Please find attached the execution plan for your investment portfolio.
-
-Plan Details:
-- Plan Name: {{ execution_plan.plan_name }}
-- Plan ID: {{ execution_plan.plan_id }}
-- Created Date: {{ execution_plan.created_at|date:"M d, Y" }}
-- Total Actions: {{ actions.count }}
-
-Please review the plan and let us know if you have any questions.
-
-Best regards,
-{{ execution_plan.created_by.get_full_name|default:execution_plan.created_by.username }}</textarea>
+                        <label class="form-label">Message to Client (Optional)</label>
+                        <textarea class="form-control" id="combinedClientMessage" rows="4" placeholder="Add any message for the client..."></textarea>
                     </div>
                     
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="attachExcel" checked>
-                                <label class="form-check-label" for="attachExcel">
-                                    Attach Excel File
-                                </label>
-                            </div>
+                    <hr>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="notifyOpsTeam" checked>
+                            <label class="form-check-label" for="notifyOpsTeam">
+                                <i class="fas fa-users text-primary me-2"></i>Notify operations team after marking as client approved
+                            </label>
                         </div>
                     </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="sendEmailPlan()">
-                    <i class="fas fa-paper-plane me-2"></i>Send Email
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Download Progress Modal -->
-<div class="modal fade" id="downloadProgressModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-download me-2"></i>Preparing Download
-                </h5>
-            </div>
-            <div class="modal-body text-center">
-                <div class="spinner-border text-primary mb-3" role="status">
-                    <span class="visually-hidden">Loading...</span>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Internal Notes (Optional)</label>
+                        <textarea class="form-control" id="combinedInternalNotes" rows="3" placeholder="Add any internal notes about client approval..."></textarea>
+                    </div>
                 </div>
-                <p id="downloadStatus">Generating file...</p>
-                <div class="progress">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                         role="progressbar" style="width: 0%" id="downloadProgress"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" onclick="confirmSendAndMarkApproved()">
+                        <i class="fas fa-paper-plane me-2"></i>Send Email & Mark Approved
+                    </button>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Execute Action Modal -->
-<div class="modal fade" id="executeActionModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Execute Action</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div id="executeActionContent">
-                    <!-- Content will be loaded dynamically -->
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" id="confirmExecuteBtn">Execute Action</button>
-            </div>
-        </div>
-    </div>
-</div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const planId = {{ execution_plan.id }};
+        const csrfToken = '{{ csrf_token }}';
 
-<!-- Mark Failed Modal -->
-<div class="modal fade" id="markFailedModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Mark Action as Failed</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Please provide a reason for marking this action as failed:</p>
-                <div class="mb-3">
-                    <label for="failureReason" class="form-label">Failure Reason *</label>
-                    <textarea class="form-control" id="failureReason" rows="3" 
-                              placeholder="Enter failure reason..." required></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmMarkFailedBtn">Mark as Failed</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Email Status Indicator -->
-<div id="emailStatusIndicator" class="email-status-indicator" style="display: none;">
-    <div class="card shadow-sm border-0">
-        <div class="card-body p-3">
-            <div class="d-flex align-items-center">
-                <div class="spinner-border spinner-border-sm text-primary me-3" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-                <div>
-                    <div class="fw-bold">Sending Email...</div>
-                    <small class="text-muted" id="emailStatusText">Preparing message</small>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-{% endblock %}
-
-{% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-let currentActionId = null;
-
-// Enhanced JavaScript functions with email integration
-
-// Submit for approval with email notifications
-function submitForApproval() {
-    if (confirm('Are you sure you want to submit this plan for approval? Approval managers will be notified automatically.')) {
-        const submitUrl = `/execution-plans/{{ execution_plan.id }}/submit-with-email/`;
-        
-        // Show loading indicator
-        const submitBtn = $('button[onclick="submitForApproval()"]');
-        const originalText = submitBtn.html();
-        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Submitting...');
-        
-        $.post(submitUrl, {
-            csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
-        }, function(response) {
-            submitBtn.prop('disabled', false).html(originalText);
+        // Utility function for AJAX calls
+        function makeAjaxCall(url, method = 'POST', data = {}) {
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', csrfToken);
             
-            if (response.success) {
-                showNotification('Plan submitted for approval successfully! Approval managers have been notified.', 'success');
-                setTimeout(() => {
-                    location.reload();
-                }, 2000);
-            } else {
-                showNotification('Error: ' + response.error, 'error');
+            for (const key in data) {
+                formData.append(key, data[key]);
             }
-        }).fail(function(xhr) {
-            submitBtn.prop('disabled', false).html(originalText);
-            showNotification('Error submitting for approval. Please try again.', 'error');
-        });
-    }
-}
 
-// Enhanced approval function with email option
-function approvePlanWithEmail() {
-    const comments = $('#approvalComments').val();
-    const sendEmail = $('#sendEmailToClient').is(':checked');
-    const includeExcel = $('#includeExcelAttachment').is(':checked');
-    const copyToRM = $('#copyToRM').is(':checked');
-    const manualEmail = $('#manualClientEmail').val();
-    
-    // Show loading indicator
-    showEmailStatus('Approving plan and preparing email...');
-    
-    const approveUrl = `/execution-plans/{{ execution_plan.id }}/approve-with-email/`;
-    
-    $.post(approveUrl, {
-        csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val(),
-        comments: comments,
-        send_email: sendEmail,
-        include_excel: includeExcel,
-        copy_to_rm: copyToRM,
-        manual_email: manualEmail
-    }, function(response) {
-        hideEmailStatus();
-        
-        if (response.success) {
-            $('#approvalModal').modal('hide');
-            
-            let message = 'Plan approved successfully!';
-            if (response.email_sent) {
-                message += ` ✅ Email sent to client.`;
-            } else if (sendEmail) {
-                message += ` ⚠️ ${response.email_message}`;
-            }
-            
-            showNotification(message, 'success');
-            
-            setTimeout(() => {
-                location.reload();
-            }, 2000);
-        } else {
-            showNotification('Error: ' + response.error, 'error');
-        }
-    }).fail(function(xhr) {
-        hideEmailStatus();
-        showNotification('Error approving plan. Please try again.', 'error');
-    });
-}
-
-// Enhanced client approval function with automatic email
-function markClientApproved() {
-    if (confirm('Are you sure the client has approved this execution plan? This will automatically notify the operations team.')) {
-        const clientApproveUrl = `/execution-plans/{{ execution_plan.id }}/mark-client-approved-with-email/`;
-        
-        $.post(clientApproveUrl, {
-            csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
-        }, function(response) {
-            if (response.success) {
-                showNotification(response.message, 'success');
-                setTimeout(() => {
-                    location.reload();
-                }, 2000);
-            } else {
-                showNotification('Error: ' + response.error, 'error');
-            }
-        }).fail(function(xhr) {
-            showNotification('Error marking client approved. Please try again.', 'error');
-        });
-    }
-}
-
-// Enhanced send to client function
-function sendToClientWithEmail() {
-    const emailTo = $('#clientEmailAddress').val();
-    const subject = $('#emailSubject').val();
-    const message = $('#clientEmailMessage').val();
-    const includeExcel = $('#includeExcelFile').is(':checked');
-    const generateFresh = $('#generateFreshExcel').is(':checked');
-    const copyToRM = $('#copyToRM').is(':checked');
-    
-    if (!emailTo) {
-        showNotification('Please enter a client email address', 'warning');
-        return;
-    }
-    
-    showEmailStatus('Sending plan to client...');
-    
-    const sendUrl = `/execution-plans/{{ execution_plan.id }}/send-to-client-enhanced/`;
-    
-    $.post(sendUrl, {
-        csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val(),
-        email_to: emailTo,
-        subject: subject,
-        message: message,
-        include_excel: includeExcel,
-        generate_fresh: generateFresh,
-        copy_to_rm: copyToRM
-    }, function(response) {
-        hideEmailStatus();
-        
-        if (response.success) {
-            $('#sendClientModal').modal('hide');
-            showNotification('Plan sent to client successfully! ✅', 'success');
-            
-            // Update email status badge
-            updateEmailStatusBadge('sent');
-        } else {
-            showNotification('Error: ' + response.error, 'error');
-        }
-    }).fail(function(xhr) {
-        hideEmailStatus();
-        showNotification('Error sending to client. Please try again.', 'error');
-    });
-}
-
-// Enhanced execution completion function
-function markExecutionComplete() {
-    if (confirm('Are you sure all actions in this execution plan have been completed? This will automatically notify the client.')) {
-        const completeUrl = `/execution-plans/{{ execution_plan.id }}/complete-with-email/`;
-        
-        // Show loading indicator
-        showLoadingModal('Completing execution and preparing client notification...');
-        
-        $.post(completeUrl, {
-            csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
-        }, function(response) {
-            hideLoadingModal();
-            
-            if (response.success) {
-                let message = response.message;
-                if (response.email_sent) {
-                    message += ` Client notification: ${response.email_message}`;
+            return fetch(url, {
+                method: method,
+                body: formData,
+                headers: {
+                    'X-CSRFToken': csrfToken
                 }
-                
-                showNotification(message, 'success');
-                setTimeout(() => {
-                    location.reload();
-                }, 3000);
-            } else {
-                showNotification('Error: ' + response.error, 'error');
-            }
-        }).fail(function(xhr) {
-            hideLoadingModal();
-            showNotification('Error completing execution. Please try again.', 'error');
-        });
-    }
-}
-
-// Reject plan
-function rejectPlan() {
-    const reason = $('#rejectionReason').val().trim();
-    
-    if (!reason) {
-        showNotification('Please provide a rejection reason', 'warning');
-        return;
-    }
-    
-    const rejectUrl = `/execution-plans/{{ execution_plan.id }}/reject/`;
-    
-    $.post(rejectUrl, {
-        csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val(),
-        reason: reason
-    }, function(response) {
-        if (response.success) {
-            $('#rejectionModal').modal('hide');
-            showNotification('Plan rejected successfully', 'success');
-            setTimeout(() => {
-                location.reload();
-            }, 2000);
-        } else {
-            showNotification('Error: ' + response.error, 'error');
-        }
-    }).fail(function(xhr) {
-        showNotification('Error rejecting plan. Please try again.', 'error');
-    });
-}
-
-// Start execution
-function startExecution() {
-    if (confirm('Are you sure you want to start executing this plan?')) {
-        const startExecutionUrl = `/execution-plans/{{ execution_plan.id }}/start-execution/`;
-        
-        $.post(startExecutionUrl, {
-            csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
-        }, function(response) {
-            if (response.success) {
-                showNotification('Execution started successfully!', 'success');
-                setTimeout(() => {
-                    location.reload();
-                }, 2000);
-            } else {
-                showNotification('Error: ' + response.error, 'error');
-            }
-        }).fail(function(xhr) {
-            showNotification('Error starting execution. Please try again.', 'error');
-        });
-    }
-}
-
-// Email plan function (general purpose)
-function sendEmailPlan() {
-    const emailTo = $('#emailTo').val().trim();
-    const emailCc = $('#emailCc').val().trim();
-    const emailSubject = $('#emailSubject').val().trim();
-    const emailMessage = $('#emailMessage').val().trim();
-    const attachExcel = $('#attachExcel').is(':checked');
-    
-    if (!emailTo) {
-        showNotification('Please enter a recipient email address', 'warning');
-        return;
-    }
-    
-    if (!emailSubject) {
-        showNotification('Please enter an email subject', 'warning');
-        return;
-    }
-    
-    // Show loading state
-    const sendBtn = $('#emailPlanModal .btn-primary');
-    const originalText = sendBtn.html();
-    sendBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Sending...');
-    
-    $.ajax({
-        url: `/execution-plans/{{ execution_plan.id }}/email-plan/`,
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val(),
-            'Content-Type': 'application/json'
-        },
-        data: JSON.stringify({
-            email_to: emailTo,
-            email_cc: emailCc,
-            subject: emailSubject,
-            message: emailMessage,
-            attach_excel: attachExcel
-        }),
-        success: function(response) {
-            sendBtn.prop('disabled', false).html(originalText);
-            
-            if (response.success) {
-                $('#emailPlanModal').modal('hide');
-                showNotification('Email sent successfully to ' + emailTo, 'success');
-                
-                // Reset form
-                $('#emailPlanForm')[0].reset();
-                $('#emailSubject').val('Execution Plan - {{ execution_plan.plan_name }}');
-                $('#attachExcel').prop('checked', true);
-            } else {
-                showNotification('Error sending email: ' + response.error, 'error');
-            }
-        },
-        error: function(xhr) {
-            sendBtn.prop('disabled', false).html(originalText);
-            console.error('Email sending error:', xhr);
-            showNotification('Error sending email. Please try again.', 'error');
-        }
-    });
-}
-
-// Download Functions
-function downloadExcel() {
-    showDownloadProgress();
-    updateDownloadProgress(20, 'Checking existing Excel file...');
-    
-    // Check if Excel file already exists
-    const hasExcelFile = {{ execution_plan.excel_file|yesno:"true,false" }};
-    
-    if (hasExcelFile) {
-        updateDownloadProgress(60, 'Excel file found, preparing download...');
-        
-        // Use existing Excel file
-        const downloadUrl = `/execution-plans/{{ execution_plan.id }}/download-excel/`;
-        downloadFile(downloadUrl, '{{ execution_plan.plan_id }}_execution_plan.xlsx');
-        
-        updateDownloadProgress(100, 'Download started!');
-        setTimeout(() => {
-            hideDownloadProgress();
-            showDownloadSuccess('Excel file downloaded successfully!');
-        }, 1000);
-    } else {
-        // Generate new Excel file
-        generateFreshExcel();
-    }
-}
-
-function generateFreshExcel() {
-    showDownloadProgress();
-    updateDownloadProgress(10, 'Generating new Excel file...');
-    
-    $.ajax({
-        url: `/execution-plans/{{ execution_plan.id }}/generate-excel/`,
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
-        },
-        xhr: function() {
-            const xhr = new window.XMLHttpRequest();
-            // Track upload progress
-            xhr.upload.addEventListener("progress", function(evt) {
-                if (evt.lengthComputable) {
-                    const percentComplete = (evt.loaded / evt.total) * 100;
-                    updateDownloadProgress(Math.min(percentComplete, 90), 'Generating Excel file...');
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
-            }, false);
-            return xhr;
-        },
-        success: function(response) {
-            if (response.success) {
-                updateDownloadProgress(95, 'File generated, starting download...');
-                
-                // Download the generated file
-                const downloadUrl = `/execution-plans/{{ execution_plan.id }}/download-excel/`;
-                downloadFile(downloadUrl, response.filename || '{{ execution_plan.plan_id }}_execution_plan.xlsx');
-                
-                updateDownloadProgress(100, 'Download completed!');
-                setTimeout(() => {
-                    hideDownloadProgress();
-                    showDownloadSuccess('Excel file generated and downloaded successfully!');
-                }, 1000);
-            } else {
-                hideDownloadProgress();
-                showNotification('Error generating Excel file: ' + response.error, 'error');
-            }
-        },
-        error: function(xhr) {
-            hideDownloadProgress();
-            console.error('Excel generation error:', xhr);
-            showNotification('Error generating Excel file. Please try again.', 'error');
-        }
-    });
-}
-
-// Print function
-function printPlan() {
-    // Hide non-printable elements
-    $('.btn, .modal, .dropdown').hide();
-    
-    // Print
-    window.print();
-    
-    // Restore hidden elements
-    $('.btn, .modal, .dropdown').show();
-}
-
-// Utility functions for download progress
-function showDownloadProgress() {
-    $('#downloadProgressModal').modal('show');
-    updateDownloadProgress(0, 'Starting...');
-}
-
-function hideDownloadProgress() {
-    $('#downloadProgressModal').modal('hide');
-    updateDownloadProgress(0, 'Starting...');
-}
-
-function updateDownloadProgress(percent, message) {
-    $('#downloadProgress').css('width', percent + '%').attr('aria-valuenow', percent);
-    $('#downloadStatus').text(message);
-}
-
-function showDownloadSuccess(message) {
-    $('#downloadMessage').text(message);
-    $('#downloadStatusCard').addClass('show').show();
-    
-    // Auto-hide after 5 seconds
-    setTimeout(() => {
-        $('#downloadStatusCard').removeClass('show').fadeOut();
-    }, 5000);
-}
-
-// Generic file download function
-function downloadFile(url, filename) {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename || 'download';
-    link.target = '_blank';
-    
-    // Append to body, click, and remove
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    // Update download link in success card
-    $('#downloadLink').attr('href', url).attr('download', filename);
-}
-
-// Email status functions
-function showEmailStatus(message) {
-    $('#emailStatusText').text(message);
-    $('#emailStatusIndicator').fadeIn();
-}
-
-function hideEmailStatus() {
-    $('#emailStatusIndicator').fadeOut();
-}
-
-function updateEmailStatusBadge(status) {
-    const badge = $('#emailStatusBadge');
-    
-    switch(status) {
-        case 'sent':
-            badge.removeClass().addClass('badge bg-success ms-2').html('<i class="fas fa-check me-1"></i>Email Sent');
-            break;
-        case 'pending':
-            badge.removeClass().addClass('badge bg-warning ms-2').html('<i class="fas fa-clock me-1"></i>Email Pending');
-            break;
-        case 'failed':
-            badge.removeClass().addClass('badge bg-danger ms-2').html('<i class="fas fa-times me-1"></i>Email Failed');
-            break;
-    }
-}
-
-// Loading modal functions
-function showLoadingModal(message = 'Processing...') {
-    const loadingHtml = `
-        <div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-body text-center p-4">
-                        <div class="spinner-border text-primary mb-3" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <p id="loadingMessage">${message}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    $('body').append(loadingHtml);
-    $('#loadingModal').modal('show');
-}
-
-function hideLoadingModal() {
-    $('#loadingModal').modal('hide');
-    setTimeout(() => {
-        $('#loadingModal').remove();
-    }, 500);
-}
-
-// Notification system
-function showNotification(message, type = 'info') {
-    const alertClass = {
-        'success': 'alert-success',
-        'error': 'alert-danger', 
-        'warning': 'alert-warning',
-        'info': 'alert-info'
-    }[type] || 'alert-info';
-    
-    const icon = {
-        'success': 'fa-check-circle',
-        'error': 'fa-exclamation-circle',
-        'warning': 'fa-exclamation-triangle', 
-        'info': 'fa-info-circle'
-    }[type] || 'fa-info-circle';
-    
-    const notificationHtml = `
-        <div class="alert ${alertClass} alert-dismissible fade show" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 400px;">
-            <i class="fas ${icon} me-2"></i>
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    `;
-    
-    $('body').append(notificationHtml);
-    
-    // Auto-remove after 5 seconds
-    setTimeout(() => {
-        $('.alert').fadeOut(500, function() {
-            $(this).remove();
-        });
-    }, 5000);
-}
-
-// Loading modal functions
-function showLoadingModal(message = 'Processing...') {
-    const loadingHtml = `
-        <div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-body text-center p-4">
-                        <div class="spinner-border text-primary mb-3" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <p id="loadingMessage">${message}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    $('body').append(loadingHtml);
-    $('#loadingModal').modal('show');
-}
-
-function hideLoadingModal() {
-    $('#loadingModal').modal('hide');
-    setTimeout(() => {
-        $('#loadingModal').remove();
-    }, 500);
-}
-
-function updateLoadingMessage(message) {
-    $('#loadingMessage').text(message);
-}
-
-// Auto-send email when plan status changes to specific states
-$(document).ready(function() {
-    // Monitor for status changes that should trigger emails
-    const currentStatus = '{{ execution_plan.status }}';
-    
-    // Check if we should show email options based on status
-    if (currentStatus === 'approved') {
-        // Show option to send to client
-        showEmailPrompt('approved');
-    } else if (currentStatus === 'completed') {
-        // Show completion summary
-        showCompletionSummary();
-    }
-});
-
-// Show email prompt for specific statuses
-function showEmailPrompt(status) {
-    const prompts = {
-        'approved': {
-            title: 'Plan Approved!',
-            message: 'Would you like to send this approved plan to the client now?',
-            action: 'sendToClient'
-        },
-        'completed': {
-            title: 'Execution Complete!', 
-            message: 'Would you like to send the execution summary to the client?',
-            action: 'sendCompletionEmail'
-        }
-    };
-    
-    const prompt = prompts[status];
-    if (!prompt) return;
-    
-    // Only show if email hasn't been sent recently
-    const lastEmailSent = localStorage.getItem(`lastEmail_${execution_plan.id}_${status}`);
-    const now = new Date().getTime();
-    
-    if (!lastEmailSent || (now - parseInt(lastEmailSent)) > 3600000) { // 1 hour
-        setTimeout(() => {
-            if (confirm(`${prompt.title}\n\n${prompt.message}`)) {
-                if (prompt.action === 'sendToClient') {
-                    $('#sendClientModal').modal('show');
-                } else if (prompt.action === 'sendCompletionEmail') {
-                    sendCompletionEmail();
+                return response.json();
+            })
+            .then(data => {
+                console.log('Response data:', data); // Debug log
+                if (data.success) {
+                    showAlert('success', data.message);
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showAlert('danger', data.error || 'An error occurred');
                 }
-                
-                // Remember that we showed this prompt
-                localStorage.setItem(`lastEmail_${execution_plan.id}_${status}`, now.toString());
-            }
-        }, 1000);
-    }
-}
-
-// Send completion email directly
-function sendCompletionEmail() {
-    const completeEmailUrl = `/execution-plans/{{ execution_plan.id }}/send-completion-email/`;
-    
-    showLoadingModal('Preparing completion email...');
-    
-    $.post(completeEmailUrl, {
-        csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
-    }, function(response) {
-        hideLoadingModal();
-        
-        if (response.success) {
-            showNotification('Completion email sent to client successfully!', 'success');
-        } else {
-            showNotification('Error sending completion email: ' + response.error, 'error');
+                return data;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('danger', 'Network error occurred: ' + error.message);
+            });
         }
-    }).fail(function(xhr) {
-        hideLoadingModal();
-        showNotification('Error sending completion email. Please try again.', 'error');
-    });
-}
 
-// Email preview function
-function previewEmail(emailType) {
-    const previewUrl = `/execution-plans/{{ execution_plan.id }}/preview-email/${emailType}/`;
-    
-    $.get(previewUrl, function(response) {
-        if (response.success) {
-            showEmailPreview(response.subject, response.html_content);
-        } else {
-            showNotification('Error loading email preview', 'error');
-        }
-    });
-}
-
-// Show email preview modal
-function showEmailPreview(subject, htmlContent) {
-    const previewHtml = `
-        <div class="modal fade" id="emailPreviewModal" tabindex="-1">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Email Preview</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <strong>Subject:</strong> ${subject}
-                        </div>
-                        <div class="border p-3">
-                            ${htmlContent}
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button type="button" class="btn btn-primary" onclick="sendPreviewedEmail()">
-                            <i class="fas fa-paper-plane me-2"></i>Send Email
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    $('body').append(previewHtml);
-    $('#emailPreviewModal').modal('show');
-    
-    $('#emailPreviewModal').on('hidden.bs.modal', function() {
-        $(this).remove();
-    });
-}
-
-// Bulk email functions for multiple plans
-function sendBulkEmails(planIds, emailType) {
-    if (!planIds || planIds.length === 0) {
-        showNotification('No plans selected', 'warning');
-        return;
-    }
-    
-    showLoadingModal(`Sending ${emailType} emails to ${planIds.length} clients...`);
-    
-    $.ajax({
-        url: '/execution-plans/bulk-email/',
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val(),
-            'Content-Type': 'application/json'
-        },
-        data: JSON.stringify({
-            plan_ids: planIds,
-            email_type: emailType
-        }),
-        success: function(response) {
-            hideLoadingModal();
-            
-            if (response.success) {
-                const successCount = response.results.filter(r => r.success).length;
-                const failCount = response.results.length - successCount;
-                
-                let message = `Bulk email completed: ${successCount} sent successfully`;
-                if (failCount > 0) {
-                    message += `, ${failCount} failed`;
-                }
-                
-                showNotification(message, successCount > 0 ? 'success' : 'warning');
-            } else {
-                showNotification('Error in bulk email: ' + response.error, 'error');
-            }
-        },
-        error: function(xhr) {
-            hideLoadingModal();
-            showNotification('Error sending bulk emails. Please try again.', 'error');
-        }
-    });
-}
-
-function rejectPlan() {
-    const reason = $('#rejectionReason').val().trim();
-    
-    if (!reason) {
-        alert('Please provide a rejection reason');
-        return;
-    }
-    
-    const rejectUrl = `/execution-plans/{{ execution_plan.id }}/reject/`;
-    
-    $.post(rejectUrl, {
-        csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val(),
-        reason: reason
-    }, function(response) {
-        if (response.success) {
-            location.reload();
-        } else {
-            alert('Error: ' + response.error);
-        }
-    }).fail(function(xhr) {
-        alert('Error rejecting plan. Please try again.');
-    });
-}
-
-function markClientApproved() {
-    if (confirm('Are you sure the client has approved this execution plan?')) {
-        const clientApproveUrl = `/execution-plans/{{ execution_plan.id }}/mark-client-approved/`;
-        
-        $.post(clientApproveUrl, {
-            csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
-        }, function(response) {
-            if (response.success) {
-                location.reload();
-            } else {
-                alert('Error: ' + response.error);
-            }
-        }).fail(function(xhr) {
-            alert('Error marking client approved. Please try again.');
-        });
-    }
-}
-
-function startExecution() {
-    if (confirm('Are you sure you want to start executing this plan?')) {
-        const startExecutionUrl = `/execution-plans/{{ execution_plan.id }}/start-execution/`;
-        
-        $.post(startExecutionUrl, {
-            csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
-        }, function(response) {
-            if (response.success) {
-                location.reload();
-            } else {
-                alert('Error: ' + response.error);
-            }
-        }).fail(function(xhr) {
-            alert('Error starting execution. Please try again.');
-        });
-    }
-}
-
-function sendToClient() {
-    const message = $('#clientEmailMessage').val();
-    const includeExcel = $('#includeExcelFile').is(':checked');
-    const sendClientUrl = `/execution-plans/{{ execution_plan.id }}/send-to-client/`;
-    
-    $.post(sendClientUrl, {
-        csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val(),
-        message: message,
-        include_excel: includeExcel
-    }, function(response) {
-        if (response.success) {
-            $('#sendClientModal').modal('hide');
-            alert('Plan sent to client successfully');
-        } else {
-            alert('Error: ' + response.error);
-        }
-    }).fail(function(xhr) {
-        alert('Error sending to client. Please try again.');
-    });
-}
-
-// Fixed comment form submission
-$('#commentForm').on('submit', function(e) {
-    e.preventDefault();
-    
-    const commentText = $('#commentText').val().trim();
-    const isInternal = $('#isInternal').is(':checked');
-    
-    if (!commentText) {
-        alert('Please enter a comment');
-        return;
-    }
-    
-    const addCommentUrl = `/execution-plans/{{ execution_plan.id }}/comments/add/`;
-    
-    $.post(addCommentUrl, {
-        csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val(),
-        comment: commentText,
-        is_internal: isInternal
-    }, function(response) {
-        if (response.success) {
-            // Add the new comment to the container
-            const commentHtml = `
-                <div class="mb-3 pb-2 border-bottom">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <strong>${response.comment.user_name}</strong>
-                        <small class="text-muted">${response.comment.created_at}</small>
-                    </div>
-                    <p class="mb-1">${response.comment.comment}</p>
-                    ${response.comment.is_internal ? '<span class="badge bg-warning">Internal</span>' : ''}
-                </div>
+        // Show alert messages
+        function showAlert(type, message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alertDiv.style.top = '20px';
+            alertDiv.style.right = '20px';
+            alertDiv.style.zIndex = '9999';
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
+            document.body.appendChild(alertDiv);
             
-            if ($('#commentsContainer .text-center').length) {
-                // Replace "no comments" message
-                $('#commentsContainer').html(commentHtml);
-            } else {
-                // Prepend to existing comments
-                $('#commentsContainer').prepend(commentHtml);
-            }
-            
-            // Clear form
-            $('#commentText').val('');
-            $('#isInternal').prop('checked', false);
-            
-            // Scroll to top of comments
-            $('#commentsContainer').scrollTop(0);
-        } else {
-            alert('Error adding comment: ' + response.error);
-        }
-    }).fail(function(xhr) {
-        alert('Error adding comment. Please try again.');
-    });
-});
-
-// Fixed analytics initialization
-$('#analyticsModal').on('shown.bs.modal', function() {
-    initializeAnalytics();
-});
-
-function initializeAnalytics() {
-    // Status chart
-    const statusCtx = document.getElementById('statusChart').getContext('2d');
-    new Chart(statusCtx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Completed', 'Pending', 'Failed', 'In Progress'],
-            datasets: [{
-                data: [
-                    {{ completed_actions_count|default:0 }},
-                    {{ pending_actions_count|default:0 }},
-                    {{ failed_actions_count|default:0 }},
-                    {{ in_progress_actions_count|default:0 }}
-                ],
-                backgroundColor: [
-                    '#28a745',
-                    '#ffc107',
-                    '#dc3545',
-                    '#17a2b8'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.parentNode.removeChild(alertDiv);
                 }
-            }
+            }, 5000);
         }
-    });
-    
-    // Timeline chart
-    const timelineCtx = document.getElementById('timelineChart').getContext('2d');
-    const timelineUrl = `/execution-plans/{{ execution_plan.id }}/timeline-data/`;
-    
-    $.get(timelineUrl, function(response) {
-        if (response.success) {
-            new Chart(timelineCtx, {
-                type: 'line',
-                data: {
-                    labels: response.dates,
-                    datasets: [{
-                        label: 'Actions Executed',
-                        data: response.counts,
-                        borderColor: '#007bff',
-                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                        tension: 0.1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                stepSize: 1
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    }
+
+        // Workflow Actions
+        function submitForApproval() {
+            makeAjaxCall(`/execution-plans/${planId}/submit/`);
+        }
+
+        function submitWithEmail() {
+            showEmailModal('Submit for Approval with Email', () => {
+                const includeExcel = document.getElementById('includeExcel').checked;
+                const comments = document.getElementById('emailComments').value;
+                
+                makeAjaxCall(`/execution-plans/${planId}/submit-with-email/`, 'POST', {
+                    include_excel: includeExcel,
+                    comments: comments
+                });
+            });
+        }
+
+        function approvePlan() {
+            const modal = new bootstrap.Modal(document.getElementById('approvalModal'));
+            modal.show();
+        }
+
+        function confirmApproval() {
+            const comments = document.getElementById('approvalComments').value;
+            makeAjaxCall(`/execution-plans/${planId}/approve/`, 'POST', { comments });
+            bootstrap.Modal.getInstance(document.getElementById('approvalModal')).hide();
+        }
+
+        function approveWithEmail() {
+            showEmailModal('Approve with Email', () => {
+                const includeExcel = document.getElementById('includeExcel').checked;
+                const comments = document.getElementById('emailComments').value;
+                
+                makeAjaxCall(`/execution-plans/${planId}/approve-with-email/`, 'POST', {
+                    include_excel: includeExcel,
+                    comments: comments
+                });
+            });
+        }
+
+        function rejectPlan() {
+            const modal = new bootstrap.Modal(document.getElementById('rejectionModal'));
+            modal.show();
+        }
+
+        function confirmRejection() {
+            const reason = document.getElementById('rejectionReason').value.trim();
+            if (!reason) {
+                showAlert('warning', 'Please provide a rejection reason');
+                return;
+            }
+            
+            makeAjaxCall(`/execution-plans/${planId}/reject/`, 'POST', { reason });
+            bootstrap.Modal.getInstance(document.getElementById('rejectionModal')).hide();
+        }
+
+        function sendToClient() {
+            // Clear previous values
+            document.getElementById('clientEmail').value = '';
+            document.getElementById('attachExcel').checked = true;
+            document.getElementById('clientMessage').value = '';
+            
+            const modal = new bootstrap.Modal(document.getElementById('sendToClientModal'));
+            modal.show();
+        }
+
+        function sendToClientAndMarkApproved() {
+            // Clear previous values
+            document.getElementById('combinedClientEmail').value = '';
+            document.getElementById('combinedAttachExcel').checked = true;
+            document.getElementById('combinedClientMessage').value = '';
+            document.getElementById('notifyOpsTeam').checked = true;
+            document.getElementById('combinedInternalNotes').value = '';
+            
+            const modal = new bootstrap.Modal(document.getElementById('sendAndMarkApprovedModal'));
+            modal.show();
+        }
+
+        function confirmSendAndMarkApproved() {
+            const email = document.getElementById('combinedClientEmail').value.trim();
+            const attachExcel = document.getElementById('combinedAttachExcel').checked;
+            const clientMessage = document.getElementById('combinedClientMessage').value.trim();
+            const notifyOps = document.getElementById('notifyOpsTeam').checked;
+            const internalNotes = document.getElementById('combinedInternalNotes').value.trim();
+            
+            // Validate email
+            if (!email) {
+                showAlert('warning', 'Please enter client email address');
+                return;
+            }
+            
+            // Basic email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                showAlert('warning', 'Please enter a valid email address');
+                return;
+            }
+            
+            // Debug log
+            console.log('Sending data:', {
+                client_email: email,
+                attach_excel: attachExcel,
+                client_message: clientMessage,
+                notify_ops_team: notifyOps,
+                internal_notes: internalNotes,
+                mark_client_approved: true
+            });
+            
+            // Use existing send-to-client-enhanced endpoint with additional parameters
+            makeAjaxCall(`/execution-plans/${planId}/send-to-client-enhanced/`, 'POST', {
+                client_email: email,
+                attach_excel: attachExcel ? 'true' : 'false',
+                client_message: clientMessage,
+                notify_ops_team: notifyOps ? 'true' : 'false',
+                internal_notes: internalNotes,
+                mark_client_approved: 'true'  // Flag to indicate combined action
+            }).then(data => {
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('sendAndMarkApprovedModal')).hide();
                 }
             });
         }
-    });
-}
 
-// Auto-refresh for execution status
-{% if execution_plan.status == 'in_execution' %}
-setInterval(function() {
-    const statusUrl = `/execution-plans/{{ execution_plan.id }}/action-statuses/`;
-    
-    $.get(statusUrl, function(response) {
-        if (response.success) {
-            response.actions.forEach(function(action) {
-                const row = $(`tr[data-action-id="${action.id}"]`);
-                if (row.length) {
-                    // Update status badge
-                    const statusCell = row.find('td:nth-child(5)');
-                    let statusHtml = '';
-                    
-                    switch(action.status) {
-                        case 'completed':
-                            statusHtml = '<span class="badge bg-success">Completed</span>';
-                            if (action.executed_at) {
-                                statusHtml += `<br><small>${action.executed_at}</small>`;
-                            }
-                            row.removeClass('pending failed').addClass('completed');
-                            break;
-                        case 'failed':
-                            statusHtml = '<span class="badge bg-danger">Failed</span>';
-                            if (action.failure_reason) {
-                                statusHtml += `<br><small class="text-danger">${action.failure_reason}</small>`;
-                            }
-                            row.removeClass('pending completed').addClass('failed');
-                            break;
-                        case 'in_progress':
-                            statusHtml = '<span class="badge bg-info">In Progress</span>';
-                            break;
-                        default:
-                            statusHtml = '<span class="badge bg-warning">Pending</span>';
-                    }
-                    
-                    statusCell.html(statusHtml);
-                    
-                    // Update action buttons if needed
-                    if (action.status !== 'pending') {
-                        row.find('.execute-action-btn, .mark-failed-btn').remove();
-                    }
-                }
+        function markClientApproved() {
+            makeAjaxCall(`/execution-plans/${planId}/mark-client-approved/`);
+        }
+
+        function markClientApprovedWithEmail() {
+            showEmailModal('Mark Client Approved with Email', () => {
+                const includeExcel = document.getElementById('includeExcel').checked;
+                const comments = document.getElementById('emailComments').value;
+                
+                makeAjaxCall(`/execution-plans/${planId}/mark-client-approved-with-email/`, 'POST', {
+                    include_excel: includeExcel,
+                    comments: comments
+                });
             });
         }
-    });
-}, 30000); // Refresh every 30 seconds
-{% endif %}
 
-// Keyboard shortcuts
-$(document).on('keydown', function(e) {
-    // Ctrl+Enter to submit comment
-    if (e.ctrlKey && e.which === 13 && $('#commentText').is(':focus')) {
-        e.preventDefault();
-        $('#commentForm').submit();
-    }
-    
-    // Escape to close modals
-    if (e.which === 27) {
-        $('.modal').modal('hide');
-    }
-});
-
-// Tooltip initialization
-$(function () {
-    $('[data-bs-toggle="tooltip"]').tooltip();
-});
-
-// Print functionality
-function printPlan() {
-    window.print();
-}
-
-
-// Workflow tracking
-function trackWorkflowChange(fromStatus, toStatus, comments = '') {
-    $.post('{% url "track_workflow" execution_plan.id %}', {
-        csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val(),
-        from_status: fromStatus,
-        to_status: toStatus,
-        comments: comments
-    });
-}
-
-// Initialize page
-$(document).ready(function() {
-    // Add data attributes to action rows for JavaScript access
-    $('tbody tr').each(function() {
-        const actionId = $(this).find('.execute-action-btn, .mark-failed-btn').data('action-id');
-        if (actionId) {
-            $(this).attr('data-action-id', actionId);
+        function startExecution() {
+            if (confirm('Are you sure you want to start execution of this plan?')) {
+                makeAjaxCall(`/execution-plans/${planId}/start-execution/`);
+            }
         }
-    });
-    
-    // Initialize progress bars if any
-    $('.progress-bar').each(function() {
-        const width = $(this).attr('aria-valuenow') + '%';
-        $(this).css('width', width);
-    });
-    
-    // Auto-focus comment textarea when clicking in comments area
-    $('#commentsContainer').on('click', function() {
-        $('#commentText').focus();
-    });
-    
-    // Character counter for comments
-    $('#commentText').on('input', function() {
-        const maxLength = 500;
-        const currentLength = $(this).val().length;
-        const remaining = maxLength - currentLength;
-        
-        if (!$('#commentCounter').length) {
-            $(this).after('<small id="commentCounter" class="text-muted"></small>');
+
+        function completeWithEmail() {
+            showEmailModal('Complete Execution with Email', () => {
+                const includeExcel = document.getElementById('includeExcel').checked;
+                const comments = document.getElementById('emailComments').value;
+                
+                makeAjaxCall(`/execution-plans/${planId}/complete-with-email/`, 'POST', {
+                    include_excel: includeExcel,
+                    comments: comments
+                });
+            });
         }
-        
-        $('#commentCounter').text(`${remaining} characters remaining`);
-        
-        if (remaining < 0) {
-            $('#commentCounter').removeClass('text-muted').addClass('text-danger');
-            $(this).addClass('is-invalid');
-        } else {
-            $('#commentCounter').removeClass('text-danger').addClass('text-muted');
-            $(this).removeClass('is-invalid');
+
+        // Email Modal Helper
+        function showEmailModal(title, confirmCallback) {
+            document.getElementById('emailModalTitle').textContent = title;
+            document.getElementById('emailComments').value = '';
+            document.getElementById('includeExcel').checked = true;
+            
+            const modal = new bootstrap.Modal(document.getElementById('emailOptionsModal'));
+            modal.show();
+            
+            document.getElementById('confirmEmailAction').onclick = () => {
+                confirmCallback();
+                modal.hide();
+            };
         }
-    });
-});
 
-// Error handling for AJAX requests
-$(document).ajaxError(function(event, xhr, settings, thrownError) {
-    if (xhr.status === 403) {
-        alert('Access denied. You may not have permission to perform this action.');
-    } else if (xhr.status === 404) {
-        alert('The requested resource was not found.');
-    } else if (xhr.status >= 500) {
-        alert('A server error occurred. Please try again or contact support.');
-    }
-});
+        // Action Management
+        function executeAction(actionId) {
+            if (confirm('Mark this action as executed?')) {
+                makeAjaxCall(`/execution-plans/actions/${actionId}/execute/`);
+            }
+        }
 
-// Confirmation dialogs for destructive actions
-function confirmAction(message, callback) {
-    if (confirm(message)) {
-        callback();
-    }
-}
+        function markActionFailed(actionId) {
+            const reason = prompt('Please provide failure reason:');
+            if (reason) {
+                makeAjaxCall(`/execution-plans/actions/${actionId}/mark-failed/`, 'POST', { reason });
+            }
+        }
 
-// Real-time notifications (if WebSocket is available)
-{% if request.user.is_authenticated %}
-// This would be implemented with WebSocket for real-time updates
-function connectWebSocket() {
-    // WebSocket implementation for real-time plan updates
-    // This is a placeholder for future enhancement
-}
-{% endif %}
-</script>
+        // File Operations
+        function downloadExcel() {
+            window.open(`/execution-plans/${planId}/download-excel/`, '_blank');
+        }
 
-<!-- Print styles -->
-<style media="print">
-    .btn, .modal, .card-header .dropdown, .workflow-step i {
-        display: none !important;
-    }
-    
-    .card {
-        border: 1px solid #000 !important;
-        box-shadow: none !important;
-        page-break-inside: avoid;
-    }
-    
-    .workflow-step {
-        font-size: 12px;
-    }
-    
-    .table {
-        font-size: 12px;
-    }
-    
-    @page {
-        margin: 1in;
-    }
-</style>
-{% endblock %}
+        function generateExcel() {
+            makeAjaxCall(`/execution-plans/${planId}/generate-excel/`)
+                .then(data => {
+                    if (data.success && data.download_url) {
+                        window.open(data.download_url, '_blank');
+                    }
+                });
+        }
+
+        // Comments
+        document.getElementById('commentForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const comment = document.getElementById('commentText').value.trim();
+            const isInternal = document.getElementById('isInternal').checked;
+            
+            if (!comment) {
+                showAlert('warning', 'Please enter a comment');
+                return;
+            }
+            
+            makeAjaxCall(`/execution-plans/${planId}/add-comment/`, 'POST', {
+                comment: comment,
+                is_internal: isInternal
+            }).then(data => {
+                if (data.success) {
+                    document.getElementById('commentText').value = '';
+                    document.getElementById('isInternal').checked = false;
+                }
+            });
+        });
+
+        // Print functionality
+        function printPage() {
+            window.print();
+        }
+    </script>
+</body>
+</html>
