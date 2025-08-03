@@ -26,8 +26,11 @@
                 <div class="col-md-3 d-flex align-items-end">
                     <button type="submit" class="btn btn-primary">Filter</button>
                     <a href="{% url 'lead_list' %}" class="btn btn-outline-secondary ms-2">Reset</a>
+                    {% if user.role == 'ops_team_lead' %}
+                    <a href="{% url 'lead_list' %}?status=conversion_requested" class="btn btn-outline-warning ms-2">Pending</a>
+                    {% endif %}
                 </div>
-                {% if user.role == 'rm_head' or user.role == 'business_head' or user.role == 'top_management' or user.role == 'rm' %}
+                {% if user.role == 'rm_head' or user.role == 'business_head' or user.role == 'top_management' or user.role == 'rm' or user.role == 'ops_team_lead' or user.role == 'ops_exec' %}
                 <div class="col-md-3 d-flex align-items-end justify-content-end">
                     <a href="{% url 'lead_create' %}" class="btn btn-success">Create New Lead</a>
                 </div>
@@ -35,6 +38,43 @@
             </form>
         </div>
     </div>
+
+    <!-- Quick Actions for Ops Team Lead -->
+    {% if user.role == 'ops_team_lead' %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="fas fa-bolt"></i> Quick Actions</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <a href="{% url 'lead_list' %}?status=conversion_requested" class="btn btn-outline-warning btn-block">
+                        <i class="fas fa-clipboard-check"></i><br>
+                        <small>Pending Approvals</small>
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'lead_list' %}?status=converted" class="btn btn-outline-success btn-block">
+                        <i class="fas fa-check-circle"></i><br>
+                        <small>Converted Leads</small>
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'lead_list' %}" class="btn btn-outline-info btn-block">
+                        <i class="fas fa-list"></i><br>
+                        <small>All Relevant</small>
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'ops_pending_approvals' %}" class="btn btn-outline-primary btn-block">
+                        <i class="fas fa-clipboard-list"></i><br>
+                        <small>Detailed Review</small>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Leads Table -->
     <div class="card">
@@ -54,8 +94,13 @@
                     </thead>
                     <tbody>
                         {% for lead in leads %}
-                        <tr>
-                            <td>{{ lead.lead_id }}</td>
+                        <tr {% if lead.status == 'conversion_requested' and user.role == 'ops_team_lead' %}class="table-warning"{% endif %}>
+                            <td>
+                                {{ lead.lead_id }}
+                                {% if lead.status == 'conversion_requested' and user.role == 'ops_team_lead' %}
+                                <i class="fas fa-exclamation-triangle text-warning ml-1" title="Pending your approval"></i>
+                                {% endif %}
+                            </td>
                             <td>{{ lead.name }}</td>
                             <td>
                                 {% if lead.email %}{{ lead.email }}<br>{% endif %}
@@ -78,16 +123,85 @@
                                     <span class="badge bg-danger">{{ lead.get_status_display }}</span>
                                 {% elif lead.status == 'on_hold' %}
                                     <span class="badge bg-light text-dark">{{ lead.get_status_display }}</span>
+                                {% elif lead.status == 'conversion_requested' %}
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-clock"></i> {{ lead.get_status_display }}
+                                    </span>
+                                {% elif lead.status == 'converted' %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check-circle"></i> {{ lead.get_status_display }}
+                                    </span>
                                 {% else %}
                                     <span class="badge bg-secondary">{{ lead.get_status_display }}</span>
                                 {% endif %}
                             </td>
-                            <td>{{ lead.assigned_to.get_full_name }}</td>
+                            <td>
+                                {% if lead.assigned_to %}
+                                    {{ lead.assigned_to.get_full_name }}
+                                {% else %}
+                                    <span class="text-muted">Not assigned</span>
+                                {% endif %}
+                                {% if lead.final_assigned_rm and lead.final_assigned_rm != lead.assigned_to %}
+                                <br><small class="text-muted">
+                                    <i class="fas fa-arrow-right"></i> {{ lead.final_assigned_rm.get_full_name }}
+                                </small>
+                                {% endif %}
+                            </td>
                             <td>{{ lead.created_at|date:"d M Y" }}</td>
                             <td>
-                                <a href="{% url 'lead_update' lead.pk %}" class="btn btn-sm btn-primary">Edit</a>
+                                <!-- Standard Actions -->
+                                <a href="{% url 'lead_detail' lead.pk %}" class="btn btn-sm btn-info" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                
+                                {% if user.role != 'ops_team_lead' or lead.status != 'conversion_requested' %}
+                                <a href="{% url 'lead_update' lead.pk %}" class="btn btn-sm btn-primary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% endif %}
+                                
                                 {% if user.role == 'business_head' or user.role == 'top_management' or lead.assigned_to == user or lead.created_by == user %}
-                                <a href="{% url 'lead_delete' lead.pk %}" class="btn btn-sm btn-danger">Delete</a>
+                                <a href="{% url 'lead_delete' lead.pk %}" class="btn btn-sm btn-danger" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                                {% endif %}
+                                
+                                <!-- Special Actions for Ops Team Lead -->
+                                {% if user.role == 'ops_team_lead' and lead.status == 'conversion_requested' %}
+                                <a href="{% url 'ops_pending_approvals' %}" class="btn btn-sm btn-warning" title="Review for Approval">
+                                    <i class="fas fa-clipboard-check"></i> Review
+                                </a>
+                                {% endif %}
+                                
+                                <!-- Show Client Link if Converted - Fixed Version -->
+                                {% if lead.status == 'converted' %}
+                                    {% if lead.generated_client %}
+                                        <!-- Try multiple possible client URL patterns -->
+                                        {% url 'client_detail' lead.generated_client.pk as client_url %}
+                                        {% if client_url %}
+                                        <a href="{{ client_url }}" class="btn btn-sm btn-success" title="View Client">
+                                            <i class="fas fa-user"></i>
+                                        </a>
+                                        {% else %}
+                                            <!-- Alternative URL patterns to try -->
+                                            {% url 'client_profile' lead.generated_client.pk as client_profile_url %}
+                                            {% if client_profile_url %}
+                                            <a href="{{ client_profile_url }}" class="btn btn-sm btn-success" title="View Client">
+                                                <i class="fas fa-user"></i>
+                                            </a>
+                                            {% else %}
+                                                <!-- If no client URL exists, show client ID as text -->
+                                                <span class="btn btn-sm btn-success disabled" title="Client: {{ lead.client_id }}">
+                                                    <i class="fas fa-user"></i> {{ lead.client_id }}
+                                                </span>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% elif lead.client_id %}
+                                        <!-- Show client ID if no generated_client relation exists -->
+                                        <span class="btn btn-sm btn-success disabled" title="Client ID: {{ lead.client_id }}">
+                                            <i class="fas fa-user"></i> {{ lead.client_id }}
+                                        </span>
+                                    {% endif %}
                                 {% endif %}
                             </td>
                         </tr>
@@ -101,5 +215,97 @@
             </div>
         </div>
     </div>
-</div>
+    
+    <!-- Debug Section for Ops Team Lead -->
+    {% if user.role == 'ops_team_lead' and debug_info %}
+    <div class="card mb-4 border-info">
+        <div class="card-header bg-info text-white">
+            <h6 class="mb-0"><i class="fas fa-bug"></i> Debug Information</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-2">
+                    <strong>Total Leads in DB:</strong><br>
+                    <span class="badge badge-primary">{{ debug_info.total_leads }}</span>
+                </div>
+                <div class="col-md-2">
+                    <strong>Converted Leads:</strong><br>
+                    <span class="badge badge-success">{{ debug_info.converted_leads }}</span>
+                </div>
+                <div class="col-md-2">
+                    <strong>Conversion Requested:</strong><br>
+                    <span class="badge badge-warning">{{ debug_info.conversion_requested }}</span>
+                </div>
+                <div class="col-md-2">
+                    <strong>Ops Relevant:</strong><br>
+                    <span class="badge badge-info">{{ debug_info.ops_relevant_leads }}</span>
+                </div>
+                <div class="col-md-2">
+                    <strong>Visible to You:</strong><br>
+                    <span class="badge badge-secondary">{{ debug_info.accessible_leads_count }}</span>
+                </div>
+                <div class="col-md-2">
+                    <strong>Current Filters:</strong><br>
+                    Status: <code>{{ debug_info.current_filters.status|default:"All" }}</code><br>
+                    Search: <code>{{ debug_info.current_filters.search|default:"None" }}</code>
+                </div>
+            </div>
+            {% if debug_info.ops_relevant_leads > 0 and debug_info.accessible_leads_count == 0 %}
+            <div class="alert alert-warning mt-3">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Issue Detected:</strong> There are relevant leads (converted/pending approval) but none are visible to you. 
+                Check if there are any additional filters applied.
+            </div>
+            {% elif debug_info.ops_relevant_leads == 0 %}
+            <div class="alert alert-info mt-3">
+                <i class="fas fa-info-circle"></i>
+                <strong>No Relevant Leads:</strong> There are currently no converted leads or leads awaiting conversion approval.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+<style>
+/* Custom styles for pending approval highlights */
+.table-warning {
+    background-color: rgba(255, 193, 7, 0.1) !important;
+}
+
+.table-warning:hover {
+    background-color: rgba(255, 193, 7, 0.2) !important;
+}
+
+.btn-block {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 15px 10px;
+    text-align: center;
+}
+
+.btn-block small {
+    display: block;
+    margin-top: 5px;
+}
+
+.badge {
+    position: relative;
+}
+
+.fa-exclamation-triangle {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+</style>
 {% endblock %}

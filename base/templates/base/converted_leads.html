@@ -1,0 +1,411 @@
+<!-- templates/base/converted_leads.html -->
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Converted Leads{% endblock %}
+
+{% block extra_css %}
+<style>
+    .lead-card {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        transition: box-shadow 0.3s ease;
+    }
+    
+    .lead-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .lead-header {
+        background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
+        padding: 15px 20px;
+        border-bottom: 1px solid #c3e6cb;
+        border-radius: 8px 8px 0 0;
+    }
+    
+    .client-badge {
+        background-color: #28a745;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.8em;
+    }
+    
+    .conversion-info {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        padding: 15px;
+        margin: 15px 0;
+    }
+    
+    .interaction-item {
+        background-color: #ffffff;
+        border: 1px solid #e9ecef;
+        border-radius: 4px;
+        padding: 10px;
+        margin-bottom: 8px;
+    }
+    
+    .rm-change-indicator {
+        background-color: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 4px;
+        padding: 8px;
+        margin: 10px 0;
+        font-size: 0.9em;
+    }
+
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+
+    .timeline-item {
+        position: relative;
+        padding-bottom: 15px;
+        border-left: 2px solid #e9ecef;
+        padding-left: 25px;
+        margin-left: 10px;
+    }
+
+    .timeline-item:last-child {
+        border-left: none;
+        padding-bottom: 0;
+    }
+
+    .timeline-item i {
+        position: absolute;
+        left: -10px;
+        top: 0;
+        background: white;
+        padding: 2px;
+        border-radius: 50%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="fas fa-check-circle text-success"></i> Converted Leads</h2>
+                    <p class="text-muted mb-0">Leads that have been successfully converted to clients with full interaction history</p>
+                </div>
+                <div>
+                    <span class="badge badge-success badge-lg">
+                        {{ converted_leads|length }} Converted
+                    </span>
+                </div>
+            </div>
+
+            <!-- Search -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="get" class="form-inline">
+                        <div class="input-group mr-3">
+                            <input type="text" name="search" class="form-control" 
+                                placeholder="Search by name, email, mobile, lead ID, or client ID..." 
+                                value="{{ search_query }}" style="width: 300px;">
+                            <div class="input-group-append">
+                                <button class="btn btn-primary" type="submit">
+                                    <i class="fas fa-search"></i> Search
+                                </button>
+                            </div>
+                        </div>
+                        {% if search_query %}
+                        <a href="{% url 'converted_leads_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Clear
+                        </a>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+
+            <!-- Converted Leads List -->
+            {% if converted_leads %}
+                {% for lead in converted_leads %}
+                <div class="lead-card">
+                    <div class="lead-header">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h5 class="mb-1">
+                                    {{ lead.name }}
+                                    <span class="client-badge">
+                                        <i class="fas fa-user-check"></i> Client
+                                    </span>
+                                </h5>
+                                <div class="text-muted">
+                                    <small>
+                                        <strong>Lead ID:</strong> {{ lead.lead_id }} | 
+                                        <strong>Client ID:</strong> {{ lead.client_id }} | 
+                                        Converted: {{ lead.converted_at|date:"M d, Y" }}
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-right">
+                                <a href="{% url 'lead_detail' lead.pk %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye"></i> View Lead History
+                                </a>
+                                
+                                <!-- Fixed Client Link with Proper Error Handling -->
+                                {% if lead.generated_client %}
+                                    {% url 'client_detail' lead.generated_client.pk as client_detail_url %}
+                                    {% if client_detail_url %}
+                                        <a href="{{ client_detail_url }}" class="btn btn-success btn-sm ml-2">
+                                            <i class="fas fa-user"></i> View Client
+                                        </a>
+                                    {% else %}
+                                        <!-- Try alternative URL patterns -->
+                                        {% url 'client_profile' lead.generated_client.pk as client_profile_url %}
+                                        {% if client_profile_url %}
+                                            <a href="{{ client_profile_url }}" class="btn btn-success btn-sm ml-2">
+                                                <i class="fas fa-user"></i> View Client
+                                            </a>
+                                        {% else %}
+                                            <!-- Show client ID if no URL pattern exists -->
+                                            <span class="btn btn-success btn-sm ml-2 disabled" title="Client ID: {{ lead.client_id }}">
+                                                <i class="fas fa-user"></i> {{ lead.client_id }}
+                                            </span>
+                                        {% endif %}
+                                    {% endif %}
+                                {% elif lead.client_id %}
+                                    <!-- Show client ID if no generated_client relation exists -->
+                                    <span class="btn btn-success btn-sm ml-2 disabled" title="Client ID: {{ lead.client_id }}">
+                                        <i class="fas fa-user"></i> {{ lead.client_id }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <!-- Basic Lead Info -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <h6 class="text-primary"><i class="fas fa-info-circle"></i> Lead Information</h6>
+                                <p class="mb-1"><strong>Email:</strong> {{ lead.email|default:"Not provided" }}</p>
+                                <p class="mb-1"><strong>Mobile:</strong> {{ lead.mobile|default:"Not provided" }}</p>
+                                <p class="mb-1"><strong>Company:</strong> {{ lead.company|default:"Not provided" }}</p>
+                                <p class="mb-1"><strong>Source:</strong> {{ lead.source|default:"Not specified" }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-success"><i class="fas fa-exchange-alt"></i> Conversion Details</h6>
+                                <p class="mb-1"><strong>Original RM:</strong> {{ lead.assigned_to.get_full_name|default:"Not assigned" }}</p>
+                                {% if lead.final_assigned_rm and lead.final_assigned_rm != lead.assigned_to %}
+                                <div class="rm-change-indicator">
+                                    <i class="fas fa-arrow-right"></i> 
+                                    <strong>Assigned to:</strong> {{ lead.final_assigned_rm.get_full_name }}
+                                    <small class="text-muted">(RM changed during conversion)</small>
+                                </div>
+                                {% else %}
+                                <p class="mb-1"><strong>Current RM:</strong> {{ lead.assigned_to.get_full_name|default:"Not assigned" }}</p>
+                                {% endif %}
+                                <p class="mb-1"><strong>Converted by:</strong> {{ lead.converted_by.get_full_name|default:"System" }}</p>
+                                {% if lead.business_verified_by %}
+                                <p class="mb-1"><strong>Business Verified by:</strong> {{ lead.business_verified_by.get_full_name }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Business Verification Notes -->
+                        {% if lead.business_verification_notes %}
+                        <div class="conversion-info">
+                            <h6 class="text-info"><i class="fas fa-clipboard-check"></i> Business Verification Notes</h6>
+                            <p class="mb-0">{{ lead.business_verification_notes }}</p>
+                        </div>
+                        {% endif %}
+
+                        <!-- Lead Interactions History -->
+                        {% if lead.interactions.exists %}
+                        <div class="mt-4">
+                            <h6 class="text-secondary">
+                                <i class="fas fa-comments"></i> Lead Interaction History 
+                                <span class="badge badge-secondary">{{ lead.interactions.count }}</span>
+                            </h6>
+                            <div class="row">
+                                {% for interaction in lead.interactions.all|slice:":6" %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="interaction-item">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <strong>{{ interaction.get_interaction_type_display }}</strong>
+                                                <br>
+                                                <small class="text-muted">
+                                                    {{ interaction.interaction_date|date:"M d, Y" }} by 
+                                                    {{ interaction.interacted_by.get_full_name }}
+                                                </small>
+                                                {% if interaction.notes %}
+                                                <p class="mb-0 mt-1" style="font-size: 0.9em;">
+                                                    {{ interaction.notes|truncatewords:15 }}
+                                                </p>
+                                                {% endif %}
+                                            </div>
+                                            <div>
+                                                {% if interaction.follow_up_required %}
+                                                <span class="badge badge-warning badge-sm">Follow-up</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% if lead.interactions.count > 6 %}
+                            <div class="text-center mt-2">
+                                <a href="{% url 'lead_detail' lead.pk %}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-plus"></i> View All {{ lead.interactions.count }} Interactions
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <!-- Product Discussions History -->
+                        {% if lead.product_discussions.exists %}
+                        <div class="mt-4">
+                            <h6 class="text-secondary">
+                                <i class="fas fa-chart-line"></i> Product Discussions 
+                                <span class="badge badge-secondary">{{ lead.product_discussions.count }}</span>
+                            </h6>
+                            <div class="row">
+                                {% for discussion in lead.product_discussions.all|slice:":4" %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="interaction-item">
+                                        <strong>{{ discussion.get_product_display }}</strong>
+                                        <br>
+                                        <small class="text-muted">
+                                            {{ discussion.discussion_date|date:"M d, Y" }}
+                                            {% if discussion.discussed_by %} by {{ discussion.discussed_by.get_full_name }}{% endif %}
+                                        </small>
+                                        {% if discussion.notes %}
+                                        <p class="mb-0 mt-1" style="font-size: 0.9em;">
+                                            {{ discussion.notes|truncatewords:10 }}
+                                        </p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Conversion Timeline -->
+                        <div class="mt-4">
+                            <h6 class="text-secondary">
+                                <i class="fas fa-timeline"></i> Conversion Timeline
+                            </h6>
+                            <div class="timeline">
+                                <div class="timeline-item">
+                                    <i class="fas fa-plus-circle text-primary"></i>
+                                    <strong>Lead Created:</strong> {{ lead.created_at|date:"M d, Y H:i" }}
+                                    {% if lead.created_by %}
+                                    <small class="text-muted">by {{ lead.created_by.get_full_name }}</small>
+                                    {% endif %}
+                                </div>
+                                
+                                {% if lead.first_interaction_date %}
+                                <div class="timeline-item">
+                                    <i class="fas fa-phone text-info"></i>
+                                    <strong>First Contact:</strong> {{ lead.first_interaction_date|date:"M d, Y" }}
+                                </div>
+                                {% endif %}
+                                
+                                {% if lead.conversion_requested_at %}
+                                <div class="timeline-item">
+                                    <i class="fas fa-paper-plane text-warning"></i>
+                                    <strong>Conversion Requested:</strong> {{ lead.conversion_requested_at|date:"M d, Y H:i" }}
+                                    {% if lead.conversion_requested_by %}
+                                    <small class="text-muted">by {{ lead.conversion_requested_by.get_full_name }}</small>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                                
+                                <div class="timeline-item">
+                                    <i class="fas fa-check-circle text-success"></i>
+                                    <strong>Converted to Client:</strong> {{ lead.converted_at|date:"M d, Y H:i" }}
+                                    {% if lead.converted_by %}
+                                    <small class="text-muted">by {{ lead.converted_by.get_full_name }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Current Client Status -->
+                        {% if lead.generated_client %}
+                        <div class="conversion-info mt-3">
+                            <h6 class="text-success"><i class="fas fa-user-check"></i> Current Client Status</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Client ID:</strong> {{ lead.generated_client.client_id|default:lead.client_id }}</p>
+                                    <p class="mb-1"><strong>Current RM:</strong> 
+                                        {% if lead.generated_client.user %}
+                                            {{ lead.generated_client.user.get_full_name }}
+                                        {% elif lead.final_assigned_rm %}
+                                            {{ lead.final_assigned_rm.get_full_name }}
+                                        {% elif lead.assigned_to %}
+                                            {{ lead.assigned_to.get_full_name }}
+                                        {% else %}
+                                            Not assigned
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>AUM:</strong> ₹{{ lead.generated_client.aum|floatformat:0|default:"Not set" }}</p>
+                                    <p class="mb-1"><strong>SIP:</strong> ₹{{ lead.generated_client.sip_amount|floatformat:0|default:"Not set" }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% elif lead.client_id %}
+                        <!-- Show basic client info even if generated_client doesn't exist -->
+                        <div class="conversion-info mt-3">
+                            <h6 class="text-success"><i class="fas fa-user-check"></i> Client Information</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Client ID:</strong> {{ lead.client_id }}</p>
+                                    <p class="mb-1"><strong>Assigned RM:</strong> 
+                                        {% if lead.final_assigned_rm %}
+                                            {{ lead.final_assigned_rm.get_full_name }}
+                                        {% elif lead.assigned_to %}
+                                            {{ lead.assigned_to.get_full_name }}
+                                        {% else %}
+                                            Not assigned
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1 text-muted"><em>Client details managed in client system</em></p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+
+                <!-- Pagination would go here if implemented -->
+                
+            {% else %}
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <h5>No Converted Leads Found</h5>
+                        {% if search_query %}
+                        <p class="text-muted">No converted leads match your search criteria.</p>
+                        <a href="{% url 'converted_leads_list' %}" class="btn btn-primary">
+                            <i class="fas fa-list"></i> View All Converted Leads
+                        </a>
+                        {% else %}
+                        <p class="text-muted">No leads have been converted to clients yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

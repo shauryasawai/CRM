@@ -16,6 +16,9 @@ import pandas as pd
 from threading import Thread
 from django.db.models.signals import post_save
 from django.db.models import Q
+from datetime import datetime
+import random
+import string
 
 logger = logging.getLogger(__name__)
 
@@ -1461,7 +1464,43 @@ class Lead(models.Model):
         blank=True,
         related_name='lead_profile'
     )
-    
+    conversion_requested_at = models.DateTimeField(null=True, blank=True, help_text="When conversion was requested")
+    conversion_requested_by = models.ForeignKey(
+        User, 
+        null=True, 
+        blank=True, 
+        on_delete=models.SET_NULL,
+        related_name='requested_conversions',
+        help_text="RM who requested the conversion"
+    )
+    business_verified_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='business_verified_leads',
+        help_text="Ops team lead who verified business details"
+    )
+    business_verification_notes = models.TextField(
+        blank=True,
+        help_text="Business verification notes from ops team lead"
+    )
+    final_assigned_rm = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='final_assigned_clients',
+        help_text="RM assigned to the client after conversion (can be different from original RM)"
+    )
+    generated_client = models.OneToOneField(
+        'Client',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='source_lead',
+        help_text="The client record generated from this lead"
+    )
     # Lead Identification
     lead_id = models.CharField(max_length=20, unique=True, editable=False, null=True, blank=True)
     client_id = models.CharField(max_length=20, blank=True, null=True, unique=True)
@@ -1561,6 +1600,27 @@ class Lead(models.Model):
             
         return f"LD{date_part}{new_num:04d}"
 
+    def generate_client_id(self):
+        """Generate a unique client ID - CORRECTED VERSION"""
+        from datetime import datetime
+        import random
+        import string
+        
+        # Format: CL + YYYYMMDD + 4 random digits
+        date_part = datetime.now().strftime("%Y%m%d")
+        random_part = ''.join(random.choices(string.digits, k=4))
+        
+        client_id = f"CL{date_part}{random_part}"
+        
+        # ONLY check uniqueness against Lead model's client_id field
+        # DO NOT check Client model since it doesn't have client_id field
+        while Lead.objects.filter(client_id=client_id).exists():
+            random_part = ''.join(random.choices(string.digits, k=4))
+            client_id = f"CL{date_part}{random_part}"
+        
+        return client_id
+
+    
     
     def days_to_first_interaction(self):
         """Calculate days from creation to first interaction"""
@@ -1701,6 +1761,34 @@ class Client(models.Model):
         null=True,
         blank=True,
         related_name='client'
+    )
+    converted_from_lead = models.ForeignKey(
+        'Lead',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='converted_client',
+        help_text="The lead that was converted to create this client"
+    )
+    original_rm = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='original_rm_clients',
+        help_text="Original RM who handled the lead"
+    )
+    conversion_approved_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='approved_conversions',
+        help_text="Ops team lead who approved the conversion"
+    )
+    business_verification_notes = models.TextField(
+        blank=True,
+        help_text="Business verification notes from conversion approval"
     )
     name = models.CharField(max_length=255)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_clients')

@@ -33,6 +33,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
 from django.urls import reverse
 from datetime import datetime, timedelta
+from django.views.decorators.http import require_http_methods
 from django.core.mail import send_mail
 from project import settings
 from .models import (
@@ -716,6 +717,18 @@ def dashboard(request):
             open_requests = team_service_requests.filter(status='open').count()
             in_progress_requests = team_service_requests.filter(status='in_progress').count()
             
+            pending_conversion_approvals = LeadStatusChange.objects.filter(
+                needs_approval=True,
+                new_status='conversion_requested',
+                approval_by=user,
+                approved__isnull=True
+                ).count()
+            recent_conversion_decisions = LeadStatusChange.objects.filter(
+                approval_by=user,
+                new_status='conversion_requested',
+                approved__isnull=False
+                ).select_related('lead', 'changed_by').order_by('-approved_at')[:5]
+    
             # Team member performance
             team_members_data = []
             for member in team_members:
@@ -789,6 +802,8 @@ def dashboard(request):
                 'team_members_data': team_members_data,
                 'recent_notes': recent_notes,
                 'execution_plans_stats': execution_plans_stats,
+                'pending_conversion_approvals': pending_conversion_approvals,
+                'recent_conversion_decisions': recent_conversion_decisions,
             })
             template_name = 'base/dashboard_ops_team_lead.html'
 
@@ -2450,8 +2465,6 @@ def quick_client_search(request):
     return JsonResponse({'results': results})
 
 
-@login_required
-
 @require_GET
 def quick_lead_search(request):
     """Quick lead search for autocomplete"""
@@ -2503,29 +2516,54 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 
-from .models import Lead, LeadInteraction, ProductDiscussion, LeadStatusChange
+from .models import Lead, LeadInteraction, ProductDiscussion, LeadStatusChange, Client
 from .forms import (
     LeadForm, 
     LeadInteractionForm, 
     ProductDiscussionForm,
     LeadConversionForm,
     LeadStatusChangeForm,
-    LeadReassignmentForm
+    LeadReassignmentForm,
+    ClientCreationForm
 )
 from .models import User
+
+# Update the lead_list view in views.py
 
 @login_required
 def lead_list(request):
     user = request.user
     
-    # Get leads accessible to user (assigned to them or users they can access)
-    accessible_leads = get_user_accessible_data(user, Lead, 'assigned_to')
-    
-    # Also include leads created by the current user (regardless of assignee)
-    created_leads = Lead.objects.filter(created_by=user)
-    
-    # Combine both querysets and remove duplicates
-    leads = (accessible_leads | created_leads).distinct()
+    # Role-based lead access
+    if user.role == 'ops_team_lead':
+        # Ops team lead can see converted leads and leads awaiting conversion approval
+        # IMPORTANT: Include leads where conversion is requested but not yet approved
+        leads = Lead.objects.filter(
+            Q(status='converted') | 
+            Q(status='conversion_requested') |
+            Q(conversion_requested_at__isnull=False, converted=False)  # Additional safety check
+        ).distinct()
+    elif user.role in ['top_management', 'business_head']:
+        # Top management and business head can see all leads in the system
+        leads = Lead.objects.all()
+    elif user.role == 'rm_head':
+        # RM Head can see leads assigned to themselves and their RMs
+        subordinate_rms = get_user_accessible_data(user, User, 'manager')
+        
+        leads = Lead.objects.filter(
+            Q(assigned_to=user) |
+            Q(assigned_to__in=subordinate_rms) |
+            Q(final_assigned_rm=user) |
+            Q(final_assigned_rm__in=subordinate_rms) |
+            Q(created_by=user)
+        ).distinct()
+    else:
+        # For other roles (RM, ops_exec, etc.)
+        accessible_leads = get_user_accessible_data(user, Lead, 'assigned_to')
+        created_leads = Lead.objects.filter(created_by=user)
+        final_assigned_leads = Lead.objects.filter(final_assigned_rm=user)
+        
+        leads = (accessible_leads | created_leads | final_assigned_leads).distinct()
     
     # Filtering options
     status_filter = request.GET.get('status')
@@ -2540,7 +2578,8 @@ def lead_list(request):
             Q(email__icontains=search_query) |
             Q(mobile__icontains=search_query) |
             Q(source__icontains=search_query) |
-            Q(lead_id__icontains=search_query)
+            Q(lead_id__icontains=search_query) |
+            Q(client_id__icontains=search_query)
         )
 
     # Filter by conversion status
@@ -2550,22 +2589,143 @@ def lead_list(request):
     elif converted_filter == 'false':
         leads = leads.filter(converted=False)
 
+    # Add data specific to different roles
+    pending_conversion_approvals = 0
+    recent_conversion_decisions = []
+    
+    if user.role == 'ops_team_lead':
+        # Get pending conversion approvals count - both those needing approval and those that can be self-assigned
+        pending_conversion_approvals = LeadStatusChange.objects.filter(
+            Q(needs_approval=True, new_status='conversion_requested', approved__isnull=True) |
+            Q(lead__status='conversion_requested', lead__converted=False)
+        ).distinct().count()
+        
+        # Also count leads that are in conversion_requested status but don't have approval records
+        leads_without_approval = Lead.objects.filter(
+            status='conversion_requested',
+            converted=False
+        ).exclude(
+            status_changes__needs_approval=True,
+            status_changes__new_status='conversion_requested'
+        ).count()
+        
+        pending_conversion_approvals += leads_without_approval
+        
+        # Get recent conversion decisions
+        recent_conversion_decisions = LeadStatusChange.objects.filter(
+            Q(approval_by=user) | Q(changed_by=user),
+            new_status__in=['conversion_requested', 'converted'],
+            approved__isnull=False
+        ).select_related('lead', 'changed_by').order_by('-approved_at')[:5]
+
+    # Order leads based on role
+    if user.role == 'ops_team_lead':
+        # Show conversion_requested leads first, then converted leads by conversion date
+        leads = leads.extra(
+            select={'priority': "CASE WHEN status = 'conversion_requested' THEN 0 ELSE 1 END"}
+        ).order_by('priority', '-created_at')
+    elif user.role in ['top_management', 'business_head']:
+        leads = leads.order_by('-created_at')
+    elif user.role == 'rm_head':
+        leads = leads.extra(
+            select={'priority': """
+                CASE 
+                    WHEN status = 'conversion_requested' THEN 0
+                    WHEN status IN ('new', 'contacted', 'qualified') THEN 1
+                    ELSE 2 
+                END
+            """}
+        ).order_by('priority', '-created_at')
+    else:
+        leads = leads.order_by('-created_at')
+
+    # Debug information
+    debug_info = {}
+    if user.role in ['ops_team_lead', 'top_management', 'business_head', 'rm_head']:
+        debug_info = {
+            'total_leads': Lead.objects.count(),
+            'converted_leads': Lead.objects.filter(status='converted').count(),
+            'conversion_requested': Lead.objects.filter(status='conversion_requested').count(),
+            'accessible_leads_count': leads.count(),
+            'user_role': user.role,
+            'current_filters': {
+                'status': status_filter,
+                'search': search_query,
+                'converted': converted_filter,
+            }
+        }
+        
+        # Role-specific debug info
+        if user.role == 'ops_team_lead':
+            debug_info['ops_relevant_leads'] = Lead.objects.filter(
+                Q(status='converted') | Q(status='conversion_requested')
+            ).count()
+            debug_info['pending_approvals'] = pending_conversion_approvals
+        elif user.role in ['top_management', 'business_head']:
+            debug_info['role_privilege'] = 'Can view all leads'
+        elif user.role == 'rm_head':
+            subordinate_rms = get_user_accessible_data(user, User, 'manager')
+            debug_info['team_leads'] = Lead.objects.filter(
+                Q(assigned_to=user) | Q(assigned_to__in=subordinate_rms)
+            ).count()
+            debug_info['team_size'] = subordinate_rms.count() + 1
+
+    # Get status choices for filter dropdown
+    status_choices = Lead.STATUS_CHOICES
+
     context = {
-        'leads': leads.order_by('-created_at'),
-        'status_choices': Lead.STATUS_CHOICES,
+        'leads': leads,
+        'status_choices': status_choices,
         'current_status': status_filter,
         'search_query': search_query,
         'converted_filter': converted_filter,
+        'pending_conversion_approvals': pending_conversion_approvals,
+        'recent_conversion_decisions': recent_conversion_decisions,
+        'debug_info': debug_info,
     }
     
     return render(request, 'base/leads.html', context)
+
 
 @login_required
 def lead_detail(request, pk):
     lead = get_object_or_404(Lead, pk=pk)
     
-    # Check permissions
-    if not request.user.can_access_user_data(lead.assigned_to):
+    # Simplified permission check
+    has_permission = False
+    
+    # Check based on user role and relationship to lead
+    if request.user.role in ['top_management', 'business_head', 'business_head_ops']:
+        # Top level roles can access all leads
+        has_permission = True
+    elif request.user.role == 'ops_team_lead':
+        # Ops team lead can access leads pending their approval or previously decided by them
+        pending_approval = LeadStatusChange.objects.filter(
+            lead=lead,
+            needs_approval=True,
+            approval_by=request.user,
+            approved__isnull=True
+        ).exists()
+        
+        previous_decision = LeadStatusChange.objects.filter(
+            lead=lead,
+            approval_by=request.user,
+            approved__isnull=False
+        ).exists()
+        
+        has_permission = pending_approval or previous_decision
+    elif request.user.role == 'rm_head':
+        # RM Head can access leads assigned to their team members
+        # Simple check: if lead is assigned to an RM, allow access
+        has_permission = (lead.assigned_to.role == 'rm') or (lead.assigned_to == request.user)
+    elif request.user.role == 'rm':
+        # RM can access their own leads
+        has_permission = (lead.assigned_to == request.user)
+    elif hasattr(lead, 'created_by') and lead.created_by == request.user:
+        # Creator can always access
+        has_permission = True
+    
+    if not has_permission:
         raise PermissionDenied("You don't have permission to view this lead.")
     
     interactions = lead.interactions.all().order_by('-interaction_date')
@@ -2577,15 +2737,31 @@ def lead_detail(request, pk):
     status_change_form = LeadStatusChangeForm()
     product_discussion_form = ProductDiscussionForm()
     
-    # Conversion form (only for managers)
+    # Conversion form (only for managers and assigned RM)
     conversion_form = None
-    if request.user.role in ['rm_head', 'business_head', 'top_management'] and not lead.converted:
+    if (request.user.role in ['rm_head', 'business_head', 'top_management'] or 
+        request.user == lead.assigned_to) and not lead.converted:
         conversion_form = LeadConversionForm()
     
     # Reassignment form (only for managers)
     reassignment_form = None
     if request.user.role in ['rm_head', 'business_head', 'top_management']:
         reassignment_form = LeadReassignmentForm(user=request.user)
+    
+    # Check if there's a pending approval for this lead
+    pending_approval = None
+    if request.user.role == 'ops_team_lead':
+        pending_approval = LeadStatusChange.objects.filter(
+            lead=lead,
+            needs_approval=True,
+            approval_by=request.user,
+            approved__isnull=True
+        ).first()
+    
+    # Get available RMs for approval form (if ops_team_lead)
+    available_rms = None
+    if request.user.role == 'ops_team_lead' and pending_approval:
+        available_rms = User.objects.filter(role='rm', is_active=True).order_by('first_name', 'last_name')
     
     product_choices = ProductDiscussion.PRODUCT_CHOICES
     context = {
@@ -2599,13 +2775,17 @@ def lead_detail(request, pk):
         'product_discussion_form': product_discussion_form,
         'conversion_form': conversion_form,
         'reassignment_form': reassignment_form,
+        'auto_client_id': lead.generate_client_id(),
+        'pending_approval': pending_approval,
+        'available_rms': available_rms,
+        'user_role': request.user.role,
     }
     
     return render(request, 'base/lead_detail.html', context)
 
 @login_required
 def lead_create(request):
-    if not request.user.role in ['rm', 'rm_head', 'business_head', 'top_management']:
+    if not request.user.role in ['rm', 'rm_head', 'business_head', 'top_management','ops_team_lead','ops_exec']:
         messages.error(request, "You don't have permission to create leads.")
         return redirect('lead_list')
         
@@ -2633,7 +2813,10 @@ def lead_create(request):
         form = LeadForm()
         
         # Limit assignee choices based on user's role and team
-        if request.user.role == 'rm_head':
+        if request.user.role == 'rm':
+            # RM can only assign leads to themselves
+            form.fields['assigned_to'].queryset = User.objects.filter(id=request.user.id)
+        elif request.user.role == 'rm_head':
             accessible_users = request.user.get_accessible_users()
             form.fields['assigned_to'].queryset = User.objects.filter(
                 id__in=[u.id for u in accessible_users],
@@ -2672,7 +2855,10 @@ def lead_update(request, pk):
         form = LeadForm(instance=lead)
         
         # Limit assignee choices based on user's role
-        if request.user.role == 'rm_head':
+        if request.user.role == 'rm':
+            # RM can only assign leads to themselves
+            form.fields['assigned_to'].queryset = User.objects.filter(id=request.user.id)
+        elif request.user.role == 'rm_head':
             accessible_users = request.user.get_accessible_users()
             form.fields['assigned_to'].queryset = User.objects.filter(
                 id__in=[u.id for u in accessible_users],
@@ -2815,46 +3001,454 @@ def request_conversion(request, pk):
     
     if lead.converted:
         messages.error(request, "This lead is already converted.")
-        return redirect('lead_detail', pk=lead.pk)
+        return redirect('lead_detail', pk=pk)
     
     # Check if conversion is already requested
     if lead.status == 'conversion_requested':
-        messages.warning(request, "Conversion request is already pending approval.")
-        return redirect('lead_detail', pk=lead.pk)
+        messages.warning(request, "Conversion request is already pending business verification.")
+        return redirect('lead_detail', pk=pk)
     
-    # Find the appropriate manager for approval
-    approval_manager = lead.assigned_to.get_approval_manager()  # Use the new method
+    # Allow ops_team_lead to self-assign verification or assign to ops_exec
+    verification_assignee = request.POST.get('verification_assignee')
     
-    if not approval_manager:
-        messages.error(request, 
-            f"No manager found to approve conversion for {lead.assigned_to.get_full_name()}. "
-            "Please contact your administrator to set up the reporting hierarchy."
-        )
-        return redirect('lead_detail', pk=lead.pk)
+    # If ops_team_lead is making the request, they can assign to themselves or ops_exec
+    if request.user.role == 'ops_team_lead':
+        if verification_assignee == 'self':
+            approval_by = request.user
+        elif verification_assignee == 'ops_exec':
+            # Find an ops_exec to assign to
+            ops_exec = User.objects.filter(role='ops_exec', is_active=True).first()
+            if not ops_exec:
+                messages.error(request, "No operations executive found for assignment.")
+                return redirect('lead_detail', pk=pk)
+            approval_by = ops_exec
+        else:
+            # Default to ops_team_lead
+            approval_by = request.user
+    else:
+        # For other roles, find ops_team_lead for business verification
+        ops_team_lead = User.objects.filter(role='ops_team_lead', is_active=True).first()
+        
+        if not ops_team_lead:
+            messages.error(request, 
+                "No operations team lead found for business verification. "
+                "Please contact your administrator."
+            )
+            return redirect('lead_detail', pk=pk)
+        
+        approval_by = ops_team_lead
     
-    # Create a status change record as conversion request
-    LeadStatusChange.objects.create(
-        lead=lead,
-        changed_by=request.user,
-        old_status=lead.status,
-        new_status='conversion_requested',
-        notes=f'Conversion requested by {request.user.get_full_name()} - pending approval from {approval_manager.get_full_name()}',
-        needs_approval=True,
-        approval_by=approval_manager
-    )
+    try:
+        with transaction.atomic():
+            # Create a status change record as conversion request
+            status_change = LeadStatusChange.objects.create(
+                lead=lead,
+                changed_by=request.user,
+                old_status=lead.status,
+                new_status='conversion_requested',
+                notes=f'Conversion requested by {request.user.get_full_name()} - pending business verification from {approval_by.get_full_name()}',
+                needs_approval=True,
+                approval_by=approval_by
+            )
+            
+            # Update lead status
+            lead.status = 'conversion_requested'
+            lead.conversion_requested_at = timezone.now()
+            lead.conversion_requested_by = request.user
+            lead.save()
+            
+            # If ops_team_lead is self-assigning, automatically approve the assignment
+            if request.user.role == 'ops_team_lead' and verification_assignee == 'self':
+                status_change.approved = True
+                status_change.approved_at = timezone.now()
+                status_change.approved_by = request.user
+                status_change.notes += f" | Self-assigned for verification by {request.user.get_full_name()}"
+                status_change.save()
+                
+                messages.success(request, 
+                    f"Conversion request created and assigned to yourself for business verification."
+                )
+            else:
+                messages.success(request, 
+                    f"Conversion request sent to {approval_by.get_full_name()} for business verification."
+                )
+                
+    except Exception as e:
+        messages.error(request, f"Error requesting conversion: {str(e)}")
     
-    # Update lead status
-    lead.status = 'conversion_requested'
-    lead.save()
-    
-    # TODO: Send notification to approval manager
-    # You might want to add notification logic here
-    
-    messages.success(request, 
-        f"Conversion request sent to {approval_manager.get_full_name()} for approval."
-    )
-    return redirect('lead_detail', pk=lead.pk)
+    return redirect('lead_detail', pk=pk)
 
+
+def ops_pending_approvals(request):
+    """Operations Team Lead view for pending conversion approvals"""
+    if request.user.role not in ['ops_team_lead', 'ops_exec']:
+        messages.error(request, "Access denied.")
+        return redirect('dashboard')
+    
+    # Get pending conversion requests assigned to current user
+    pending_approvals = LeadStatusChange.objects.filter(
+        needs_approval=True,
+        new_status='conversion_requested',
+        approval_by=request.user,
+        approved__isnull=True
+    ).select_related('lead', 'changed_by').order_by('-changed_at')
+    
+    # For ops_team_lead, also show leads that need verification but don't have approval records
+    if request.user.role == 'ops_team_lead':
+        unassigned_conversions = Lead.objects.filter(
+            status='conversion_requested',
+            converted=False
+        ).exclude(
+            id__in=LeadStatusChange.objects.filter(
+                needs_approval=True,
+                new_status='conversion_requested'
+            ).values_list('lead_id', flat=True)
+        ).order_by('-conversion_requested_at')
+        
+        # Create approval records for unassigned conversions
+        for lead in unassigned_conversions:
+            LeadStatusChange.objects.get_or_create(
+                lead=lead,
+                new_status='conversion_requested',
+                needs_approval=True,
+                defaults={
+                    'changed_by': lead.conversion_requested_by or request.user,
+                    'old_status': 'qualified',  # Assume previous status
+                    'notes': f'Auto-assigned conversion verification to {request.user.get_full_name()}',
+                    'approval_by': request.user,
+                }
+            )
+        
+        # Refresh pending approvals after creating new records
+        pending_approvals = LeadStatusChange.objects.filter(
+            needs_approval=True,
+            new_status='conversion_requested',
+            approval_by=request.user,
+            approved__isnull=True
+        ).select_related('lead', 'changed_by').order_by('-changed_at')
+    
+    # Get all RMs for assignment dropdown
+    available_rms = User.objects.filter(role='rm', is_active=True).order_by('first_name', 'last_name')
+    
+    # Get ops executives if current user is ops_team_lead
+    available_ops_execs = []
+    if request.user.role == 'ops_team_lead':
+        available_ops_execs = User.objects.filter(role='ops_exec', is_active=True).order_by('first_name', 'last_name')
+    
+    # Get recent approvals/rejections for reference
+    recent_decisions = LeadStatusChange.objects.filter(
+        approval_by=request.user,
+        approved__isnull=False
+    ).select_related('lead', 'changed_by').order_by('-approved_at')[:10]
+    
+    context = {
+        'pending_approvals': pending_approvals,
+        'available_rms': available_rms,
+        'available_ops_execs': available_ops_execs,
+        'recent_decisions': recent_decisions,
+        'pending_count': pending_approvals.count(),
+        'user_role': request.user.role,
+    }
+    
+    return render(request, 'base/pending_approvals.html', context)
+@login_required
+@require_POST
+def assign_verification_task(request, pk):
+    """Allow ops_team_lead to assign verification task to ops_exec"""
+    if request.user.role != 'ops_team_lead':
+        messages.error(request, "You don't have permission to assign verification tasks.")
+        return redirect('lead_detail', pk=pk)
+    
+    lead = get_object_or_404(Lead, pk=pk)
+    ops_exec_id = request.POST.get('ops_exec_id')
+    
+    try:
+        ops_exec = User.objects.get(id=ops_exec_id, role='ops_exec', is_active=True)
+    except User.DoesNotExist:
+        messages.error(request, "Invalid operations executive selected.")
+        return redirect('lead_detail', pk=pk)
+    
+    try:
+        with transaction.atomic():
+            # Find the existing approval record
+            approval = LeadStatusChange.objects.filter(
+                lead=lead,
+                needs_approval=True,
+                new_status='conversion_requested',
+                approved__isnull=True
+            ).first()
+            
+            if approval:
+                # Update existing approval record
+                approval.approval_by = ops_exec
+                approval.notes += f" | Verification task assigned to {ops_exec.get_full_name()} by {request.user.get_full_name()}"
+                approval.save()
+            else:
+                # Create new approval record
+                LeadStatusChange.objects.create(
+                    lead=lead,
+                    changed_by=request.user,
+                    old_status=lead.status,
+                    new_status='conversion_requested',
+                    notes=f'Verification task assigned to {ops_exec.get_full_name()} by {request.user.get_full_name()}',
+                    needs_approval=True,
+                    approval_by=ops_exec
+                )
+            
+            messages.success(request, f"Verification task assigned to {ops_exec.get_full_name()}.")
+            
+    except Exception as e:
+        messages.error(request, f"Error assigning verification task: {str(e)}")
+    
+    return redirect('lead_detail', pk=pk)
+
+# Add this new view to handle self-assignment of verification
+@login_required
+@require_POST
+def self_assign_verification(request, pk):
+    """Allow ops_team_lead to self-assign verification task"""
+    if request.user.role != 'ops_team_lead':
+        messages.error(request, "You don't have permission to self-assign verification tasks.")
+        return redirect('lead_detail', pk=pk)
+    
+    lead = get_object_or_404(Lead, pk=pk)
+    
+    try:
+        with transaction.atomic():
+            # Find or create approval record
+            approval, created = LeadStatusChange.objects.get_or_create(
+                lead=lead,
+                needs_approval=True,
+                new_status='conversion_requested',
+                defaults={
+                    'changed_by': request.user,
+                    'old_status': lead.status,
+                    'notes': f'Verification task self-assigned by {request.user.get_full_name()}',
+                    'approval_by': request.user,
+                }
+            )
+            
+            if not created:
+                # Update existing record
+                approval.approval_by = request.user
+                approval.notes += f" | Self-assigned by {request.user.get_full_name()}"
+                approval.save()
+            
+            messages.success(request, "Verification task self-assigned successfully.")
+            
+    except Exception as e:
+        messages.error(request, f"Error self-assigning verification task: {str(e)}")
+    
+    return redirect('lead_detail', pk=pk)
+
+@login_required
+@require_POST
+def approve_conversion(request, pk):
+    if not request.user.role == 'ops_team_lead':
+        messages.error(request, "You don't have permission to verify business details.")
+        return redirect('lead_detail', pk=pk)
+    
+    lead = get_object_or_404(Lead, pk=pk)
+    approval_id = request.POST.get('approval_id')
+    
+    try:
+        approval = LeadStatusChange.objects.get(id=approval_id, lead=lead, needs_approval=True)
+    except LeadStatusChange.DoesNotExist:
+        messages.error(request, "Approval request not found or already processed.")
+        return redirect('ops_pending_approvals')
+    
+    # Get business verification data from form
+    assigned_rm_id = request.POST.get('assigned_rm')
+    business_verification_notes = request.POST.get('business_verification_notes', '')
+    client_id = request.POST.get('client_id')  # Get client ID from form
+    
+    if not assigned_rm_id:
+        messages.error(request, "Please select an RM to assign the client to.")
+        return redirect('lead_detail', pk=pk)
+    
+    try:
+        assigned_rm = User.objects.get(id=assigned_rm_id, role__in=['rm', 'rm_head'])
+    except User.DoesNotExist:
+        messages.error(request, "Invalid RM selected for client assignment.")
+        return redirect('lead_detail', pk=pk)
+    
+    try:
+        with transaction.atomic():
+            # Generate client ID if not provided
+            if not client_id or not client_id.strip():
+                client_id = generate_client_id()
+            else:
+                client_id = client_id.strip()
+                # Validate uniqueness
+                if Lead.objects.filter(client_id=client_id).exclude(pk=lead.pk).exists():
+                    client_id = generate_client_id()
+                    messages.warning(request, f"Provided client ID was not unique. Generated new ID: {client_id}")
+            
+            # Update the approval record
+            approval.approved = True
+            approval.approved_at = timezone.now()
+            approval.approved_by = request.user
+            approval.needs_approval = False
+            approval.notes += f" | Business verified by {request.user.get_full_name()}: {business_verification_notes}"
+            approval.save()
+            
+            # Create Client entry using your actual Client model structure
+            client = Client.objects.create(
+                name=f"{client_id} - {lead.name}",  # Store client ID in name field
+                contact_info=f"{lead.email or ''} | {lead.mobile or ''}".strip(' |'),  # Combine email and mobile
+                user=assigned_rm,  # Assign to the selected RM
+                created_by=request.user,  # ops_team_lead who approved
+                converted_from_lead=lead,
+                business_verification_notes=business_verification_notes,
+                original_rm=lead.assigned_to,  # Keep track of original RM
+                conversion_approved_by=request.user,
+                # Set default values for required fields
+                aum=0.00,
+                sip_amount=0.00,
+                demat_count=0,
+            )
+            
+            # Convert the lead
+            lead.converted = True
+            lead.converted_at = timezone.now()
+            lead.converted_by = request.user
+            lead.status = 'converted'
+            lead.business_verified_by = request.user
+            lead.business_verification_notes = business_verification_notes
+            lead.final_assigned_rm = assigned_rm
+            lead.client_id = client_id  # Store client ID in lead
+            lead.generated_client = client
+            lead.save()
+            
+            # Create a new status change record for the conversion
+            LeadStatusChange.objects.create(
+                lead=lead,
+                changed_by=request.user,
+                old_status=approval.new_status,
+                new_status='converted',
+                notes=f"Business verified and converted to client {client_id} by {request.user.get_full_name()}. Assigned to {assigned_rm.get_full_name()}.",
+                approved=True,
+                approved_by=request.user,
+                approved_at=timezone.now()
+            )
+            
+            messages.success(request, 
+                f"Lead successfully converted to client {client_id} and assigned to {assigned_rm.get_full_name()}."
+            )
+            
+    except Exception as e:
+        messages.error(request, f"Error converting lead: {str(e)}")
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Lead conversion failed for lead {pk}: {str(e)}")
+    
+    return redirect('lead_detail', pk=pk)
+
+@login_required
+@require_POST
+def reject_conversion(request, pk):
+    if not request.user.role == 'ops_team_lead':
+        messages.error(request, "You don't have permission to reject conversions.")
+        return redirect('lead_detail', pk=pk)
+    
+    lead = get_object_or_404(Lead, pk=pk)
+    approval_id = request.POST.get('approval_id')
+    
+    try:
+        approval = LeadStatusChange.objects.get(id=approval_id, lead=lead, needs_approval=True)
+    except LeadStatusChange.DoesNotExist:
+        messages.error(request, "Approval request not found or already processed.")
+        return redirect('ops_pending_approvals')
+    
+    rejection_reason = request.POST.get('rejection_reason', 'No reason provided')
+    
+    try:
+        with transaction.atomic():
+            # Update the approval record
+            approval.approved = False
+            approval.approved_at = timezone.now()
+            approval.approved_by = request.user
+            approval.needs_approval = False
+            approval.notes = f"Business verification failed. Conversion rejected by {request.user.get_full_name()}. Reason: {rejection_reason}"
+            approval.save()
+            
+            # Revert lead status to previous status
+            lead.status = approval.old_status
+            lead.business_verification_notes = f"Rejected: {rejection_reason}"
+            lead.save()
+            
+            # Create a new status change record for the rejection
+            LeadStatusChange.objects.create(
+                lead=lead,
+                changed_by=request.user,
+                old_status='conversion_requested',
+                new_status=approval.old_status,
+                notes=f"Business verification failed. Conversion rejected by {request.user.get_full_name()}. Reason: {rejection_reason}",
+                approved=False,
+                approved_by=request.user,
+                approved_at=timezone.now()
+            )
+            
+            messages.warning(request, "Conversion request has been rejected after business verification.")
+    except Exception as e:
+        messages.error(request, f"Error rejecting conversion: {str(e)}")
+    
+    return redirect('ops_pending_approvals')
+
+@login_required
+def converted_leads_list(request):
+    """View for showing all converted leads with their interactions - maintains lead history"""
+    user = request.user
+    
+    # Get converted leads accessible to user
+    if user.role in ['top_management', 'business_head', 'ops_team_lead']:
+        converted_leads = Lead.objects.filter(converted=True)
+    elif user.role == 'rm_head':
+        accessible_users = user.get_accessible_users()
+        # Show leads that were assigned to team members OR were converted and assigned to team members
+        converted_leads = Lead.objects.filter(
+            converted=True
+        ).filter(
+            Q(assigned_to__in=accessible_users) | 
+            Q(final_assigned_rm__in=accessible_users)
+        )
+    elif user.role == 'rm':
+        # Show leads that were assigned to the RM OR are now assigned to the RM as client
+        converted_leads = Lead.objects.filter(
+            converted=True
+        ).filter(
+            Q(assigned_to=user) | 
+            Q(final_assigned_rm=user)
+        )
+    else:
+        converted_leads = Lead.objects.none()
+    
+    # Search functionality
+    search_query = request.GET.get('search')
+    if search_query:
+        converted_leads = converted_leads.filter(
+            Q(name__icontains=search_query) | 
+            Q(email__icontains=search_query) |
+            Q(mobile__icontains=search_query) |
+            Q(lead_id__icontains=search_query) |
+            Q(client_id__icontains=search_query)
+        )
+    
+    # Prefetch related data for performance
+    converted_leads = converted_leads.select_related(
+        'assigned_to', 'final_assigned_rm', 'converted_by', 'business_verified_by', 'generated_client'
+    ).prefetch_related(
+        'interactions', 'product_discussions', 'status_changes'
+    ).order_by('-converted_at')
+    
+    context = {
+        'converted_leads': converted_leads,
+        'search_query': search_query,
+    }
+    
+    return render(request, 'base/converted_leads.html', context)
+
+# Rest of the functions remain unchanged...
 @login_required
 @require_POST
 def convert_lead(request, pk):
@@ -2876,31 +3470,53 @@ def convert_lead(request, pk):
     
     try:
         with transaction.atomic():
+            # Use client_id from form if provided, otherwise generate one
+            client_id = request.POST.get('client_id')
+            if not client_id or not client_id.strip():
+                client_id = generate_client_id()
+            else:
+                client_id = client_id.strip()
+                
+                # Validate that the provided client_id is unique
+                if Lead.objects.filter(client_id=client_id).exclude(pk=lead.pk).exists():
+                    # If not unique, generate a new one
+                    client_id = generate_client_id()
+                    messages.warning(request, f"Provided client ID was not unique. Generated new ID: {client_id}")
+            
+            # Create a Client record (using existing Client model structure)
+            from .models import Client
+            client = Client.objects.create(
+                name=f"{client_id} - {lead.name}",  # Store client ID in name field
+                contact_info=f"{lead.email or ''} | {lead.mobile or ''}".strip(' |'),
+                user=lead.assigned_to,  # Assign to current RM
+                converted_from_lead=lead,
+                created_by=request.user,
+                # Add other fields based on your Client model structure
+                aum=0.00,  # Default AUM
+                sip_amount=0.00,  # Default SIP
+                demat_count=0,  # Default demat count
+            )
+            
             # Update lead as converted
             lead.converted = True
             lead.converted_at = timezone.now()
             lead.converted_by = request.user
             lead.status = 'converted'
-            
-            # Use client_id from form if provided, otherwise generate one
-            client_id = request.POST.get('client_id')
-            if client_id and client_id.strip():
-                lead.client_id = client_id.strip()
-            else:
-                lead.client_id = generate_client_id()  # Custom function
-            
+            lead.client_id = client_id
+            lead.generated_client = client  # Link to the created client
             lead.save()
             
             # Record status change
+            from .models import LeadStatusChange
             LeadStatusChange.objects.create(
                 lead=lead,
                 changed_by=request.user,
                 old_status='conversion_requested',
                 new_status='converted',
-                notes=f"Lead converted to client {lead.client_id}"
+                notes=f"Lead converted to client {client_id} (Client ID: {client.id})"
             )
             
-            messages.success(request, f"Lead successfully converted to client {lead.client_id}.")
+            messages.success(request, f"Lead successfully converted to client {client_id}.")
             
     except Exception as e:
         messages.error(request, f"Error converting lead: {str(e)}")
@@ -2946,95 +3562,6 @@ def reassign_lead(request, pk):
     
     return redirect('lead_detail', pk=lead.pk)
 
-@login_required
-@require_POST
-def approve_conversion(request, pk):
-    if not request.user.role in ['rm_head', 'business_head', 'top_management']:
-        messages.error(request, "You don't have permission to approve conversions.")
-        return redirect('rm_head_dashboard')
-    
-    lead = get_object_or_404(Lead, pk=pk)
-    approval_id = request.POST.get('approval_id')
-    
-    try:
-        approval = LeadStatusChange.objects.get(id=approval_id, lead=lead, needs_approval=True)
-    except LeadStatusChange.DoesNotExist:
-        messages.error(request, "Approval request not found or already processed.")
-        return redirect('rm_head_dashboard')
-    
-    # Update the approval record
-    approval.approved = True
-    approval.approved_at = timezone.now()
-    approval.approved_by = request.user
-    approval.needs_approval = False
-    approval.save()
-    
-    # Convert the lead
-    lead.converted = True
-    lead.converted_at = timezone.now()
-    lead.converted_by = request.user
-    lead.client_id = generate_client_id()
-    lead.status = 'converted'
-    lead.save()
-    
-    # Create a new status change record for the conversion
-    LeadStatusChange.objects.create(
-        lead=lead,
-        changed_by=request.user,
-        old_status=approval.new_status,
-        new_status='converted',
-        notes=f"Conversion approved by {request.user.get_full_name()}",
-        approved=True,
-        approved_by=request.user,
-        approved_at=timezone.now()
-    )
-    
-    messages.success(request, f"Lead successfully converted to client {lead.client_id}.")
-    return redirect('rm_head_dashboard')
-
-@login_required
-@require_POST
-def reject_conversion(request, pk):
-    if not request.user.role in ['rm_head', 'business_head', 'top_management']:
-        messages.error(request, "You don't have permission to reject conversions.")
-        return redirect('rm_head_dashboard')
-    
-    lead = get_object_or_404(Lead, pk=pk)
-    approval_id = request.POST.get('approval_id')
-    
-    try:
-        approval = LeadStatusChange.objects.get(id=approval_id, lead=lead, needs_approval=True)
-    except LeadStatusChange.DoesNotExist:
-        messages.error(request, "Approval request not found or already processed.")
-        return redirect('rm_head_dashboard')
-    
-    # Update the approval record
-    approval.approved = False
-    approval.approved_at = timezone.now()
-    approval.approved_by = request.user
-    approval.needs_approval = False
-    approval.notes = f"Conversion rejected by {request.user.get_full_name()}. " + (request.POST.get('rejection_reason', '') or "No reason provided")
-    approval.save()
-    
-    # Revert lead status to previous status
-    lead.status = approval.old_status
-    lead.save()
-    
-    # Create a new status change record for the rejection
-    LeadStatusChange.objects.create(
-        lead=lead,
-        changed_by=request.user,
-        old_status='conversion_requested',
-        new_status=approval.old_status,
-        notes=f"Conversion rejected by {request.user.get_full_name()}",
-        approved=False,
-        approved_by=request.user,
-        approved_at=timezone.now()
-    )
-    
-    messages.warning(request, "Conversion request has been rejected.")
-    return redirect('rm_head_dashboard')
-
 # Helper functions
 def generate_lead_id():
     """Generate a unique lead ID"""
@@ -3043,13 +3570,71 @@ def generate_lead_id():
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     return f"{prefix}{timestamp}"
 
-def generate_client_id():
-    """Generate a unique client ID"""
-    from datetime import datetime
-    prefix = "CL"
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    return f"{prefix}{timestamp}"
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required
+from datetime import datetime
+import random
+import string
 
+def generate_client_id():
+    """Standalone function to generate unique client ID"""
+    date_part = datetime.now().strftime("%Y%m%d")
+    random_part = ''.join(random.choices(string.digits, k=4))
+    
+    client_id = f"CL{date_part}{random_part}"
+    
+    # Check uniqueness against Lead model's client_id field
+    from .models import Lead, Client
+    
+    # Check against both models if Client has client_id field, otherwise just Lead
+    try:
+        while (Lead.objects.filter(client_id=client_id).exists() or 
+               Client.objects.filter(client_id=client_id).exists()):
+            random_part = ''.join(random.choices(string.digits, k=4))
+            client_id = f"CL{date_part}{random_part}"
+    except Exception:
+        # Fallback: only check against Lead model
+        while Lead.objects.filter(client_id=client_id).exists():
+            random_part = ''.join(random.choices(string.digits, k=4))
+            client_id = f"CL{date_part}{random_part}"
+    
+    return client_id
+
+@login_required
+@require_http_methods(["GET"])
+def generate_client_id_view(request):
+    """Generate a new client ID via AJAX"""
+    client_id = generate_client_id()
+    return JsonResponse({'client_id': client_id})
+
+@login_required
+def get_rm_details(request, rm_id):
+    """AJAX endpoint to get RM details for assignment"""
+    if request.user.role != 'ops_team_lead':
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    try:
+        rm = User.objects.get(id=rm_id, role='rm', is_active=True)
+        
+        # Get RM's current client count and other relevant metrics
+        client_count = Client.objects.filter(user=rm).count()
+        
+        rm_details = {
+            'id': rm.id,
+            'name': rm.get_full_name() or rm.username,
+            'email': rm.email,
+            'current_clients': client_count,
+            'department': getattr(rm, 'department', 'Not specified'),
+            'phone': getattr(rm, 'phone', 'Not available'),
+        }
+        
+        return JsonResponse({'success': True, 'rm_details': rm_details})
+        
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'RM not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 @login_required
 @require_POST
 def delete_interaction(request, interaction_id):
@@ -3168,8 +3753,6 @@ def get_accessible_users(request):
     ).values('id', 'first_name', 'last_name', 'email', 'role')[:10]
     
     return JsonResponse(list(users), safe=False)
-
-
 # Client Views with Hierarchy
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -4211,7 +4794,7 @@ def task_list(request):
 @login_required
 def task_create(request):
     # Only RM Heads and above can assign tasks to others
-    if not request.user.role in ['rm_head', 'business_head', 'top_management']:
+    if not request.user.role in ['rm_head', 'business_head', 'top_management', 'ops_team_lead']:
         messages.error(request, "You don't have permission to create tasks for others.")
         return redirect('task_list')
         
@@ -4232,6 +4815,9 @@ def task_create(request):
             form.fields['assigned_to'].queryset = User.objects.filter(
                 id__in=[u.id for u in accessible_users]
             )
+        elif request.user.role == 'ops_team_lead':
+            # Can only assign to ops_exec users
+            form.fields['assigned_to'].queryset = User.objects.filter(role='ops_exec')
         elif request.user.role in ['business_head', 'top_management']:
             # Can assign to anyone below them in hierarchy
             form.fields['assigned_to'].queryset = User.objects.exclude(role='top_management')

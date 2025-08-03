@@ -4603,3 +4603,54 @@ class ActionPlanApprovalForm(forms.Form):
             raise ValidationError("Please provide a reason for rejection")
         
         return cleaned_data
+    
+# Add this to your forms.py file
+
+from django import forms
+from .models import Client, User
+
+class ClientCreationForm(forms.Form):
+    """Form for ops team lead to assign client to RM during conversion approval"""
+    assigned_rm = forms.ModelChoiceField(
+        queryset=User.objects.filter(role__in=['rm', 'rm_head'], is_active=True),
+        empty_label="Select RM to assign client",
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label="Assign Client to RM"
+    )
+    business_verification_notes = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'Enter business verification notes...'
+        }),
+        label="Business Verification Notes",
+        help_text="Enter details about business verification and why this lead should be converted to client",
+        required=True
+    )
+
+class ClientReassignmentForm(forms.Form):
+    """Form for reassigning clients to different RMs"""
+    assigned_to = forms.ModelChoiceField(
+        queryset=User.objects.filter(role__in=['rm', 'rm_head'], is_active=True),
+        empty_label="Select RM",
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label="Reassign to RM"
+    )
+    reason = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 2,
+            'placeholder': 'Enter reason for reassignment...'
+        }),
+        label="Reason for Reassignment",
+        required=True
+    )
+
+    def __init__(self, user=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if user and user.role in ['rm_head', 'business_head', 'top_management']:
+            # Managers can assign to any RM
+            self.fields['assigned_to'].queryset = User.objects.filter(
+                role__in=['rm', 'rm_head'], 
+                is_active=True
+            ).order_by('first_name', 'last_name')

@@ -1,0 +1,667 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Pending Conversion Approvals{% endblock %}
+
+{% block extra_css %}
+<style>
+    .approval-card {
+        border-left: 4px solid #ffc107;
+        transition: all 0.3s ease;
+    }
+    .approval-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .lead-info {
+        background: #f8f9fa;
+        border-radius: 5px;
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+    .action-buttons .btn {
+        margin: 2px;
+    }
+    .priority-high {
+        border-left-color: #dc3545 !important;
+    }
+    .priority-medium {
+        border-left-color: #ffc107 !important;
+    }
+    .priority-low {
+        border-left-color: #28a745 !important;
+    }
+    .modal-header.approve {
+        background-color: #28a745;
+        color: white;
+    }
+    .modal-header.reject {
+        background-color: #dc3545;
+        color: white;
+    }
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+    }
+    .quick-actions {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2>
+                        <i class="fas fa-clipboard-check text-warning"></i>
+                        {% if user_role == 'ops_team_lead' %}
+                            Operations Team Lead Dashboard
+                        {% else %}
+                            Operations Executive Dashboard
+                        {% endif %}
+                    </h2>
+                    <p class="text-muted">Manage conversion approvals and business verification tasks</p>
+                </div>
+                <div>
+                    <a href="{% url 'lead_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Leads
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-clock fa-2x mb-2"></i>
+                    <h3>{{ pending_count }}</h3>
+                    <p class="mb-0">Pending Approvals</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-circle fa-2x mb-2"></i>
+                    <h3>{{ recent_decisions|length }}</h3>
+                    <p class="mb-0">Recent Decisions</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-users fa-2x mb-2"></i>
+                    <h3>{{ available_rms|length }}</h3>
+                    <p class="mb-0">Available RMs</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-user-tie fa-2x mb-2"></i>
+                    <h3>{{ available_ops_execs|length }}</h3>
+                    <p class="mb-0">Operations Team</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions (for ops_team_lead) -->
+    {% if user_role == 'ops_team_lead' and pending_count > 0 %}
+    <div class="quick-actions">
+        <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+        <div class="row">
+            <div class="col-md-6">
+                <button type="button" class="btn btn-primary btn-block" onclick="bulkSelfAssign()">
+                    <i class="fas fa-user-check"></i> Self-Assign All Pending
+                </button>
+            </div>
+            <div class="col-md-6">
+                <div class="dropdown">
+                    <button class="btn btn-secondary btn-block dropdown-toggle" type="button" 
+                            data-toggle="dropdown">
+                        <i class="fas fa-users"></i> Bulk Assign to Ops Exec
+                    </button>
+                    <div class="dropdown-menu w-100">
+                        {% for ops_exec in available_ops_execs %}
+                        <a class="dropdown-item" href="#" onclick="bulkAssignToOpsExec({{ ops_exec.id }}, '{{ ops_exec.get_full_name|default:ops_exec.username }}')">
+                            {{ ops_exec.get_full_name|default:ops_exec.username }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <div class="row">
+        <!-- Pending Approvals Section -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">
+                        <i class="fas fa-hourglass-half"></i> Pending Approvals
+                        {% if pending_count > 0 %}
+                            <span class="badge badge-warning ml-2">{{ pending_count }}</span>
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if pending_count > 0 %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Action Required:</strong> 
+                            You have {{ pending_count }} lead{{ pending_count|pluralize }} awaiting business verification.
+                            {% if user_role == 'ops_team_lead' %}
+                                You can verify these leads yourself or assign them to operations executives.
+                            {% endif %}
+                        </div>
+
+                        <!-- Approval Cards -->
+                        {% for approval in pending_approvals %}
+                        <div class="card approval-card mb-3 {% cycle 'priority-high' 'priority-medium' 'priority-low' %}">
+                            <div class="card-body">
+                                <div class="row">
+                                    <!-- Lead Information -->
+                                    <div class="col-md-4">
+                                        <div class="lead-info">
+                                            <h6 class="mb-1">
+                                                <strong>{{ approval.lead.name }}</strong>
+                                                <span class="badge badge-{{ approval.lead.status|default:'secondary' }} ml-2">
+                                                    {{ approval.lead.get_status_display }}
+                                                </span>
+                                            </h6>
+                                            <small class="text-muted">
+                                                <i class="fas fa-id-badge"></i> {{ approval.lead.lead_id }}<br>
+                                                {% if approval.lead.email %}
+                                                    <i class="fas fa-envelope"></i> {{ approval.lead.email }}<br>
+                                                {% endif %}
+                                                {% if approval.lead.mobile %}
+                                                    <i class="fas fa-phone"></i> {{ approval.lead.mobile }}<br>
+                                                {% endif %}
+                                                <i class="fas fa-user"></i> Assigned to: {{ approval.lead.assigned_to.get_full_name|default:approval.lead.assigned_to.username }}
+                                            </small>
+                                        </div>
+                                    </div>
+
+                                    <!-- Request Information -->
+                                    <div class="col-md-4">
+                                        <h6>Request Details</h6>
+                                        <small>
+                                            <strong>Requested by:</strong> {{ approval.changed_by.get_full_name|default:approval.changed_by.username }}<br>
+                                            <strong>Role:</strong> {{ approval.changed_by.role|title }}<br>
+                                            <strong>Date:</strong> {{ approval.changed_at|date:"M d, Y g:i A" }}<br>
+                                            <strong>Priority:</strong> 
+                                            {% if approval.changed_at|timesince|slice:":1" == "0" %}
+                                                <span class="badge badge-danger">High</span>
+                                            {% elif approval.changed_at|timesince|slice:":1" == "1" %}
+                                                <span class="badge badge-warning">Medium</span>
+                                            {% else %}
+                                                <span class="badge badge-success">Normal</span>
+                                            {% endif %}
+                                        </small>
+                                    </div>
+
+                                    <!-- Actions -->
+                                    <div class="col-md-4">
+                                        <h6>Actions</h6>
+                                        <div class="action-buttons">
+                                            <!-- View Lead Details -->
+                                            <a href="{% url 'lead_detail' approval.lead.pk %}" 
+                                               class="btn btn-info btn-sm btn-block mb-1">
+                                                <i class="fas fa-eye"></i> View Details
+                                            </a>
+
+                                            {% if user_role == 'ops_team_lead' %}
+                                                <!-- Self-assign verification -->
+                                                <form method="post" action="{% url 'self_assign_verification' approval.lead.pk %}" 
+                                                      style="display: inline-block; width: 100%;">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-primary btn-sm btn-block mb-1" 
+                                                            onclick="return confirm('Assign this verification to yourself?')">
+                                                        <i class="fas fa-user-check"></i> Self-Assign
+                                                    </button>
+                                                </form>
+
+                                                <!-- Assign to ops_exec -->
+                                                {% if available_ops_execs %}
+                                                <div class="dropdown w-100 mb-1">
+                                                    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" 
+                                                            type="button" data-toggle="dropdown">
+                                                        <i class="fas fa-user-plus"></i> Assign to Ops Exec
+                                                    </button>
+                                                    <div class="dropdown-menu w-100">
+                                                        {% for ops_exec in available_ops_execs %}
+                                                        <form method="post" action="{% url 'assign_verification_task' approval.lead.pk %}">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="ops_exec_id" value="{{ ops_exec.id }}">
+                                                            <button type="submit" class="dropdown-item">
+                                                                <i class="fas fa-user"></i> {{ ops_exec.get_full_name|default:ops_exec.username }}
+                                                                <small class="text-muted d-block">{{ ops_exec.email }}</small>
+                                                            </button>
+                                                        </form>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                                {% endif %}
+                                            {% endif %}
+
+                                            <!-- Quick approve/reject (if assigned to current user) -->
+                                            {% if approval.approval_by == request.user %}
+                                            <div class="row">
+                                                <div class="col-6">
+                                                    <button type="button" class="btn btn-success btn-sm btn-block" 
+                                                            data-toggle="modal" data-target="#approveModal{{ approval.id }}">
+                                                        <i class="fas fa-check"></i> Approve
+                                                    </button>
+                                                </div>
+                                                <div class="col-6">
+                                                    <button type="button" class="btn btn-danger btn-sm btn-block" 
+                                                            data-toggle="modal" data-target="#rejectModal{{ approval.id }}">
+                                                        <i class="fas fa-times"></i> Reject
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Notes Section -->
+                                {% if approval.notes %}
+                                <div class="row mt-2">
+                                    <div class="col-12">
+                                        <div class="alert alert-light mb-0">
+                                            <small><strong>Notes:</strong> {{ approval.notes }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Approval Modal -->
+                        {% if approval.approval_by == request.user %}
+                        <div class="modal fade" id="approveModal{{ approval.id }}" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <form method="post" action="{% url 'approve_conversion' approval.lead.pk %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="approval_id" value="{{ approval.id }}">
+                                        <div class="modal-header approve">
+                                            <h5 class="modal-title">
+                                                <i class="fas fa-check-circle"></i> Approve Conversion - {{ approval.lead.name }}
+                                            </h5>
+                                            <button type="button" class="close text-white" data-dismiss="modal">
+                                                <span>&times;</span>
+                                            </button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="alert alert-success">
+                                                <i class="fas fa-info-circle"></i>
+                                                <strong>Business Verification:</strong> Please review all lead details and assign to appropriate RM.
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label for="assigned_rm{{ approval.id }}">
+                                                            <i class="fas fa-user-tie"></i> Assign to RM: <span class="text-danger">*</span>
+                                                        </label>
+                                                        <select name="assigned_rm" id="assigned_rm{{ approval.id }}" 
+                                                                class="form-control" required onchange="updateRMInfo(this, {{ approval.id }})">
+                                                            <option value="">Select RM...</option>
+                                                            {% for rm in available_rms %}
+                                                            <option value="{{ rm.id }}" 
+                                                                    data-email="{{ rm.email }}"
+                                                                    data-phone="{{ rm.phone|default:'N/A' }}"
+                                                                    {% if rm.id == approval.lead.assigned_to.id %}selected{% endif %}>
+                                                                {{ rm.get_full_name|default:rm.username }}
+                                                            </option>
+                                                            {% endfor %}
+                                                        </select>
+                                                        <div id="rmInfo{{ approval.id }}" class="mt-2"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label for="client_id{{ approval.id }}">
+                                                            <i class="fas fa-id-card"></i> Client ID:
+                                                        </label>
+                                                        <div class="input-group">
+                                                            <input type="text" name="client_id" id="client_id{{ approval.id }}" 
+                                                                   class="form-control" 
+                                                                   placeholder="Auto-generate if empty">
+                                                            <div class="input-group-append">
+                                                                <button type="button" class="btn btn-outline-secondary" 
+                                                                        onclick="generateClientId({{ approval.id }})">
+                                                                    <i class="fas fa-magic"></i> Generate
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label for="business_verification_notes{{ approval.id }}">
+                                                    <i class="fas fa-clipboard-list"></i> Business Verification Notes:
+                                                </label>
+                                                <textarea name="business_verification_notes" id="business_verification_notes{{ approval.id }}"
+                                                          class="form-control" rows="4" 
+                                                          placeholder="Enter verification notes, compliance checks, business validation details..."></textarea>
+                                            </div>
+
+                                            <!-- Lead Summary for Review -->
+                                            <div class="card bg-light">
+                                                <div class="card-header">
+                                                    <h6><i class="fas fa-clipboard-check"></i> Lead Summary for Review</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="row">
+                                                        <div class="col-md-6">
+                                                            <strong>Lead Details:</strong><br>
+                                                            <small>
+                                                                Name: {{ approval.lead.name }}<br>
+                                                                Email: {{ approval.lead.email|default:'N/A' }}<br>
+                                                                Mobile: {{ approval.lead.mobile|default:'N/A' }}<br>
+                                                                Source: {{ approval.lead.source|default:'N/A' }}
+                                                            </small>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <strong>Current Status:</strong><br>
+                                                            <small>
+                                                                Status: {{ approval.lead.get_status_display }}<br>
+                                                                Created: {{ approval.lead.created_at|date:"M d, Y" }}<br>
+                                                                Last Updated: {{ approval.lead.updated_at|date:"M d, Y" }}<br>
+                                                                Interactions: {{ approval.lead.interactions.count }}
+                                                            </small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                                                <i class="fas fa-times"></i> Cancel
+                                            </button>
+                                            <button type="submit" class="btn btn-success">
+                                                <i class="fas fa-check"></i> Approve & Convert to Client
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Rejection Modal -->
+                        <div class="modal fade" id="rejectModal{{ approval.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <form method="post" action="{% url 'reject_conversion' approval.lead.pk %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="approval_id" value="{{ approval.id }}">
+                                        <div class="modal-header reject">
+                                            <h5 class="modal-title">
+                                                <i class="fas fa-times-circle"></i> Reject Conversion - {{ approval.lead.name }}
+                                            </h5>
+                                            <button type="button" class="close text-white" data-dismiss="modal">
+                                                <span>&times;</span>
+                                            </button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="alert alert-warning">
+                                                <i class="fas fa-exclamation-triangle"></i>
+                                                <strong>Rejection Notice:</strong> This action will reject the conversion request and notify the requesting team member.
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label for="rejection_reason{{ approval.id }}">
+                                                    <i class="fas fa-comment-alt"></i> Rejection Reason: <span class="text-danger">*</span>
+                                                </label>
+                                                <textarea name="rejection_reason" id="rejection_reason{{ approval.id }}" 
+                                                          class="form-control" rows="4" required 
+                                                          placeholder="Please provide detailed reasons for rejection (e.g., incomplete documentation, compliance issues, business criteria not met)..."></textarea>
+                                            </div>
+
+                                            <!-- Quick rejection reasons -->
+                                            <div class="form-group">
+                                                <label>Quick Reasons:</label><br>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm mr-1 mb-1" 
+                                                        onclick="setRejectionReason({{ approval.id }}, 'Incomplete documentation provided')">
+                                                    Incomplete Documentation
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm mr-1 mb-1" 
+                                                        onclick="setRejectionReason({{ approval.id }}, 'Business criteria not met')">
+                                                    Business Criteria Not Met
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm mr-1 mb-1" 
+                                                        onclick="setRejectionReason({{ approval.id }}, 'Compliance issues identified')">
+                                                    Compliance Issues
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm mr-1 mb-1" 
+                                                        onclick="setRejectionReason({{ approval.id }}, 'Additional verification required')">
+                                                    Additional Verification Required
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                                                <i class="fas fa-arrow-left"></i> Cancel
+                                            </button>
+                                            <button type="submit" class="btn btn-danger">
+                                                <i class="fas fa-times"></i> Reject Conversion
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% endfor %}
+
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                            <h4>All Caught Up!</h4>
+                            <p class="text-muted">There are no pending conversion approvals at this time.</p>
+                            <a href="{% url 'lead_list' %}" class="btn btn-primary">
+                                <i class="fas fa-list"></i> View All Leads
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar with Recent Decisions and Quick Info -->
+        <div class="col-lg-4">
+            <!-- Recent Decisions -->
+            {% if recent_decisions %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-history"></i> Recent Decisions</h5>
+                </div>
+                <div class="card-body">
+                    {% for decision in recent_decisions %}
+                    <div class="media mb-3">
+                        <div class="media-object mr-3">
+                            {% if decision.approved %}
+                                <i class="fas fa-check-circle text-success fa-2x"></i>
+                            {% else %}
+                                <i class="fas fa-times-circle text-danger fa-2x"></i>
+                            {% endif %}
+                        </div>
+                        <div class="media-body">
+                            <h6 class="mt-0">{{ decision.lead.name }}</h6>
+                            <small class="text-muted">
+                                {% if decision.approved %}
+                                    <span class="badge badge-success">Approved</span>
+                                {% else %}
+                                    <span class="badge badge-danger">Rejected</span>
+                                {% endif %}
+                                on {{ decision.approved_at|date:"M d, Y" }}
+                            </small>
+                            <div class="mt-1">
+                                <a href="{% url 'lead_detail' decision.lead.pk %}" class="btn btn-sm btn-outline-info">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% if not forloop.last %}<hr>{% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Available Team Members -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-users"></i> Team Information</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Available RMs ({{ available_rms|length }})</h6>
+                    <div class="mb-3">
+                        {% for rm in available_rms|slice:":5" %}
+                        <span class="badge badge-info mr-1 mb-1">{{ rm.get_full_name|default:rm.username }}</span>
+                        {% endfor %}
+                        {% if available_rms|length > 5 %}
+                        <span class="badge badge-secondary">+{{ available_rms|length|add:"-5" }} more</span>
+                        {% endif %}
+                    </div>
+
+                    {% if available_ops_execs %}
+                    <h6>Operations Executives ({{ available_ops_execs|length }})</h6>
+                    <div>
+                        {% for ops_exec in available_ops_execs %}
+                        <span class="badge badge-primary mr-1 mb-1">{{ ops_exec.get_full_name|default:ops_exec.username }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+// Generate client ID function
+function generateClientId(approvalId) {
+    fetch("{% url 'generate_client_id' %}")
+        .then(response => response.json())
+        .then(data => {
+            if (data.client_id) {
+                document.getElementById('client_id' + approvalId).value = data.client_id;
+            }
+        })
+        .catch(error => {
+            console.error('Error generating client ID:', error);
+            alert('Error generating client ID. Please try again.');
+        });
+}
+
+// Update RM information when RM is selected
+function updateRMInfo(selectElement, approvalId) {
+    const selectedOption = selectElement.options[selectElement.selectedIndex];
+    const rmInfoDiv = document.getElementById('rmInfo' + approvalId);
+    
+    if (selectedOption.value) {
+        const email = selectedOption.getAttribute('data-email') || 'N/A';
+        const phone = selectedOption.getAttribute('data-phone') || 'N/A';
+        
+        rmInfoDiv.innerHTML = `
+            <div class="alert alert-info alert-sm">
+                <small>
+                    <i class="fas fa-envelope"></i> ${email}<br>
+                    <i class="fas fa-phone"></i> ${phone}
+                </small>
+            </div>
+        `;
+    } else {
+        rmInfoDiv.innerHTML = '';
+    }
+}
+
+// Set quick rejection reason
+function setRejectionReason(approvalId, reason) {
+    const textarea = document.getElementById('rejection_reason' + approvalId);
+    if (textarea.value.trim() === '') {
+        textarea.value = reason;
+    } else {
+        textarea.value += '\n' + reason;
+    }
+}
+
+// Bulk assignment functions
+function bulkSelfAssign() {
+    if (confirm('Assign all pending verifications to yourself?')) {
+        const forms = document.querySelectorAll('form[action*="self-assign-verification"]');
+        forms.forEach(form => {
+            const formData = new FormData(form);
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                }
+            });
+        });
+        
+        setTimeout(() => {
+            location.reload();
+        }, 2000);
+    }
+}
+
+function bulkAssignToOpsExec(opsExecId, opsExecName) {
+    if (confirm(`Assign all pending verifications to ${opsExecName}?`)) {
+        const forms = document.querySelectorAll('form[action*="assign-verification-task"]');
+        forms.forEach(form => {
+            const opsExecInput = form.querySelector('input[name="ops_exec_id"]');
+            if (opsExecInput && opsExecInput.value == opsExecId) {
+                const formData = new FormData(form);
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                    }
+                });
+            }
+        });
+        
+        setTimeout(() => {
+            location.reload();
+        }, 2000);
+    }
+}
+
+// Auto-refresh every 30 seconds if there are pending approvals
+{% if pending_count > 0 %}
+setInterval(() => {
+    // Only refresh if no modals are open
+    if (!document.querySelector('.modal.show')) {
+        location.reload();
+    }
+}, 30000);
+{% endif %}
+</script>
+{% endblock %}
