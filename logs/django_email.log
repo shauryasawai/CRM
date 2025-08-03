@@ -926,3 +926,68 @@ INFO 2025-08-03 15:46:04,841 views 29180 27700 Found 1 actions for execution pla
 INFO 2025-08-03 15:46:04,963 views 29180 27700 Portfolio-independent Excel generated in memory for plan 61
 INFO 2025-08-03 15:46:04,963 views 29180 27700 Portfolio actions: 0, New investments: 1
 INFO 2025-08-03 15:46:04,964 views 29180 27700 Generated Excel data for plan EP202508030008
+INFO 2025-08-03 16:07:35,664 views 28384 5168 create_plan_step2 called with client_id: 1523 (type: <class 'str'>)
+INFO 2025-08-03 16:07:35,728 views 28384 5168 Found legacy client: PRASHANT TIWARI (ID: 1523)
+INFO 2025-08-03 16:07:35,999 views 28384 5168 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-03 16:07:36,035 views 28384 5168 Found linked profile for client 1523
+INFO 2025-08-03 16:07:36,165 views 28384 5168 Found 22 portfolio holdings for client 1523
+INFO 2025-08-03 16:07:41,347 views 28384 5168 Search query: 'ax', action_type: ''
+INFO 2025-08-03 16:07:41,477 views 28384 5168 Total schemes matching search (before active filter): 627
+INFO 2025-08-03 16:07:41,673 views 28384 5168 Final schemes count: 100
+INFO 2025-08-03 16:07:41,998 views 28384 5168 Returning 100 schemes for query 'ax'
+INFO 2025-08-03 16:34:04,924 views 20216 22336 create_plan_step2 called with client_id: 1565 (type: <class 'str'>)
+INFO 2025-08-03 16:34:05,023 views 20216 22336 Found legacy client: REKHA GAWRI (ID: 1565)
+INFO 2025-08-03 16:34:05,236 views 20216 22336 RM radhika access check: Direct=True, Profile=True, CanAccess=True
+INFO 2025-08-03 16:34:05,259 views 20216 22336 Found linked profile for client 1565
+INFO 2025-08-03 16:34:05,335 views 20216 22336 Found 7 portfolio holdings for client 1565
+INFO 2025-08-03 16:34:42,404 views 20216 31356 create_plan_step2 called with client_id: 1565 (type: <class 'str'>)
+INFO 2025-08-03 16:34:42,466 views 20216 31356 Found legacy client: REKHA GAWRI (ID: 1565)
+INFO 2025-08-03 16:34:42,724 views 20216 31356 RM radhika access check: Direct=True, Profile=True, CanAccess=True
+INFO 2025-08-03 16:34:42,724 views 20216 31356 Found linked profile for client 1565
+INFO 2025-08-03 16:34:42,800 views 20216 31356 Found 7 portfolio holdings for client 1565
+INFO 2025-08-03 16:35:41,474 views 24104 16056 Search query: 'ds', action_type: ''
+INFO 2025-08-03 16:35:41,602 views 24104 16056 Total schemes matching search (before active filter): 448
+INFO 2025-08-03 16:35:41,817 views 24104 16056 Final schemes count: 100
+INFO 2025-08-03 16:35:42,176 views 24104 16056 Returning 100 schemes for query 'ds'
+INFO 2025-08-03 16:36:02,706 views 24104 6536 create_plan_step2 called with client_id: 1523 (type: <class 'str'>)
+INFO 2025-08-03 16:36:02,768 views 24104 6536 Found legacy client: PRASHANT TIWARI (ID: 1523)
+INFO 2025-08-03 16:36:03,003 views 24104 6536 RM radhika access check: Direct=True, Profile=True, CanAccess=True
+INFO 2025-08-03 16:36:03,027 views 24104 6536 Found linked profile for client 1523
+INFO 2025-08-03 16:36:03,103 views 24104 6536 Found 22 portfolio holdings for client 1523
+INFO 2025-08-03 16:36:42,318 views 24104 24004 create_plan_step2 called with client_id: 1523 (type: <class 'str'>)
+INFO 2025-08-03 16:36:42,394 views 24104 24004 Found legacy client: PRASHANT TIWARI (ID: 1523)
+INFO 2025-08-03 16:36:42,713 views 24104 24004 RM radhika access check: Direct=True, Profile=True, CanAccess=True
+INFO 2025-08-03 16:36:42,713 views 24104 24004 Found linked profile for client 1523
+INFO 2025-08-03 16:36:42,797 views 24104 24004 Found 22 portfolio holdings for client 1523
+INFO 2025-08-03 16:37:42,473 views 24104 19032 create_plan_step2 called with client_id: 1554 (type: <class 'str'>)
+INFO 2025-08-03 16:37:42,551 views 24104 19032 Found legacy client: RAJESH BACHUBHAI JHAVERI (ID: 1554)
+INFO 2025-08-03 16:37:42,875 views 24104 19032 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-03 16:37:42,882 views 24104 19032 Found linked profile for client 1554
+INFO 2025-08-03 16:37:42,959 views 24104 19032 Found 17 portfolio holdings for client 1554
+INFO 2025-08-03 16:38:00,750 views 24104 19032 Search query: 'test', action_type: ''
+INFO 2025-08-03 16:38:00,876 views 24104 19032 Total schemes matching search (before active filter): 0
+WARNING 2025-08-03 16:38:01,001 views 24104 19032 No active schemes found, showing all matching schemes
+INFO 2025-08-03 16:38:01,120 views 24104 19032 Final schemes count: 0
+INFO 2025-08-03 16:38:01,375 views 24104 19032 Returning 0 schemes for query 'test'
+INFO 2025-08-03 16:39:38,296 views 24104 19032 create_plan_step2 called with client_id: 1554 (type: <class 'str'>)
+INFO 2025-08-03 16:39:38,366 views 24104 19032 Found legacy client: RAJESH BACHUBHAI JHAVERI (ID: 1554)
+INFO 2025-08-03 16:39:38,691 views 24104 19032 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-03 16:39:38,691 views 24104 19032 Found linked profile for client 1554
+INFO 2025-08-03 16:39:38,764 views 24104 19032 Found 17 portfolio holdings for client 1554
+INFO 2025-08-03 16:45:09,737 views 24104 8628 create_plan_step2 called with client_id: 1554 (type: <class 'str'>)
+INFO 2025-08-03 16:45:09,828 views 24104 8628 Found legacy client: RAJESH BACHUBHAI JHAVERI (ID: 1554)
+INFO 2025-08-03 16:45:10,148 views 24104 8628 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-03 16:45:10,148 views 24104 8628 Found linked profile for client 1554
+INFO 2025-08-03 16:45:10,229 views 24104 8628 Found 17 portfolio holdings for client 1554
+INFO 2025-08-03 16:45:21,077 views 24104 8628 Created execution plan EP202508030009 for client 1554
+INFO 2025-08-03 16:45:21,077 views 24104 8628 Processing action 1: {'action_type': 'redeem', 'source_scheme': 'Quant Small Cap Fund (G)', 'target_scheme': None, 'notes': 'ok', 'portfolio_id': 15274, 'source_portfolio_id': 15274, 'source_scheme_name': 'Quant Small Cap Fund (G)', 'redeem_by': 'all_units', 'redeem_amount': None, 'redeem_units': None, 'scheme': 'Quant Small Cap Fund (G)', 'scheme_name': 'Quant Small Cap Fund (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-03 16:45:21,174 views 24104 8628 Portfolio action for holding 15274: Quant Small Cap Fund (G)
+INFO 2025-08-03 16:45:21,174 views 24104 8628 Processed values - Mode: portfolio, Scheme: None, Portfolio: Quant Small Cap Fund (G)
+INFO 2025-08-03 16:45:21,423 views 24104 8628 Created portfolio mapping for action 30
+INFO 2025-08-03 16:45:21,424 views 24104 8628 Created Portfolio action 30: redemption - Quant Small Cap Fund (G) (Portfolio)
+INFO 2025-08-03 16:45:21,425 views 24104 8628 Successfully created action 30
+INFO 2025-08-03 16:45:21,632 views 24104 8628 Plan EP202508030009 submitted for approval
+INFO 2025-08-03 16:45:26,847 views 24104 8628 Found 1 actions for execution plan 62
+INFO 2025-08-03 16:45:26,911 views 24104 8628 Portfolio-independent Excel generated in memory for plan 62
+INFO 2025-08-03 16:45:26,911 views 24104 8628 Portfolio actions: 1, New investments: 0
+INFO 2025-08-03 16:45:26,911 views 24104 8628 Generated Excel data for plan EP202508030009
