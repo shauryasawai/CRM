@@ -8997,20 +8997,25 @@ def generate_execution_plan_excel_portfolio_independent(execution_plan):
         ws = wb.active
         ws.title = "Execution Plan"
         
-        # Set column widths
-        ws.column_dimensions['A'].width = 8
-        ws.column_dimensions['B'].width = 40  # Wider for scheme names
-        ws.column_dimensions['C'].width = 20  # ISIN/Portfolio ID
-        ws.column_dimensions['D'].width = 15
-        ws.column_dimensions['E'].width = 15
-        ws.column_dimensions['F'].width = 15
-        ws.column_dimensions['G'].width = 12
-        ws.column_dimensions['H'].width = 12
-        ws.column_dimensions['I'].width = 15
-        ws.column_dimensions['J'].width = 15
-        ws.column_dimensions['K'].width = 25  # Wider for action source
+        # Set column widths - improved sizing
+        column_widths = {
+            'A': 8,   # Sr. No.
+            'B': 45,  # Scheme Name (increased)
+            'C': 25,  # Source/ISIN (increased)
+            'D': 18,  # Transaction Type (increased)
+            'E': 18,  # Amount (increased)
+            'F': 18,  # SIP Amount (increased)
+            'G': 12,  # SIP Date
+            'H': 15,  # Frequency
+            'I': 15,  # Status
+            'J': 10,  # Priority
+            'K': 20   # Action Source
+        }
         
-        # Create header style
+        for col, width in column_widths.items():
+            ws.column_dimensions[col].width = width
+        
+        # Create styles
         header_style = NamedStyle(name="header")
         header_style.font = Font(name='Arial', size=11, bold=True, color='FFFFFF')
         header_style.fill = PatternFill(start_color='366092', end_color='366092', fill_type='solid')
@@ -9022,16 +9027,30 @@ def generate_execution_plan_excel_portfolio_independent(execution_plan):
             bottom=Side(style='thin')
         )
         
+        # Title style
+        title_style = NamedStyle(name="title")
+        title_style.font = Font(name='Arial', size=16, bold=True, color='1F4E79')
+        title_style.alignment = Alignment(horizontal='center', vertical='center')
+        
+        # Info style
+        info_label_style = NamedStyle(name="info_label")
+        info_label_style.font = Font(name='Arial', size=11, bold=True)
+        info_label_style.alignment = Alignment(horizontal='left', vertical='center')
+        
+        info_value_style = NamedStyle(name="info_value")
+        info_value_style.font = Font(name='Arial', size=11)
+        info_value_style.alignment = Alignment(horizontal='left', vertical='center')
+        
         # Plan header information
         row = 1
         ws.merge_cells(f'A{row}:K{row}')
         plan_id = getattr(execution_plan, 'plan_id', f"Plan #{execution_plan.id}")
         ws[f'A{row}'] = f"EXECUTION PLAN - {plan_id}"
-        ws[f'A{row}'].font = Font(name='Arial', size=16, bold=True)
-        ws[f'A{row}'].alignment = Alignment(horizontal='center')
-        row += 1
+        ws[f'A{row}'].style = title_style
+        ws.row_dimensions[row].height = 25
+        row += 2  # Extra space
         
-        # Plan details
+        # Plan details in a more structured format
         client_name = "Unknown Client"
         if hasattr(execution_plan, 'client') and execution_plan.client:
             if hasattr(execution_plan.client, 'name'):
@@ -9039,31 +9058,65 @@ def generate_execution_plan_excel_portfolio_independent(execution_plan):
             elif hasattr(execution_plan.client, 'client_full_name'):
                 client_name = execution_plan.client.client_full_name
         
+        # Client and Date row
         ws[f'A{row}'] = "Client:"
+        ws[f'A{row}'].style = info_label_style
         ws[f'B{row}'] = client_name
-        ws[f'F{row}'] = "Date:"
-        ws[f'G{row}'] = execution_plan.created_at.strftime('%Y-%m-%d') if hasattr(execution_plan, 'created_at') else "N/A"
+        ws[f'B{row}'].style = info_value_style
+        
+        ws[f'G{row}'] = "Date Created:"
+        ws[f'G{row}'].style = info_label_style
+        ws[f'H{row}'] = execution_plan.created_at.strftime('%Y-%m-%d %H:%M') if hasattr(execution_plan, 'created_at') else "N/A"
+        ws[f'H{row}'].style = info_value_style
         row += 1
         
-        # Calculate total amount
+        # Calculate totals
         total_amount = 0
+        total_sip_amount = 0
         if plan_actions:
-            total_amount = sum(float(action.amount) for action in plan_actions if action.amount)
+            for action in plan_actions:
+                if hasattr(action, 'amount') and action.amount:
+                    total_amount += float(action.amount)
+                if hasattr(action, 'sip_amount') and action.sip_amount:
+                    total_sip_amount += float(action.sip_amount)
         
+        # Total Amount and Status row
         ws[f'A{row}'] = "Total Amount:"
+        ws[f'A{row}'].style = info_label_style
         ws[f'B{row}'] = f"₹{total_amount:,.2f}"
-        ws[f'F{row}'] = "Status:"
-        ws[f'G{row}'] = execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else execution_plan.status
+        ws[f'B{row}'].style = info_value_style
+        ws[f'B{row}'].font = Font(name='Arial', size=11, bold=True, color='0D5016')
+        
+        ws[f'G{row}'] = "Status:"
+        ws[f'G{row}'].style = info_label_style
+        status_value = execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else execution_plan.status
+        ws[f'H{row}'] = status_value
+        ws[f'H{row}'].style = info_value_style
         row += 1
+        
+        # Total SIP Amount and Created By row
+        if total_sip_amount > 0:
+            ws[f'A{row}'] = "Total SIP Amount:"
+            ws[f'A{row}'].style = info_label_style
+            ws[f'B{row}'] = f"₹{total_sip_amount:,.2f}"
+            ws[f'B{row}'].style = info_value_style
+            ws[f'B{row}'].font = Font(name='Arial', size=11, bold=True, color='7B2CBF')
         
         if hasattr(execution_plan, 'created_by') and execution_plan.created_by:
-            ws[f'A{row}'] = "Created By:"
-            ws[f'B{row}'] = execution_plan.created_by.get_full_name() or execution_plan.created_by.username
-            row += 1
+            ws[f'G{row}'] = "Created By:"
+            ws[f'G{row}'].style = info_label_style
+            ws[f'H{row}'] = execution_plan.created_by.get_full_name() or execution_plan.created_by.username
+            ws[f'H{row}'].style = info_value_style
+        row += 1
         
-        row += 1  # Empty row
+        # Actions count
+        ws[f'A{row}'] = "Total Actions:"
+        ws[f'A{row}'].style = info_label_style
+        ws[f'B{row}'] = str(len(plan_actions))
+        ws[f'B{row}'].style = info_value_style
+        row += 2  # Extra space before table
         
-        # Updated table headers for portfolio independence
+        # Table headers
         headers = [
             'Sr. No.',
             'Scheme Name',
@@ -9078,11 +9131,13 @@ def generate_execution_plan_excel_portfolio_independent(execution_plan):
             'Action Source'
         ]
         
+        # Add header row with improved styling
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=row, column=col)
             cell.value = header
             cell.style = header_style
         
+        ws.row_dimensions[row].height = 20
         row += 1
         
         # Data rows for actions
@@ -9132,35 +9187,37 @@ def generate_execution_plan_excel_portfolio_independent(execution_plan):
                 if hasattr(action, 'get_action_type_display'):
                     action_type = action.get_action_type_display()
                 else:
-                    action_type = action.action_type
+                    action_type = str(action.action_type).replace('_', ' ').title()
             
-            # Get amount
+            # Get amounts with better formatting
             amount = 0
             if hasattr(action, 'amount') and action.amount:
                 amount = float(action.amount)
             
-            # Get other details
-            sip_amount = ""
+            sip_amount = 0
+            sip_amount_str = "N/A"
             if hasattr(action, 'sip_amount') and action.sip_amount:
-                sip_amount = f"₹{action.sip_amount:,.2f}"
+                sip_amount = float(action.sip_amount)
+                sip_amount_str = f"₹{sip_amount:,.2f}"
             
-            sip_date = ""
+            # Get other details with better handling
+            sip_date = "N/A"
             if hasattr(action, 'sip_date') and action.sip_date:
-                sip_date = str(action.sip_date)
+                sip_date = action.sip_date.strftime('%d-%m-%Y') if hasattr(action.sip_date, 'strftime') else str(action.sip_date)
             
-            frequency = ""
-            if hasattr(action, 'frequency'):
-                frequency = action.frequency
+            frequency = "N/A"
+            if hasattr(action, 'frequency') and action.frequency:
+                frequency = str(action.frequency).replace('_', ' ').title()
             
-            status = ""
-            if hasattr(action, 'status'):
+            status = "N/A"
+            if hasattr(action, 'status') and action.status:
                 if hasattr(action, 'get_status_display'):
                     status = action.get_status_display()
                 else:
-                    status = action.status
+                    status = str(action.status).replace('_', ' ').title()
             
-            priority = ""
-            if hasattr(action, 'priority'):
+            priority = "N/A"
+            if hasattr(action, 'priority') and action.priority is not None:
                 priority = str(action.priority)
             
             # Build row data
@@ -9169,25 +9226,33 @@ def generate_execution_plan_excel_portfolio_independent(execution_plan):
                 scheme_name,
                 source_info,
                 action_type,
-                f"₹{amount:,.2f}" if amount > 0 else "N/A",
-                sip_amount if sip_amount else "N/A",
-                sip_date if sip_date else "N/A",
-                frequency if frequency else "N/A",
-                status if status else "N/A",
-                priority if priority else "N/A",
+                f"₹{amount:,.2f}" if amount > 0 else "₹0.00",
+                sip_amount_str,
+                sip_date,
+                frequency,
+                status,
+                priority,
                 action_source
             ]
             
-            total_amount += amount
-            
-            # Write row data
+            # Write row data with improved formatting
             for col, value in enumerate(data, 1):
                 cell = ws.cell(row=row, column=col)
                 cell.value = value
-                cell.alignment = Alignment(
-                    horizontal='center' if col in [1, 3, 5, 7, 9, 10] else 'left', 
-                    vertical='center'
-                )
+                
+                # Set alignment based on column type
+                if col == 1:  # Serial number
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
+                elif col in [5, 6]:  # Amount columns
+                    cell.alignment = Alignment(horizontal='right', vertical='center')
+                    if value != "N/A" and value != "₹0.00":
+                        cell.font = Font(name='Arial', size=10, bold=True)
+                elif col in [7, 9, 10]:  # Date, Status, Priority
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
+                else:
+                    cell.alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
+                
+                # Add borders
                 cell.border = Border(
                     left=Side(style='thin'),
                     right=Side(style='thin'),
@@ -9195,72 +9260,100 @@ def generate_execution_plan_excel_portfolio_independent(execution_plan):
                     bottom=Side(style='thin')
                 )
                 
-                # Color coding for action source
+                # Color coding for action source with better colors
                 if col == 11:  # Action Source column
                     if value == "Existing Portfolio":
-                        cell.fill = PatternFill(start_color='E8F4FD', end_color='E8F4FD', fill_type='solid')
+                        cell.fill = PatternFill(start_color='E3F2FD', end_color='E3F2FD', fill_type='solid')
+                        cell.font = Font(name='Arial', size=10, bold=True, color='1565C0')
                     elif value == "New Investment":
-                        cell.fill = PatternFill(start_color='E8F8F5', end_color='E8F8F5', fill_type='solid')
-                
-                # Format amount columns
-                if col in [5, 6] and value != "N/A" and value:
-                    cell.font = Font(name='Arial', size=10, bold=True)
+                        cell.fill = PatternFill(start_color='E8F5E8', end_color='E8F5E8', fill_type='solid')
+                        cell.font = Font(name='Arial', size=10, bold=True, color='2E7D32')
             
+            # Set row height for better readability
+            ws.row_dimensions[row].height = 18
             row += 1
         
-        # Add totals row
+        # Add totals row with better styling
         if plan_actions:
             row += 1
-            ws[f'A{row}'] = "TOTAL"
-            ws[f'A{row}'].font = Font(bold=True)
-            ws[f'E{row}'] = f"₹{total_amount:,.2f}"
-            ws[f'E{row}'].font = Font(bold=True)
+            # Create totals row
+            total_cells = ['TOTAL', '', '', '', f"₹{total_amount:,.2f}", 
+                          f"₹{total_sip_amount:,.2f}" if total_sip_amount > 0 else "₹0.00", 
+                          '', '', '', '', '']
             
-            for col in range(1, 12):
+            for col, value in enumerate(total_cells, 1):
                 cell = ws.cell(row=row, column=col)
+                cell.value = value
+                cell.font = Font(name='Arial', size=11, bold=True)
+                
+                if col in [1, 5, 6]:  # Total label and amount columns
+                    cell.fill = PatternFill(start_color='F5F5F5', end_color='F5F5F5', fill_type='solid')
+                
+                if col in [5, 6]:  # Amount columns
+                    cell.alignment = Alignment(horizontal='right', vertical='center')
+                else:
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
+                
                 cell.border = Border(
                     left=Side(style='thin'),
                     right=Side(style='thin'),
                     top=Side(style='thick'),
                     bottom=Side(style='thick')
                 )
+            
+            ws.row_dimensions[row].height = 20
         
-        # Add legend
+        # Add legend with better formatting
         row += 3
         ws[f'A{row}'] = "Legend:"
-        ws[f'A{row}'].font = Font(bold=True)
+        ws[f'A{row}'].font = Font(name='Arial', size=12, bold=True, color='1F4E79')
         row += 1
         
         # Portfolio actions legend
-        ws[f'A{row}'] = "🔵 Existing Portfolio:"
-        ws[f'B{row}'] = "Actions on current portfolio holdings (Redeem, Switch From, STP From, SWP)"
-        ws[f'A{row}'].fill = PatternFill(start_color='E8F4FD', end_color='E8F4FD', fill_type='solid')
+        ws.merge_cells(f'A{row}:C{row}')
+        ws[f'A{row}'] = "🔵 Existing Portfolio Actions"
+        ws[f'A{row}'].font = Font(name='Arial', size=10, bold=True)
+        ws[f'A{row}'].fill = PatternFill(start_color='E3F2FD', end_color='E3F2FD', fill_type='solid')
+        ws.merge_cells(f'D{row}:K{row}')
+        ws[f'D{row}'] = "Actions on current portfolio holdings (Redeem, Switch From, STP From, SWP)"
+        ws[f'D{row}'].font = Font(name='Arial', size=10)
+        ws[f'D{row}'].alignment = Alignment(horizontal='left', vertical='center')
         row += 1
         
         # New investment legend
-        ws[f'A{row}'] = "🟢 New Investment:"
-        ws[f'B{row}'] = "Fresh investments in mutual fund schemes (Purchase, SIP, Switch To, STP To)"
-        ws[f'A{row}'].fill = PatternFill(start_color='E8F8F5', end_color='E8F8F5', fill_type='solid')
+        ws.merge_cells(f'A{row}:C{row}')
+        ws[f'A{row}'] = "🟢 New Investment Actions"
+        ws[f'A{row}'].font = Font(name='Arial', size=10, bold=True)
+        ws[f'A{row}'].fill = PatternFill(start_color='E8F5E8', end_color='E8F5E8', fill_type='solid')
+        ws.merge_cells(f'D{row}:K{row}')
+        ws[f'D{row}'] = "Fresh investments in mutual fund schemes (Purchase, SIP, Switch To, STP To)"
+        ws[f'D{row}'].font = Font(name='Arial', size=10)
+        ws[f'D{row}'].alignment = Alignment(horizontal='left', vertical='center')
         row += 1
         
-        # Add summary
-        row += 1
+        # Add summary with better formatting
+        row += 2
         ws[f'A{row}'] = "Summary:"
-        ws[f'A{row}'].font = Font(bold=True)
+        ws[f'A{row}'].font = Font(name='Arial', size=12, bold=True, color='1F4E79')
         row += 1
         
         portfolio_actions = sum(1 for action in plan_actions if hasattr(action, 'portfolio_scheme_name') and action.portfolio_scheme_name)
         new_investment_actions = len(plan_actions) - portfolio_actions
         
-        ws[f'A{row}'] = f"Total Actions: {len(plan_actions)}"
-        row += 1
-        ws[f'A{row}'] = f"Portfolio Actions: {portfolio_actions}"
-        row += 1
-        ws[f'A{row}'] = f"New Investment Actions: {new_investment_actions}"
-        row += 1
-        ws[f'A{row}'] = f"Total Amount: ₹{total_amount:,.2f}"
-        row += 1
-        ws[f'A{row}'] = f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        summary_data = [
+            f"Total Actions: {len(plan_actions)}",
+            f"Portfolio Actions: {portfolio_actions}",
+            f"New Investment Actions: {new_investment_actions}",
+            f"Total Investment Amount: ₹{total_amount:,.2f}",
+            f"Total SIP Amount: ₹{total_sip_amount:,.2f}" if total_sip_amount > 0 else None,
+            f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        ]
+        
+        for item in summary_data:
+            if item:
+                ws[f'A{row}'] = item
+                ws[f'A{row}'].font = Font(name='Arial', size=10)
+                row += 1
         
         # Save to BytesIO buffer
         from io import BytesIO
@@ -9270,6 +9363,7 @@ def generate_execution_plan_excel_portfolio_independent(execution_plan):
         
         logger.info(f"Portfolio-independent Excel generated for plan {execution_plan.id}")
         logger.info(f"Portfolio actions: {portfolio_actions}, New investments: {new_investment_actions}")
+        logger.info(f"Total amount: ₹{total_amount:,.2f}, Total SIP: ₹{total_sip_amount:,.2f}")
         
         return buffer.getvalue()
         
@@ -9867,15 +9961,25 @@ def generate_execution_plan_excel_in_memory(execution_plan):
         ws = wb.active
         ws.title = "Execution Plan"
         
-        # Set column widths
+        # Set column widths - improved sizing
         column_widths = {
-            'A': 8, 'B': 40, 'C': 20, 'D': 15, 'E': 15, 'F': 15,
-            'G': 12, 'H': 12, 'I': 15, 'J': 15, 'K': 25
+            'A': 8,   # Sr. No.
+            'B': 45,  # Scheme Name (increased)
+            'C': 25,  # Source/ISIN (increased)
+            'D': 18,  # Transaction Type (increased)
+            'E': 18,  # Amount (increased)
+            'F': 18,  # SIP Amount (increased)
+            'G': 12,  # SIP Date
+            'H': 15,  # Frequency
+            'I': 15,  # Status
+            'J': 10,  # Priority
+            'K': 20   # Action Source
         }
+        
         for col, width in column_widths.items():
             ws.column_dimensions[col].width = width
         
-        # Create header style
+        # Create styles
         header_style = NamedStyle(name="header")
         header_style.font = Font(name='Arial', size=11, bold=True, color='FFFFFF')
         header_style.fill = PatternFill(start_color='366092', end_color='366092', fill_type='solid')
@@ -9885,16 +9989,30 @@ def generate_execution_plan_excel_in_memory(execution_plan):
             top=Side(style='thin'), bottom=Side(style='thin')
         )
         
+        # Title style
+        title_style = NamedStyle(name="title")
+        title_style.font = Font(name='Arial', size=16, bold=True, color='1F4E79')
+        title_style.alignment = Alignment(horizontal='center', vertical='center')
+        
+        # Info style
+        info_label_style = NamedStyle(name="info_label")
+        info_label_style.font = Font(name='Arial', size=11, bold=True)
+        info_label_style.alignment = Alignment(horizontal='left', vertical='center')
+        
+        info_value_style = NamedStyle(name="info_value")
+        info_value_style.font = Font(name='Arial', size=11)
+        info_value_style.alignment = Alignment(horizontal='left', vertical='center')
+        
         # Plan header information
         row = 1
         ws.merge_cells(f'A{row}:K{row}')
         plan_id = getattr(execution_plan, 'plan_id', f"Plan #{execution_plan.id}")
         ws[f'A{row}'] = f"EXECUTION PLAN - {plan_id}"
-        ws[f'A{row}'].font = Font(name='Arial', size=16, bold=True)
-        ws[f'A{row}'].alignment = Alignment(horizontal='center')
-        row += 1
+        ws[f'A{row}'].style = title_style
+        ws.row_dimensions[row].height = 25
+        row += 2  # Extra space
         
-        # Plan details
+        # Plan details in a more structured format
         client_name = "Unknown Client"
         if hasattr(execution_plan, 'client') and execution_plan.client:
             if hasattr(execution_plan.client, 'name'):
@@ -9902,30 +10020,63 @@ def generate_execution_plan_excel_in_memory(execution_plan):
             elif hasattr(execution_plan.client, 'client_full_name'):
                 client_name = execution_plan.client.client_full_name
         
+        # Client and Date row
         ws[f'A{row}'] = "Client:"
+        ws[f'A{row}'].style = info_label_style
         ws[f'B{row}'] = client_name
-        ws[f'F{row}'] = "Date:"
-        ws[f'G{row}'] = execution_plan.created_at.strftime('%Y-%m-%d') if hasattr(execution_plan, 'created_at') else "N/A"
+        ws[f'B{row}'].style = info_value_style
+        
+        ws[f'G{row}'] = "Date Created:"
+        ws[f'G{row}'].style = info_label_style
+        ws[f'H{row}'] = execution_plan.created_at.strftime('%Y-%m-%d %H:%M') if hasattr(execution_plan, 'created_at') else "N/A"
+        ws[f'H{row}'].style = info_value_style
         row += 1
         
-        # Calculate total amount
+        # Calculate totals
         total_amount = 0
+        total_sip_amount = 0
         if plan_actions:
-            total_amount = sum(float(action.amount) for action in plan_actions if action.amount)
+            for action in plan_actions:
+                if hasattr(action, 'amount') and action.amount:
+                    total_amount += float(action.amount)
+                if hasattr(action, 'sip_amount') and action.sip_amount:
+                    total_sip_amount += float(action.sip_amount)
         
+        # Total Amount and Status row
         ws[f'A{row}'] = "Total Amount:"
+        ws[f'A{row}'].style = info_label_style
         ws[f'B{row}'] = f"₹{total_amount:,.2f}"
-        ws[f'F{row}'] = "Status:"
-        ws[f'G{row}'] = execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else execution_plan.status
+        ws[f'B{row}'].style = info_value_style
+        ws[f'B{row}'].font = Font(name='Arial', size=11, bold=True, color='0D5016')
+        
+        ws[f'G{row}'] = "Status:"
+        ws[f'G{row}'].style = info_label_style
+        status_value = execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else execution_plan.status
+        ws[f'H{row}'] = status_value
+        ws[f'H{row}'].style = info_value_style
         row += 1
         
-        # Add additional details
-        if hasattr(execution_plan, 'created_by') and execution_plan.created_by:
-            ws[f'A{row}'] = "Created By:"
-            ws[f'B{row}'] = execution_plan.created_by.get_full_name() or execution_plan.created_by.username
-            row += 1
+        # Total SIP Amount and Created By row
+        if total_sip_amount > 0:
+            ws[f'A{row}'] = "Total SIP Amount:"
+            ws[f'A{row}'].style = info_label_style
+            ws[f'B{row}'] = f"₹{total_sip_amount:,.2f}"
+            ws[f'B{row}'].style = info_value_style
+            ws[f'B{row}'].font = Font(name='Arial', size=11, bold=True, color='7B2CBF')
         
-        row += 1  # Empty row
+        if hasattr(execution_plan, 'created_by') and execution_plan.created_by:
+            ws[f'G{row}'] = "Created By:"
+            ws[f'G{row}'].style = info_label_style
+            ws[f'H{row}'] = execution_plan.created_by.get_full_name() or execution_plan.created_by.username
+            ws[f'H{row}'].style = info_value_style
+        row += 1
+        
+        # Actions count
+        ws[f'A{row}'] = "Total Actions:"
+        ws[f'A{row}'].style = info_label_style
+        ws[f'B{row}'] = str(len(plan_actions))
+        ws[f'B{row}'].style = info_value_style
+        row += 2  # Extra space before table
         
         # Table headers for portfolio independence
         headers = [
@@ -9933,11 +10084,13 @@ def generate_execution_plan_excel_in_memory(execution_plan):
             'SIP Amount (₹)', 'SIP Date', 'Frequency', 'Status', 'Priority', 'Action Source'
         ]
         
+        # Add header row with improved styling
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=row, column=col)
             cell.value = header
             cell.style = header_style
         
+        ws.row_dimensions[row].height = 20
         row += 1
         
         # Data rows for actions
@@ -9972,50 +10125,52 @@ def generate_execution_plan_excel_in_memory(execution_plan):
                         source_info = "New Scheme"
             else:
                 # Fallback for actions without action_mode (legacy)
-                if action.portfolio_scheme_name:
+                if hasattr(action, 'portfolio_scheme_name') and action.portfolio_scheme_name:
                     scheme_name = action.portfolio_scheme_name
                     source_info = "Portfolio Holdings"
                     action_source = "Existing Portfolio"
-                elif action.scheme:
+                elif hasattr(action, 'scheme') and action.scheme:
                     scheme_name = action.scheme.scheme_name
                     source_info = getattr(action.scheme, 'isin_growth', 'New Scheme')
                     action_source = "New Investment"
             
-            # Get action type
+            # Get action type with better formatting
             action_type = "N/A"
-            if hasattr(action, 'action_type'):
+            if hasattr(action, 'action_type') and action.action_type:
                 if hasattr(action, 'get_action_type_display'):
                     action_type = action.get_action_type_display()
                 else:
-                    action_type = action.action_type
+                    action_type = str(action.action_type).replace('_', ' ').title()
             
-            # Get amount
+            # Get amounts with better formatting
             amount = 0
             if hasattr(action, 'amount') and action.amount:
                 amount = float(action.amount)
             
-            # Get other details
-            sip_amount = ""
+            sip_amount = 0
+            sip_amount_str = "N/A"
             if hasattr(action, 'sip_amount') and action.sip_amount:
-                sip_amount = f"₹{action.sip_amount:,.2f}"
+                sip_amount = float(action.sip_amount)
+                sip_amount_str = f"₹{sip_amount:,.2f}"
             
-            sip_date = ""
+            # Get other details with better handling
+            sip_date = "N/A"
             if hasattr(action, 'sip_date') and action.sip_date:
-                sip_date = str(action.sip_date)
+                sip_date = action.sip_date.strftime('%d-%m-%Y') if hasattr(action.sip_date, 'strftime') else str(action.sip_date)
             
-            frequency = ""
+            frequency = "N/A"
             if hasattr(action, 'frequency') and action.frequency:
-                frequency = action.frequency
+                frequency = str(action.frequency).replace('_', ' ').title()
             
-            status = ""
-            if hasattr(action, 'status'):
+            status = "N/A"
+            if hasattr(action, 'status') and action.status:
                 if hasattr(action, 'get_status_display'):
                     status = action.get_status_display()
                 else:
-                    status = action.status
+                    status = str(action.status).replace('_', ' ').title()
             
-            priority = ""
-            if hasattr(action, 'priority'):
+            priority = "N/A"
+            if hasattr(action, 'priority') and action.priority is not None:
                 priority = str(action.priority)
             
             # Build row data
@@ -10024,94 +10179,133 @@ def generate_execution_plan_excel_in_memory(execution_plan):
                 scheme_name,
                 source_info,
                 action_type,
-                f"₹{amount:,.2f}" if amount > 0 else "N/A",
-                sip_amount if sip_amount else "N/A",
-                sip_date if sip_date else "N/A",
-                frequency if frequency else "N/A",
-                status if status else "N/A",
-                priority if priority else "N/A",
+                f"₹{amount:,.2f}" if amount > 0 else "₹0.00",
+                sip_amount_str,
+                sip_date,
+                frequency,
+                status,
+                priority,
                 action_source
             ]
             
-            # Write row data
+            # Write row data with improved formatting
             for col, value in enumerate(data, 1):
                 cell = ws.cell(row=row, column=col)
                 cell.value = value
-                cell.alignment = Alignment(
-                    horizontal='center' if col in [1, 3, 5, 7, 9, 10] else 'left', 
-                    vertical='center'
-                )
+                
+                # Set alignment based on column type
+                if col == 1:  # Serial number
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
+                elif col in [5, 6]:  # Amount columns
+                    cell.alignment = Alignment(horizontal='right', vertical='center')
+                    if value != "N/A" and value != "₹0.00":
+                        cell.font = Font(name='Arial', size=10, bold=True)
+                elif col in [7, 9, 10]:  # Date, Status, Priority
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
+                else:
+                    cell.alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
+                
+                # Add borders
                 cell.border = Border(
                     left=Side(style='thin'), right=Side(style='thin'),
                     top=Side(style='thin'), bottom=Side(style='thin')
                 )
                 
-                # Color coding for action source
+                # Color coding for action source with better colors
                 if col == 11:  # Action Source column
                     if value == "Existing Portfolio":
-                        cell.fill = PatternFill(start_color='E8F4FD', end_color='E8F4FD', fill_type='solid')
+                        cell.fill = PatternFill(start_color='E3F2FD', end_color='E3F2FD', fill_type='solid')
+                        cell.font = Font(name='Arial', size=10, bold=True, color='1565C0')
                     elif value == "New Investment":
-                        cell.fill = PatternFill(start_color='E8F8F5', end_color='E8F8F5', fill_type='solid')
-                
-                # Format amount columns
-                if col in [5, 6] and value != "N/A" and value:
-                    cell.font = Font(name='Arial', size=10, bold=True)
+                        cell.fill = PatternFill(start_color='E8F5E8', end_color='E8F5E8', fill_type='solid')
+                        cell.font = Font(name='Arial', size=10, bold=True, color='2E7D32')
             
+            # Set row height for better readability
+            ws.row_dimensions[row].height = 18
             row += 1
         
-        # Add totals row
+        # Add totals row with better styling
         if plan_actions:
             row += 1
-            ws[f'A{row}'] = "TOTAL"
-            ws[f'A{row}'].font = Font(bold=True)
-            ws[f'E{row}'] = f"₹{total_amount:,.2f}"
-            ws[f'E{row}'].font = Font(bold=True)
+            # Create totals row
+            total_cells = ['TOTAL', '', '', '', f"₹{total_amount:,.2f}", 
+                          f"₹{total_sip_amount:,.2f}" if total_sip_amount > 0 else "₹0.00", 
+                          '', '', '', '', '']
             
-            for col in range(1, 12):
+            for col, value in enumerate(total_cells, 1):
                 cell = ws.cell(row=row, column=col)
+                cell.value = value
+                cell.font = Font(name='Arial', size=11, bold=True)
+                
+                if col in [1, 5, 6]:  # Total label and amount columns
+                    cell.fill = PatternFill(start_color='F5F5F5', end_color='F5F5F5', fill_type='solid')
+                
+                if col in [5, 6]:  # Amount columns
+                    cell.alignment = Alignment(horizontal='right', vertical='center')
+                else:
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
+                
                 cell.border = Border(
                     left=Side(style='thin'), right=Side(style='thin'),
                     top=Side(style='thick'), bottom=Side(style='thick')
                 )
+            
+            ws.row_dimensions[row].height = 20
         
-        # Add legend and summary
+        # Add legend with better formatting
         row += 3
         ws[f'A{row}'] = "Legend:"
-        ws[f'A{row}'].font = Font(bold=True)
+        ws[f'A{row}'].font = Font(name='Arial', size=12, bold=True, color='1F4E79')
         row += 1
         
         # Portfolio actions legend
-        ws[f'A{row}'] = "🔵 Existing Portfolio:"
-        ws[f'B{row}'] = "Actions on current portfolio holdings"
-        ws[f'A{row}'].fill = PatternFill(start_color='E8F4FD', end_color='E8F4FD', fill_type='solid')
+        ws.merge_cells(f'A{row}:C{row}')
+        ws[f'A{row}'] = "🔵 Existing Portfolio Actions"
+        ws[f'A{row}'].font = Font(name='Arial', size=10, bold=True)
+        ws[f'A{row}'].fill = PatternFill(start_color='E3F2FD', end_color='E3F2FD', fill_type='solid')
+        ws.merge_cells(f'D{row}:K{row}')
+        ws[f'D{row}'] = "Actions on current portfolio holdings (Redeem, Switch From, STP From, SWP)"
+        ws[f'D{row}'].font = Font(name='Arial', size=10)
+        ws[f'D{row}'].alignment = Alignment(horizontal='left', vertical='center')
         row += 1
         
         # New investment legend
-        ws[f'A{row}'] = "🟢 New Investment:"
-        ws[f'B{row}'] = "Fresh investments in mutual fund schemes"
-        ws[f'A{row}'].fill = PatternFill(start_color='E8F8F5', end_color='E8F8F5', fill_type='solid')
+        ws.merge_cells(f'A{row}:C{row}')
+        ws[f'A{row}'] = "🟢 New Investment Actions"
+        ws[f'A{row}'].font = Font(name='Arial', size=10, bold=True)
+        ws[f'A{row}'].fill = PatternFill(start_color='E8F5E8', end_color='E8F5E8', fill_type='solid')
+        ws.merge_cells(f'D{row}:K{row}')
+        ws[f'D{row}'] = "Fresh investments in mutual fund schemes (Purchase, SIP, Switch To, STP To)"
+        ws[f'D{row}'].font = Font(name='Arial', size=10)
+        ws[f'D{row}'].alignment = Alignment(horizontal='left', vertical='center')
         row += 1
         
-        # Add summary
-        row += 1
+        # Add summary with better formatting
+        row += 2
         ws[f'A{row}'] = "Summary:"
-        ws[f'A{row}'].font = Font(bold=True)
+        ws[f'A{row}'].font = Font(name='Arial', size=12, bold=True, color='1F4E79')
         row += 1
         
+        # Calculate portfolio actions more accurately
         portfolio_actions = sum(1 for action in plan_actions 
-                              if getattr(action, 'action_mode', None) == 'portfolio' or 
-                              getattr(action, 'portfolio_scheme_name', None))
+                              if (getattr(action, 'action_mode', None) == 'portfolio' or 
+                                  getattr(action, 'portfolio_scheme_name', None)))
         new_investment_actions = len(plan_actions) - portfolio_actions
         
-        ws[f'A{row}'] = f"Total Actions: {len(plan_actions)}"
-        row += 1
-        ws[f'A{row}'] = f"Portfolio Actions: {portfolio_actions}"
-        row += 1
-        ws[f'A{row}'] = f"New Investment Actions: {new_investment_actions}"
-        row += 1
-        ws[f'A{row}'] = f"Total Amount: ₹{total_amount:,.2f}"
-        row += 1
-        ws[f'A{row}'] = f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        summary_data = [
+            f"Total Actions: {len(plan_actions)}",
+            f"Portfolio Actions: {portfolio_actions}",
+            f"New Investment Actions: {new_investment_actions}",
+            f"Total Investment Amount: ₹{total_amount:,.2f}",
+            f"Total SIP Amount: ₹{total_sip_amount:,.2f}" if total_sip_amount > 0 else None,
+            f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        ]
+        
+        for item in summary_data:
+            if item:
+                ws[f'A{row}'] = item
+                ws[f'A{row}'].font = Font(name='Arial', size=10)
+                row += 1
         
         # Save to BytesIO buffer
         buffer = BytesIO()
@@ -10120,6 +10314,7 @@ def generate_execution_plan_excel_in_memory(execution_plan):
         
         logger.info(f"Portfolio-independent Excel generated in memory for plan {execution_plan.id}")
         logger.info(f"Portfolio actions: {portfolio_actions}, New investments: {new_investment_actions}")
+        logger.info(f"Total amount: ₹{total_amount:,.2f}, Total SIP: ₹{total_sip_amount:,.2f}")
         
         return buffer.getvalue()
         
@@ -12901,12 +13096,68 @@ def mark_client_approved_with_email(request, plan_id):
     else:
         return JsonResponse({'error': 'Failed to mark as client approved'}, status=400)
 
-
+@login_required
+@require_http_methods(["POST"])
+def complete_execution(request, plan_id):
+    """Mark execution plan as completed"""
+    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
+    
+    # Check permission
+    if not can_execute_plan(request.user, execution_plan):
+        return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+    
+    if execution_plan.status != 'in_progress':
+        return JsonResponse({'success': False, 'error': 'Plan is not in progress'}, status=400)
+    
+    completion_notes = request.POST.get('completion_notes', '')
+    notify_client = request.POST.get('notify_client') == 'true'
+    generate_report = request.POST.get('generate_report') == 'true'
+    
+    try:
+        with transaction.atomic():
+            # Mark as completed
+            execution_plan.status = 'completed'
+            execution_plan.completed_at = timezone.now()
+            execution_plan.save()
+            
+            # Create workflow history
+            PlanWorkflowHistory.objects.create(
+                execution_plan=execution_plan,
+                from_status='in_progress',
+                to_status='completed',
+                changed_by=request.user,
+                comments=completion_notes or 'Execution completed'
+            )
+            
+            # Add completion notes if provided
+            if completion_notes:
+                PlanComment.objects.create(
+                    execution_plan=execution_plan,
+                    comment=f"Completion Notes: {completion_notes}",
+                    commented_by=request.user,
+                    is_internal=True
+                )
+            
+            # Generate metrics
+            if generate_report:
+                metrics, created = ExecutionMetrics.objects.get_or_create(execution_plan=execution_plan)
+                metrics.calculate_metrics()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Execution plan marked as completed successfully',
+            'new_status': execution_plan.status
+        })
+        
+    except Exception as e:
+        logger.error(f"Error completing execution plan: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'Failed to complete execution'}, status=500)
+    
 @login_required
 @require_http_methods(["POST"])  
 def complete_execution_with_email(request, plan_id):
     """
-    Mark execution as completed and send completion email to client
+    Mark execution as completed and send completion email to client - FIXED VERSION
     """
     execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
     
@@ -12932,22 +13183,157 @@ def complete_execution_with_email(request, plan_id):
             
             # Generate fresh Excel with execution results
             try:
-                excel_file_path = generate_execution_plan_excel(execution_plan)
-                if excel_file_path:
-                    execution_plan.excel_file = excel_file_path
-                    execution_plan.save()
+                excel_data = generate_execution_plan_excel_in_memory(execution_plan)
+                if excel_data:
+                    logger.info(f"Generated completion Excel for plan {execution_plan.plan_id}")
             except Exception as e:
                 logger.warning(f"Could not generate completion Excel: {str(e)}")
             
-            # Send completion email
-            email_success, email_result = send_execution_plan_email(
-                execution_plan=execution_plan,
-                email_type='completed',
-                custom_message="All transactions in your execution plan have been completed successfully.",
-                include_excel=True,
-                send_to_rm=True,
-                send_to_client=True
-            )
+            # FIXED: Send completion email without custom_message parameter
+            try:
+                # Get client email
+                client_email = get_client_email(execution_plan)
+                
+                if client_email:
+                    # Use the enhanced email system instead
+                    from django.core.mail import EmailMultiAlternatives
+                    from django.template.loader import render_to_string
+                    
+                    subject = f"✅ Investment Plan Completed - {execution_plan.plan_name}"
+                    
+                    # Get client name
+                    client_name = execution_plan.client.name if hasattr(execution_plan.client, 'name') else 'Valued Client'
+                    rm_name = execution_plan.created_by.get_full_name() or execution_plan.created_by.username
+                    
+                    # Create completion message
+                    message = f"""Dear {client_name},
+
+Excellent news! Your investment execution plan "{execution_plan.plan_name}" has been completed successfully.
+
+All {execution_plan.actions.count()} action{'s' if execution_plan.actions.count() != 1 else ''} in your plan have been executed as planned.
+
+Execution Summary:
+- Plan ID: {execution_plan.plan_id}
+- Completion Date: {execution_plan.completed_at.strftime('%B %d, %Y') if execution_plan.completed_at else 'Today'}
+- Total Actions Executed: {execution_plan.actions.count()}
+- Status: Completed Successfully
+
+Your portfolio has been updated according to the executed plan. You can expect to see these changes reflected in your statements within the next 1-2 business days.
+
+If you have any questions about the executed transactions or would like to discuss your portfolio further, please don't hesitate to contact me.
+
+Thank you for your trust in our services.
+
+Best regards,
+{rm_name}
+{execution_plan.created_by.email if execution_plan.created_by.email else ''}"""
+                    
+                    # Create HTML version
+                    html_message = f"""
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="utf-8">
+                        <style>
+                            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                            .header {{ background-color: #16a34a; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }}
+                            .content {{ padding: 20px; background-color: #f9f9f9; }}
+                            .summary {{ background-color: white; padding: 15px; margin: 15px 0; border-left: 4px solid #16a34a; border-radius: 4px; }}
+                            .footer {{ background-color: #333; color: white; padding: 15px; text-align: center; font-size: 12px; border-radius: 0 0 8px 8px; }}
+                        </style>
+                    </head>
+                    <body>
+                        <div class="container">
+                            <div class="header">
+                                <h1>🎯 Plan Execution Completed!</h1>
+                                <h2>{execution_plan.plan_name}</h2>
+                            </div>
+                            
+                            <div class="content">
+                                <p>Dear {client_name},</p>
+                                
+                                <p><strong>Excellent news!</strong> Your investment execution plan has been completed successfully.</p>
+                                
+                                <div class="summary">
+                                    <h3>✅ Execution Summary</h3>
+                                    <ul>
+                                        <li><strong>Plan ID:</strong> {execution_plan.plan_id}</li>
+                                        <li><strong>Completion Date:</strong> {execution_plan.completed_at.strftime('%B %d, %Y at %I:%M %p') if execution_plan.completed_at else 'Today'}</li>
+                                        <li><strong>Total Actions:</strong> {execution_plan.actions.count()}</li>
+                                        <li><strong>Status:</strong> ✅ Completed Successfully</li>
+                                        <li><strong>Your RM:</strong> {rm_name}</li>
+                                    </ul>
+                                </div>
+                                
+                                <p>All actions in your plan have been executed as planned. Your portfolio has been updated accordingly.</p>
+                                
+                                <p>You can expect to see these changes reflected in your statements within the next 1-2 business days.</p>
+                                
+                                <p>If you have any questions about the executed transactions or would like to discuss your portfolio further, please don't hesitate to contact your relationship manager.</p>
+                                
+                                <p><strong>Thank you for your trust in our services.</strong></p>
+                                
+                                <p>Best regards,<br>{rm_name}</p>
+                            </div>
+                            
+                            <div class="footer">
+                                <p>Investment Management Services | Execution Completed Successfully</p>
+                                <p>This is an automated message generated on {timezone.now().strftime('%B %d, %Y')}</p>
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                    """
+                    
+                    # Prepare recipients
+                    recipients = [client_email]
+                    cc_recipients = []
+                    
+                    # Add RM to CC
+                    if execution_plan.created_by and execution_plan.created_by.email:
+                        if execution_plan.created_by.email not in recipients:
+                            cc_recipients.append(execution_plan.created_by.email)
+                    
+                    # Create and send email
+                    email = EmailMultiAlternatives(
+                        subject=subject,
+                        body=message,
+                        from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@yourcompany.com'),
+                        to=recipients,
+                        cc=cc_recipients if cc_recipients else None,
+                        reply_to=[execution_plan.created_by.email] if execution_plan.created_by and execution_plan.created_by.email else None
+                    )
+                    
+                    # Attach HTML version
+                    email.attach_alternative(html_message, "text/html")
+                    
+                    # Attach Excel if available
+                    excel_attached = False
+                    if excel_data:
+                        try:
+                            filename = f"{execution_plan.plan_id}_execution_completed.xlsx"
+                            email.attach(filename, excel_data, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                            excel_attached = True
+                        except Exception as e:
+                            logger.warning(f"Could not attach Excel: {str(e)}")
+                    
+                    # Send email
+                    email.send(fail_silently=False)
+                    
+                    email_success = True
+                    email_result = f'Completion email sent successfully to {client_email}'
+                    if excel_attached:
+                        email_result += ' with Excel attachment'
+                    
+                else:
+                    email_success = False
+                    email_result = 'No client email found'
+                
+            except Exception as e:
+                logger.error(f"Error sending completion email: {str(e)}")
+                email_success = False
+                email_result = f'Failed to send email: {str(e)}'
             
             return JsonResponse({
                 'success': True,

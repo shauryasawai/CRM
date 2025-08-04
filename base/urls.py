@@ -212,7 +212,7 @@ urlpatterns = [
         path('<int:plan_id>/approve-with-email/', views.approve_plan_with_email, name='approve_plan_with_email'),
         path('<int:plan_id>/mark-client-approved-with-email/', views.mark_client_approved_with_email, name='mark_client_approved_with_email'),
         path('<int:plan_id>/complete-with-email/', views.complete_execution_with_email, name='complete_execution_with_email'),
-        
+        path('<int:plan_id>/complete-execution/', views.complete_execution, name='complete_execution'),
         path('<int:plan_id>/send-to-client-enhanced/', views.send_to_client_enhanced, name='send_to_client_enhanced'),
 
         

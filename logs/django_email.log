@@ -1285,3 +1285,58 @@ INFO 2025-08-03 17:45:57,193 views 26212 9584 Found client email: None for plan 
 INFO 2025-08-03 17:56:16,559 views 26440 27480 Approval notification sent to narayan@gmail.com
 INFO 2025-08-03 17:59:04,704 views 26440 27492 Found client email: None for plan EP202508030009
 INFO 2025-08-03 18:00:16,727 views 26440 23140 Found client email: None for plan EP202508030009
+INFO 2025-08-03 18:37:13,175 views 8540 22220 Found 1 actions for execution plan 62
+INFO 2025-08-03 18:37:13,563 views 8540 22220 Portfolio-independent Excel generated in memory for plan 62
+INFO 2025-08-03 18:37:13,563 views 8540 22220 Portfolio actions: 1, New investments: 0
+INFO 2025-08-03 18:37:14,032 views 8540 22220 Found 1 actions for execution plan 62
+INFO 2025-08-03 18:37:14,208 views 8540 22220 Portfolio-independent Excel generated in memory for plan 62
+INFO 2025-08-03 18:37:14,209 views 8540 22220 Portfolio actions: 1, New investments: 0
+INFO 2025-08-04 15:05:25,071 views 2120 29360 Found 1 actions for execution plan 60
+INFO 2025-08-04 15:05:25,400 views 2120 29360 Portfolio-independent Excel generated in memory for plan 60
+INFO 2025-08-04 15:05:25,401 views 2120 29360 Portfolio actions: 1, New investments: 0
+INFO 2025-08-04 15:06:25,849 views 2120 26164 Found 1 actions for execution plan 60
+INFO 2025-08-04 15:06:26,050 views 2120 26164 Excel file generated successfully: execution_plan_EP202508030007_20250804_150626.xlsx
+INFO 2025-08-04 15:06:26,050 views 2120 26164 File saved at: /tmp\execution_plan_EP202508030007_20250804_150626.xlsx
+INFO 2025-08-04 15:06:26,050 views 2120 26164 Total actions exported: 1
+WARNING 2025-08-04 15:06:26,088 views 2120 26164 Could not generate completion Excel: 'dict' object has no attribute '_committed'
+ERROR 2025-08-04 15:06:26,167 views 2120 26164 Error completing execution: send_execution_plan_email() got an unexpected keyword argument 'custom_message'
+INFO 2025-08-04 15:06:47,725 views 2120 31168 Found 1 actions for execution plan 60
+INFO 2025-08-04 15:06:47,881 views 2120 31168 Excel file generated successfully: execution_plan_EP202508030007_20250804_150647.xlsx
+INFO 2025-08-04 15:06:47,881 views 2120 31168 File saved at: /tmp\execution_plan_EP202508030007_20250804_150647.xlsx
+INFO 2025-08-04 15:06:47,881 views 2120 31168 Total actions exported: 1
+WARNING 2025-08-04 15:06:47,889 views 2120 31168 Could not generate completion Excel: 'dict' object has no attribute '_committed'
+ERROR 2025-08-04 15:06:47,970 views 2120 31168 Error completing execution: send_execution_plan_email() got an unexpected keyword argument 'custom_message'
+INFO 2025-08-04 15:09:45,228 views 8036 33916 Found 1 actions for execution plan 60
+INFO 2025-08-04 15:09:45,395 views 8036 33916 Portfolio-independent Excel generated in memory for plan 60
+INFO 2025-08-04 15:09:45,395 views 8036 33916 Portfolio actions: 1, New investments: 0
+INFO 2025-08-04 15:09:45,396 views 8036 33916 Generated completion Excel for plan EP202508030007
+INFO 2025-08-04 15:09:45,396 views 8036 33916 Found client email: None for plan EP202508030007
+INFO 2025-08-04 15:12:06,192 views 8036 22504 Approval notification sent to narayan@gmail.com
+INFO 2025-08-04 15:12:20,594 views 8036 17756 Found 1 actions for execution plan 61
+INFO 2025-08-04 15:12:20,818 views 8036 17756 Excel file generated successfully: execution_plan_EP202508030008_20250804_151220.xlsx
+INFO 2025-08-04 15:12:20,818 views 8036 17756 File saved at: /tmp\execution_plan_EP202508030008_20250804_151220.xlsx
+INFO 2025-08-04 15:12:20,818 views 8036 17756 Total actions exported: 1
+WARNING 2025-08-04 15:12:20,844 views 8036 17756 Could not generate fresh Excel: 'dict' object has no attribute '_committed'
+INFO 2025-08-04 15:12:25,010 views 8036 17756 Enhanced client email sent successfully for plan EP202508030008 to sawaisushil@gmail.com
+INFO 2025-08-04 15:13:37,318 views 8036 11044 Found 1 actions for execution plan 61
+INFO 2025-08-04 15:13:37,598 views 8036 11044 Portfolio-independent Excel generated in memory for plan 61
+INFO 2025-08-04 15:13:37,599 views 8036 11044 Portfolio actions: 0, New investments: 1
+INFO 2025-08-04 15:21:40,580 views 25904 27808 Found 1 actions for execution plan 61
+INFO 2025-08-04 15:21:40,921 views 25904 27808 Portfolio-independent Excel generated in memory for plan 61
+INFO 2025-08-04 15:21:40,921 views 25904 27808 Portfolio actions: 0, New investments: 1
+INFO 2025-08-04 15:25:22,451 views 25904 29844 Found 1 actions for execution plan 61
+INFO 2025-08-04 15:25:22,624 views 25904 29844 Excel file generated successfully: execution_plan_EP202508030008_20250804_152522.xlsx
+INFO 2025-08-04 15:25:22,624 views 25904 29844 File saved at: /tmp\execution_plan_EP202508030008_20250804_152522.xlsx
+INFO 2025-08-04 15:25:22,624 views 25904 29844 Total actions exported: 1
+WARNING 2025-08-04 15:25:22,632 views 25904 29844 Could not generate fresh Excel: 'dict' object has no attribute '_committed'
+INFO 2025-08-04 15:25:26,709 views 25904 29844 Enhanced client email sent successfully for plan EP202508030008 to sawaisushil@gmail.com
+INFO 2025-08-04 15:30:30,390 views 29940 17104 Found 1 actions for execution plan 62
+INFO 2025-08-04 15:30:30,606 views 29940 17104 Portfolio-independent Excel generated in memory for plan 62
+INFO 2025-08-04 15:30:30,606 views 29940 17104 Portfolio actions: 1, New investments: 0
+INFO 2025-08-04 15:30:30,640 views 29940 17104 Generated completion Excel for plan EP202508030009
+INFO 2025-08-04 15:30:30,642 views 29940 17104 Found client email: None for plan EP202508030009
+INFO 2025-08-04 15:37:46,161 views 29940 30068 Found 1 actions for execution plan 61
+INFO 2025-08-04 15:37:46,474 views 29940 30068 Portfolio-independent Excel generated in memory for plan 61
+INFO 2025-08-04 15:37:46,479 views 29940 30068 Portfolio actions: 0, New investments: 1
+INFO 2025-08-04 15:37:46,506 views 29940 30068 Generated completion Excel for plan EP202508030008
+INFO 2025-08-04 15:37:46,506 views 29940 30068 Found client email: None for plan EP202508030008
