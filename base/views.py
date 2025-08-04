@@ -12269,38 +12269,37 @@ def password_reset_request(request):
             return JsonResponse({
                 'success': False,
                 'message': 'Username or email is required.'
-            })
+            }, status=400)
         
-        # Try to find user by username or email
+        User = get_user_model()
         user = None
         
-        # First try by email
+        # Try to find user by email
         if '@' in username_or_email:
             try:
                 user = User.objects.get(email__iexact=username_or_email, is_active=True)
             except User.DoesNotExist:
-                pass
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No active account found with this email address.'
+                }, status=404)
         
-        # If not found by email, try by username
+        # If not email, try by username
         if not user:
             try:
                 user = User.objects.get(username__iexact=username_or_email, is_active=True)
             except User.DoesNotExist:
-                pass
-        
-        # Security: Always return success message to prevent user enumeration
-        if not user:
-            return JsonResponse({
-                'success': True,
-                'message': 'If an account with that username or email exists, password reset instructions have been sent.'
-            })
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No active account found with this username.'
+                }, status=404)
         
         # Check if user has an email address
         if not user.email:
             return JsonResponse({
-                'success': True,
-                'message': 'If an account with that username or email exists, password reset instructions have been sent.'
-            })
+                'success': False,
+                'message': 'This account has no email address associated with it.'
+            }, status=400)
         
         # Generate password reset token
         token = default_token_generator.make_token(user)
@@ -12377,30 +12376,29 @@ def password_reset_request(request):
             
             logger.info(f"Password reset email sent successfully to {user.email}")
             
+            return JsonResponse({
+                'success': True,
+                'message': 'Password reset instructions have been sent to your email address.'
+            })
+            
         except Exception as e:
             logger.error(f"Failed to send password reset email to {user.email}: {str(e)}")
             return JsonResponse({
                 'success': False,
                 'message': 'Failed to send reset email. Please try again later or contact support.'
-            })
-        
-        return JsonResponse({
-            'success': True,
-            'message': 'Password reset instructions have been sent to your email address.'
-        })
+            }, status=500)
         
     except json.JSONDecodeError:
         return JsonResponse({
             'success': False,
             'message': 'Invalid request format.'
-        })
+        }, status=400)
     except Exception as e:
         logger.error(f"Unexpected error in password reset: {str(e)}")
         return JsonResponse({
             'success': False,
             'message': 'An unexpected error occurred. Please try again later.'
-        })
-
+        }, status=500)
 
 def password_reset_confirm(request, uidb64, token):
     """

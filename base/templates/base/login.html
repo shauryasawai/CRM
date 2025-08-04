@@ -989,12 +989,10 @@
         if (forgotPasswordForm) {
             forgotPasswordForm.addEventListener('submit', function(e) {
                 e.preventDefault();
-                
                 if (!forgotPasswordForm.checkValidity()) {
                     forgotPasswordForm.classList.add('was-validated');
                     return;
                 }
-
                 const resetPasswordBtn = document.getElementById('resetPasswordBtn');
                 if (resetPasswordBtn) {
                     resetPasswordBtn.classList.add('loading');
@@ -1002,33 +1000,67 @@
                     const resetBtnText = resetPasswordBtn.querySelector('.btn-text');
                     if (resetBtnText) resetBtnText.textContent = 'Sending...';
                 }
-
-                // Simulate API call (simplified)
-                setTimeout(() => {
+                const formData = {
+                    username_or_email: document.getElementById('resetUsername').value
+                };
+                // Make actual API call
+                fetch('{% url "password_reset_request" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    const modalMessages = document.getElementById('modalMessages');
+                    if (modalMessages) {
+                        if (data.success) {
+                            modalMessages.innerHTML = `
+                            <div class="alert alert-success" role="alert">
+                            <i class="fas fa-check-circle"></i>
+                            <span>${data.message}</span>
+                            </div>
+                            `;
+                        } else {
+                            modalMessages.innerHTML = `
+                            <div class="alert alert-danger" role="alert">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <span>${data.message}</span>
+                            </div>
+                            `;
+                        }
+                        modalMessages.style.display = 'block';
+                    }
+                    if (data.success) {
+                        // Auto-close modal after 3 seconds if successful
+                        setTimeout(() => {
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('forgotPasswordModal'));
+                            if (modal) modal.hide();
+                        }, 3000);
+                    }
+                })
+                .catch(error => {
                     const modalMessages = document.getElementById('modalMessages');
                     if (modalMessages) {
                         modalMessages.innerHTML = `
-                            <div class="alert alert-success" role="alert">
-                                <i class="fas fa-check-circle"></i>
-                                <span>Password reset instructions have been sent to your email address.</span>
-                            </div>
+                        <div class="alert alert-danger" role="alert">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span>An error occurred. Please try again.</span>
+                        </div>
                         `;
                         modalMessages.style.display = 'block';
                     }
-
+                })
+                .finally(() => {
                     if (resetPasswordBtn) {
                         resetPasswordBtn.classList.remove('loading');
                         resetPasswordBtn.disabled = false;
                         const resetBtnText = resetPasswordBtn.querySelector('.btn-text');
                         if (resetBtnText) resetBtnText.textContent = 'Send Reset Link';
                     }
-
-                    // Auto-close modal after 3 seconds
-                    setTimeout(() => {
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('forgotPasswordModal'));
-                        if (modal) modal.hide();
-                    }, 3000);
-                }, 1000);
+                });
             });
         }
 
