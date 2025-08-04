@@ -2698,12 +2698,12 @@ def lead_detail(request, pk):
     if request.user.role in ['top_management', 'business_head', 'business_head_ops']:
         # Top level roles can access all leads
         has_permission = True
-    elif request.user.role == 'ops_team_lead':
-        # Ops team lead can access leads pending their approval or previously decided by them
+    elif request.user.role in ['ops_team_lead', 'ops_exec']:
+        # Ops team can access leads pending their approval or previously decided by them
         pending_approval = LeadStatusChange.objects.filter(
             lead=lead,
             needs_approval=True,
-            approval_by=request.user,
+            new_status='conversion_requested',
             approved__isnull=True
         ).exists()
         
@@ -2713,7 +2713,10 @@ def lead_detail(request, pk):
             approved__isnull=False
         ).exists()
         
-        has_permission = pending_approval or previous_decision
+        # Allow access to conversion_requested leads
+        conversion_requested = (lead.status == 'conversion_requested')
+        
+        has_permission = pending_approval or previous_decision or conversion_requested
     elif request.user.role == 'rm_head':
         # RM Head can access leads assigned to their team members
         # Simple check: if lead is assigned to an RM, allow access
@@ -2737,11 +2740,9 @@ def lead_detail(request, pk):
     status_change_form = LeadStatusChangeForm()
     product_discussion_form = ProductDiscussionForm()
     
-    # Conversion form (only for managers and assigned RM)
+    # Conversion form (only for managers and assigned RM) - REMOVED direct conversion
     conversion_form = None
-    if (request.user.role in ['rm_head', 'business_head', 'top_management'] or 
-        request.user == lead.assigned_to) and not lead.converted:
-        conversion_form = LeadConversionForm()
+    # Direct conversion is no longer allowed - all must go through ops verification
     
     # Reassignment form (only for managers)
     reassignment_form = None
@@ -2750,17 +2751,17 @@ def lead_detail(request, pk):
     
     # Check if there's a pending approval for this lead
     pending_approval = None
-    if request.user.role == 'ops_team_lead':
+    if request.user.role in ['ops_team_lead', 'ops_exec']:
         pending_approval = LeadStatusChange.objects.filter(
             lead=lead,
             needs_approval=True,
-            approval_by=request.user,
+            new_status='conversion_requested',
             approved__isnull=True
         ).first()
     
-    # Get available RMs for approval form (if ops_team_lead)
+    # Get available RMs for approval form (if ops_team_lead or ops_exec)
     available_rms = None
-    if request.user.role == 'ops_team_lead' and pending_approval:
+    if request.user.role in ['ops_team_lead', 'ops_exec'] and (pending_approval or lead.status == 'conversion_requested'):
         available_rms = User.objects.filter(role='rm', is_active=True).order_by('first_name', 'last_name')
     
     product_choices = ProductDiscussion.PRODUCT_CHOICES
@@ -2773,12 +2774,18 @@ def lead_detail(request, pk):
         'interaction_form': interaction_form,
         'status_change_form': status_change_form,
         'product_discussion_form': product_discussion_form,
-        'conversion_form': conversion_form,
+        'conversion_form': conversion_form,  # This will be None now
         'reassignment_form': reassignment_form,
         'auto_client_id': lead.generate_client_id(),
         'pending_approval': pending_approval,
         'available_rms': available_rms,
         'user_role': request.user.role,
+        'can_request_conversion': (
+            request.user.role in ['rm', 'rm_head', 'business_head', 'top_management'] and 
+            not lead.converted and 
+            lead.status != 'conversion_requested' and
+            request.user.can_access_user_data(lead.assigned_to)
+        ),
     }
     
     return render(request, 'base/lead_detail.html', context)
@@ -3005,96 +3012,207 @@ def request_conversion(request, pk):
     
     # Check if conversion is already requested
     if lead.status == 'conversion_requested':
-        messages.warning(request, "Conversion request is already pending business verification.")
+        messages.warning(request, "Conversion request is already pending ops team verification.")
         return redirect('lead_detail', pk=pk)
     
-    # Allow ops_team_lead to self-assign verification or assign to ops_exec
-    verification_assignee = request.POST.get('verification_assignee')
+    # MANDATORY: All conversion requests must go through ops_team_lead for verification
+    # Find ops_team_lead for business verification
+    ops_team_lead = User.objects.filter(role='ops_team_lead', is_active=True).first()
     
-    # If ops_team_lead is making the request, they can assign to themselves or ops_exec
-    if request.user.role == 'ops_team_lead':
-        if verification_assignee == 'self':
-            approval_by = request.user
-        elif verification_assignee == 'ops_exec':
-            # Find an ops_exec to assign to
-            ops_exec = User.objects.filter(role='ops_exec', is_active=True).first()
-            if not ops_exec:
-                messages.error(request, "No operations executive found for assignment.")
-                return redirect('lead_detail', pk=pk)
-            approval_by = ops_exec
-        else:
-            # Default to ops_team_lead
-            approval_by = request.user
-    else:
-        # For other roles, find ops_team_lead for business verification
-        ops_team_lead = User.objects.filter(role='ops_team_lead', is_active=True).first()
-        
-        if not ops_team_lead:
-            messages.error(request, 
-                "No operations team lead found for business verification. "
-                "Please contact your administrator."
-            )
-            return redirect('lead_detail', pk=pk)
-        
-        approval_by = ops_team_lead
+    if not ops_team_lead:
+        messages.error(request, 
+            "No operations team lead found for business verification. "
+            "Please contact your administrator."
+        )
+        return redirect('lead_detail', pk=pk)
     
     try:
         with transaction.atomic():
-            # Create a status change record as conversion request
-            status_change = LeadStatusChange.objects.create(
-                lead=lead,
-                changed_by=request.user,
-                old_status=lead.status,
-                new_status='conversion_requested',
-                notes=f'Conversion requested by {request.user.get_full_name()} - pending business verification from {approval_by.get_full_name()}',
-                needs_approval=True,
-                approval_by=approval_by
-            )
+            # Store the old status before changing
+            old_status = lead.status
             
-            # Update lead status
+            # Update lead status FIRST
             lead.status = 'conversion_requested'
             lead.conversion_requested_at = timezone.now()
             lead.conversion_requested_by = request.user
             lead.save()
             
-            # If ops_team_lead is self-assigning, automatically approve the assignment
-            if request.user.role == 'ops_team_lead' and verification_assignee == 'self':
-                status_change.approved = True
-                status_change.approved_at = timezone.now()
-                status_change.approved_by = request.user
-                status_change.notes += f" | Self-assigned for verification by {request.user.get_full_name()}"
-                status_change.save()
-                
-                messages.success(request, 
-                    f"Conversion request created and assigned to yourself for business verification."
-                )
-            else:
-                messages.success(request, 
-                    f"Conversion request sent to {approval_by.get_full_name()} for business verification."
-                )
+            # Create a status change record as conversion request - THIS IS THE KEY FIX
+            status_change = LeadStatusChange.objects.create(
+                lead=lead,
+                changed_by=request.user,
+                old_status=old_status,  # Use the actual old status
+                new_status='conversion_requested',
+                notes=f'Conversion requested by {request.user.get_full_name()} - pending business verification from ops team',
+                needs_approval=True,  # THIS IS CRITICAL
+                approval_by=ops_team_lead  # THIS IS CRITICAL
+            )
+            
+            messages.success(request, 
+                f"Conversion request sent to ops team for business verification. "
+                f"The request will be reviewed by {ops_team_lead.get_full_name()}."
+            )
                 
     except Exception as e:
         messages.error(request, f"Error requesting conversion: {str(e)}")
     
     return redirect('lead_detail', pk=pk)
 
-
-def ops_pending_approvals(request):
-    """Operations Team Lead view for pending conversion approvals"""
-    if request.user.role not in ['ops_team_lead', 'ops_exec']:
-        messages.error(request, "Access denied.")
-        return redirect('dashboard')
+@login_required
+def debug_ops_workflow(request):
+    """Debug view to check why ops team isn't seeing pending approvals"""
     
-    # Get pending conversion requests assigned to current user
-    pending_approvals = LeadStatusChange.objects.filter(
+    if not request.user.role in ['ops_team_lead', 'ops_exec', 'top_management']:
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    debug_data = {}
+    
+    # 1. Check leads with conversion_requested status
+    conversion_requested_leads = Lead.objects.filter(status='conversion_requested')
+    debug_data['conversion_requested_leads'] = {
+        'count': conversion_requested_leads.count(),
+        'leads': [
+            {
+                'id': lead.id,
+                'name': lead.name,
+                'lead_id': lead.lead_id,
+                'status': lead.status,
+                'conversion_requested_at': lead.conversion_requested_at,
+                'conversion_requested_by': lead.conversion_requested_by.get_full_name() if lead.conversion_requested_by else None,
+                'converted': lead.converted
+            }
+            for lead in conversion_requested_leads[:10]  # Show first 10
+        ]
+    }
+    
+    # 2. Check LeadStatusChange records that need approval
+    pending_status_changes = LeadStatusChange.objects.filter(
+        needs_approval=True,
+        new_status='conversion_requested',
+        approved__isnull=True
+    )
+    debug_data['pending_status_changes'] = {
+        'count': pending_status_changes.count(),
+        'records': [
+            {
+                'id': change.id,
+                'lead_name': change.lead.name,
+                'lead_id': change.lead.lead_id,
+                'changed_by': change.changed_by.get_full_name(),
+                'changed_at': change.changed_at,
+                'approval_by': change.approval_by.get_full_name() if change.approval_by else None,
+                'notes': change.notes
+            }
+            for change in pending_status_changes[:10]
+        ]
+    }
+    
+    # 3. Check ops team users
+    ops_users = User.objects.filter(role__in=['ops_team_lead', 'ops_exec'], is_active=True)
+    debug_data['ops_users'] = {
+        'count': ops_users.count(),
+        'users': [
+            {
+                'id': user.id,
+                'username': user.username,
+                'full_name': user.get_full_name(),
+                'role': user.role,
+                'is_active': user.is_active
+            }
+            for user in ops_users
+        ]
+    }
+    
+    # 4. Check recent conversions
+    recent_conversions = Lead.objects.filter(converted=True).order_by('-converted_at')[:5]
+    debug_data['recent_conversions'] = [
+        {
+            'name': lead.name,
+            'converted_at': lead.converted_at,
+            'converted_by': lead.converted_by.get_full_name() if lead.converted_by else None,
+            'client_id': lead.client_id
+        }
+        for lead in recent_conversions
+    ]
+    
+    # 5. Check all status changes for conversion_requested
+    all_conversion_requests = LeadStatusChange.objects.filter(
+        new_status='conversion_requested'
+    ).order_by('-changed_at')[:10]
+    debug_data['all_conversion_requests'] = [
+        {
+            'lead_name': change.lead.name,
+            'changed_by': change.changed_by.get_full_name(),
+            'changed_at': change.changed_at,
+            'needs_approval': change.needs_approval,
+            'approved': change.approved,
+            'approval_by': change.approval_by.get_full_name() if change.approval_by else None,
+            'approved_at': change.approved_at
+        }
+        for change in all_conversion_requests
+    ]
+    
+    # 6. Check the current user's pending approvals specifically
+    user_pending_approvals = LeadStatusChange.objects.filter(
         needs_approval=True,
         new_status='conversion_requested',
         approval_by=request.user,
         approved__isnull=True
-    ).select_related('lead', 'changed_by').order_by('-changed_at')
+    )
+    debug_data['user_pending_approvals'] = {
+        'count': user_pending_approvals.count(),
+        'approvals': [
+            {
+                'lead_name': approval.lead.name,
+                'changed_by': approval.changed_by.get_full_name(),
+                'changed_at': approval.changed_at,
+                'notes': approval.notes
+            }
+            for approval in user_pending_approvals
+        ]
+    }
     
-    # For ops_team_lead, also show leads that need verification but don't have approval records
+    # 7. Check if there are any unassigned conversion requests
+    unassigned_conversions = Lead.objects.filter(
+        status='conversion_requested',
+        converted=False
+    ).exclude(
+        id__in=LeadStatusChange.objects.filter(
+            needs_approval=True,
+            new_status='conversion_requested'
+        ).values_list('lead_id', flat=True)
+    )
+    debug_data['unassigned_conversions'] = {
+        'count': unassigned_conversions.count(),
+        'leads': [
+            {
+                'name': lead.name,
+                'lead_id': lead.lead_id,
+                'conversion_requested_at': lead.conversion_requested_at,
+                'conversion_requested_by': lead.conversion_requested_by.get_full_name() if lead.conversion_requested_by else None
+            }
+            for lead in unassigned_conversions
+        ]
+    }
+    
+    return JsonResponse(debug_data, indent=2)
+
+def ops_pending_approvals(request):
+    """Operations Team Lead view for pending conversion approvals - FIXED VERSION"""
+    if request.user.role not in ['ops_team_lead', 'ops_exec']:
+        messages.error(request, "Access denied.")
+        return redirect('dashboard')
+    
+    # FIXED QUERY: Use approved=False instead of approved__isnull=True
     if request.user.role == 'ops_team_lead':
+        # Show all pending conversion requests for ops_team_lead
+        pending_approvals = LeadStatusChange.objects.filter(
+            needs_approval=True,
+            new_status='conversion_requested',
+            approved=False  # FIXED: was approved__isnull=True
+        ).select_related('lead', 'changed_by').order_by('-changed_at')
+        
+        # Also auto-assign unassigned conversion requests to ops_team_lead
         unassigned_conversions = Lead.objects.filter(
             status='conversion_requested',
             converted=False
@@ -3103,7 +3221,7 @@ def ops_pending_approvals(request):
                 needs_approval=True,
                 new_status='conversion_requested'
             ).values_list('lead_id', flat=True)
-        ).order_by('-conversion_requested_at')
+        )
         
         # Create approval records for unassigned conversions
         for lead in unassigned_conversions:
@@ -3113,9 +3231,10 @@ def ops_pending_approvals(request):
                 needs_approval=True,
                 defaults={
                     'changed_by': lead.conversion_requested_by or request.user,
-                    'old_status': 'qualified',  # Assume previous status
+                    'old_status': 'qualified',
                     'notes': f'Auto-assigned conversion verification to {request.user.get_full_name()}',
                     'approval_by': request.user,
+                    'approved': False  # EXPLICIT: Set to False
                 }
             )
         
@@ -3123,8 +3242,16 @@ def ops_pending_approvals(request):
         pending_approvals = LeadStatusChange.objects.filter(
             needs_approval=True,
             new_status='conversion_requested',
+            approved=False  # FIXED: was approved__isnull=True
+        ).select_related('lead', 'changed_by').order_by('-changed_at')
+        
+    else:  # ops_exec
+        # Show only conversion requests specifically assigned to this ops_exec
+        pending_approvals = LeadStatusChange.objects.filter(
+            needs_approval=True,
+            new_status='conversion_requested',
             approval_by=request.user,
-            approved__isnull=True
+            approved=False  # FIXED: was approved__isnull=True
         ).select_related('lead', 'changed_by').order_by('-changed_at')
     
     # Get all RMs for assignment dropdown
@@ -3135,10 +3262,11 @@ def ops_pending_approvals(request):
     if request.user.role == 'ops_team_lead':
         available_ops_execs = User.objects.filter(role='ops_exec', is_active=True).order_by('first_name', 'last_name')
     
-    # Get recent approvals/rejections for reference
+    # Get recent approvals/rejections for reference - FIXED QUERY
     recent_decisions = LeadStatusChange.objects.filter(
         approval_by=request.user,
-        approved__isnull=False
+        approved__in=[True, False],  # FIXED: Include both approved and rejected
+        approved_at__isnull=False    # FIXED: Only get actually processed ones
     ).select_related('lead', 'changed_by').order_by('-approved_at')[:10]
     
     context = {
@@ -3151,6 +3279,8 @@ def ops_pending_approvals(request):
     }
     
     return render(request, 'base/pending_approvals.html', context)
+
+
 @login_required
 @require_POST
 def assign_verification_task(request, pk):
@@ -3162,11 +3292,15 @@ def assign_verification_task(request, pk):
     lead = get_object_or_404(Lead, pk=pk)
     ops_exec_id = request.POST.get('ops_exec_id')
     
+    if not ops_exec_id:
+        messages.error(request, "Please select an operations executive.")
+        return redirect('ops_pending_approvals')
+    
     try:
         ops_exec = User.objects.get(id=ops_exec_id, role='ops_exec', is_active=True)
     except User.DoesNotExist:
         messages.error(request, "Invalid operations executive selected.")
-        return redirect('lead_detail', pk=pk)
+        return redirect('ops_pending_approvals')
     
     try:
         with transaction.atomic():
@@ -3175,7 +3309,7 @@ def assign_verification_task(request, pk):
                 lead=lead,
                 needs_approval=True,
                 new_status='conversion_requested',
-                approved__isnull=True
+                approved=False  # FIXED: Use approved=False
             ).first()
             
             if approval:
@@ -3183,24 +3317,14 @@ def assign_verification_task(request, pk):
                 approval.approval_by = ops_exec
                 approval.notes += f" | Verification task assigned to {ops_exec.get_full_name()} by {request.user.get_full_name()}"
                 approval.save()
+                messages.success(request, f"Verification task assigned to {ops_exec.get_full_name()}.")
             else:
-                # Create new approval record
-                LeadStatusChange.objects.create(
-                    lead=lead,
-                    changed_by=request.user,
-                    old_status=lead.status,
-                    new_status='conversion_requested',
-                    notes=f'Verification task assigned to {ops_exec.get_full_name()} by {request.user.get_full_name()}',
-                    needs_approval=True,
-                    approval_by=ops_exec
-                )
-            
-            messages.success(request, f"Verification task assigned to {ops_exec.get_full_name()}.")
+                messages.error(request, "No pending approval found for this lead.")
             
     except Exception as e:
         messages.error(request, f"Error assigning verification task: {str(e)}")
     
-    return redirect('lead_detail', pk=pk)
+    return redirect('ops_pending_approvals')
 
 # Add this new view to handle self-assignment of verification
 @login_required
@@ -3209,50 +3333,56 @@ def self_assign_verification(request, pk):
     """Allow ops_team_lead to self-assign verification task"""
     if request.user.role != 'ops_team_lead':
         messages.error(request, "You don't have permission to self-assign verification tasks.")
-        return redirect('lead_detail', pk=pk)
+        return redirect('ops_pending_approvals')
     
     lead = get_object_or_404(Lead, pk=pk)
     
     try:
         with transaction.atomic():
             # Find or create approval record
-            approval, created = LeadStatusChange.objects.get_or_create(
+            approval = LeadStatusChange.objects.filter(
                 lead=lead,
                 needs_approval=True,
                 new_status='conversion_requested',
-                defaults={
-                    'changed_by': request.user,
-                    'old_status': lead.status,
-                    'notes': f'Verification task self-assigned by {request.user.get_full_name()}',
-                    'approval_by': request.user,
-                }
-            )
+                approved=False  # FIXED: Use approved=False
+            ).first()
             
-            if not created:
+            if approval:
                 # Update existing record
                 approval.approval_by = request.user
                 approval.notes += f" | Self-assigned by {request.user.get_full_name()}"
                 approval.save()
-            
-            messages.success(request, "Verification task self-assigned successfully.")
+                messages.success(request, "Verification task self-assigned successfully.")
+            else:
+                messages.error(request, "No pending approval found for this lead.")
             
     except Exception as e:
         messages.error(request, f"Error self-assigning verification task: {str(e)}")
     
-    return redirect('lead_detail', pk=pk)
+    return redirect('ops_pending_approvals')
 
 @login_required
 @require_POST
 def approve_conversion(request, pk):
-    if not request.user.role == 'ops_team_lead':
+    """Only ops_team_lead can approve conversions after business verification"""
+    if request.user.role not in ['ops_team_lead', 'ops_exec']:
         messages.error(request, "You don't have permission to verify business details.")
-        return redirect('lead_detail', pk=pk)
+        return redirect('ops_pending_approvals')
     
     lead = get_object_or_404(Lead, pk=pk)
     approval_id = request.POST.get('approval_id')
     
+    if not approval_id:
+        messages.error(request, "No approval ID provided.")
+        return redirect('ops_pending_approvals')
+    
     try:
-        approval = LeadStatusChange.objects.get(id=approval_id, lead=lead, needs_approval=True)
+        approval = LeadStatusChange.objects.get(
+            id=approval_id, 
+            lead=lead, 
+            needs_approval=True,
+            approved=False  # FIXED: Use approved=False instead of approved__isnull=True
+        )
     except LeadStatusChange.DoesNotExist:
         messages.error(request, "Approval request not found or already processed.")
         return redirect('ops_pending_approvals')
@@ -3260,17 +3390,17 @@ def approve_conversion(request, pk):
     # Get business verification data from form
     assigned_rm_id = request.POST.get('assigned_rm')
     business_verification_notes = request.POST.get('business_verification_notes', '')
-    client_id = request.POST.get('client_id')  # Get client ID from form
+    client_id = request.POST.get('client_id')
     
     if not assigned_rm_id:
         messages.error(request, "Please select an RM to assign the client to.")
-        return redirect('lead_detail', pk=pk)
+        return redirect('ops_pending_approvals')
     
     try:
         assigned_rm = User.objects.get(id=assigned_rm_id, role__in=['rm', 'rm_head'])
     except User.DoesNotExist:
         messages.error(request, "Invalid RM selected for client assignment.")
-        return redirect('lead_detail', pk=pk)
+        return redirect('ops_pending_approvals')
     
     try:
         with transaction.atomic():
@@ -3292,17 +3422,16 @@ def approve_conversion(request, pk):
             approval.notes += f" | Business verified by {request.user.get_full_name()}: {business_verification_notes}"
             approval.save()
             
-            # Create Client entry using your actual Client model structure
+            # Create Client entry
             client = Client.objects.create(
-                name=f"{client_id} - {lead.name}",  # Store client ID in name field
-                contact_info=f"{lead.email or ''} | {lead.mobile or ''}".strip(' |'),  # Combine email and mobile
-                user=assigned_rm,  # Assign to the selected RM
-                created_by=request.user,  # ops_team_lead who approved
+                name=f"{client_id} - {lead.name}",
+                contact_info=f"{lead.email or ''} | {lead.mobile or ''}".strip(' |'),
+                user=assigned_rm,
+                created_by=request.user,
                 converted_from_lead=lead,
                 business_verification_notes=business_verification_notes,
-                original_rm=lead.assigned_to,  # Keep track of original RM
+                original_rm=lead.assigned_to,
                 conversion_approved_by=request.user,
-                # Set default values for required fields
                 aum=0.00,
                 sip_amount=0.00,
                 demat_count=0,
@@ -3316,7 +3445,7 @@ def approve_conversion(request, pk):
             lead.business_verified_by = request.user
             lead.business_verification_notes = business_verification_notes
             lead.final_assigned_rm = assigned_rm
-            lead.client_id = client_id  # Store client ID in lead
+            lead.client_id = client_id
             lead.generated_client = client
             lead.save()
             
@@ -3342,39 +3471,55 @@ def approve_conversion(request, pk):
         logger = logging.getLogger(__name__)
         logger.error(f"Lead conversion failed for lead {pk}: {str(e)}")
     
-    return redirect('lead_detail', pk=pk)
+    return redirect('ops_pending_approvals')
 
 @login_required
 @require_POST
 def reject_conversion(request, pk):
-    if not request.user.role == 'ops_team_lead':
+    """Only ops_team_lead can reject conversions"""
+    if request.user.role not in ['ops_team_lead', 'ops_exec']:
         messages.error(request, "You don't have permission to reject conversions.")
-        return redirect('lead_detail', pk=pk)
+        return redirect('ops_pending_approvals')
     
     lead = get_object_or_404(Lead, pk=pk)
     approval_id = request.POST.get('approval_id')
     
+    if not approval_id:
+        messages.error(request, "No approval ID provided.")
+        return redirect('ops_pending_approvals')
+    
     try:
-        approval = LeadStatusChange.objects.get(id=approval_id, lead=lead, needs_approval=True)
+        approval = LeadStatusChange.objects.get(
+            id=approval_id, 
+            lead=lead, 
+            needs_approval=True,
+            approved=False  # FIXED: Use approved=False instead of approved__isnull=True
+        )
     except LeadStatusChange.DoesNotExist:
         messages.error(request, "Approval request not found or already processed.")
         return redirect('ops_pending_approvals')
     
     rejection_reason = request.POST.get('rejection_reason', 'No reason provided')
     
+    if not rejection_reason.strip():
+        messages.error(request, "Please provide a rejection reason.")
+        return redirect('ops_pending_approvals')
+    
     try:
         with transaction.atomic():
             # Update the approval record
-            approval.approved = False
+            approval.approved = False  # Keep it False but mark as processed
             approval.approved_at = timezone.now()
             approval.approved_by = request.user
-            approval.needs_approval = False
+            approval.needs_approval = False  # Mark as processed
             approval.notes = f"Business verification failed. Conversion rejected by {request.user.get_full_name()}. Reason: {rejection_reason}"
             approval.save()
             
             # Revert lead status to previous status
             lead.status = approval.old_status
             lead.business_verification_notes = f"Rejected: {rejection_reason}"
+            lead.conversion_requested_at = None
+            lead.conversion_requested_by = None
             lead.save()
             
             # Create a new status change record for the rejection
@@ -3448,84 +3593,6 @@ def converted_leads_list(request):
     
     return render(request, 'base/converted_leads.html', context)
 
-# Rest of the functions remain unchanged...
-@login_required
-@require_POST
-def convert_lead(request, pk):
-    if not request.user.role in ['rm_head', 'business_head', 'top_management']:
-        messages.error(request, "You don't have permission to convert leads.")
-        return redirect('lead_detail', pk=pk)
-    
-    lead = get_object_or_404(Lead, pk=pk)
-    
-    # Check if lead is already converted
-    if lead.converted:
-        messages.warning(request, "This lead is already converted.")
-        return redirect('lead_detail', pk=pk)
-    
-    # Check if lead status allows conversion
-    if lead.status != 'conversion_requested':
-        messages.error(request, "Lead must be in 'conversion_requested' status to be converted.")
-        return redirect('lead_detail', pk=pk)
-    
-    try:
-        with transaction.atomic():
-            # Use client_id from form if provided, otherwise generate one
-            client_id = request.POST.get('client_id')
-            if not client_id or not client_id.strip():
-                client_id = generate_client_id()
-            else:
-                client_id = client_id.strip()
-                
-                # Validate that the provided client_id is unique
-                if Lead.objects.filter(client_id=client_id).exclude(pk=lead.pk).exists():
-                    # If not unique, generate a new one
-                    client_id = generate_client_id()
-                    messages.warning(request, f"Provided client ID was not unique. Generated new ID: {client_id}")
-            
-            # Create a Client record (using existing Client model structure)
-            from .models import Client
-            client = Client.objects.create(
-                name=f"{client_id} - {lead.name}",  # Store client ID in name field
-                contact_info=f"{lead.email or ''} | {lead.mobile or ''}".strip(' |'),
-                user=lead.assigned_to,  # Assign to current RM
-                converted_from_lead=lead,
-                created_by=request.user,
-                # Add other fields based on your Client model structure
-                aum=0.00,  # Default AUM
-                sip_amount=0.00,  # Default SIP
-                demat_count=0,  # Default demat count
-            )
-            
-            # Update lead as converted
-            lead.converted = True
-            lead.converted_at = timezone.now()
-            lead.converted_by = request.user
-            lead.status = 'converted'
-            lead.client_id = client_id
-            lead.generated_client = client  # Link to the created client
-            lead.save()
-            
-            # Record status change
-            from .models import LeadStatusChange
-            LeadStatusChange.objects.create(
-                lead=lead,
-                changed_by=request.user,
-                old_status='conversion_requested',
-                new_status='converted',
-                notes=f"Lead converted to client {client_id} (Client ID: {client.id})"
-            )
-            
-            messages.success(request, f"Lead successfully converted to client {client_id}.")
-            
-    except Exception as e:
-        messages.error(request, f"Error converting lead: {str(e)}")
-        # Log the error for debugging
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f"Lead conversion failed for lead {pk}: {str(e)}")
-    
-    return redirect('lead_detail', pk=pk)
 
 @login_required
 @require_POST

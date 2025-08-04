@@ -5,663 +5,1057 @@
 
 {% block extra_css %}
 <style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --success-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        --warning-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        --info-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        --dark-gradient: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    }
+
+    body {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        min-height: 100vh;
+    }
+
+    .page-header {
+        background: var(--primary-gradient);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-radius: 0 0 20px 20px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+
+    .stats-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+        border: none;
+    }
+
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .stats-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: var(--warning-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+    }
+
     .approval-card {
-        border-left: 4px solid #ffc107;
+        background: white;
+        border-radius: 20px;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        overflow: hidden;
+        transition: all 0.3s ease;
+        border: none;
+    }
+
+    .approval-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+    }
+
+    .lead-header {
+        background: var(--primary-gradient);
+        color: white;
+        padding: 1.5rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .lead-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 100%;
+        height: 100%;
+        background: rgba(255,255,255,0.1);
+        transform: rotate(45deg);
         transition: all 0.3s ease;
     }
-    .approval-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+
+    .approval-card:hover .lead-header::before {
+        right: -40%;
     }
+
     .lead-info {
-        background: #f8f9fa;
-        border-radius: 5px;
-        padding: 10px;
-        margin-bottom: 10px;
+        position: relative;
+        z-index: 2;
     }
-    .action-buttons .btn {
-        margin: 2px;
+
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     }
-    .priority-high {
-        border-left-color: #dc3545 !important;
+
+    .status-pending {
+        background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+        color: #8b4513;
     }
-    .priority-medium {
-        border-left-color: #ffc107 !important;
-    }
-    .priority-low {
-        border-left-color: #28a745 !important;
-    }
-    .modal-header.approve {
-        background-color: #28a745;
+
+    .status-approved {
+        background: var(--success-gradient);
         color: white;
     }
-    .modal-header.reject {
-        background-color: #dc3545;
+
+    .status-rejected {
+        background: var(--warning-gradient);
         color: white;
     }
-    .stats-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+    .card-body {
+        padding: 2rem;
+    }
+
+    .info-section {
+        background: linear-gradient(135deg, #f8f9ff 0%, #e6f2ff 100%);
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid #667eea;
+    }
+
+    .assignment-section {
+        background: linear-gradient(135deg, #f0fff4 0%, #e6ffed 100%);
+        border-radius: 15px;
+        padding: 1.5rem;
+        border-left: 4px solid #38ef7d;
+    }
+
+    .approval-actions {
+        background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
+        border-radius: 15px;
+        padding: 2rem;
+        margin-top: 1rem;
+    }
+
+    .form-section {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        border: 2px solid #f0f8ff;
+    }
+
+    .btn-modern {
+        border-radius: 25px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.3s ease;
+        border: none;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .btn-modern::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.3);
+        transition: all 0.3s ease;
+        transform: translate(-50%, -50%);
+    }
+
+    .btn-modern:hover::before {
+        width: 300px;
+        height: 300px;
+    }
+
+    .btn-approve {
+        background: var(--success-gradient);
         color: white;
+        box-shadow: 0 6px 20px rgba(17, 153, 142, 0.4);
+    }
+
+    .btn-approve:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(17, 153, 142, 0.6);
+        color: white;
+    }
+
+    .btn-reject {
+        background: var(--warning-gradient);
+        color: white;
+        box-shadow: 0 6px 20px rgba(240, 147, 251, 0.4);
+    }
+
+    .btn-reject:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(240, 147, 251, 0.6);
+        color: white;
+    }
+
+    .btn-assign {
+        background: var(--info-gradient);
+        color: white;
+        box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
+    }
+
+    .btn-assign:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(79, 172, 254, 0.6);
+        color: white;
+    }
+
+    .form-control-modern {
+        border-radius: 10px;
+        border: 2px solid #e2e8f0;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+        background: white;
+    }
+
+    .form-control-modern:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        background: #f8f9ff;
+    }
+
+    .sidebar-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+        border: none;
+    }
+
+    .sidebar-header {
+        background: var(--dark-gradient);
+        color: white;
+        padding: 1rem 1.5rem;
+        font-weight: 600;
+    }
+
+    .recent-decisions {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .recent-decisions::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .recent-decisions::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    .recent-decisions::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
         border-radius: 10px;
     }
-    .quick-actions {
-        background: #f8f9fa;
-        border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 20px;
+
+    .decision-item {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background-color 0.3s ease;
+    }
+
+    .decision-item:hover {
+        background: #f8f9ff;
+    }
+
+    .decision-item:last-child {
+        border-bottom: none;
+    }
+
+    .empty-state {
+        background: white;
+        border-radius: 20px;
+        padding: 3rem;
+        text-align: center;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        margin: 2rem 0;
+    }
+
+    .empty-state-icon {
+        font-size: 4rem;
+        background: var(--success-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 1rem;
+    }
+
+    .quick-actions .btn {
+        margin-bottom: 0.75rem;
+        border-radius: 15px;
+        padding: 0.75rem 1rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .quick-actions .btn:hover {
+        transform: translateX(5px);
+    }
+
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+        font-weight: 600;
+        color: #2d3748;
+    }
+
+    .section-title i {
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--primary-gradient);
+        color: white;
+        border-radius: 50%;
+        font-size: 0.9rem;
+    }
+
+    .collapse-toggle {
+        background: linear-gradient(135deg, #cbd5e0 0%, #e2e8f0 100%);
+        border: none;
+        color: #4a5568;
+        font-weight: 500;
+        border-radius: 15px;
+        padding: 0.75rem 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .collapse-toggle:hover {
+        background: linear-gradient(135deg, #a0aec0 0%, #cbd5e0 100%);
+        color: #2d3748;
+        transform: translateY(-2px);
+    }
+
+    .fade-in {
+        animation: fadeIn 0.6s ease-in;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .pulse {
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+
+    @media (max-width: 768px) {
+        .page-header {
+            padding: 1rem 0;
+            margin-bottom: 1rem;
+        }
+        
+        .approval-card {
+            margin-bottom: 1rem;
+        }
+        
+        .card-body {
+            padding: 1rem;
+        }
+        
+        .btn-modern {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <!-- Header Section -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h2>
-                        <i class="fas fa-clipboard-check text-warning"></i>
-                        {% if user_role == 'ops_team_lead' %}
-                            Operations Team Lead Dashboard
-                        {% else %}
-                            Operations Executive Dashboard
-                        {% endif %}
-                    </h2>
-                    <p class="text-muted">Manage conversion approvals and business verification tasks</p>
-                </div>
-                <div>
-                    <a href="{% url 'lead_list' %}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Back to Leads
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card stats-card">
-                <div class="card-body text-center">
-                    <i class="fas fa-clock fa-2x mb-2"></i>
-                    <h3>{{ pending_count }}</h3>
-                    <p class="mb-0">Pending Approvals</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-success text-white">
-                <div class="card-body text-center">
-                    <i class="fas fa-check-circle fa-2x mb-2"></i>
-                    <h3>{{ recent_decisions|length }}</h3>
-                    <p class="mb-0">Recent Decisions</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-info text-white">
-                <div class="card-body text-center">
-                    <i class="fas fa-users fa-2x mb-2"></i>
-                    <h3>{{ available_rms|length }}</h3>
-                    <p class="mb-0">Available RMs</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-primary text-white">
-                <div class="card-body text-center">
-                    <i class="fas fa-user-tie fa-2x mb-2"></i>
-                    <h3>{{ available_ops_execs|length }}</h3>
-                    <p class="mb-0">Operations Team</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Quick Actions (for ops_team_lead) -->
-    {% if user_role == 'ops_team_lead' and pending_count > 0 %}
-    <div class="quick-actions">
-        <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
-        <div class="row">
-            <div class="col-md-6">
-                <button type="button" class="btn btn-primary btn-block" onclick="bulkSelfAssign()">
-                    <i class="fas fa-user-check"></i> Self-Assign All Pending
-                </button>
-            </div>
-            <div class="col-md-6">
-                <div class="dropdown">
-                    <button class="btn btn-secondary btn-block dropdown-toggle" type="button" 
-                            data-toggle="dropdown">
-                        <i class="fas fa-users"></i> Bulk Assign to Ops Exec
-                    </button>
-                    <div class="dropdown-menu w-100">
-                        {% for ops_exec in available_ops_execs %}
-                        <a class="dropdown-item" href="#" onclick="bulkAssignToOpsExec({{ ops_exec.id }}, '{{ ops_exec.get_full_name|default:ops_exec.username }}')">
-                            {{ ops_exec.get_full_name|default:ops_exec.username }}
-                        </a>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Main Content -->
-    <div class="row">
-        <!-- Pending Approvals Section -->
-        <div class="col-lg-8">
-            <div class="card">
-                <div class="card-header">
-                    <h4 class="card-title mb-0">
-                        <i class="fas fa-hourglass-half"></i> Pending Approvals
-                        {% if pending_count > 0 %}
-                            <span class="badge badge-warning ml-2">{{ pending_count }}</span>
-                        {% endif %}
-                    </h4>
-                </div>
-                <div class="card-body">
-                    {% if pending_count > 0 %}
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i>
-                            <strong>Action Required:</strong> 
-                            You have {{ pending_count }} lead{{ pending_count|pluralize }} awaiting business verification.
-                            {% if user_role == 'ops_team_lead' %}
-                                You can verify these leads yourself or assign them to operations executives.
-                            {% endif %}
-                        </div>
-
-                        <!-- Approval Cards -->
-                        {% for approval in pending_approvals %}
-                        <div class="card approval-card mb-3 {% cycle 'priority-high' 'priority-medium' 'priority-low' %}">
-                            <div class="card-body">
-                                <div class="row">
-                                    <!-- Lead Information -->
-                                    <div class="col-md-4">
-                                        <div class="lead-info">
-                                            <h6 class="mb-1">
-                                                <strong>{{ approval.lead.name }}</strong>
-                                                <span class="badge badge-{{ approval.lead.status|default:'secondary' }} ml-2">
-                                                    {{ approval.lead.get_status_display }}
-                                                </span>
-                                            </h6>
-                                            <small class="text-muted">
-                                                <i class="fas fa-id-badge"></i> {{ approval.lead.lead_id }}<br>
-                                                {% if approval.lead.email %}
-                                                    <i class="fas fa-envelope"></i> {{ approval.lead.email }}<br>
-                                                {% endif %}
-                                                {% if approval.lead.mobile %}
-                                                    <i class="fas fa-phone"></i> {{ approval.lead.mobile }}<br>
-                                                {% endif %}
-                                                <i class="fas fa-user"></i> Assigned to: {{ approval.lead.assigned_to.get_full_name|default:approval.lead.assigned_to.username }}
-                                            </small>
-                                        </div>
-                                    </div>
-
-                                    <!-- Request Information -->
-                                    <div class="col-md-4">
-                                        <h6>Request Details</h6>
-                                        <small>
-                                            <strong>Requested by:</strong> {{ approval.changed_by.get_full_name|default:approval.changed_by.username }}<br>
-                                            <strong>Role:</strong> {{ approval.changed_by.role|title }}<br>
-                                            <strong>Date:</strong> {{ approval.changed_at|date:"M d, Y g:i A" }}<br>
-                                            <strong>Priority:</strong> 
-                                            {% if approval.changed_at|timesince|slice:":1" == "0" %}
-                                                <span class="badge badge-danger">High</span>
-                                            {% elif approval.changed_at|timesince|slice:":1" == "1" %}
-                                                <span class="badge badge-warning">Medium</span>
-                                            {% else %}
-                                                <span class="badge badge-success">Normal</span>
-                                            {% endif %}
-                                        </small>
-                                    </div>
-
-                                    <!-- Actions -->
-                                    <div class="col-md-4">
-                                        <h6>Actions</h6>
-                                        <div class="action-buttons">
-                                            <!-- View Lead Details -->
-                                            <a href="{% url 'lead_detail' approval.lead.pk %}" 
-                                               class="btn btn-info btn-sm btn-block mb-1">
-                                                <i class="fas fa-eye"></i> View Details
-                                            </a>
-
-                                            {% if user_role == 'ops_team_lead' %}
-                                                <!-- Self-assign verification -->
-                                                <form method="post" action="{% url 'self_assign_verification' approval.lead.pk %}" 
-                                                      style="display: inline-block; width: 100%;">
-                                                    {% csrf_token %}
-                                                    <button type="submit" class="btn btn-primary btn-sm btn-block mb-1" 
-                                                            onclick="return confirm('Assign this verification to yourself?')">
-                                                        <i class="fas fa-user-check"></i> Self-Assign
-                                                    </button>
-                                                </form>
-
-                                                <!-- Assign to ops_exec -->
-                                                {% if available_ops_execs %}
-                                                <div class="dropdown w-100 mb-1">
-                                                    <button class="btn btn-secondary btn-sm btn-block dropdown-toggle" 
-                                                            type="button" data-toggle="dropdown">
-                                                        <i class="fas fa-user-plus"></i> Assign to Ops Exec
-                                                    </button>
-                                                    <div class="dropdown-menu w-100">
-                                                        {% for ops_exec in available_ops_execs %}
-                                                        <form method="post" action="{% url 'assign_verification_task' approval.lead.pk %}">
-                                                            {% csrf_token %}
-                                                            <input type="hidden" name="ops_exec_id" value="{{ ops_exec.id }}">
-                                                            <button type="submit" class="dropdown-item">
-                                                                <i class="fas fa-user"></i> {{ ops_exec.get_full_name|default:ops_exec.username }}
-                                                                <small class="text-muted d-block">{{ ops_exec.email }}</small>
-                                                            </button>
-                                                        </form>
-                                                        {% endfor %}
-                                                    </div>
-                                                </div>
-                                                {% endif %}
-                                            {% endif %}
-
-                                            <!-- Quick approve/reject (if assigned to current user) -->
-                                            {% if approval.approval_by == request.user %}
-                                            <div class="row">
-                                                <div class="col-6">
-                                                    <button type="button" class="btn btn-success btn-sm btn-block" 
-                                                            data-toggle="modal" data-target="#approveModal{{ approval.id }}">
-                                                        <i class="fas fa-check"></i> Approve
-                                                    </button>
-                                                </div>
-                                                <div class="col-6">
-                                                    <button type="button" class="btn btn-danger btn-sm btn-block" 
-                                                            data-toggle="modal" data-target="#rejectModal{{ approval.id }}">
-                                                        <i class="fas fa-times"></i> Reject
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Notes Section -->
-                                {% if approval.notes %}
-                                <div class="row mt-2">
-                                    <div class="col-12">
-                                        <div class="alert alert-light mb-0">
-                                            <small><strong>Notes:</strong> {{ approval.notes }}</small>
-                                        </div>
-                                    </div>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <!-- Approval Modal -->
-                        {% if approval.approval_by == request.user %}
-                        <div class="modal fade" id="approveModal{{ approval.id }}" tabindex="-1">
-                            <div class="modal-dialog modal-lg">
-                                <div class="modal-content">
-                                    <form method="post" action="{% url 'approve_conversion' approval.lead.pk %}">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="approval_id" value="{{ approval.id }}">
-                                        <div class="modal-header approve">
-                                            <h5 class="modal-title">
-                                                <i class="fas fa-check-circle"></i> Approve Conversion - {{ approval.lead.name }}
-                                            </h5>
-                                            <button type="button" class="close text-white" data-dismiss="modal">
-                                                <span>&times;</span>
-                                            </button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <div class="alert alert-success">
-                                                <i class="fas fa-info-circle"></i>
-                                                <strong>Business Verification:</strong> Please review all lead details and assign to appropriate RM.
-                                            </div>
-
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label for="assigned_rm{{ approval.id }}">
-                                                            <i class="fas fa-user-tie"></i> Assign to RM: <span class="text-danger">*</span>
-                                                        </label>
-                                                        <select name="assigned_rm" id="assigned_rm{{ approval.id }}" 
-                                                                class="form-control" required onchange="updateRMInfo(this, {{ approval.id }})">
-                                                            <option value="">Select RM...</option>
-                                                            {% for rm in available_rms %}
-                                                            <option value="{{ rm.id }}" 
-                                                                    data-email="{{ rm.email }}"
-                                                                    data-phone="{{ rm.phone|default:'N/A' }}"
-                                                                    {% if rm.id == approval.lead.assigned_to.id %}selected{% endif %}>
-                                                                {{ rm.get_full_name|default:rm.username }}
-                                                            </option>
-                                                            {% endfor %}
-                                                        </select>
-                                                        <div id="rmInfo{{ approval.id }}" class="mt-2"></div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label for="client_id{{ approval.id }}">
-                                                            <i class="fas fa-id-card"></i> Client ID:
-                                                        </label>
-                                                        <div class="input-group">
-                                                            <input type="text" name="client_id" id="client_id{{ approval.id }}" 
-                                                                   class="form-control" 
-                                                                   placeholder="Auto-generate if empty">
-                                                            <div class="input-group-append">
-                                                                <button type="button" class="btn btn-outline-secondary" 
-                                                                        onclick="generateClientId({{ approval.id }})">
-                                                                    <i class="fas fa-magic"></i> Generate
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div class="form-group">
-                                                <label for="business_verification_notes{{ approval.id }}">
-                                                    <i class="fas fa-clipboard-list"></i> Business Verification Notes:
-                                                </label>
-                                                <textarea name="business_verification_notes" id="business_verification_notes{{ approval.id }}"
-                                                          class="form-control" rows="4" 
-                                                          placeholder="Enter verification notes, compliance checks, business validation details..."></textarea>
-                                            </div>
-
-                                            <!-- Lead Summary for Review -->
-                                            <div class="card bg-light">
-                                                <div class="card-header">
-                                                    <h6><i class="fas fa-clipboard-check"></i> Lead Summary for Review</h6>
-                                                </div>
-                                                <div class="card-body">
-                                                    <div class="row">
-                                                        <div class="col-md-6">
-                                                            <strong>Lead Details:</strong><br>
-                                                            <small>
-                                                                Name: {{ approval.lead.name }}<br>
-                                                                Email: {{ approval.lead.email|default:'N/A' }}<br>
-                                                                Mobile: {{ approval.lead.mobile|default:'N/A' }}<br>
-                                                                Source: {{ approval.lead.source|default:'N/A' }}
-                                                            </small>
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <strong>Current Status:</strong><br>
-                                                            <small>
-                                                                Status: {{ approval.lead.get_status_display }}<br>
-                                                                Created: {{ approval.lead.created_at|date:"M d, Y" }}<br>
-                                                                Last Updated: {{ approval.lead.updated_at|date:"M d, Y" }}<br>
-                                                                Interactions: {{ approval.lead.interactions.count }}
-                                                            </small>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                                                <i class="fas fa-times"></i> Cancel
-                                            </button>
-                                            <button type="submit" class="btn btn-success">
-                                                <i class="fas fa-check"></i> Approve & Convert to Client
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Rejection Modal -->
-                        <div class="modal fade" id="rejectModal{{ approval.id }}" tabindex="-1">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <form method="post" action="{% url 'reject_conversion' approval.lead.pk %}">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="approval_id" value="{{ approval.id }}">
-                                        <div class="modal-header reject">
-                                            <h5 class="modal-title">
-                                                <i class="fas fa-times-circle"></i> Reject Conversion - {{ approval.lead.name }}
-                                            </h5>
-                                            <button type="button" class="close text-white" data-dismiss="modal">
-                                                <span>&times;</span>
-                                            </button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <div class="alert alert-warning">
-                                                <i class="fas fa-exclamation-triangle"></i>
-                                                <strong>Rejection Notice:</strong> This action will reject the conversion request and notify the requesting team member.
-                                            </div>
-
-                                            <div class="form-group">
-                                                <label for="rejection_reason{{ approval.id }}">
-                                                    <i class="fas fa-comment-alt"></i> Rejection Reason: <span class="text-danger">*</span>
-                                                </label>
-                                                <textarea name="rejection_reason" id="rejection_reason{{ approval.id }}" 
-                                                          class="form-control" rows="4" required 
-                                                          placeholder="Please provide detailed reasons for rejection (e.g., incomplete documentation, compliance issues, business criteria not met)..."></textarea>
-                                            </div>
-
-                                            <!-- Quick rejection reasons -->
-                                            <div class="form-group">
-                                                <label>Quick Reasons:</label><br>
-                                                <button type="button" class="btn btn-outline-secondary btn-sm mr-1 mb-1" 
-                                                        onclick="setRejectionReason({{ approval.id }}, 'Incomplete documentation provided')">
-                                                    Incomplete Documentation
-                                                </button>
-                                                <button type="button" class="btn btn-outline-secondary btn-sm mr-1 mb-1" 
-                                                        onclick="setRejectionReason({{ approval.id }}, 'Business criteria not met')">
-                                                    Business Criteria Not Met
-                                                </button>
-                                                <button type="button" class="btn btn-outline-secondary btn-sm mr-1 mb-1" 
-                                                        onclick="setRejectionReason({{ approval.id }}, 'Compliance issues identified')">
-                                                    Compliance Issues
-                                                </button>
-                                                <button type="button" class="btn btn-outline-secondary btn-sm mr-1 mb-1" 
-                                                        onclick="setRejectionReason({{ approval.id }}, 'Additional verification required')">
-                                                    Additional Verification Required
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                                                <i class="fas fa-arrow-left"></i> Cancel
-                                            </button>
-                                            <button type="submit" class="btn btn-danger">
-                                                <i class="fas fa-times"></i> Reject Conversion
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                        {% endif %}
-
-                        {% endfor %}
-
+<div class="page-header">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="fas fa-clipboard-check me-3"></i>
+                    Conversion Approvals
+                </h1>
+                <p class="mb-0 opacity-75">
+                    {% if user_role == 'ops_team_lead' %}
+                        <i class="fas fa-crown me-2"></i>Team Lead Dashboard - Manage all conversion requests
                     {% else %}
-                        <div class="text-center py-5">
-                            <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
-                            <h4>All Caught Up!</h4>
-                            <p class="text-muted">There are no pending conversion approvals at this time.</p>
-                            <a href="{% url 'lead_list' %}" class="btn btn-primary">
-                                <i class="fas fa-list"></i> View All Leads
-                            </a>
-                        </div>
+                        <i class="fas fa-user-tie me-2"></i>Executive Dashboard - Your assigned verifications
                     {% endif %}
-                </div>
+                </p>
             </div>
-        </div>
-
-        <!-- Sidebar with Recent Decisions and Quick Info -->
-        <div class="col-lg-4">
-            <!-- Recent Decisions -->
-            {% if recent_decisions %}
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5><i class="fas fa-history"></i> Recent Decisions</h5>
-                </div>
-                <div class="card-body">
-                    {% for decision in recent_decisions %}
-                    <div class="media mb-3">
-                        <div class="media-object mr-3">
-                            {% if decision.approved %}
-                                <i class="fas fa-check-circle text-success fa-2x"></i>
-                            {% else %}
-                                <i class="fas fa-times-circle text-danger fa-2x"></i>
-                            {% endif %}
-                        </div>
-                        <div class="media-body">
-                            <h6 class="mt-0">{{ decision.lead.name }}</h6>
-                            <small class="text-muted">
-                                {% if decision.approved %}
-                                    <span class="badge badge-success">Approved</span>
-                                {% else %}
-                                    <span class="badge badge-danger">Rejected</span>
-                                {% endif %}
-                                on {{ decision.approved_at|date:"M d, Y" }}
-                            </small>
-                            <div class="mt-1">
-                                <a href="{% url 'lead_detail' decision.lead.pk %}" class="btn btn-sm btn-outline-info">
-                                    <i class="fas fa-eye"></i> View
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    {% if not forloop.last %}<hr>{% endif %}
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Available Team Members -->
-            <div class="card">
-                <div class="card-header">
-                    <h5><i class="fas fa-users"></i> Team Information</h5>
-                </div>
-                <div class="card-body">
-                    <h6>Available RMs ({{ available_rms|length }})</h6>
-                    <div class="mb-3">
-                        {% for rm in available_rms|slice:":5" %}
-                        <span class="badge badge-info mr-1 mb-1">{{ rm.get_full_name|default:rm.username }}</span>
-                        {% endfor %}
-                        {% if available_rms|length > 5 %}
-                        <span class="badge badge-secondary">+{{ available_rms|length|add:"-5" }} more</span>
-                        {% endif %}
-                    </div>
-
-                    {% if available_ops_execs %}
-                    <h6>Operations Executives ({{ available_ops_execs|length }})</h6>
-                    <div>
-                        {% for ops_exec in available_ops_execs %}
-                        <span class="badge badge-primary mr-1 mb-1">{{ ops_exec.get_full_name|default:ops_exec.username }}</span>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
+            <div class="col-md-4 text-end">
+                <div class="stats-card d-inline-block {% if pending_count > 0 %}pulse{% endif %}">
+                    <div class="stats-number">{{ pending_count }}</div>
+                    <div class="small text-muted fw-semibold">Pending Approvals</div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- JavaScript -->
-<script>
-// Generate client ID function
-function generateClientId(approvalId) {
-    fetch("{% url 'generate_client_id' %}")
-        .then(response => response.json())
-        .then(data => {
-            if (data.client_id) {
-                document.getElementById('client_id' + approvalId).value = data.client_id;
-            }
-        })
-        .catch(error => {
-            console.error('Error generating client ID:', error);
-            alert('Error generating client ID. Please try again.');
-        });
-}
-
-// Update RM information when RM is selected
-function updateRMInfo(selectElement, approvalId) {
-    const selectedOption = selectElement.options[selectElement.selectedIndex];
-    const rmInfoDiv = document.getElementById('rmInfo' + approvalId);
-    
-    if (selectedOption.value) {
-        const email = selectedOption.getAttribute('data-email') || 'N/A';
-        const phone = selectedOption.getAttribute('data-phone') || 'N/A';
-        
-        rmInfoDiv.innerHTML = `
-            <div class="alert alert-info alert-sm">
-                <small>
-                    <i class="fas fa-envelope"></i> ${email}<br>
-                    <i class="fas fa-phone"></i> ${phone}
-                </small>
+<div class="container-fluid">
+    {% if pending_count == 0 %}
+        <div class="row justify-content-center">
+            <div class="col-lg-6">
+                <div class="empty-state fade-in">
+                    <div class="empty-state-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h3 class="mb-3">All Caught Up!</h3>
+                    <p class="text-muted mb-4">
+                        No pending conversion approvals at the moment. 
+                        All requests have been processed successfully.
+                    </p>
+                    <a href="{% url 'converted_leads_list' %}" class="btn btn-modern btn-assign">
+                        <i class="fas fa-list me-2"></i>View Converted Leads
+                    </a>
+                </div>
             </div>
-        `;
-    } else {
-        rmInfoDiv.innerHTML = '';
-    }
-}
+        </div>
+    {% else %}
+        <div class="row">
+            <!-- Main Content -->
+            <div class="col-lg-8">
+                <div class="section-title">
+                    <i class="fas fa-hourglass-half"></i>
+                    <span>Awaiting Business Verification ({{ pending_count }})</span>
+                </div>
 
-// Set quick rejection reason
-function setRejectionReason(approvalId, reason) {
-    const textarea = document.getElementById('rejection_reason' + approvalId);
-    if (textarea.value.trim() === '') {
-        textarea.value = reason;
-    } else {
-        textarea.value += '\n' + reason;
-    }
-}
+                {% for approval in pending_approvals %}
+                    <div class="approval-card fade-in">
+                        <div class="lead-header">
+                            <div class="lead-info">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <h4 class="mb-2 fw-bold">
+                                            <i class="fas fa-user me-2"></i>
+                                            {{ approval.lead.name }}
+                                        </h4>
+                                        <div class="mb-2">
+                                            <span class="badge bg-light text-dark me-2">
+                                                <i class="fas fa-hashtag me-1"></i>{{ approval.lead.lead_id }}
+                                            </span>
+                                            {% if approval.lead.email %}
+                                                <span class="badge bg-light text-dark me-2">
+                                                    <i class="fas fa-envelope me-1"></i>{{ approval.lead.email }}
+                                                </span>
+                                            {% endif %}
+                                            {% if approval.lead.mobile %}
+                                                <span class="badge bg-light text-dark">
+                                                    <i class="fas fa-phone me-1"></i>{{ approval.lead.mobile }}
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                        {% if approval.lead.conversion_requested_by %}
+                                            <small class="opacity-75">
+                                                <i class="fas fa-user-check me-1"></i>
+                                                Requested by {{ approval.lead.conversion_requested_by.get_full_name }}
+                                            </small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <div class="status-badge status-pending mb-2">
+                                            <i class="fas fa-clock"></i>
+                                            Pending Verification
+                                        </div>
+                                        <div class="small opacity-75">
+                                            <i class="fas fa-calendar me-1"></i>
+                                            {{ approval.changed_at|date:"M d, Y H:i" }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-// Bulk assignment functions
-function bulkSelfAssign() {
-    if (confirm('Assign all pending verifications to yourself?')) {
-        const forms = document.querySelectorAll('form[action*="self-assign-verification"]');
-        forms.forEach(form => {
-            const formData = new FormData(form);
-            fetch(form.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRFToken': formData.get('csrfmiddlewaretoken')
-                }
-            });
+                        <div class="card-body">
+                            <div class="row">
+                                <!-- Request Details -->
+                                <div class="col-lg-6">
+                                    <div class="info-section">
+                                        <h6 class="fw-bold mb-3">
+                                            <i class="fas fa-info-circle text-primary me-2"></i>
+                                            Request Details
+                                        </h6>
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <small class="text-muted d-block">Original RM</small>
+                                                <strong>{{ approval.lead.assigned_to.get_full_name|default:"Not assigned" }}</strong>
+                                            </div>
+                                            <div class="col-6">
+                                                <small class="text-muted d-block">Current Status</small>
+                                                <strong class="text-primary">{{ approval.lead.status|title }}</strong>
+                                            </div>
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted d-block">Changed by</small>
+                                            <strong>{{ approval.changed_by.get_full_name }}</strong>
+                                        </div>
+                                        {% if approval.notes %}
+                                            <div class="mt-3">
+                                                <small class="text-muted d-block">Notes</small>
+                                                <p class="small mb-0">{{ approval.notes }}</p>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <!-- Assignment Section -->
+                                <div class="col-lg-6">
+                                    <div class="assignment-section">
+                                        {% if user_role == 'ops_team_lead' and approval.approval_by != user %}
+                                            <h6 class="fw-bold mb-3">
+                                                <i class="fas fa-tasks text-success me-2"></i>
+                                                Assignment Options
+                                            </h6>
+                                            
+                                            <form method="post" action="{% url 'self_assign_verification' approval.lead.pk %}" class="mb-3">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-modern btn-assign w-100">
+                                                    <i class="fas fa-user-check me-2"></i>
+                                                    Self-Assign Verification
+                                                </button>
+                                            </form>
+                                            
+                                            {% if available_ops_execs %}
+                                                <form method="post" action="{% url 'assign_verification_task' approval.lead.pk %}">
+                                                    {% csrf_token %}
+                                                    <div class="d-flex gap-2">
+                                                        <select name="ops_exec_id" class="form-control form-control-modern flex-grow-1" required>
+                                                            <option value="">Assign to Executive...</option>
+                                                            {% for exec in available_ops_execs %}
+                                                                <option value="{{ exec.id }}">{{ exec.get_full_name }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                        <button type="submit" class="btn btn-modern btn-assign">
+                                                            <i class="fas fa-hand-point-right"></i>
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            {% endif %}
+                                        {% else %}
+                                            <h6 class="fw-bold mb-3">
+                                                <i class="fas fa-user-tie text-success me-2"></i>
+                                                Assigned Verifier
+                                            </h6>
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-success rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                                    <i class="fas fa-check text-white"></i>
+                                                </div>
+                                                <div>
+                                                    <strong class="text-success">{{ approval.approval_by.get_full_name }}</strong>
+                                                    <br>
+                                                    <small class="text-muted">Verification assigned</small>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Verification Actions -->
+                            {% if approval.approval_by == user %}
+                                <div class="approval-actions mt-4">
+                                    <h5 class="fw-bold mb-4 text-center">
+                                        <i class="fas fa-clipboard-check text-primary me-2"></i>
+                                        Business Verification Center
+                                    </h5>
+                                    
+                                    <!-- Approval Form -->
+                                    <form method="post" action="{% url 'approve_conversion' approval.lead.pk %}" class="mb-4">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="approval_id" value="{{ approval.id }}">
+                                        
+                                        <div class="form-section">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <label class="form-label fw-semibold">
+                                                        <i class="fas fa-user-tie text-primary me-2"></i>
+                                                        Assign to RM *
+                                                    </label>
+                                                    <select name="assigned_rm" class="form-control form-control-modern" required>
+                                                        <option value="">Choose RM...</option>
+                                                        {% for rm in available_rms %}
+                                                            <option value="{{ rm.id }}" 
+                                                                {% if rm.id == approval.lead.assigned_to.id %}selected{% endif %}>
+                                                                {{ rm.get_full_name }} 
+                                                                <span class="text-muted">({{ rm.role|title }})</span>
+                                                            </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label fw-semibold">
+                                                        <i class="fas fa-id-card text-primary me-2"></i>
+                                                        Client ID
+                                                    </label>
+                                                    <input type="text" name="client_id" class="form-control form-control-modern" 
+                                                           placeholder="Auto-generated if empty">
+                                                    <small class="text-muted">Leave empty for auto-generation</small>
+                                                </div>
+                                            </div>
+                                            <div class="mt-3">
+                                                <label class="form-label fw-semibold">
+                                                    <i class="fas fa-clipboard text-primary me-2"></i>
+                                                    Business Verification Notes *
+                                                </label>
+                                                <textarea name="business_verification_notes" 
+                                                          class="form-control form-control-modern" 
+                                                          rows="4" 
+                                                          required 
+                                                          placeholder="Document your verification process:&#10;• Business legitimacy checks&#10;• Document verification results&#10;• Compliance status&#10;• Any concerns or observations"></textarea>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="text-center">
+                                            <button type="submit" class="btn btn-modern btn-approve btn-lg">
+                                                <i class="fas fa-check-circle me-2"></i>
+                                                Approve & Convert to Client
+                                            </button>
+                                        </div>
+                                    </form>
+
+                                    <!-- Rejection Toggle -->
+                                    <div class="text-center">
+                                        <button class="collapse-toggle" type="button" 
+                                                data-bs-toggle="collapse" data-bs-target="#rejection-form-{{ approval.id }}">
+                                            <i class="fas fa-times-circle me-2"></i>
+                                            Reject Conversion Request
+                                        </button>
+                                    </div>
+
+                                    <!-- Rejection Form -->
+                                    <div class="collapse mt-3" id="rejection-form-{{ approval.id }}">
+                                        <div class="form-section" style="background: linear-gradient(135deg, #fff5f5 0%, #ffe6e6 100%);">
+                                            <form method="post" action="{% url 'reject_conversion' approval.lead.pk %}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="approval_id" value="{{ approval.id }}">
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-semibold">
+                                                        <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                                                        Rejection Reason *
+                                                    </label>
+                                                    <textarea name="rejection_reason" 
+                                                              class="form-control form-control-modern" 
+                                                              rows="3" 
+                                                              required 
+                                                              placeholder="Please provide detailed reasons for rejection..."></textarea>
+                                                </div>
+                                                <div class="text-center">
+                                                    <button type="submit" class="btn btn-modern btn-reject">
+                                                        <i class="fas fa-ban me-2"></i>
+                                                        Confirm Rejection
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Recent Decisions -->
+                <div class="sidebar-card">
+                    <div class="sidebar-header">
+                        <i class="fas fa-history me-2"></i>
+                        Recent Decisions
+                    </div>
+                    <div class="recent-decisions">
+                        {% if recent_decisions %}
+                            {% for decision in recent_decisions %}
+                                <div class="decision-item">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1 fw-semibold">{{ decision.lead.name }}</h6>
+                                            <small class="text-muted">
+                                                by {{ decision.changed_by.get_full_name }}
+                                            </small>
+                                        </div>
+                                        <div class="text-end">
+                                            {% if decision.approved %}
+                                                <span class="status-badge status-approved">
+                                                    <i class="fas fa-check"></i>
+                                                    Approved
+                                                </span>
+                                            {% else %}
+                                                <span class="status-badge status-rejected">
+                                                    <i class="fas fa-times"></i>
+                                                    Rejected
+                                                </span>
+                                            {% endif %}
+                                            <div class="small text-muted mt-1">
+                                                {{ decision.approved_at|date:"M d, H:i" }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="decision-item text-center text-muted">
+                                <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                <p class="mb-0">No recent decisions</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="sidebar-card">
+                    <div class="sidebar-header">
+                        <i class="fas fa-bolt me-2"></i>
+                        Quick Actions
+                    </div>
+                    <div class="p-3 quick-actions">
+                        <a href="{% url 'converted_leads_list' %}" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-list me-2"></i>
+                            View Converted Leads
+                        </a>
+                        {% if user_role == 'ops_team_lead' %}
+                            <a href="{% url 'debug_ops_workflow' %}" class="btn btn-outline-warning w-100">
+                                <i class="fas fa-bug me-2"></i>
+                                Debug Workflow
+                            </a>
+                        {% endif %}
+                        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary w-100">
+                            <i class="fas fa-home me-2"></i>
+                            Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Modern animations and interactions
+    
+    // Auto-refresh with visual indicator
+    let refreshTimer;
+    const startRefreshTimer = () => {
+        if ({{ pending_count }} > 0) {
+            refreshTimer = setTimeout(() => {
+                // Show loading indicator
+                $('body').append('<div class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background: rgba(0,0,0,0.1); z-index: 9999;"><div class="spinner-border text-primary" role="status"></div></div>');
+                location.reload();
+            }, 180000); // 3 minutes
+        }
+    };
+    startRefreshTimer();
+
+    // Enhanced form validation with visual feedback
+    const validateForm = (form) => {
+        let isValid = true;
+        
+        // Validate business verification notes
+        const notesField = form.find('textarea[name="business_verification_notes"]');
+        const notes = notesField.val().trim();
+        
+        if (notes.length < 20) {
+            showFieldError(notesField, 'Please provide detailed verification notes (minimum 20 characters)');
+            isValid = false;
+        } else {
+            removeFieldError(notesField);
+        }
+        
+        // Validate RM selection
+        const rmField = form.find('select[name="assigned_rm"]');
+        if (!rmField.val()) {
+            showFieldError(rmField, 'Please select an RM to assign the client');
+            isValid = false;
+        } else {
+            removeFieldError(rmField);
+        }
+        
+        return isValid;
+    };
+
+    const showFieldError = (field, message) => {
+        field.removeClass('is-valid').addClass('is-invalid');
+        field.next('.invalid-feedback').remove();
+        field.after(`<div class="invalid-feedback">${message}</div>`);
+        
+        // Add shake animation
+        field.parent().addClass('animate__animated animate__shakeX');
+        setTimeout(() => {
+            field.parent().removeClass('animate__animated animate__shakeX');
+        }, 1000);
+    };
+
+    const removeFieldError = (field) => {
+        field.removeClass('is-invalid').addClass('is-valid');
+        field.next('.invalid-feedback').remove();
+    };
+
+    // Enhanced confirmation dialogs with modern styling
+    const showConfirmation = (title, message, confirmText, cancelText, onConfirm) => {
+        const modal = $(`
+            <div class="modal fade" tabindex="-1" style="z-index: 10000;">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content" style="border-radius: 20px; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                        <div class="modal-header" style="background: var(--primary-gradient); color: white; border: none; border-radius: 20px 20px 0 0;">
+                            <h5 class="modal-title fw-bold">${title}</h5>
+                        </div>
+                        <div class="modal-body p-4">
+                            <p class="mb-0">${message}</p>
+                        </div>
+                        <div class="modal-footer border-0 p-4 pt-0">
+                            <button type="button" class="btn btn-outline-secondary btn-modern me-2" data-bs-dismiss="modal">${cancelText}</button>
+                            <button type="button" class="btn btn-modern btn-approve confirm-action">${confirmText}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `);
+        
+        $('body').append(modal);
+        modal.modal('show');
+        
+        modal.find('.confirm-action').on('click', function() {
+            modal.modal('hide');
+            onConfirm();
         });
         
-        setTimeout(() => {
-            location.reload();
-        }, 2000);
-    }
-}
+        modal.on('hidden.bs.modal', function() {
+            modal.remove();
+        });
+    };
 
-function bulkAssignToOpsExec(opsExecId, opsExecName) {
-    if (confirm(`Assign all pending verifications to ${opsExecName}?`)) {
-        const forms = document.querySelectorAll('form[action*="assign-verification-task"]');
-        forms.forEach(form => {
-            const opsExecInput = form.querySelector('input[name="ops_exec_id"]');
-            if (opsExecInput && opsExecInput.value == opsExecId) {
-                const formData = new FormData(form);
-                fetch(form.action, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-CSRFToken': formData.get('csrfmiddlewaretoken')
-                    }
-                });
+    // Form submission with validation and confirmation
+    $('form[action*="approve_conversion"]').on('submit', function(e) {
+        e.preventDefault();
+        const form = $(this);
+        
+        if (!validateForm(form)) {
+            return false;
+        }
+        
+        const leadName = form.closest('.approval-card').find('.lead-header h4').text().trim();
+        const rmName = form.find('select[name="assigned_rm"] option:selected').text().trim();
+        
+        showConfirmation(
+            'Confirm Conversion Approval',
+            `Are you sure you want to approve the conversion for <strong>${leadName}</strong> and assign to <strong>${rmName}</strong>?<br><br>This will create a new client record and cannot be undone.`,
+            'Approve & Convert',
+            'Cancel',
+            () => {
+                // Show loading state
+                const submitBtn = form.find('button[type="submit"]');
+                const originalText = submitBtn.html();
+                submitBtn.html('<i class="fas fa-spinner fa-spin me-2"></i>Processing...').prop('disabled', true);
+                
+                form.off('submit').submit();
+            }
+        );
+    });
+
+    $('form[action*="reject_conversion"]').on('submit', function(e) {
+        e.preventDefault();
+        const form = $(this);
+        const reason = form.find('textarea[name="rejection_reason"]').val().trim();
+        
+        if (reason.length < 10) {
+            showFieldError(form.find('textarea[name="rejection_reason"]'), 'Please provide a detailed rejection reason (minimum 10 characters)');
+            return false;
+        }
+        
+        const leadName = form.closest('.approval-card').find('.lead-header h4').text().trim();
+        
+        showConfirmation(
+            'Confirm Conversion Rejection',
+            `Are you sure you want to reject the conversion for <strong>${leadName}</strong>?<br><br>Reason: <em>${reason}</em>`,
+            'Reject Conversion',
+            'Cancel',
+            () => {
+                // Show loading state
+                const submitBtn = form.find('button[type="submit"]');
+                submitBtn.html('<i class="fas fa-spinner fa-spin me-2"></i>Rejecting...').prop('disabled', true);
+                
+                form.off('submit').submit();
+            }
+        );
+    });
+
+    // Assignment form confirmations
+    $('form[action*="assign_verification"]').on('submit', function(e) {
+        const execName = $(this).find('select[name="ops_exec_id"] option:selected').text().trim();
+        if (!execName || execName === 'Assign to Executive...') {
+            e.preventDefault();
+            showFieldError($(this).find('select[name="ops_exec_id"]'), 'Please select an operations executive');
+            return false;
+        }
+    });
+
+    $('form[action*="self_assign_verification"]').on('submit', function(e) {
+        e.preventDefault();
+        const form = $(this);
+        const leadName = form.closest('.approval-card').find('.lead-header h4').text().trim();
+        
+        showConfirmation(
+            'Self-Assign Verification',
+            `Assign verification task for <strong>${leadName}</strong> to yourself?`,
+            'Self-Assign',
+            'Cancel',
+            () => {
+                form.off('submit').submit();
+            }
+        );
+    });
+
+    // Real-time character counter for text areas
+    $('textarea[name="business_verification_notes"], textarea[name="rejection_reason"]').each(function() {
+        const textarea = $(this);
+        const minLength = textarea.attr('name') === 'business_verification_notes' ? 20 : 10;
+        
+        // Add character counter
+        textarea.after(`<div class="character-counter text-muted small text-end mt-1">
+            <span class="current">0</span> / <span class="minimum">${minLength} minimum</span>
+        </div>`);
+        
+        textarea.on('input', function() {
+            const length = $(this).val().length;
+            const counter = $(this).next('.character-counter');
+            counter.find('.current').text(length);
+            
+            if (length >= minLength) {
+                counter.removeClass('text-danger').addClass('text-success');
+                $(this).removeClass('is-invalid').addClass('is-valid');
+            } else {
+                counter.removeClass('text-success').addClass('text-danger');
+                $(this).removeClass('is-valid');
             }
         });
+    });
+
+    // Smooth collapse animations
+    $('.collapse').on('show.bs.collapse', function() {
+        $(this).find('.form-section').addClass('animate__animated animate__fadeInUp');
+    });
+
+    // Auto-save draft notes (stores in sessionStorage temporarily)
+    $('textarea[name="business_verification_notes"]').on('input', function() {
+        const leadId = $(this).closest('form').find('input[name="approval_id"]').val();
+        if (leadId) {
+            sessionStorage.setItem(`draft_notes_${leadId}`, $(this).val());
+        }
+    });
+
+    // Restore draft notes on page load
+    $('textarea[name="business_verification_notes"]').each(function() {
+        const leadId = $(this).closest('form').find('input[name="approval_id"]').val();
+        const draft = sessionStorage.getItem(`draft_notes_${leadId}`);
+        if (draft && !$(this).val()) {
+            $(this).val(draft).trigger('input');
+            $(this).after('<small class="text-info"><i class="fas fa-info-circle me-1"></i>Draft restored</small>');
+        }
+    });
+
+    // Clear draft on successful submission
+    $('form[action*="approve_conversion"], form[action*="reject_conversion"]').on('submit', function() {
+        const leadId = $(this).find('input[name="approval_id"]').val();
+        if (leadId) {
+            sessionStorage.removeItem(`draft_notes_${leadId}`);
+        }
+    });
+
+    // Progressive enhancement for better UX
+    // Add loading states to buttons
+    $('.btn-modern').on('click', function() {
+        if ($(this).is('[type="submit"]')) return; // Handle in form submission
+        
+        const btn = $(this);
+        const originalText = btn.html();
+        btn.html('<i class="fas fa-spinner fa-spin me-2"></i>Loading...').prop('disabled', true);
         
         setTimeout(() => {
-            location.reload();
+            btn.html(originalText).prop('disabled', false);
         }, 2000);
-    }
-}
+    });
 
-// Auto-refresh every 30 seconds if there are pending approvals
-{% if pending_count > 0 %}
-setInterval(() => {
-    // Only refresh if no modals are open
-    if (!document.querySelector('.modal.show')) {
-        location.reload();
-    }
-}, 30000);
-{% endif %}
+    // Keyboard shortcuts
+    $(document).on('keydown', function(e) {
+        // Ctrl/Cmd + Enter to submit approval form
+        if ((e.ctrlKey || e.metaKey) && e.which === 13) {
+            const activeForm = $('form[action*="approve_conversion"]:visible').first();
+            if (activeForm.length) {
+                e.preventDefault();
+                activeForm.find('button[type="submit"]').click();
+            }
+        }
+        
+        // Escape to close modals and collapses
+        if (e.which === 27) {
+            $('.collapse.show').collapse('hide');
+        }
+    });
+
+    // Enhanced accessibility
+    // Add ARIA labels and improve focus management
+    $('.approval-card').each(function(index) {
+        $(this).attr('aria-label', `Approval request ${index + 1}`);
+    });
+
+    // Focus management for forms
+    $('.collapse').on('shown.bs.collapse', function() {
+        $(this).find('textarea, input, select').first().focus();
+    });
+
+    // Success/error message handling with auto-dismiss
+    $('.alert').each(function() {
+        const alert = $(this);
+        if (alert.hasClass('alert-success') || alert.hasClass('alert-info')) {
+            setTimeout(() => {
+                alert.fadeOut(500);
+            }, 5000);
+        }
+    });
+
+    // Add tooltips for better UX
+    $('[title]').tooltip({
+        placement: 'top',
+        trigger: 'hover focus'
+    });
+
+    // Initialize animations for existing elements
+    $('.approval-card').each(function(index) {
+        $(this).css('animation-delay', `${index * 0.1}s`);
+    });
+
+    console.log('✅ Pending Approvals interface initialized with enhanced UX features');
+});
 </script>
+
+<!-- Add animate.css for enhanced animations -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
 {% endblock %}

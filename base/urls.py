@@ -99,16 +99,11 @@ urlpatterns = [
         path('<int:pk>/add-product-discussion/', views.add_product_discussion, name='add_product_discussion'),
         path('<int:pk>/change-status/', views.change_lead_status, name='change_lead_status'),
         path('<int:pk>/request-conversion/', views.request_conversion, name='request_conversion'),
-        path('converted/', views.converted_leads_list, name='converted_leads_list'),
-        path('<int:pk>/convert/', views.convert_lead, name='convert_lead'),
         path('<int:pk>/reassign/', views.reassign_lead, name='reassign_lead'),
-        path('<int:pk>/approve-conversion/', views.approve_conversion, name='approve_conversion'),
-        path('<int:pk>/reject-conversion/', views.reject_conversion, name='reject_conversion'),
         path('<int:pk>/request-reassignment/', views.request_reassignment, name='request_reassignment'),
         path('<int:pk>/approve-reassignment/', views.approve_reassignment, name='approve_reassignment'),
-        path('<int:pk>/assign-verification/', views.assign_verification_task, name='assign_verification_task'),
-        path('<int:pk>/self-assign-verification/', views.self_assign_verification, name='self_assign_verification'),
         
+        path('converted/', views.converted_leads_list, name='converted_leads_list'),
         path('interactions/<int:interaction_id>/delete/', views.delete_interaction, name='delete_interaction'),
         
         # API endpoints
@@ -273,10 +268,17 @@ urlpatterns = [
     path('analytics/', views.analytics_dashboard, name='analytics_dashboard'),
     path('ajax/get-rm-details/<int:rm_id>/', views.get_rm_details, name='get_rm_details'),
     
-    path('operations/pending-approvals/', views.ops_pending_approvals, name='ops_pending_approvals'),
-    path('operations/approve-conversion/<int:pk>/', views.approve_conversion, name='approve_conversion'),
-    path('operations/reject-conversion/<int:pk>/', views.reject_conversion, name='reject_conversion'),
-    path('generate-client-id/', views.generate_client_id_view, name='generate_client_id'),
-
+    # Operations team URLs - CENTRALIZED HERE
+    path('operations/', include([
+        path('pending-approvals/', views.ops_pending_approvals, name='ops_pending_approvals'),
+        path('approve_conversion/<int:pk>/', views.approve_conversion, name='approve_conversion'),  # FIXED: underscore in URL
+        path('reject_conversion/<int:pk>/', views.reject_conversion, name='reject_conversion'),      # FIXED: underscore in URL
+        path('assign_verification/<int:pk>/', views.assign_verification_task, name='assign_verification_task'),  # FIXED: underscore in URL
+        path('self_assign_verification/<int:pk>/', views.self_assign_verification, name='self_assign_verification'),  # FIXED: underscore in URL
+    ])),
     
+    # Utility URLs
+    path('generate-client-id/', views.generate_client_id_view, name='generate_client_id'),
+    path('debug-ops-workflow/', views.debug_ops_workflow, name='debug_ops_workflow'),
+
 ]
