@@ -290,7 +290,7 @@ class ReimbursementClaim(models.Model):
     STATUS_CHOICES = [
         ('D', 'Draft'),
         ('P', 'Pending'),
-        ('MA', 'Manager Approved'),
+        ('M', 'Manager Approved'),
         ('A', 'Approved'),
         ('R', 'Rejected'),
     ]
@@ -299,7 +299,7 @@ class ReimbursementClaim(models.Model):
     month = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(12)])
     year = models.PositiveIntegerField()
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    status = models.CharField(max_length=2, choices=STATUS_CHOICES, default='D')
+    status = models.CharField(max_length=3, choices=STATUS_CHOICES, default='D')
     
     # Submission details
     submitted_on = models.DateTimeField(null=True, blank=True)

@@ -691,7 +691,6 @@ def reimbursement_claims(request):
 
 @login_required
 def add_expense(request):
-    """Add expense to current month's claim"""
     try:
         employee = Employee.objects.get(user=request.user)
     except Employee.DoesNotExist:
@@ -701,25 +700,25 @@ def add_expense(request):
     if request.method == 'POST':
         form = ReimbursementExpenseForm(request.POST, request.FILES)
         if form.is_valid():
+            print("Form data before save:", form.cleaned_data)  # Debug form data
+            
             expense = form.save(commit=False)
             
-            # Get or create current month claim
+            # Get or create claim - debug the status value
             today = timezone.now().date()
             claim, created = ReimbursementClaim.objects.get_or_create(
                 employee=employee,
                 month=today.month,
                 year=today.year,
                 defaults={
-                    'status': 'draft',
+                    'status': 'D',  # Ensure this is exactly 'D' (1 char)
                     'submitted_on': None
                 }
             )
+            print("Claim status:", claim.status)  # Debug claim status
             
             expense.claim = claim
-            expense.save()
-            
-            # Update claim total
-            claim.save()  # This will trigger the total calculation in the model
+            expense.save()  # Error occurs here
             
             messages.success(request, 'Expense added successfully!')
             return redirect('reimbursement_claims')
@@ -1235,9 +1234,8 @@ def reports_dashboard(request):
         date__range=[start_date, end_date]
     ).aggregate(
         total_records=models.Count('id'),
-        remote_count=models.Count('id', filter=Q(work_mode='remote')),
+        remote_count=models.Count('id', filter=Q(is_remote=True)),
         late_count=models.Count('id', filter=Q(is_late=True)),
-        early_departure_count=models.Count('id', filter=Q(is_early_departure=True))
     )
     
     # Reimbursement statistics

@@ -1,326 +1,369 @@
 {% extends 'hrm/base.html' %}
 
+{% block title %}Attendance Tracking - HRM{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
-  <div class="card">
-    <div class="card-header">
-      <h4>Attendance Tracking - {{ current_month }} {{ current_year }}</h4>
+    <div class="row">
+        <div class="col-12">
+            <h1>Attendance Tracking</h1>
+            <p>Welcome, {{ employee.user.get_full_name }}!</p>
+        </div>
     </div>
-    <div class="card-body">
-      <!-- Current Day Attendance -->
-      <div class="row mb-4">
-        <div class="col-md-6">
-          <div class="card">
-            <div class="card-header">
-              <h5>Today's Attendance</h5>
-            </div>
-            <div class="card-body">
-              {% if today_attendance %}
-              <div class="d-flex justify-content-between mb-3">
-                <div>
-                  <strong>Status:</strong>
-                  {% if today_attendance.login_time %}
-                  <span class="badge bg-success">Present</span>
-                  {% if today_attendance.is_remote %}
-                  <span class="badge bg-warning">Remote</span>
-                  {% endif %}
-                  {% if today_attendance.is_late %}
-                  <span class="badge bg-danger">Late</span>
-                  {% endif %}
-                  {% else %}
-                  <span class="badge bg-secondary">Absent</span>
-                  {% endif %}
-                </div>
-                <div><strong>Date:</strong> {{ today|date:"M d, Y" }}</div>
-              </div>
 
-              {% if today_attendance.login_time %}
-              <div class="row">
-                <div class="col-md-6">
-                  <p>
-                    <strong>Login Time:</strong> {{ today_attendance.login_time|time:"H:i" }}
-                  </p>
-                  <p>
-                    <strong>Location:</strong>
-                    {% if today_attendance.login_location %}
-                    {{ today_attendance.login_location }}
+    <!-- Today's Attendance Status -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Today's Attendance - {{ current_month }} {{ current_year }}</h3>
+                </div>
+                <div class="card-body">
+                    {% if today_attendance %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>Login Details</h5>
+                                <p><strong>Login Time:</strong> 
+                                    {% if today_attendance.login_time %}
+                                        {{ today_attendance.login_time|time:"H:i" }}
+                                        {% if today_attendance.is_late %}
+                                            <span class="badge badge-warning">Late</span>
+                                        {% endif %}
+                                    {% else %}
+                                        Not logged in
+                                    {% endif %}
+                                </p>
+                                <p><strong>Work Mode:</strong> 
+                                    {% if today_attendance.is_remote %}
+                                        <span class="badge badge-info">Remote</span>
+                                    {% else %}
+                                        <span class="badge badge-success">Office</span>
+                                    {% endif %}
+                                </p>
+                                {% if today_attendance.notes %}
+                                    <p><strong>Notes:</strong> {{ today_attendance.notes }}</p>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Logout Details</h5>
+                                <p><strong>Logout Time:</strong> 
+                                    {% if today_attendance.logout_time %}
+                                        {{ today_attendance.logout_time|time:"H:i" }}
+                                        {% if today_attendance.is_early_departure %}
+                                            <span class="badge badge-warning">Early Departure</span>
+                                        {% endif %}
+                                    {% else %}
+                                        Not logged out
+                                    {% endif %}
+                                </p>
+                                {% if today_attendance.logout_time and today_attendance.login_time %}
+                                    <p><strong>Total Hours:</strong> {{ today_attendance.total_hours|floatformat:2 }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
                     {% else %}
-                    Not recorded
+                        <p>No attendance record for today. Please log in to mark your attendance.</p>
                     {% endif %}
-                  </p>
+
+                    <!-- Attendance Actions -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h5>Actions</h5>
+                            {% if not today_attendance %}
+                                <button type="button" class="btn btn-success" onclick="markAttendance('login')">
+                                    Clock In
+                                </button>
+                            {% elif today_attendance and not today_attendance.logout_time %}
+                                <button type="button" class="btn btn-danger" onclick="markAttendance('logout')">
+                                    Clock Out
+                                </button>
+                            {% else %}
+                                <p class="text-muted">You have completed your attendance for today.</p>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-6">
-                  {% if today_attendance.logout_time %}
-                  <p>
-                    <strong>Logout Time:</strong> {{ today_attendance.logout_time|time:"H:i" }}
-                  </p>
-                  <p>
-                    <strong>Location:</strong>
-                    {% if today_attendance.logout_location %}
-                    {{ today_attendance.logout_location }}
-                    {% else %}
-                    Not recorded
-                    {% endif %}
-                  </p>
-                  {% else %}
-                  <p class="text-warning"><strong>Still logged in</strong></p>
-                  {% endif %}
-                </div>
-              </div>
-              {% endif %}
-
-              <form method="post" action="" class="mt-3" id="attendanceForm">
-                {% csrf_token %}
-                <input type="hidden" name="action" id="actionInput" />
-                <input type="hidden" name="latitude" id="latitudeInput" />
-                <input type="hidden" name="longitude" id="longitudeInput" />
-
-                {% if not today_attendance.login_time %}
-                <button
-                  type="button"
-                  class="btn btn-success"
-                  onclick="recordAttendance('login')"
-                >
-                  <i class="fas fa-sign-in-alt"></i> Record Login
-                </button>
-                {% elif not today_attendance.logout_time %}
-                <button
-                  type="button"
-                  class="btn btn-danger"
-                  onclick="recordAttendance('logout')"
-                >
-                  <i class="fas fa-sign-out-alt"></i> Record Logout
-                </button>
-                {% else %}
-                <p class="text-success">Attendance completed for today</p>
-                {% endif %}
-              </form>
-              {% else %}
-              <form method="post" action="" id="attendanceForm">
-                {% csrf_token %}
-                <input type="hidden" name="action" id="actionInput" />
-                <input type="hidden" name="latitude" id="latitudeInput" />
-                <input type="hidden" name="longitude" id="longitudeInput" />
-
-                <button
-                  type="button"
-                  class="btn btn-success"
-                  onclick="recordAttendance('login')"
-                >
-                  <i class="fas fa-sign-in-alt"></i> Record Login
-                </button>
-              </form>
-              {% endif %}
             </div>
-          </div>
         </div>
 
         <!-- Monthly Summary -->
-        <div class="col-md-6">
-          <div class="card">
-            <div class="card-header">
-              <h5>Monthly Summary</h5>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Monthly Summary</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <h6>Present Days</h6>
+                            <h3>{{ present_days }}</h3>
+                        </div>
+                        <div class="col-6">
+                            <h6>Total Days</h6>
+                            <h3>{{ total_days }}</h3>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-6">
+                            <h6>Remote Days</h6>
+                            <h3>{{ remote_days }}</h3>
+                        </div>
+                        <div class="col-6">
+                            <h6>Late Days</h6>
+                            <h3>{{ late_days }}</h3>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <h6>Total Hours</h6>
+                            <h3>{{ total_hours }}</h3>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-              <div class="row text-center">
-                <div class="col-md-4">
-                  <div class="card bg-primary text-white mb-3">
-                    <div class="card-body">
-                      <h6>Working Days</h6>
-                      <h3>{{ total_days }}</h3>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-4">
-                  <div class="card bg-success text-white mb-3">
-                    <div class="card-body">
-                      <h6>Present Days</h6>
-                      <h3>{{ present_days }}</h3>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-4">
-                  <div class="card bg-info text-white mb-3">
-                    <div class="card-body">
-                      <h6>Total Hours</h6>
-                      <h3>{{ total_hours }}</h3>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="row text-center">
-                <div class="col-md-6">
-                  <div class="card bg-warning text-white mb-3">
-                    <div class="card-body">
-                      <h6>Remote Days</h6>
-                      <h3>{{ remote_days }}</h3>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="card bg-danger text-white mb-3">
-                    <div class="card-body">
-                      <h6>Late Days</h6>
-                      <h3>{{ late_days }}</h3>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
-      </div>
-
-      <!-- Monthly Attendance Records -->
-      <div class="card">
-        <div class="card-header">
-          <h5>Monthly Attendance Records</h5>
-        </div>
-        <div class="card-body">
-          <div class="table-responsive">
-            <table class="table table-striped">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Status</th>
-                  <th>Login Time</th>
-                  <th>Logout Time</th>
-                  <th>Duration</th>
-                  <th>Location</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for record in monthly_attendance %}
-                <tr>
-                  <td>{{ record.date|date:"M d, Y" }}</td>
-                  <td>
-                    {% if record.login_time %}
-                    <span class="badge bg-success">Present</span>
-                    {% if record.is_remote %}
-                    <span class="badge bg-warning">Remote</span>
-                    {% endif %}
-                    {% if record.is_late %}
-                    <span class="badge bg-danger">Late</span>
-                    {% endif %}
-                    {% else %}
-                    <span class="badge bg-secondary">Absent</span>
-                    {% endif %}
-                  </td>
-                  <td>{{ record.login_time|time:"H:i"|default:"-" }}</td>
-                  <td>{{ record.logout_time|time:"H:i"|default:"-" }}</td>
-                  <td>
-                    {% if record.login_time and record.logout_time %}
-                    {% load humanize %}
-                    {% with duration=record.logout_time|timesince:record.login_time %}
-                    {{ duration }}
-                    {% endwith %}
-                    {% else %}
-                    -
-                    {% endif %}
-                  </td>
-                  <td>
-                    {% if record.is_remote %}
-                    Remote
-                    {% elif record.login_location %}
-                    Office
-                    {% else %}
-                    -
-                    {% endif %}
-                  </td>
-                </tr>
-                {% empty %}
-                <tr>
-                  <td colspan="6" class="text-center">
-                    No attendance records found
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
     </div>
-  </div>
+
+    <!-- Monthly Attendance Records -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Monthly Attendance Records</h4>
+                </div>
+                <div class="card-body">
+                    {% if monthly_attendance %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Login Time</th>
+                                        <th>Logout Time</th>
+                                        <th>Total Hours</th>
+                                        <th>Work Mode</th>
+                                        <th>Status</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for attendance in monthly_attendance %}
+                                        <tr>
+                                            <td>{{ attendance.date|date:"M d, Y" }}</td>
+                                            <td>
+                                                {% if attendance.login_time %}
+                                                    {{ attendance.login_time|time:"H:i" }}
+                                                    {% if attendance.is_late %}
+                                                        <span class="badge badge-warning">Late</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if attendance.logout_time %}
+                                                    {{ attendance.logout_time|time:"H:i" }}
+                                                    {% if attendance.is_early_departure %}
+                                                        <span class="badge badge-warning">Early</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if attendance.total_hours %}
+                                                    {{ attendance.total_hours|floatformat:2 }}
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if attendance.is_remote %}
+                                                    <span class="badge badge-info">Remote</span>
+                                                {% else %}
+                                                    <span class="badge badge-success">Office</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if attendance.login_time %}
+                                                    <span class="badge badge-success">Present</span>
+                                                {% else %}
+                                                    <span class="badge badge-danger">Absent</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if attendance.notes %}
+                                                    {{ attendance.notes|truncatewords:5 }}
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No attendance records found for this month.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Links -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5>Quick Links</h5>
+                    <a href="{% url 'hrm_dashboard' %}" class="btn btn-primary">Dashboard</a>
+                    <a href="{% url 'leave_calendar' %}" class="btn btn-info">Leave Calendar</a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
+<!-- Hidden form for attendance actions -->
+<form id="attendanceForm" method="post" style="display: none;">
+    {% csrf_token %}
+    <input type="hidden" name="action" id="attendanceAction">
+    <input type="hidden" name="latitude" id="attendanceLatitude">
+    <input type="hidden" name="longitude" id="attendanceLongitude">
+</form>
+
+<!-- JavaScript for Attendance Tracking -->
 <script>
-  // Define functions in global scope
-  window.recordAttendance = function(action) {
-    console.log("Recording attendance:", action);
+function markAttendance(action) {
+    // Show loading state
+    const button = event.target;
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Processing...';
     
-    // Set the action first
-    var actionInput = document.getElementById("actionInput");
-    if (actionInput) {
-      actionInput.value = action;
-    } else {
-      console.error("Action input not found");
-      return;
-    }
-    
-    // Get location
+    // Get user location
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        function (position) {
-          console.log("Location obtained:", position.coords.latitude, position.coords.longitude);
-          // Successfully got location
-          var latInput = document.getElementById("latitudeInput");
-          var lngInput = document.getElementById("longitudeInput");
-          
-          if (latInput) latInput.value = position.coords.latitude;
-          if (lngInput) lngInput.value = position.coords.longitude;
-          
-          // Submit the form
-          submitForm();
-        },
-        function (error) {
-          console.log("Location error:", error);
-          // Error getting location - ask user if they want to submit without location
-          if (confirm("Could not get your location. Submit without location?")) {
-            submitForm();
-          }
-        },
-        { 
-          enableHighAccuracy: true, 
-          timeout: 10000, 
-          maximumAge: 60000 
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                submitAttendance(action, position.coords.latitude, position.coords.longitude);
+            },
+            function(error) {
+                console.log('Location error:', error);
+                // Submit without location
+                submitAttendance(action, null, null);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 60000
+            }
+        );
+    } else {
+        // Submit without location if geolocation is not supported
+        submitAttendance(action, null, null);
+    }
+    
+    // Reset button state
+    setTimeout(function() {
+        button.disabled = false;
+        button.textContent = originalText;
+    }, 3000);
+}
+
+function submitAttendance(action, latitude, longitude) {
+    // Set form values
+    document.getElementById('attendanceAction').value = action;
+    document.getElementById('attendanceLatitude').value = latitude || '';
+    document.getElementById('attendanceLongitude').value = longitude || '';
+    
+    // Submit form
+    document.getElementById('attendanceForm').submit();
+}
+
+// Auto-refresh page every 5 minutes to show updated data
+setInterval(function() {
+    if (document.visibilityState === 'visible') {
+        location.reload();
+    }
+}, 300000); // 5 minutes
+
+// Show current time
+function updateCurrentTime() {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('en-US', { 
+        hour12: false, 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        second: '2-digit' 
+    });
+    const dateString = now.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+    });
+    
+    // Update page title with current time
+    document.title = `Attendance (${timeString}) - HRM`;
+    
+    // Add current time display if it doesn't exist
+    let timeDisplay = document.getElementById('currentTimeDisplay');
+    if (!timeDisplay) {
+        timeDisplay = document.createElement('div');
+        timeDisplay.id = 'currentTimeDisplay';
+        timeDisplay.className = 'alert alert-info';
+        timeDisplay.innerHTML = `<strong>Current Time:</strong> <span id="timeValue">${timeString}</span> | <strong>Date:</strong> ${dateString}`;
+        
+        const container = document.querySelector('.container-fluid .row:first-child');
+        if (container) {
+            container.appendChild(timeDisplay);
         }
-      );
     } else {
-      // Geolocation not supported - ask user if they want to submit without location
-      if (confirm("Geolocation is not supported by your browser. Submit without location?")) {
-        submitForm();
-      }
+        document.getElementById('timeValue').textContent = timeString;
     }
-  };
+}
 
-  window.submitForm = function() {
-    var form = document.getElementById("attendanceForm");
-    if (form) {
-      console.log("Submitting form...");
-      form.submit();
-    } else {
-      console.error("Form not found");
-      alert("Error: Could not find the attendance form");
-    }
-  };
+// Update time every second
+setInterval(updateCurrentTime, 1000);
+updateCurrentTime(); // Initial call
 
-  // Initialize when DOM is ready
-  document.addEventListener('DOMContentLoaded', function() {
-    console.log("Attendance form initialized");
-    
-    // Verify elements exist
-    var form = document.getElementById("attendanceForm");
-    var actionInput = document.getElementById("actionInput");
-    
-    if (!form) {
-      console.error("Attendance form not found!");
+// Location permission request
+document.addEventListener('DOMContentLoaded', function() {
+    // Request location permission on page load
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                console.log('Location permission granted');
+            },
+            function(error) {
+                if (error.code === error.PERMISSION_DENIED) {
+                    const locationWarning = document.createElement('div');
+                    locationWarning.className = 'alert alert-warning alert-dismissible fade show';
+                    locationWarning.innerHTML = `
+                        <strong>Location Access:</strong> Please enable location access for accurate attendance tracking.
+                        <button type="button" class="close" data-dismiss="alert">
+                            <span>&times;</span>
+                        </button>
+                    `;
+                    document.querySelector('.container-fluid').insertBefore(locationWarning, document.querySelector('.container-fluid').firstChild);
+                }
+            }
+        );
     }
-    if (!actionInput) {
-      console.error("Action input not found!");
+});
+
+// Add confirmation for logout
+function confirmLogout() {
+    return confirm('Are you sure you want to clock out?');
+}
+
+// Modify the logout button to add confirmation
+document.addEventListener('DOMContentLoaded', function() {
+    const logoutButton = document.querySelector('button[onclick*="logout"]');
+    if (logoutButton) {
+        logoutButton.setAttribute('onclick', 'if(confirmLogout()) markAttendance("logout")');
     }
-  });
+});
 </script>
 {% endblock %}
