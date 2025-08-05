@@ -1341,3 +1341,23 @@ INFO 2025-08-04 15:37:46,479 views 29940 30068 Portfolio actions: 0, New investm
 INFO 2025-08-04 15:37:46,506 views 29940 30068 Generated completion Excel for plan EP202508030008
 INFO 2025-08-04 15:37:46,506 views 29940 30068 Found client email: None for plan EP202508030008
 INFO 2025-08-04 17:53:15,076 views 23504 17092 Password reset email sent successfully to sawaisushil@gmail.com
+INFO 2025-08-05 13:29:36,122 views 11980 24316 create_plan_step2 called with client_id: 1554 (type: <class 'str'>)
+INFO 2025-08-05 13:29:36,205 views 11980 24316 Found legacy client: RAJESH BACHUBHAI JHAVERI (ID: 1554)
+INFO 2025-08-05 13:29:36,469 views 11980 24316 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-05 13:29:36,505 views 11980 24316 Found linked profile for client 1554
+INFO 2025-08-05 13:29:36,573 views 11980 24316 Found 17 portfolio holdings for client 1554
+INFO 2025-08-05 13:29:57,256 views 11980 30240 Created execution plan EP202508050001 for client 1554
+INFO 2025-08-05 13:29:57,257 views 11980 30240 Processing action 1: {'action_type': 'redeem', 'source_scheme': 'Invesco India Mid Cap Fund (G)', 'target_scheme': None, 'notes': 'ok', 'portfolio_id': 15268, 'source_portfolio_id': 15268, 'source_scheme_name': 'Invesco India Mid Cap Fund (G)', 'redeem_by': 'specific_amount', 'redeem_amount': 1888, 'redeem_units': None, 'scheme': 'Invesco India Mid Cap Fund (G)', 'scheme_name': 'Invesco India Mid Cap Fund (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-05 13:29:57,333 views 11980 30240 Portfolio action for holding 15268: Invesco India Mid Cap Fund (G)
+INFO 2025-08-05 13:29:57,333 views 11980 30240 Processed values - Mode: portfolio, Scheme: None, Portfolio: Invesco India Mid Cap Fund (G)
+INFO 2025-08-05 13:29:57,581 views 11980 30240 Created portfolio mapping for action 31
+INFO 2025-08-05 13:29:57,589 views 11980 30240 Successfully created action 31
+INFO 2025-08-05 13:29:57,824 views 11980 30240 Plan EP202508050001 submitted for approval
+INFO 2025-08-05 13:30:17,671 views 11980 30240 Found 1 actions for execution plan 63
+INFO 2025-08-05 13:30:17,699 views 11980 30240 Portfolio-independent Excel generated in memory for plan 63
+INFO 2025-08-05 13:30:17,699 views 11980 30240 Portfolio actions: 1, New investments: 0
+INFO 2025-08-05 13:30:17,714 views 11980 30240 Generated Excel data for plan EP202508050001
+INFO 2025-08-05 13:31:10,064 views 11980 19432 Found 1 actions for execution plan 63
+INFO 2025-08-05 13:31:10,145 views 11980 19432 Portfolio-independent Excel generated in memory for plan 63
+INFO 2025-08-05 13:31:10,145 views 11980 19432 Portfolio actions: 1, New investments: 0
+INFO 2025-08-05 13:34:37,181 views 11980 33736 Approval notification sent to narayan@gmail.com

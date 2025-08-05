@@ -8872,7 +8872,7 @@ def ongoing_plans(request):
 
 @login_required
 def completed_plans(request):
-    """View completed execution plans"""
+    """View completed execution plans - FIXED VERSION"""
     # Get plans based on user role
     if request.user.role == 'rm':
         plans = ExecutionPlan.objects.filter(
@@ -8889,6 +8889,11 @@ def completed_plans(request):
         plans = ExecutionPlan.objects.filter(
             status__in=['completed', 'cancelled', 'rejected']
         )
+    
+    # Debug logging to check what plans exist
+    all_completed = ExecutionPlan.objects.filter(status='completed')
+    logger.info(f"Total completed plans in database: {all_completed.count()}")
+    logger.info(f"User {request.user.username} can see {plans.count()} completed plans")
     
     # Filter by status if requested
     status_filter = request.GET.get('status')
@@ -8912,8 +8917,19 @@ def completed_plans(request):
             Q(plan_id__icontains=search)
         )
     
+    # Order by completion date, then creation date (most recent first)
+    plans = plans.order_by('-completed_at', '-created_at')
+    
+    # Calculate statistics for the filtered plans
+    stats = {
+        'total_completed': plans.filter(status='completed').count(),
+        'total_cancelled': plans.filter(status='cancelled').count(),
+        'total_rejected': plans.filter(status='rejected').count(),
+        'total_all': plans.count(),
+    }
+    
     # Pagination
-    paginator = Paginator(plans.order_by('-completed_at', '-created_at'), 20)
+    paginator = Paginator(plans.select_related('client', 'created_by', 'approved_by'), 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -8924,9 +8940,17 @@ def completed_plans(request):
         'date_from': date_from,
         'date_to': date_to,
         'user_role': request.user.role,
+        'stats': stats,
+        'status_choices': [
+            ('completed', 'Completed'),
+            ('cancelled', 'Cancelled'),
+            ('rejected', 'Rejected'),
+        ],
+        'title': 'Completed Plans',
     }
     
     return render(request, 'execution_plans/completed_plans.html', context)
+
 
 
 @login_required
