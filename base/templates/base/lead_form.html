@@ -272,17 +272,21 @@
                         </div>
                         {% endif %}
                     </div>
+
                     <div class="col-md-6 form-field" id="reference-client-field" style="display: none;">
-                        <label for="{{ form.reference_client.id_for_label }}" class="form-label">Existing Client</label>
-                        {{ form.reference_client }}
-                        {% if form.reference_client.errors %}
+                        <label for="{{ form.existing_client_choice.id_for_label }}" class="form-label">Existing Client</label>
+                        {{ form.existing_client_choice }}
+                        {% if form.existing_client_choice.errors %}
                         <div class="invalid-feedback d-block">
-                            {% for error in form.reference_client.errors %}
+                            {% for error in form.existing_client_choice.errors %}
                                 {{ error }}
                             {% endfor %}
                         </div>
                         {% endif %}
+                        <!-- Keep the hidden reference_client field -->
+                        {{ form.reference_client }}
                     </div>
+
                     <div class="col-md-6 form-field" id="source-details-field" style="display: none;">
                         <label for="{{ form.source_details.id_for_label }}" class="form-label">Source Details</label>
                         {{ form.source_details }}

@@ -2797,7 +2797,7 @@ def lead_create(request):
         return redirect('lead_list')
         
     if request.method == 'POST':
-        form = LeadForm(request.POST)
+        form = LeadForm(request.POST, current_user=request.user)
         if form.is_valid():
             lead = form.save(commit=False)
             lead.created_by = request.user
@@ -2817,21 +2817,137 @@ def lead_create(request):
             messages.success(request, "Lead created successfully.")
             return redirect('lead_detail', pk=lead.pk)
     else:
-        form = LeadForm()
-        
-        # Limit assignee choices based on user's role and team
-        if request.user.role == 'rm':
-            # RM can only assign leads to themselves
-            form.fields['assigned_to'].queryset = User.objects.filter(id=request.user.id)
-        elif request.user.role == 'rm_head':
-            accessible_users = request.user.get_accessible_users()
-            form.fields['assigned_to'].queryset = User.objects.filter(
-                id__in=[u.id for u in accessible_users],
-                role__in=['rm', 'rm_head']
-            )
+        form = LeadForm(current_user=request.user)
     
-    return render(request, 'base/lead_form.html', {'form': form, 'action': 'Create'})
+    # Get client names for ultra-fast datalist
+    client_names = get_client_names_for_user(request.user)
+    
+    return render(request, 'base/lead_form.html', {
+        'form': form, 
+        'action': 'Create',
+        'client_names': client_names
+    })
 
+def get_client_names_for_user(user):
+    """Ultra-fast client name retrieval with role-based filtering"""
+    try:
+        # Base query - only active clients
+        query = ClientProfile.objects.filter(status='active')
+        
+        # Apply role-based filtering
+        if user and hasattr(user, 'role'):
+            if user.role == 'rm':
+                # RM sees only their assigned clients
+                query = query.filter(mapped_rm=user)
+            elif user.role == 'rm_head':
+                # RM Head sees their team's clients
+                try:
+                    # Get subordinate RMs efficiently
+                    subordinate_rm_ids = list(user.subordinates.filter(
+                        role='rm', is_active=True
+                    ).values_list('id', flat=True))
+                    
+                    if subordinate_rm_ids:
+                        query = query.filter(mapped_rm__id__in=subordinate_rm_ids)
+                    else:
+                        # If no subordinates, return empty list
+                        return []
+                except Exception:
+                    # Fallback: show all active clients
+                    pass
+            # For business_head, top_management, ops roles - show all clients (no filter needed)
+        
+        # Get only names, ordered and limited for performance
+        names = list(
+            query.values_list('client_full_name', flat=True)
+            .distinct()
+            .order_by('client_full_name')[:100]  # Limit to 100 for browser performance
+        )
+        
+        return names
+        
+    except Exception as e:
+        # Log error and return empty list
+        print(f"Error getting client names for user {user.username}: {e}")
+
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q
+
+@login_required
+@require_http_methods(["GET"])
+def ajax_search_clients(request):
+    """AJAX endpoint for client search - OPTIMIZED"""
+    query = request.GET.get('q', '').strip()
+    
+    if len(query) < 2:  # Minimum 2 characters to search
+        return JsonResponse({'results': []})
+    
+    try:
+        # Optimized query with select_related and only necessary fields
+        clients = ClientProfile.objects.select_related('mapped_rm').filter(
+            Q(client_full_name__icontains=query) |
+            Q(pan_number__icontains=query) |
+            Q(mobile_number__icontains=query),
+            status='active'
+        ).only(
+            'id', 'client_full_name', 'pan_number', 'mobile_number', 'mapped_rm__first_name', 'mapped_rm__last_name', 'mapped_rm__username'
+        )
+        
+        # Apply role-based filtering
+        user = request.user
+        if hasattr(user, 'role'):
+            if user.role == 'rm':
+                clients = clients.filter(mapped_rm=user)
+            elif user.role == 'rm_head':
+                # Get subordinates efficiently
+                subordinate_ids = list(user.subordinates.filter(role='rm').values_list('id', flat=True))
+                clients = clients.filter(mapped_rm__id__in=subordinate_ids)
+        
+        # Limit results for performance
+        clients = clients[:20]  # Maximum 20 results
+        
+        results = []
+        for client in clients:
+            display_name = client.client_full_name
+            if client.pan_number:
+                display_name += f" (PAN: {client.pan_number})"
+            if client.mobile_number:
+                display_name += f" - {client.mobile_number}"
+            if client.mapped_rm:
+                rm_name = f"{client.mapped_rm.first_name} {client.mapped_rm.last_name}".strip() or client.mapped_rm.username
+                display_name += f" [RM: {rm_name}]"
+            
+            results.append({
+                'id': f'profile_{client.id}',
+                'text': display_name,
+                'type': 'profile'
+            })
+        
+        # Add converted leads if query is broader
+        if len(query) >= 3:
+            converted_leads = Lead.objects.filter(
+                Q(name__icontains=query) | Q(email__icontains=query),
+                converted=True
+            ).only('id', 'name', 'email')[:10]  # Limit to 10
+            
+            for lead in converted_leads:
+                display_name = f"{lead.name} (Converted Lead)"
+                if lead.email:
+                    display_name += f" - {lead.email}"
+                
+                results.append({
+                    'id': f'lead_{lead.id}',
+                    'text': display_name,
+                    'type': 'lead'
+                })
+        
+        return JsonResponse({'results': results})
+        
+    except Exception as e:
+        return JsonResponse({'results': [], 'error': str(e)})
+    
 @login_required
 def lead_update(request, pk):
     lead = get_object_or_404(Lead, pk=pk)
