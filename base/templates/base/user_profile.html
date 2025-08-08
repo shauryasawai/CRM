@@ -6,155 +6,86 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 <style>
-    :root {
-        --primary-color: #1C64FF;
-        --secondary-text: #696969;
-        --background-color: #FFFFFF;
-        --border-color: #D9D9D9;
-        --highlight-color: #C3E4FF;
-        --success-color: #28a745;
-        --warning-color: #ffc107;
-        --danger-color: #dc3545;
-        --info-color: #17a2b8;
-    }
-
     body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         background-color: #f8f9fa;
-        color: #333;
-        line-height: 1.6;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     }
 
     .profile-header {
-        background: linear-gradient(135deg, var(--primary-color), #0d47a1);
+        background: linear-gradient(135deg, #007bff, #0056b3);
         color: white;
-        padding: 3rem 0;
+        padding: 2rem 0;
         margin-bottom: 2rem;
-        border-radius: 0 0 20px 20px;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .profile-header::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="50" cy="10" r="0.5" fill="rgba(255,255,255,0.05)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
-        opacity: 0.3;
     }
 
     .profile-avatar {
-        width: 120px;
-        height: 120px;
+        width: 100px;
+        height: 100px;
         border-radius: 50%;
         background: rgba(255, 255, 255, 0.2);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 3rem;
-        margin: 0 auto 1.5rem;
-        border: 4px solid rgba(255, 255, 255, 0.3);
-        backdrop-filter: blur(10px);
-        position: relative;
-        z-index: 1;
+        font-size: 2.5rem;
+        margin: 0 auto 1rem;
+        border: 3px solid rgba(255, 255, 255, 0.3);
     }
 
     .profile-name {
-        font-size: 2.5rem;
-        font-weight: 700;
+        font-size: 2rem;
+        font-weight: 600;
         margin-bottom: 0.5rem;
         text-align: center;
-        position: relative;
-        z-index: 1;
     }
 
     .profile-role {
         text-align: center;
-        margin-bottom: 2rem;
-        position: relative;
-        z-index: 1;
+        margin-bottom: 1rem;
     }
 
     .role-badge {
         display: inline-flex;
         align-items: center;
         gap: 0.5rem;
-        padding: 0.75rem 1.5rem;
+        padding: 0.5rem 1rem;
         background: rgba(255, 255, 255, 0.2);
         border: 1px solid rgba(255, 255, 255, 0.3);
-        border-radius: 50px;
-        font-weight: 600;
-        font-size: 0.9rem;
+        border-radius: 25px;
+        font-weight: 500;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-        backdrop-filter: blur(10px);
-    }
-
-    .role-badge.rm {
-        background: rgba(28, 100, 255, 0.2);
-        border-color: rgba(28, 100, 255, 0.3);
-    }
-
-    .role-badge.rm_head {
-        background: rgba(40, 167, 69, 0.2);
-        border-color: rgba(40, 167, 69, 0.3);
-    }
-
-    .role-badge.business_head {
-        background: rgba(255, 193, 7, 0.2);
-        border-color: rgba(255, 193, 7, 0.3);
-    }
-
-    .role-badge.top_management {
-        background: rgba(108, 117, 125, 0.2);
-        border-color: rgba(108, 117, 125, 0.3);
+        font-size: 0.85rem;
     }
 
     .edit-btn {
         position: absolute;
-        top: 2rem;
-        right: 2rem;
+        top: 1rem;
+        right: 1rem;
         background: rgba(255, 255, 255, 0.2);
         border: 1px solid rgba(255, 255, 255, 0.3);
         color: white;
-        padding: 0.75rem 1.5rem;
-        border-radius: 10px;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
         text-decoration: none;
-        font-weight: 500;
-        backdrop-filter: blur(10px);
-        transition: all 0.3s ease;
-        z-index: 1;
+        font-size: 0.9rem;
     }
 
     .edit-btn:hover {
         background: rgba(255, 255, 255, 0.3);
-        border-color: rgba(255, 255, 255, 0.5);
         color: white;
-        transform: translateY(-2px);
     }
 
     .info-card {
         background: white;
-        border: 1px solid var(--border-color);
-        border-radius: 15px;
-        padding: 2rem;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-        margin-bottom: 2rem;
-        transition: all 0.3s ease;
-    }
-
-    .info-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-        border-color: var(--primary-color);
+        border: 1px solid #dee2e6;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        margin-bottom: 1.5rem;
     }
 
     .info-card h5 {
         color: #333;
-        font-weight: 700;
+        font-weight: 600;
         margin-bottom: 1.5rem;
         display: flex;
         align-items: center;
@@ -164,33 +95,25 @@
     .info-item {
         display: flex;
         align-items: center;
-        padding: 1rem 0;
+        padding: 0.75rem 0;
         border-bottom: 1px solid #f8f9fa;
-        transition: all 0.3s ease;
     }
 
     .info-item:last-child {
         border-bottom: none;
     }
 
-    .info-item:hover {
-        background: #f8f9fa;
-        margin: 0 -1rem;
-        padding: 1rem;
-        border-radius: 8px;
-    }
-
     .info-icon {
-        width: 40px;
-        height: 40px;
+        width: 35px;
+        height: 35px;
         border-radius: 8px;
-        background: var(--highlight-color);
-        color: var(--primary-color);
+        background: #e3f2fd;
+        color: #007bff;
         display: flex;
         align-items: center;
         justify-content: center;
         margin-right: 1rem;
-        font-size: 1rem;
+        font-size: 0.9rem;
     }
 
     .info-content {
@@ -198,22 +121,15 @@
     }
 
     .info-label {
-        font-weight: 600;
+        font-weight: 500;
         color: #333;
         margin-bottom: 0.25rem;
         font-size: 0.9rem;
     }
 
     .info-value {
-        color: var(--secondary-text);
+        color: #666;
         font-size: 1rem;
-    }
-
-    .teams-table {
-        background: white;
-        border-radius: 10px;
-        overflow: hidden;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
     }
 
     .table {
@@ -227,8 +143,6 @@
         color: #333;
         padding: 1rem;
         font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
     }
 
     .table tbody td {
@@ -237,24 +151,18 @@
         vertical-align: middle;
     }
 
-    .table tbody tr {
-        transition: all 0.3s ease;
-    }
-
     .table tbody tr:hover {
         background: #f8f9fa;
-        transform: scale(1.01);
     }
 
     .team-link {
-        color: var(--primary-color);
+        color: #007bff;
         text-decoration: none;
-        font-weight: 600;
-        transition: all 0.3s ease;
+        font-weight: 500;
     }
 
     .team-link:hover {
-        color: #0d47a1;
+        color: #0056b3;
         text-decoration: underline;
     }
 
@@ -265,78 +173,43 @@
     }
 
     .leader-avatar {
-        width: 32px;
-        height: 32px;
+        width: 30px;
+        height: 30px;
         border-radius: 50%;
-        background: var(--highlight-color);
-        color: var(--primary-color);
+        background: #e3f2fd;
+        color: #007bff;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 0.8rem;
-        font-weight: 600;
+        font-weight: 500;
     }
 
     .empty-state {
         text-align: center;
-        padding: 3rem 2rem;
-        color: var(--secondary-text);
+        padding: 2rem;
+        color: #666;
     }
 
     .empty-state i {
-        font-size: 3rem;
-        color: var(--border-color);
+        font-size: 2.5rem;
+        color: #ccc;
         margin-bottom: 1rem;
-    }
-
-    .empty-state h6 {
-        color: #333;
-        margin-bottom: 0.5rem;
-    }
-
-    .fade-in {
-        animation: fadeIn 0.6s ease-out;
-    }
-
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .stagger-animation {
-        animation: staggerIn 0.6s ease-out both;
-    }
-
-    @keyframes staggerIn {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
     }
 
     @media (max-width: 768px) {
         .profile-header {
-            padding: 2rem 0;
+            padding: 1.5rem 0;
         }
         
         .profile-name {
-            font-size: 2rem;
+            font-size: 1.5rem;
         }
         
         .profile-avatar {
-            width: 100px;
-            height: 100px;
-            font-size: 2.5rem;
+            width: 80px;
+            height: 80px;
+            font-size: 2rem;
         }
         
         .edit-btn {
@@ -346,7 +219,7 @@
         }
         
         .info-card {
-            padding: 1.5rem;
+            padding: 1rem;
         }
         
         .info-item {
@@ -360,25 +233,13 @@
             margin-bottom: 0.5rem;
         }
     }
-
-    @media (max-width: 576px) {
-        .table-responsive {
-            font-size: 0.9rem;
-        }
-        
-        .leader-info {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 0.25rem;
-        }
-    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid">
     <!-- Profile Header -->
-    <div class="profile-header">
+    <div class="profile-header position-relative">
         <div class="container">
             {% if user_role in 'business_head top_management' %}
             <a href="{% url 'edit_user' profile_user.id %}" class="edit-btn">
@@ -393,7 +254,7 @@
             <h1 class="profile-name">{{ profile_user.get_full_name|default:profile_user.username }}</h1>
             
             <div class="profile-role">
-                <span class="role-badge {{ profile_user.role }}">
+                <span class="role-badge">
                     {% if profile_user.role == 'rm' %}
                         <i class="fas fa-handshake"></i> {{ profile_user.get_role_display }}
                     {% elif profile_user.role == 'rm_head' %}
@@ -412,12 +273,12 @@
 
     <div class="container">
         <!-- User Information Card -->
-        <div class="info-card fade-in">
+        <div class="info-card">
             <h5><i class="fas fa-info-circle text-primary"></i> Profile Information</h5>
             
             <div class="row">
                 <div class="col-md-6">
-                    <div class="info-item stagger-animation" style="animation-delay: 0.1s">
+                    <div class="info-item">
                         <div class="info-icon">
                             <i class="fas fa-envelope"></i>
                         </div>
@@ -427,7 +288,7 @@
                         </div>
                     </div>
                     
-                    <div class="info-item stagger-animation" style="animation-delay: 0.2s">
+                    <div class="info-item">
                         <div class="info-icon">
                             <i class="fas fa-user-tag"></i>
                         </div>
@@ -448,7 +309,7 @@
                 </div>
                 
                 <div class="col-md-6">
-                    <div class="info-item stagger-animation" style="animation-delay: 0.3s">
+                    <div class="info-item">
                         <div class="info-icon">
                             <i class="fas fa-calendar-plus"></i>
                         </div>
@@ -458,7 +319,7 @@
                         </div>
                     </div>
                     
-                    <div class="info-item stagger-animation" style="animation-delay: 0.4s">
+                    <div class="info-item">
                         <div class="info-icon">
                             <i class="fas fa-clock"></i>
                         </div>
@@ -478,11 +339,11 @@
         </div>
 
         <!-- Team Memberships Card -->
-        <div class="info-card fade-in">
+        <div class="info-card">
             <h5><i class="fas fa-users text-success"></i> Team Memberships</h5>
             
             {% if profile_user.teams.all %}
-            <div class="table-responsive teams-table">
+            <div class="table-responsive">
                 <table class="table table-hover">
                     <thead>
                         <tr>
@@ -493,7 +354,7 @@
                     </thead>
                     <tbody>
                         {% for team in profile_user.teams.all %}
-                        <tr class="stagger-animation" style="animation-delay: {{ forloop.counter|add:4|floatformat:1|mul:0.1 }}s">
+                        <tr>
                             <td>
                                 <a href="{% url 'team_detail' team.id %}" class="team-link">
                                     <i class="fas fa-external-link-alt me-2"></i>{{ team.name }}
@@ -529,171 +390,5 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Intersection Observer for scroll animations
-    const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.style.opacity = '1';
-                entry.target.style.transform = 'translateY(0)';
-            }
-        });
-    }, observerOptions);
-
-    // Observe elements for scroll animations
-    const animateOnScroll = document.querySelectorAll('.info-card');
-    animateOnScroll.forEach(el => {
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(30px)';
-        el.style.transition = 'all 0.6s ease';
-        observer.observe(el);
-    });
-
-    // Enhanced table row interactions
-    const tableRows = document.querySelectorAll('.table tbody tr');
-    tableRows.forEach(row => {
-        row.addEventListener('mouseenter', function() {
-            this.style.transform = 'scale(1.01)';
-            this.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.1)';
-        });
-        
-        row.addEventListener('mouseleave', function() {
-            this.style.transform = 'scale(1)';
-            this.style.boxShadow = 'none';
-        });
-    });
-
-    // Enhanced button interactions
-    const editBtn = document.querySelector('.edit-btn');
-    if (editBtn) {
-        editBtn.addEventListener('click', function(e) {
-            // Add ripple effect
-            const ripple = document.createElement('span');
-            const rect = this.getBoundingClientRect();
-            const size = Math.max(rect.width, rect.height);
-            const x = e.clientX - rect.left - size / 2;
-            const y = e.clientY - rect.top - size / 2;
-            
-            ripple.style.cssText = `
-                position: absolute;
-                width: ${size}px;
-                height: ${size}px;
-                left: ${x}px;
-                top: ${y}px;
-                background: rgba(255, 255, 255, 0.3);
-                border-radius: 50%;
-                transform: scale(0);
-                animation: ripple 0.6s ease-out;
-                pointer-events: none;
-            `;
-            
-            this.style.position = 'relative';
-            this.style.overflow = 'hidden';
-            this.appendChild(ripple);
-            
-            setTimeout(() => {
-                ripple.remove();
-            }, 600);
-        });
-    }
-
-    // Dynamic role badge animation
-    const roleBadge = document.querySelector('.role-badge');
-    if (roleBadge) {
-        setInterval(() => {
-            roleBadge.style.transform = 'scale(1.05)';
-            setTimeout(() => {
-                roleBadge.style.transform = 'scale(1)';
-            }, 200);
-        }, 5000);
-    }
-
-    // Info item hover effects
-    const infoItems = document.querySelectorAll('.info-item');
-    infoItems.forEach(item => {
-        item.addEventListener('mouseenter', function() {
-            const icon = this.querySelector('.info-icon');
-            if (icon) {
-                icon.style.transform = 'scale(1.1) rotate(5deg)';
-                icon.style.background = 'var(--primary-color)';
-                icon.style.color = 'white';
-            }
-        });
-        
-        item.addEventListener('mouseleave', function() {
-            const icon = this.querySelector('.info-icon');
-            if (icon) {
-                icon.style.transform = 'scale(1) rotate(0deg)';
-                icon.style.background = 'var(--highlight-color)';
-                icon.style.color = 'var(--primary-color)';
-            }
-        });
-    });
-
-    // Team link hover effects
-    const teamLinks = document.querySelectorAll('.team-link');
-    teamLinks.forEach(link => {
-        link.addEventListener('mouseenter', function() {
-            const icon = this.querySelector('i');
-            if (icon) {
-                icon.style.transform = 'translateX(3px)';
-            }
-        });
-        
-        link.addEventListener('mouseleave', function() {
-            const icon = this.querySelector('i');
-            if (icon) {
-                icon.style.transform = 'translateX(0)';
-            }
-        });
-    });
-
-    // Profile avatar animation
-    const profileAvatar = document.querySelector('.profile-avatar');
-    if (profileAvatar) {
-        profileAvatar.addEventListener('mouseenter', function() {
-            this.style.transform = 'scale(1.1) rotate(5deg)';
-        });
-        
-        profileAvatar.addEventListener('mouseleave', function() {
-            this.style.transform = 'scale(1) rotate(0deg)';
-        });
-    }
-});
-
-// Add CSS for ripple animation
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes ripple {
-        to {
-            transform: scale(2);
-            opacity: 0;
-        }
-    }
-    
-    .info-icon {
-        transition: all 0.3s ease;
-    }
-    
-    .team-link i {
-        transition: transform 0.3s ease;
-    }
-    
-    .profile-avatar {
-        transition: all 0.3s ease;
-    }
-    
-    .role-badge {
-        transition: all 0.3s ease;
-    }
-`;
-document.head.appendChild(style);
-</script>
 {% endblock %}
 {% endblock %}
