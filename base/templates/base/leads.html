@@ -1,311 +1,665 @@
 {% extends 'base/base.html' %}
-{% load lead_filters %}
+{% load static %}
+
+{% block title %}{{ action }} Lead{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Modern form styling with CSS variables */
+    :root {
+        --primary-color: #4a6cf7;
+        --secondary-color: #6c757d;
+        --success-color: #28a745;
+        --danger-color: #dc3545;
+        --warning-color: #ffc107;
+        --info-color: #17a2b8;
+        --light-color: #f8f9fa;
+        --dark-color: #343a40;
+        --border-color: #e9ecef;
+        --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        --transition: all 0.3s ease;
+    }
+
+    .lead-form-container {
+        max-width: 900px;
+        margin: 2rem auto;
+    }
+
+    .lead-form-header {
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+
+    .lead-form-header h1 {
+        font-weight: 700;
+        color: var(--dark-color);
+        margin-bottom: 0.5rem;
+    }
+
+    .lead-form-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: var(--card-shadow);
+        overflow: hidden;
+        transition: var(--transition);
+    }
+
+    .lead-form-card:hover {
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    }
+
+    .card-body {
+        padding: 2.5rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    .form-control, .form-select {
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        transition: var(--transition);
+        height: auto;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(74, 108, 247, 0.15);
+    }
+
+    .form-check {
+        margin-bottom: 0.5rem;
+    }
+
+    .form-check-input {
+        width: 1.2em;
+        height: 1.2em;
+        margin-top: 0.15em;
+    }
+
+    .form-check-label {
+        margin-left: 0.5rem;
+    }
+
+    .source-radio {
+        background: var(--light-color);
+        padding: 1rem;
+        border-radius: 8px;
+    }
+
+    .invalid-feedback {
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    .btn {
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: var(--transition);
+    }
+
+    .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+
+    .btn-primary:hover {
+        background-color: #3a5bd9;
+        border-color: #3a5bd9;
+        transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+        background-color: var(--secondary-color);
+        border-color: var(--secondary-color);
+    }
+
+    .btn-secondary:hover {
+        background-color: #5a6268;
+        border-color: #5a6268;
+        transform: translateY(-2px);
+    }
+
+    .spinner-border {
+        vertical-align: middle;
+    }
+
+    /* Debug section styling */
+    .debug-section {
+        margin-bottom: 2rem;
+    }
+
+    .debug-section .alert {
+        border-radius: 8px;
+        border: none;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Client search enhancements */
+    .client-search-container {
+        position: relative;
+    }
+
+    .form-text {
+        font-size: 0.8rem;
+        color: var(--secondary-color);
+        margin-top: 0.25rem;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        .lead-form-header h1 {
+            font-size: 1.75rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .card-body {
+            padding: 1.25rem;
+        }
+
+        .btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+
+        .d-flex.justify-content-between {
+            flex-direction: column;
+        }
+    }
+
+    /* Animation for form fields */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .form-field {
+        animation: fadeIn 0.5s ease-out forwards;
+        opacity: 0;
+    }
+
+    /* Create staggered animation delays */
+    .form-field:nth-child(1) { animation-delay: 0.1s; }
+    .form-field:nth-child(2) { animation-delay: 0.2s; }
+    .form-field:nth-child(3) { animation-delay: 0.3s; }
+    .form-field:nth-child(4) { animation-delay: 0.4s; }
+    .form-field:nth-child(5) { animation-delay: 0.5s; }
+    .form-field:nth-child(6) { animation-delay: 0.6s; }
+    .form-field:nth-child(7) { animation-delay: 0.7s; }
+    .form-field:nth-child(8) { animation-delay: 0.8s; }
+
+    /* Required field indicator */
+    .required::after {
+        content: " *";
+        color: var(--danger-color);
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1 class="my-4">Lead Management</h1>
+<div class="lead-form-container">
+    <div class="lead-form-header">
+        <h1>{{ action }} Lead</h1>
+        <p class="text-muted">Fill in the details below to {{ action|lower }} this lead</p>
+    </div>
     
-    <!-- Filter and Search Section -->
-    <div class="card mb-4">
+    <!-- Messages -->
+    {% if messages %}
+    <div class="messages mb-4">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Debug Section -->
+    <div class="debug-section">
+        {% if form.errors %}
+        <div class="alert alert-danger">
+            <h5><i class="fas fa-exclamation-triangle"></i> Form Validation Errors:</h5>
+            <ul class="mb-0">
+                {% for field, errors in form.errors.items %}
+                    {% for error in errors %}
+                        <li><strong>{{ field|title }}:</strong> {{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-warning">
+            <h5><i class="fas fa-exclamation-circle"></i> General Errors:</h5>
+            <ul class="mb-0">
+                {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Debug info in development -->
+        {% if debug and request.method == 'POST' %}
+        <div class="alert alert-info">
+            <h6><i class="fas fa-bug"></i> Debug Information:</h6>
+            <p><strong>Method:</strong> {{ request.method }}</p>
+            <p><strong>POST Data:</strong></p>
+            <div style="max-height: 200px; overflow-y: auto;">
+                <pre class="mb-0">{% for key, value in request.POST.items %}{{ key }}: {{ value }}
+{% endfor %}</pre>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="card lead-form-card">
         <div class="card-body">
-            <form method="get" class="row g-3">
-                <div class="col-md-3">
-                    <label for="status" class="form-label">Status</label>
-                    <select name="status" id="status" class="form-select">
-                        <option value="">All Statuses</option>
-                        {% for value, label in status_choices %}
-                        <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>{{ label }}</option>
+            <form method="post" id="leadForm" novalidate class="needs-validation">
+                {% csrf_token %}
+                
+                <!-- Basic Information Section -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="text-primary mb-3">
+                            <i class="fas fa-user"></i> Basic Information
+                        </h5>
+                    </div>
+                    <div class="col-md-6 form-field">
+                        <label for="{{ form.name.id_for_label }}" class="form-label required">Name</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.name.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 form-field">
+                        <label for="{{ form.assigned_to.id_for_label }}" class="form-label required">Assigned To</label>
+                        {{ form.assigned_to }}
+                        {% if form.assigned_to.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.assigned_to.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Contact Information Section -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="text-primary mb-3">
+                            <i class="fas fa-envelope"></i> Contact Information
+                        </h5>
+                    </div>
+                    <div class="col-md-6 form-field">
+                        <label for="{{ form.email.id_for_label }}" class="form-label required">Email</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.email.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 form-field">
+                        <label for="{{ form.mobile.id_for_label }}" class="form-label">Mobile</label>
+                        {{ form.mobile }}
+                        {% if form.mobile.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.mobile.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Source Information Section -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="text-primary mb-3">
+                            <i class="fas fa-source-fork"></i> Source Information
+                        </h5>
+                    </div>
+                    <div class="col-md-6 form-field">
+                        <label class="form-label required">Source</label>
+                        <div class="source-radio">
+                            {% for radio in form.source %}
+                            <div class="form-check">
+                                {{ radio.tag }}
+                                <label for="{{ radio.id_for_label }}" class="form-check-label">
+                                    {{ radio.choice_label }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% if form.source.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.source.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Existing Client Field -->
+                    <div class="col-md-6 form-field" id="reference-client-field" style="display: none;">
+                        <label for="existing-client-dropdown" class="form-label">Existing Client Name</label>
+                        <div class="client-search-container">
+                            <select name="existing_client_choice" id="existing-client-dropdown" class="form-select">
+                                <option value="">Select an existing client...</option>
+                                {% for client_name in client_names %}
+                                <option value="{{ client_name }}">{{ client_name }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">
+                                <i class="fas fa-users"></i> 
+                                Select from available clients for your role
+                            </div>
+                        </div>
+                        {% if form.existing_client_choice.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.existing_client_choice.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        {{ form.reference_client }}
+                    </div>
+                    
+                    <!-- Source Details Field -->
+                    <div class="col-md-6 form-field" id="source-details-field" style="display: none;">
+                        <label for="{{ form.source_details.id_for_label }}" class="form-label">Source Details</label>
+                        {{ form.source_details }}
+                        {% if form.source_details.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.source_details.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Additional Information Section -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="text-primary mb-3">
+                            <i class="fas fa-info-circle"></i> Additional Information
+                        </h5>
+                    </div>
+                    <div class="col-md-6 form-field">
+                        <label for="{{ form.probability.id_for_label }}" class="form-label">Conversion Probability</label>
+                        <div class="input-group">
+                            {{ form.probability }}
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <div class="form-text">Estimated probability of converting this lead (0-100%)</div>
+                        {% if form.probability.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.probability.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 form-field">
+                        <label for="{{ form.next_interaction_date.id_for_label }}" class="form-label">Next Follow-up Date</label>
+                        {{ form.next_interaction_date }}
+                        <div class="form-text">When should we follow up with this lead?</div>
+                        {% if form.next_interaction_date.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.next_interaction_date.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Notes Section -->
+                <div class="mb-4 form-field">
+                    <label for="{{ form.notes.id_for_label }}" class="form-label">
+                        <i class="fas fa-sticky-note"></i> Notes
+                    </label>
+                    {{ form.notes }}
+                    <div class="form-text">Any additional information about this lead</div>
+                    {% if form.notes.errors %}
+                    <div class="invalid-feedback d-block">
+                        {% for error in form.notes.errors %}
+                            {{ error }}
                         {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="search" class="form-label">Search</label>
-                    <input type="text" name="search" id="search" class="form-control" 
-                           placeholder="Search leads..." value="{{ search_query|default:'' }}">
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary">Filter</button>
-                    <a href="{% url 'lead_list' %}" class="btn btn-outline-secondary ms-2">Reset</a>
-                    {% if user.role == 'ops_team_lead' %}
-                    <a href="{% url 'lead_list' %}?status=conversion_requested" class="btn btn-outline-warning ms-2">Pending</a>
+                    </div>
                     {% endif %}
                 </div>
-                {% if user.role == 'rm_head' or user.role == 'business_head' or user.role == 'top_management' or user.role == 'rm' or user.role == 'ops_team_lead' or user.role == 'ops_exec' %}
-                <div class="col-md-3 d-flex align-items-end justify-content-end">
-                    <a href="{% url 'lead_create' %}" class="btn btn-success">Create New Lead</a>
+
+                <!-- Action Buttons -->
+                <div class="d-flex justify-content-between mt-5">
+                    <a href="{% if lead %}{% url 'lead_detail' lead.pk %}{% else %}{% url 'lead_list' %}{% endif %}" 
+                       class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        <i class="fas fa-save"></i> Save Lead
+                    </button>
                 </div>
-                {% endif %}
             </form>
         </div>
     </div>
 
-    <!-- Quick Actions for Ops Team Lead -->
-    {% if user.role == 'ops_team_lead' %}
-    <div class="card mb-4">
+    <!-- Client Names Info (for debugging) -->
+    {% if debug and form.existing_client_choice.field.choices %}
+    <div class="card mt-3">
         <div class="card-header">
-            <h6 class="mb-0"><i class="fas fa-bolt"></i> Quick Actions</h6>
+            <h6 class="mb-0"><i class="fas fa-users"></i> Available Client Choices ({{ form.existing_client_choice.field.choices|length|add:"-1" }})</h6>
         </div>
         <div class="card-body">
             <div class="row">
-                <div class="col-md-3">
-                    <a href="{% url 'lead_list' %}?status=conversion_requested" class="btn btn-outline-warning btn-block">
-                        <i class="fas fa-clipboard-check"></i><br>
-                        <small>Pending Approvals</small>
-                    </a>
-                </div>
-                <div class="col-md-3">
-                    <a href="{% url 'lead_list' %}?status=converted" class="btn btn-outline-success btn-block">
-                        <i class="fas fa-check-circle"></i><br>
-                        <small>Converted Leads</small>
-                    </a>
-                </div>
-                <div class="col-md-3">
-                    <a href="{% url 'lead_list' %}" class="btn btn-outline-info btn-block">
-                        <i class="fas fa-list"></i><br>
-                        <small>All Relevant</small>
-                    </a>
-                </div>
-                <div class="col-md-3">
-                    <a href="{% url 'ops_pending_approvals' %}" class="btn btn-outline-primary btn-block">
-                        <i class="fas fa-clipboard-list"></i><br>
-                        <small>Detailed Review</small>
-                    </a>
-                </div>
+                {% for value, label in form.existing_client_choice.field.choices %}
+                    {% if value %}  <!-- Skip the empty option -->
+                    <div class="col-md-4 col-sm-6">
+                        <small class="text-muted">{{ label }}</small>
+                    </div>
+                    {% endif %}
+                {% endfor %}
             </div>
         </div>
     </div>
     {% endif %}
+</div>
+{% endblock %}
 
-    <!-- Leads Table -->
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Lead ID</th>
-                            <th>Name</th>
-                            <th>Contact</th>
-                            <th>Status</th>
-                            <th>Assigned To</th>
-                            <th>Created</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for lead in leads %}
-                        <tr {% if lead.status == 'conversion_requested' and user.role == 'ops_team_lead' %}class="table-warning"{% endif %}>
-                            <td>
-                                {{ lead.lead_id }}
-                                {% if lead.status == 'conversion_requested' and user.role == 'ops_team_lead' %}
-                                <i class="fas fa-exclamation-triangle text-warning ml-1" title="Pending your approval"></i>
-                                {% endif %}
-                            </td>
-                            <td>{{ lead.name }}</td>
-                            <td>
-                                {% if lead.email %}{{ lead.email }}<br>{% endif %}
-                                {{ lead.mobile }}
-                            </td>
-                            <td>
-                                {% if lead.status == 'new' %}
-                                    <span class="badge bg-primary">{{ lead.get_status_display }}</span>
-                                {% elif lead.status == 'contacted' %}
-                                    <span class="badge bg-info">{{ lead.get_status_display }}</span>
-                                {% elif lead.status == 'qualified' %}
-                                    <span class="badge bg-warning">{{ lead.get_status_display }}</span>
-                                {% elif lead.status == 'proposal' %}
-                                    <span class="badge bg-secondary">{{ lead.get_status_display }}</span>
-                                {% elif lead.status == 'negotiation' %}
-                                    <span class="badge bg-dark">{{ lead.get_status_display }}</span>
-                                {% elif lead.status == 'closed_won' %}
-                                    <span class="badge bg-success">{{ lead.get_status_display }}</span>
-                                {% elif lead.status == 'closed_lost' %}
-                                    <span class="badge bg-danger">{{ lead.get_status_display }}</span>
-                                {% elif lead.status == 'on_hold' %}
-                                    <span class="badge bg-light text-dark">{{ lead.get_status_display }}</span>
-                                {% elif lead.status == 'conversion_requested' %}
-                                    <span class="badge bg-warning">
-                                        <i class="fas fa-clock"></i> {{ lead.get_status_display }}
-                                    </span>
-                                {% elif lead.status == 'converted' %}
-                                    <span class="badge bg-success">
-                                        <i class="fas fa-check-circle"></i> {{ lead.get_status_display }}
-                                    </span>
-                                {% else %}
-                                    <span class="badge bg-secondary">{{ lead.get_status_display }}</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if lead.assigned_to %}
-                                    {{ lead.assigned_to.get_full_name }}
-                                {% else %}
-                                    <span class="text-muted">Not assigned</span>
-                                {% endif %}
-                                {% if lead.final_assigned_rm and lead.final_assigned_rm != lead.assigned_to %}
-                                <br><small class="text-muted">
-                                    <i class="fas fa-arrow-right"></i> {{ lead.final_assigned_rm.get_full_name }}
-                                </small>
-                                {% endif %}
-                            </td>
-                            <td>{{ lead.created_at|date:"d M Y" }}</td>
-                            <td>
-                                <!-- Standard Actions -->
-                                <a href="{% url 'lead_detail' lead.pk %}" class="btn btn-sm btn-info" title="View Details">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                
-                                {% if user.role != 'ops_team_lead' or lead.status != 'conversion_requested' %}
-                                <a href="{% url 'lead_update' lead.pk %}" class="btn btn-sm btn-primary" title="Edit">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                {% endif %}
-                                
-                                {% if user.role == 'business_head' or user.role == 'top_management' or lead.assigned_to == user or lead.created_by == user %}
-                                <a href="{% url 'lead_delete' lead.pk %}" class="btn btn-sm btn-danger" title="Delete">
-                                    <i class="fas fa-trash"></i>
-                                </a>
-                                {% endif %}
-                                
-                                <!-- Special Actions for Ops Team Lead -->
-                                {% if user.role == 'ops_team_lead' and lead.status == 'conversion_requested' %}
-                                <a href="{% url 'ops_pending_approvals' %}" class="btn btn-sm btn-warning" title="Review for Approval">
-                                    <i class="fas fa-clipboard-check"></i> Review
-                                </a>
-                                {% endif %}
-                                
-                                <!-- Show Client Link if Converted - Fixed Version -->
-                                {% if lead.status == 'converted' %}
-                                    {% if lead.generated_client %}
-                                        <!-- Try multiple possible client URL patterns -->
-                                        {% url 'client_detail' lead.generated_client.pk as client_url %}
-                                        {% if client_url %}
-                                        <a href="{{ client_url }}" class="btn btn-sm btn-success" title="View Client">
-                                            <i class="fas fa-user"></i>
-                                        </a>
-                                        {% else %}
-                                            <!-- Alternative URL patterns to try -->
-                                            {% url 'client_profile' lead.generated_client.pk as client_profile_url %}
-                                            {% if client_profile_url %}
-                                            <a href="{{ client_profile_url }}" class="btn btn-sm btn-success" title="View Client">
-                                                <i class="fas fa-user"></i>
-                                            </a>
-                                            {% else %}
-                                                <!-- If no client URL exists, show client ID as text -->
-                                                <span class="btn btn-sm btn-success disabled" title="Client: {{ lead.client_id }}">
-                                                    <i class="fas fa-user"></i> {{ lead.client_id }}
-                                                </span>
-                                            {% endif %}
-                                        {% endif %}
-                                    {% elif lead.client_id %}
-                                        <!-- Show client ID if no generated_client relation exists -->
-                                        <span class="btn btn-sm btn-success disabled" title="Client ID: {{ lead.client_id }}">
-                                            <i class="fas fa-user"></i> {{ lead.client_id }}
-                                        </span>
-                                    {% endif %}
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="7" class="text-center">No leads found</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('leadForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const spinner = submitBtn.querySelector('.spinner-border');
     
-    <!-- Debug Section for Ops Team Lead -->
-    {% if user.role == 'ops_team_lead' and debug_info %}
-    <div class="card mb-4 border-info">
-        <div class="card-header bg-info text-white">
-            <h6 class="mb-0"><i class="fas fa-bug"></i> Debug Information</h6>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-2">
-                    <strong>Total Leads in DB:</strong><br>
-                    <span class="badge badge-primary">{{ debug_info.total_leads }}</span>
-                </div>
-                <div class="col-md-2">
-                    <strong>Converted Leads:</strong><br>
-                    <span class="badge badge-success">{{ debug_info.converted_leads }}</span>
-                </div>
-                <div class="col-md-2">
-                    <strong>Conversion Requested:</strong><br>
-                    <span class="badge badge-warning">{{ debug_info.conversion_requested }}</span>
-                </div>
-                <div class="col-md-2">
-                    <strong>Ops Relevant:</strong><br>
-                    <span class="badge badge-info">{{ debug_info.ops_relevant_leads }}</span>
-                </div>
-                <div class="col-md-2">
-                    <strong>Visible to You:</strong><br>
-                    <span class="badge badge-secondary">{{ debug_info.accessible_leads_count }}</span>
-                </div>
-                <div class="col-md-2">
-                    <strong>Current Filters:</strong><br>
-                    Status: <code>{{ debug_info.current_filters.status|default:"All" }}</code><br>
-                    Search: <code>{{ debug_info.current_filters.search|default:"None" }}</code>
-                </div>
-            </div>
-            {% if debug_info.ops_relevant_leads > 0 and debug_info.accessible_leads_count == 0 %}
-            <div class="alert alert-warning mt-3">
-                <i class="fas fa-exclamation-triangle"></i>
-                <strong>Issue Detected:</strong> There are relevant leads (converted/pending approval) but none are visible to you. 
-                Check if there are any additional filters applied.
-            </div>
-            {% elif debug_info.ops_relevant_leads == 0 %}
-            <div class="alert alert-info mt-3">
-                <i class="fas fa-info-circle"></i>
-                <strong>No Relevant Leads:</strong> There are currently no converted leads or leads awaiting conversion approval.
-            </div>
-            {% endif %}
-        </div>
-    </div>
-    {% endif %}
-
-<style>
-/* Custom styles for pending approval highlights */
-.table-warning {
-    background-color: rgba(255, 193, 7, 0.1) !important;
-}
-
-.table-warning:hover {
-    background-color: rgba(255, 193, 7, 0.2) !important;
-}
-
-.btn-block {
-    width: 100%;
-    margin-bottom: 10px;
-    padding: 15px 10px;
-    text-align: center;
-}
-
-.btn-block small {
-    display: block;
-    margin-top: 5px;
-}
-
-.badge {
-    position: relative;
-}
-
-.fa-exclamation-triangle {
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0% {
-        opacity: 1;
+    // Source field handling
+    const sourceRadios = document.querySelectorAll('input[name="source"]');
+    const referenceField = document.getElementById('reference-client-field');
+    const detailsField = document.getElementById('source-details-field');
+    const clientDropdown = document.getElementById('existing-client-dropdown');
+    
+    console.log('Lead form initialized');
+    
+    function toggleSourceFields() {
+        const checkedRadio = document.querySelector('input[name="source"]:checked');
+        if (checkedRadio) {
+            const selectedValue = checkedRadio.value;
+            console.log('Source changed to:', selectedValue);
+            
+            if (selectedValue === 'existing_client') {
+                referenceField.style.display = 'block';
+                detailsField.style.display = 'none';
+                // Focus on client dropdown for better UX
+                if (clientDropdown) {
+                    setTimeout(() => clientDropdown.focus(), 100);
+                }
+            } else if (selectedValue === 'other') {
+                detailsField.style.display = 'block';
+                referenceField.style.display = 'none';
+            } else {
+                referenceField.style.display = 'none';
+                detailsField.style.display = 'none';
+            }
+        }
     }
-    50% {
-        opacity: 0.5;
+    
+    sourceRadios.forEach(radio => {
+        radio.addEventListener('change', toggleSourceFields);
+    });
+    
+    // Initialize on page load
+    toggleSourceFields();
+    
+    // Enhanced form submission with comprehensive validation
+    form.addEventListener('submit', function(e) {
+        console.log('Form submission attempted');
+        
+        // Show loading state
+        submitBtn.disabled = true;
+        spinner.classList.remove('d-none');
+        
+        // Get form values
+        const name = form.querySelector('input[name="name"]');
+        const email = form.querySelector('input[name="email"]');
+        const assignedTo = form.querySelector('select[name="assigned_to"]');
+        const selectedSource = form.querySelector('input[name="source"]:checked');
+        
+        let isValid = true;
+        let errorMessage = '';
+        
+        // Comprehensive validation
+        if (!name || !name.value.trim()) {
+            isValid = false;
+            errorMessage = 'Name is required';
+            if (name) {
+                name.focus();
+                name.classList.add('is-invalid');
+            }
+        } else if (!email || !email.value.trim()) {
+            isValid = false;
+            errorMessage = 'Email is required';
+            if (email) {
+                email.focus();
+                email.classList.add('is-invalid');
+            }
+        } else if (!assignedTo || !assignedTo.value) {
+            isValid = false;
+            errorMessage = 'Please select who to assign this lead to';
+            if (assignedTo) {
+                assignedTo.focus();
+                assignedTo.classList.add('is-invalid');
+            }
+        } else if (selectedSource) {
+            // Source-specific validation
+            if (selectedSource.value === 'existing_client') {
+                const clientDropdown = form.querySelector('select[name="existing_client_choice"]');
+                if (!clientDropdown || !clientDropdown.value.trim()) {
+                    isValid = false;
+                    errorMessage = 'Please select an existing client';
+                    if (clientDropdown) {
+                        clientDropdown.focus();
+                        clientDropdown.classList.add('is-invalid');
+                    }
+                }
+            } else if (selectedSource.value === 'other') {
+                const sourceDetails = form.querySelector('input[name="source_details"]');
+                if (!sourceDetails || !sourceDetails.value.trim()) {
+                    isValid = false;
+                    errorMessage = 'Please specify source details';
+                    if (sourceDetails) {
+                        sourceDetails.focus();
+                        sourceDetails.classList.add('is-invalid');
+                    }
+                }
+            }
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            console.log('Validation failed:', errorMessage);
+            alert(errorMessage);
+            resetSubmitButton();
+            return false;
+        }
+        
+        // Log form data for debugging
+        console.log('Form validation passed. Submitting form...');
+        const formData = new FormData(form);
+        console.log('Form data:');
+        for (let [key, value] of formData.entries()) {
+            console.log(`  ${key}: ${value}`);
+        }
+        
+        // Form is valid, allow submission
+        return true;
+    });
+    
+    function resetSubmitButton() {
+        submitBtn.disabled = false;
+        spinner.classList.add('d-none');
     }
-    100% {
-        opacity: 1;
+    
+    // Reset button state if form submission fails or page reloads
+    window.addEventListener('pageshow', resetSubmitButton);
+    
+    // Enhanced field validation on blur
+    const formInputs = form.querySelectorAll('input, select, textarea');
+    formInputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            this.classList.remove('is-invalid', 'is-valid');
+            
+            if (this.hasAttribute('required') || this.value.trim()) {
+                if (this.checkValidity() && this.value.trim()) {
+                    this.classList.add('is-valid');
+                } else if (this.value.trim()) {
+                    this.classList.add('is-invalid');
+                }
+            }
+        });
+        
+        // Clear validation state on focus
+        input.addEventListener('focus', function() {
+            this.classList.remove('is-invalid');
+        });
+    });
+    
+    // Client dropdown enhancement
+    if (clientDropdown) {
+        clientDropdown.addEventListener('change', function() {
+            console.log('Client selected:', this.value);
+            this.classList.remove('is-invalid');
+            if (this.value) {
+                this.classList.add('is-valid');
+            }
+        });
     }
-}
-</style>
+    
+    console.log('All event listeners attached');
+});
+</script>
 {% endblock %}
