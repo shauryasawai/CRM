@@ -28,94 +28,299 @@ from .forms import (
 )
 from .utils import get_next_approver, auto_approve_pending_leaves
 
+# Robust fix for the dashboard list.count() error
+
+# Fixed Dashboard to Show RM Head Reimbursements for Top Management
+
 @login_required
 def hrm_dashboard(request):
-    """Enhanced dashboard with CRM integration"""
+    """Enhanced dashboard with proper approval flow visibility - Fixed QuerySet issues"""
     try:
         employee = Employee.objects.get(user=request.user)
     except Employee.DoesNotExist:
         # Create employee profile if doesn't exist
         employee = Employee.objects.create(
             user=request.user,
-            designation=request.user.get_role_display(),
+            designation=getattr(request.user, 'get_role_display', lambda: 'Employee')(),
             date_of_joining=timezone.now().date(),
-            hierarchy_level=request.user.role
+            hierarchy_level=getattr(request.user, 'role', 'employee')
         )
     
     # Auto-approve pending leaves (run this check)
-    auto_approve_pending_leaves()
+    try:
+        auto_approve_pending_leaves()
+    except:
+        pass  # Don't break if auto-approve fails
     
-    # Get subordinates using CRM hierarchy
-    subordinates = []
-    if request.user.role in ['rm_head', 'ops_team_lead', 'business_head', 'business_head_ops', 'top_management']:
-        # Get CRM subordinates and their employee profiles
-        crm_subordinates = request.user.get_team_members()
-        subordinates = Employee.objects.filter(user__in=crm_subordinates)
+    user_role = getattr(request.user, 'role', 'employee')
+    
+    # Define what roles this user can approve based on the new hierarchy
+    approval_authority = {
+        'top_management': ['ops_exec', 'employee', 'intern', 'ops_team_lead', 'rm_head', 'business_head_ops'],
+        'business_head': ['ops_exec', 'employee', 'intern', 'ops_team_lead', 'rm_head', 'business_head_ops'],
+        'ops_team_lead': ['ops_exec'],  # First level approval for ops_exec
+        'rm_head': ['employee', 'intern'],  # First level approval for employee/intern
+        'business_head_ops': [],  # No direct reports in reimbursement hierarchy
+    }
+    
+    can_approve_roles = approval_authority.get(user_role, [])
+    
+    print(f"DEBUG: User {request.user.get_full_name()} (Role: {user_role})")
+    print(f"DEBUG: Can approve roles: {can_approve_roles}")
+    
+    # Initialize subordinate employee IDs list to avoid QuerySet union issues
+    subordinate_employee_ids = []
+    
+    if user_role in ['top_management', 'business_head']:
+        # Top management can see all employees for final approvals
+        subordinate_employee_ids = list(
+            Employee.objects.exclude(user=request.user).values_list('id', flat=True)
+        )
+        print(f"DEBUG: Top management - all employee IDs: {len(subordinate_employee_ids)}")
+        
+    elif can_approve_roles:
+        # Get employees that this user can approve - convert to IDs list
+        role_based_ids = list(
+            Employee.objects.filter(user__role__in=can_approve_roles).values_list('id', flat=True)
+        )
+        subordinate_employee_ids.extend(role_based_ids)
+        print(f"DEBUG: Role-based subordinate IDs: {len(role_based_ids)}")
+        
+        # Also try CRM hierarchy as fallback - convert to IDs list
+        try:
+            if hasattr(request.user, 'get_accessible_users'):
+                accessible_users = request.user.get_accessible_users()
+                if hasattr(accessible_users, 'values_list'):
+                    accessible_user_ids = list(accessible_users.values_list('id', flat=True))
+                    # Convert user IDs to employee IDs
+                    crm_employee_ids = list(
+                        Employee.objects.filter(user__id__in=accessible_user_ids).values_list('id', flat=True)
+                    )
+                    subordinate_employee_ids.extend(crm_employee_ids)
+                    print(f"DEBUG: Added CRM employee IDs: {len(crm_employee_ids)}")
+        except Exception as e:
+            print(f"DEBUG: CRM integration error: {e}")
+    
+    # Remove duplicates and convert to final employee IDs list
+    subordinate_employee_ids = list(set(subordinate_employee_ids))
+    
+    # Create a simple QuerySet for subordinates using the ID list
+    subordinates = Employee.objects.filter(id__in=subordinate_employee_ids)
+    
+    print(f"DEBUG: Final subordinate count: {len(subordinate_employee_ids)}")
     
     # Dashboard statistics - items requiring approval
-    pending_leaves = LeaveRequest.objects.filter(
-        employee__in=subordinates,
-        status='P'
-    ).count()
+    try:
+        pending_leaves = LeaveRequest.objects.filter(
+            employee_id__in=subordinate_employee_ids,  # Use ID list instead of QuerySet
+            status='P'
+        ).count()
+        print(f"DEBUG: Pending leaves count: {pending_leaves}")
+    except Exception as e:
+        print(f"DEBUG: Error counting pending leaves: {e}")
+        pending_leaves = 0
     
-    pending_reimbursements = ReimbursementClaim.objects.filter(
-        employee__in=subordinates,
-        status='P'
-    ).count()
+    # Enhanced reimbursement counting based on approval flow
+    try:
+        if user_role in ['top_management', 'business_head']:
+            # Top management sees:
+            # 1. All 'P' status claims (can do direct approval)
+            # 2. All 'MA' status claims (needs final approval)
+            pending_reimbursements = ReimbursementClaim.objects.filter(
+                status__in=['P', 'MA']
+            ).exclude(status='D').count()
+            
+            print(f"DEBUG: Top management - all pending reimbursements: {pending_reimbursements}")
+            
+            # Break down by status for debugging
+            p_status_count = ReimbursementClaim.objects.filter(status='P').count()
+            ma_status_count = ReimbursementClaim.objects.filter(status='MA').count()
+            print(f"DEBUG: P status: {p_status_count}, MA status: {ma_status_count}")
+            
+        elif user_role in ['ops_team_lead', 'rm_head']:
+            # Team leads see only 'P' status claims from their direct reports
+            pending_reimbursements = ReimbursementClaim.objects.filter(
+                employee__user__role__in=can_approve_roles,
+                status='P'  # Only first-level approvals
+            ).count()
+            
+            print(f"DEBUG: {user_role} - first level approvals: {pending_reimbursements}")
+            
+        else:
+            # Other roles have no approval authority
+            pending_reimbursements = 0
+            
+    except Exception as e:
+        print(f"DEBUG: Error counting pending reimbursements: {e}")
+        pending_reimbursements = 0
     
-    # Get items requiring approval
-    leaves_to_approve = LeaveRequest.objects.filter(
-        employee__in=subordinates,
-        status='P'
-    ).select_related('employee', 'leave_type').order_by('-applied_on')[:5]
+    # Get items requiring approval based on new flow
+    try:
+        leaves_to_approve = LeaveRequest.objects.filter(
+            employee_id__in=subordinate_employee_ids,  # Use ID list instead of QuerySet
+            status__in=['P', 'CR']
+        ).select_related('employee__user', 'leave_type').order_by('-applied_on')[:10]
+    except Exception as e:
+        print(f"DEBUG: Error getting leaves to approve: {e}")
+        leaves_to_approve = []
     
-    reimbursements_to_approve = ReimbursementClaim.objects.filter(
-        employee__in=subordinates,
-        status='P'
-    ).select_related('employee').order_by('-submitted_on')[:5]
+    try:
+        if user_role in ['top_management', 'business_head']:
+            # Top management sees all reimbursements needing any approval
+            reimbursements_to_approve = ReimbursementClaim.objects.filter(
+                status__in=['P', 'MA']
+            ).select_related('employee__user').order_by('-submitted_on')[:15]
+            
+        elif user_role in ['ops_team_lead', 'rm_head']:
+            # Team leads see only first-level approvals for their reports
+            reimbursements_to_approve = ReimbursementClaim.objects.filter(
+                employee__user__role__in=can_approve_roles,
+                status='P'  # Only pending first approval
+            ).select_related('employee__user').order_by('-submitted_on')[:10]
+            
+        else:
+            reimbursements_to_approve = []
+            
+        print(f"DEBUG: Reimbursements to approve: {len(reimbursements_to_approve)}")
+            
+    except Exception as e:
+        print(f"DEBUG: Error getting reimbursements to approve: {e}")
+        reimbursements_to_approve = []
     
-    # Get employee's recent activities
-    recent_attendance = Attendance.objects.filter(
-        employee=employee
-    ).order_by('-date')[:5]
+    # Get team activities
+    try:
+        if user_role in ['top_management', 'business_head']:
+            all_team_leaves = LeaveRequest.objects.all().select_related(
+                'employee__user', 'leave_type'
+            ).order_by('-applied_on')[:25]
+            
+            all_team_reimbursements = ReimbursementClaim.objects.exclude(
+                status='D'
+            ).select_related('employee__user').order_by('-created_at')[:25]
+            
+        else:
+            all_team_leaves = LeaveRequest.objects.filter(
+                employee_id__in=subordinate_employee_ids  # Use ID list instead of QuerySet
+            ).select_related('employee__user', 'leave_type').order_by('-applied_on')[:20]
+            
+            all_team_reimbursements = ReimbursementClaim.objects.filter(
+                employee_id__in=subordinate_employee_ids  # Use ID list instead of QuerySet
+            ).exclude(status='D').select_related('employee__user').order_by('-created_at')[:20]
+            
+    except Exception as e:
+        print(f"DEBUG: Error getting team activities: {e}")
+        all_team_leaves = []
+        all_team_reimbursements = []
     
-    my_leave_requests = LeaveRequest.objects.filter(
-        employee=employee
-    ).order_by('-applied_on')[:5]
+    # Get employee's personal data (unchanged)
+    try:
+        recent_attendance = Attendance.objects.filter(employee=employee).order_by('-date')[:5]
+        my_leave_requests = LeaveRequest.objects.filter(employee=employee).order_by('-applied_on')[:5]
+        notifications = Notification.objects.filter(recipient=employee, is_read=False).order_by('-created_at')[:5]
+    except Exception:
+        recent_attendance = []
+        my_leave_requests = []
+        notifications = []
     
-    # Get notifications
-    notifications = Notification.objects.filter(
-        recipient=employee,
-        is_read=False
-    ).order_by('-created_at')[:5]
-    
-    # Monthly attendance summary
-    # Monthly attendance summary
-    # Monthly attendance summary
+    # Monthly attendance summary (unchanged)
     today = timezone.now().date()
-    current_month_attendance = Attendance.objects.filter(
-        employee=employee,
-        date__year=today.year,
-        date__month=today.month)
-    total_working_days = current_month_attendance.count()
-    present_days = current_month_attendance.filter(login_time__isnull=False).count()
-    remote_days = current_month_attendance.filter(is_remote=True).count()
+    try:
+        current_month_attendance = Attendance.objects.filter(
+            employee=employee,
+            date__year=today.year,
+            date__month=today.month
+        )
+        total_working_days = current_month_attendance.count()
+        present_days = current_month_attendance.filter(login_time__isnull=False).count()
+        remote_days = current_month_attendance.filter(is_remote=True).count()
+    except Exception:
+        total_working_days = 0
+        present_days = 0
+        remote_days = 0
 
-    # Get leave balance summary
+    # Leave balance summary (unchanged)
     leave_balance_summary = []
-    if hasattr(employee, 'annual_leave_balance'):
-        leave_balance_summary = [
-            {'type': 'Annual Leave', 'balance': employee.annual_leave_balance},
-            {'type': 'Casual Leave', 'balance': employee.casual_leave_balance},
-            {'type': 'Sick Leave', 'balance': employee.sick_leave_balance},
-        ]
+    try:
+        if hasattr(employee, 'annual_leave_balance'):
+            leave_balance_summary = [
+                {'type': 'Annual Leave', 'balance': getattr(employee, 'annual_leave_balance', 0)},
+                {'type': 'Casual Leave', 'balance': getattr(employee, 'casual_leave_balance', 0)},
+                {'type': 'Sick Leave', 'balance': getattr(employee, 'sick_leave_balance', 0)},
+            ]
+    except Exception:
+        pass
+    
+    # Safe subordinates count
+    subordinates_count = len(subordinate_employee_ids)
+    
+    # Special sections for different roles
+    special_sections = {}
+    
+    if user_role in ['top_management', 'business_head']:
+        # RM Head and Team Lead claims needing attention
+        try:
+            rm_head_claims = ReimbursementClaim.objects.filter(
+                employee__user__role='rm_head',
+                status__in=['P', 'MA']
+            ).select_related('employee__user').order_by('-submitted_on')[:5]
+            
+            team_lead_claims = ReimbursementClaim.objects.filter(
+                employee__user__role='ops_team_lead',
+                status__in=['P', 'MA']
+            ).select_related('employee__user').order_by('-submitted_on')[:5]
+            
+            # Claims needing final approval (MA status)
+            final_approval_claims = ReimbursementClaim.objects.filter(
+                status='MA'
+            ).select_related('employee__user').order_by('-submitted_on')[:10]
+            
+            special_sections = {
+                'rm_head_claims': rm_head_claims,
+                'team_lead_claims': team_lead_claims,
+                'final_approval_claims': final_approval_claims,
+                'rm_head_claims_count': rm_head_claims.count(),
+                'team_lead_claims_count': team_lead_claims.count(),
+                'final_approval_claims_count': final_approval_claims.count(),
+            }
+            
+        except Exception as e:
+            print(f"DEBUG: Error getting special sections for top management: {e}")
+    
+    elif user_role in ['ops_team_lead', 'rm_head']:
+        # Show claims from direct reports needing first approval
+        try:
+            direct_report_claims = ReimbursementClaim.objects.filter(
+                employee__user__role__in=can_approve_roles,
+                status='P'
+            ).select_related('employee__user').order_by('-submitted_on')[:10]
+            
+            special_sections = {
+                'direct_report_claims': direct_report_claims,
+                'direct_report_claims_count': direct_report_claims.count(),
+                'approval_level': 'first_level',
+            }
+            
+        except Exception as e:
+            print(f"DEBUG: Error getting special sections for {user_role}: {e}")
+    
+    # Debug final counts
+    print(f"DEBUG: Final dashboard counts:")
+    print(f"  - User role: {user_role}")
+    print(f"  - Can approve roles: {can_approve_roles}")
+    print(f"  - Subordinates: {subordinates_count}")
+    print(f"  - Pending leaves: {pending_leaves}")
+    print(f"  - Pending reimbursements: {pending_reimbursements}")
+    print(f"  - Reimbursements to approve: {len(reimbursements_to_approve)}")
     
     context = {
         'employee': employee,
+        'subordinates_count': subordinates_count,
         'pending_leaves': pending_leaves,
         'pending_reimbursements': pending_reimbursements,
         'leaves_to_approve': leaves_to_approve,
         'reimbursements_to_approve': reimbursements_to_approve,
+        'all_team_leaves': all_team_leaves,
+        'all_team_reimbursements': all_team_reimbursements,
         'recent_attendance': recent_attendance,
         'my_leave_requests': my_leave_requests,
         'notifications': notifications,
@@ -123,9 +328,67 @@ def hrm_dashboard(request):
         'present_days': present_days,
         'remote_days': remote_days,
         'leave_balance_summary': leave_balance_summary,
-        'can_approve_leaves': request.user.role in ['rm_head', 'ops_team_lead', 'business_head', 'business_head_ops', 'top_management'],
+        'can_approve_leaves': user_role in ['rm_head', 'ops_team_lead', 'business_head', 'business_head_ops', 'top_management'],
+        'can_approve_reimbursements': bool(can_approve_roles) or user_role in ['top_management', 'business_head'],
+        'is_top_management': user_role in ['top_management', 'business_head'],
+        'is_team_lead': user_role in ['ops_team_lead', 'rm_head'],
+        'user_role': user_role,
+        'can_approve_roles': can_approve_roles,
+        # Add special sections
+        **special_sections,
     }
     return render(request, 'hrm/dashboard.html', context)
+
+# Debug helper function to check RM Head reimbursement visibility
+@login_required
+def debug_rm_head_reimbursements(request):
+    """Debug function to check RM Head reimbursement visibility"""
+    if request.user.role not in ['top_management', 'business_head']:
+        return JsonResponse({'error': 'Access denied'})
+    
+    # Get all RM Head employees
+    rm_head_employees = Employee.objects.filter(user__role='rm_head')
+    
+    # Get all their reimbursement claims
+    rm_head_claims = ReimbursementClaim.objects.filter(
+        employee__in=rm_head_employees
+    ).select_related('employee__user')
+    
+    debug_data = {
+        'rm_head_employees_count': rm_head_employees.count(),
+        'rm_head_employees': [
+            {
+                'name': emp.user.get_full_name(),
+                'role': emp.user.role,
+                'id': emp.id
+            } for emp in rm_head_employees
+        ],
+        'rm_head_claims_total': rm_head_claims.count(),
+        'rm_head_claims': [
+            {
+                'employee': claim.employee.user.get_full_name(),
+                'status': claim.status,
+                'amount': float(claim.total_amount),
+                'month': claim.month,
+                'year': claim.year,
+                'submitted_on': claim.submitted_on.isoformat() if claim.submitted_on else None
+            } for claim in rm_head_claims
+        ],
+        'pending_rm_head_claims': rm_head_claims.filter(status__in=['P', 'MA']).count(),
+    }
+    
+    return JsonResponse(debug_data, indent=2)
+
+def get_subordinate_roles(user_role):
+    """Get roles that are subordinate to the given role"""
+    role_hierarchy = {
+        'top_management': ['business_head', 'business_head_ops', 'rm_head', 'ops_team_lead', 'employee', 'intern'],
+        'business_head': ['business_head_ops', 'rm_head', 'ops_team_lead', 'employee', 'intern'],
+        'business_head_ops': ['ops_team_lead', 'employee', 'intern'],
+        'rm_head': ['employee', 'intern'],
+        'ops_team_lead': ['employee', 'intern'],
+    }
+    return role_hierarchy.get(user_role, [])
 
 @login_required
 def leave_calendar(request):
@@ -410,7 +673,7 @@ def leave_management(request):
 
 @login_required
 def approve_leave(request, leave_id):
-    """Enhanced leave approval using CRM hierarchy"""
+    """Enhanced leave approval - Top Management can directly approve RM Head leaves"""
     leave = get_object_or_404(LeaveRequest, id=leave_id)
     
     try:
@@ -419,42 +682,157 @@ def approve_leave(request, leave_id):
         messages.error(request, 'Employee profile not found.')
         return redirect('hrm_dashboard')
     
-    # Check authorization using CRM hierarchy
-    if not request.user.can_approve_conversion(leave.employee.user):
+    # Enhanced authorization logic
+    can_approve = False
+    is_direct_top_management_approval = False
+    
+    # Top management can approve ANYONE directly (including RM Heads)
+    if request.user.role in ['top_management', 'business_head']:
+        can_approve = True
+        # Check if this is a direct approval of RM Head by top management
+        if leave.employee.user.role == 'rm_head':
+            is_direct_top_management_approval = True
+            print(f"DEBUG: Top management direct approval for RM Head {leave.employee.user.get_full_name()}")
+    
+    # Regular hierarchy check for non-top-management
+    elif hasattr(request.user, 'can_approve_conversion'):
+        try:
+            can_approve = request.user.can_approve_conversion(leave.employee.user)
+        except Exception as e:
+            print(f"DEBUG: CRM approval check failed: {e}")
+            can_approve = leave.employee.user.role in get_subordinate_roles(request.user.role)
+    else:
+        # Fallback authorization check
+        if leave.employee.user.role in get_subordinate_roles(request.user.role):
+            can_approve = True
+        if hasattr(leave.employee.user, 'manager') and leave.employee.user.manager == request.user:
+            can_approve = True
+    
+    if not can_approve:
         messages.error(request, 'You are not authorized to approve this leave request.')
-        return redirect('hrm_dashboard')
+        return redirect('all_leave_requests')
+    
+    # Debug information
+    print(f"DEBUG: Leave ID {leave.id} - Employee: {leave.employee.user.get_full_name()} (Role: {leave.employee.user.role})")
+    print(f"DEBUG: Approver: {approver_employee.user.get_full_name()} (Role: {request.user.role})")
+    print(f"DEBUG: Direct top management approval: {is_direct_top_management_approval}")
     
     if request.method == 'POST':
         action = request.POST.get('action')
         comments = request.POST.get('manager_comments', '')
         
         if action == 'approve':
-            if leave.approve(approver_employee, comments):
-                Notification.create_leave_notification(leave, leave.employee, 'approval')
-                messages.success(request, 'Leave request approved successfully.')
-            else:
-                messages.error(request, 'Failed to approve leave request.')
+            try:
+                # Enhanced approval logic
+                if hasattr(leave, 'approve') and callable(leave.approve):
+                    success = leave.approve(approver_employee, comments)
+                else:
+                    # Manual approval
+                    leave.status = 'A'  # Approved
+                    leave.processed_by = approver_employee
+                    leave.processed_on = timezone.now()
+                    leave.manager_comments = comments
+                    
+                    # For direct top management approval of RM Head
+                    if is_direct_top_management_approval:
+                        leave.final_approved_by = approver_employee
+                        leave.final_approved_on = timezone.now()
+                        leave.final_comments = f"Direct approval by top management: {comments}"
+                    
+                    leave.save()
+                    success = True
+                
+                if success:
+                    # Create approval notification
+                    try:
+                        if hasattr(Notification, 'create_leave_notification'):
+                            Notification.create_leave_notification(leave, leave.employee, 'approval')
+                        else:
+                            Notification.objects.create(
+                                recipient=leave.employee,
+                                sender=approver_employee,
+                                message=f"Your leave request for {leave.leave_type.name} ({leave.start_date} to {leave.end_date}) has been approved by {approver_employee.user.get_full_name()}",
+                                notification_type='leave',
+                                reference_id=str(leave.id),
+                                reference_model='LeaveRequest'
+                            )
+                    except Exception as e:
+                        print(f"DEBUG: Error creating approval notification: {e}")
+                    
+                    if is_direct_top_management_approval:
+                        messages.success(request, f'RM Head leave request approved directly by top management.')
+                    else:
+                        messages.success(request, 'Leave request approved successfully.')
+                else:
+                    messages.error(request, 'Failed to approve leave request.')
+                    
+            except Exception as e:
+                print(f"DEBUG: Exception during leave approval: {e}")
+                messages.error(request, f'Error approving leave: {str(e)}')
         
         elif action == 'reject':
-            if leave.reject(approver_employee, comments):
-                Notification.create_leave_notification(leave, leave.employee, 'rejection')
-                messages.success(request, 'Leave request rejected.')
-            else:
-                messages.error(request, 'Failed to reject leave request.')
+            try:
+                if hasattr(leave, 'reject') and callable(leave.reject):
+                    success = leave.reject(approver_employee, comments)
+                else:
+                    # Manual rejection
+                    leave.status = 'R'  # Rejected
+                    leave.processed_by = approver_employee
+                    leave.processed_on = timezone.now()
+                    leave.manager_comments = comments
+                    leave.save()
+                    success = True
+                
+                if success:
+                    # Create rejection notification
+                    Notification.objects.create(
+                        recipient=leave.employee,
+                        sender=approver_employee,
+                        message=f"Your leave request for {leave.leave_type.name} has been rejected by {approver_employee.user.get_full_name()}. Reason: {comments}",
+                        notification_type='leave',
+                        reference_id=str(leave.id),
+                        reference_model='LeaveRequest'
+                    )
+                    messages.success(request, 'Leave request rejected.')
+                else:
+                    messages.error(request, 'Failed to reject leave request.')
+                    
+            except Exception as e:
+                print(f"DEBUG: Exception during leave rejection: {e}")
+                messages.error(request, f'Error rejecting leave: {str(e)}')
         
         elif action == 'approve_cancellation' and leave.status == 'CR':
-            if leave.approve_cancellation(approver_employee):
-                messages.success(request, 'Leave cancellation approved.')
-            else:
-                messages.error(request, 'Failed to approve cancellation.')
+            try:
+                if hasattr(leave, 'approve_cancellation') and callable(leave.approve_cancellation):
+                    success = leave.approve_cancellation(approver_employee)
+                else:
+                    # Manual cancellation approval
+                    leave.status = 'C'  # Cancelled
+                    leave.processed_by = approver_employee
+                    leave.processed_on = timezone.now()
+                    leave.manager_comments = f"Cancellation approved: {comments}"
+                    leave.save()
+                    success = True
+                
+                if success:
+                    messages.success(request, 'Leave cancellation approved.')
+                else:
+                    messages.error(request, 'Failed to approve cancellation.')
+                    
+            except Exception as e:
+                print(f"DEBUG: Exception during cancellation approval: {e}")
+                messages.error(request, f'Error approving cancellation: {str(e)}')
         
-        return redirect('hrm_dashboard')
+        return redirect('all_leave_requests')
     
     context = {
         'leave': leave,
         'approver_employee': approver_employee,
+        'is_direct_top_management_approval': is_direct_top_management_approval,
+        'can_direct_approve': request.user.role in ['top_management', 'business_head'],
     }
     return render(request, 'hrm/approve_leave.html', context)
+
 
 def parse_coordinate(coord_str):
     """
@@ -752,9 +1130,10 @@ def submit_claim(request, claim_id):
     messages.success(request, 'Reimbursement claim submitted successfully!')
     return redirect('reimbursement_claims')
 
+
 @login_required
 def approve_reimbursement(request, claim_id):
-    """Enhanced reimbursement approval using CRM hierarchy"""
+    """Enhanced reimbursement approval with proper hierarchy flow"""
     claim = get_object_or_404(ReimbursementClaim, id=claim_id)
     
     try:
@@ -763,70 +1142,304 @@ def approve_reimbursement(request, claim_id):
         messages.error(request, 'Employee profile not found.')
         return redirect('hrm_dashboard')
     
-    # Check authorization using CRM hierarchy
-    if not request.user.can_approve_conversion(claim.employee.user):
-        messages.error(request, 'You are not authorized to approve this claim.')
+    # Enhanced authorization and flow logic based on employee role and approver role
+    can_approve = False
+    is_direct_top_management_approval = False
+    employee_role = claim.employee.user.role
+    approver_role = request.user.role
+    
+    # Define approval flows based on employee role
+    approval_flows = {
+        'ops_exec': ['ops_team_lead', 'top_management', 'business_head'],  # ops_exec -> ops_team_lead -> top_management
+        'employee': ['rm_head', 'top_management', 'business_head'],        # employee -> rm_head -> top_management  
+        'intern': ['rm_head', 'top_management', 'business_head'],          # intern -> rm_head -> top_management
+        'ops_team_lead': ['top_management', 'business_head'],              # ops_team_lead -> top_management (direct)
+        'rm_head': ['top_management', 'business_head'],                    # rm_head -> top_management (direct)
+        'business_head_ops': ['top_management', 'business_head'],          # business_head_ops -> top_management (direct)
+    }
+    
+    # Get the approval flow for this employee
+    required_approvers = approval_flows.get(employee_role, ['top_management', 'business_head'])
+    
+    print(f"DEBUG: Employee {claim.employee.user.get_full_name()} (Role: {employee_role})")
+    print(f"DEBUG: Approver {approver_employee.user.get_full_name()} (Role: {approver_role})")
+    print(f"DEBUG: Required approvers: {required_approvers}")
+    print(f"DEBUG: Current claim status: {claim.status}")
+    
+    # Check authorization based on claim status and approval flow
+    if claim.status == 'P':  # Pending - First approval
+        # Check if approver is the first required approver in the flow
+        if len(required_approvers) >= 2:
+            # Two-step approval required
+            first_approver = required_approvers[0]
+            if approver_role == first_approver:
+                can_approve = True
+                print(f"DEBUG: First level approval by {approver_role}")
+            elif approver_role in ['top_management', 'business_head']:
+                # Top management can directly approve anyone
+                can_approve = True
+                is_direct_top_management_approval = True
+                print(f"DEBUG: Direct top management approval for {employee_role}")
+        else:
+            # Single step approval (direct to top management)
+            if approver_role in required_approvers:
+                can_approve = True
+                is_direct_top_management_approval = True
+                print(f"DEBUG: Direct approval for {employee_role}")
+    
+    elif claim.status == 'MA':  # Manager Approved - Final approval needed
+        # Only top management can do final approval
+        if approver_role in ['top_management', 'business_head']:
+            can_approve = True
+            print(f"DEBUG: Final approval by top management")
+    
+    if not can_approve:
+        messages.error(request, f'You are not authorized to approve this claim. Required approvers: {", ".join(required_approvers)}')
         return redirect('hrm_dashboard')
+    
+    # Debug current claim details
+    print(f"DEBUG: Claim ID {claim.id} - Amount: ₹{claim.total_amount}")
+    print(f"DEBUG: Authorization check passed - can_approve: {can_approve}")
+    print(f"DEBUG: Is direct top management approval: {is_direct_top_management_approval}")
     
     if request.method == 'POST':
         action = request.POST.get('action')
         comments = request.POST.get('comments', '')
         
         if action == 'approve':
-            if claim.approve_by_manager(approver_employee, comments):
-                Notification.create_reimbursement_notification(claim, claim.employee, 'approval')
-                
-                # Check if needs final approval
-                if claim.status == 'manager_approved':
-                    # Send to top management
-                    top_managers = Employee.objects.filter(
-                        user__role__in=['top_management', 'business_head']
-                    )
-                    for tm in top_managers:
-                        notification = Notification.objects.create(
-                            recipient=tm,
-                            sender=approver_employee,
-                            message=f"Reimbursement claim from {claim.employee.user.get_full_name()} requires final approval",
-                            notification_type='reimbursement',
-                            reference_id=str(claim.id),
-                            reference_model='ReimbursementClaim',
-                            link=f"/hrm/reimbursement/final-approve/{claim.id}/"
+            try:
+                if claim.status == 'P':
+                    # First time approval
+                    if is_direct_top_management_approval:
+                        # Direct approval by top management - skip manager approval step
+                        print("DEBUG: Processing direct top management approval")
+                        claim.status = 'A'  # Direct final approval
+                        claim.manager_approved_by = approver_employee
+                        claim.manager_approved_on = timezone.now()
+                        claim.manager_comments = f"Direct approval by top management: {comments}"
+                        claim.final_approved_by = approver_employee
+                        claim.final_approved_on = timezone.now()
+                        claim.final_comments = f"Direct approval by {approver_employee.user.get_full_name()}"
+                        claim.save()
+                        
+                        message_text = f'Claim directly approved by top management for payment. (Amount: ₹{claim.total_amount})'
+                        
+                    elif len(required_approvers) >= 2 and approver_role == required_approvers[0]:
+                        # First level approval - send to top management for final approval
+                        claim.status = 'MA'  # Manager Approved - needs final approval
+                        claim.manager_approved_by = approver_employee
+                        claim.manager_approved_on = timezone.now()
+                        claim.manager_comments = comments
+                        claim.save()
+                        
+                        # Send notification to top management for final approval
+                        top_managers = Employee.objects.filter(
+                            user__role__in=['top_management', 'business_head']
                         )
-                    message_text = 'Claim approved and sent to top management for final approval.'
+                        for tm in top_managers:
+                            Notification.objects.create(
+                                recipient=tm,
+                                sender=approver_employee,
+                                message=f"Reimbursement claim from {claim.employee.user.get_full_name()} ({employee_role}) for ₹{claim.total_amount} requires final approval",
+                                notification_type='reimbursement',
+                                reference_id=str(claim.id),
+                                reference_model='ReimbursementClaim',
+                                link=f"/hrm/reimbursement/{claim.id}/approve/"
+                            )
+                        
+                        message_text = f'Claim approved by {approver_role} and sent to top management for final approval. (Amount: ₹{claim.total_amount})'
+                        
+                    else:
+                        # Single step approval (shouldn't reach here with current logic)
+                        claim.status = 'A'  # Approved
+                        claim.manager_approved_by = approver_employee
+                        claim.manager_approved_on = timezone.now()
+                        claim.manager_comments = comments
+                        claim.final_approved_by = approver_employee
+                        claim.final_approved_on = timezone.now()
+                        claim.save()
+                        
+                        message_text = f'Claim fully approved for reimbursement. (Amount: ₹{claim.total_amount})'
+                
+                elif claim.status == 'MA':
+                    # Final approval by top management
+                    print("DEBUG: Processing final approval for MA status claim")
+                    
+                    if approver_role in ['top_management', 'business_head']:
+                        claim.status = 'A'  # Final Approved
+                        claim.final_approved_by = approver_employee
+                        claim.final_approved_on = timezone.now()
+                        claim.final_comments = comments
+                        claim.save()
+                        
+                        message_text = f'Claim finally approved for payment by top management. (Amount: ₹{claim.total_amount})'
+                    else:
+                        messages.error(request, 'This claim requires final approval by top management.')
+                        return redirect('hrm_dashboard')
+                
+                elif claim.status == 'A':
+                    messages.warning(request, 'This claim is already fully approved.')
+                    return redirect('hrm_dashboard')
+                
                 else:
-                    message_text = 'Claim approved for reimbursement.'
+                    messages.error(request, f'Cannot approve claim with status: {claim.get_status_display()}')
+                    return redirect('hrm_dashboard')
+                
+                # Create approval notification for employee
+                Notification.objects.create(
+                    recipient=claim.employee,
+                    sender=approver_employee,
+                    message=f"Your reimbursement claim for ₹{claim.total_amount} has been approved by {approver_employee.user.get_full_name()} ({approver_role})",
+                    notification_type='reimbursement',
+                    reference_id=str(claim.id),
+                    reference_model='ReimbursementClaim'
+                )
+                
+                # Additional notification for direct top management approval
+                if is_direct_top_management_approval:
+                    Notification.objects.create(
+                        recipient=claim.employee,
+                        sender=approver_employee,
+                        message=f"Your reimbursement claim was directly approved by top management and is ready for payment processing",
+                        notification_type='reimbursement',
+                        reference_id=str(claim.id),
+                        reference_model='ReimbursementClaim'
+                    )
                 
                 messages.success(request, message_text)
-            else:
-                messages.error(request, 'Failed to approve claim.')
+                print(f"DEBUG: Approval successful - New status: {claim.status}")
+                
+            except Exception as e:
+                print(f"DEBUG: Exception during approval: {e}")
+                messages.error(request, f'Error approving claim: {str(e)}')
+                return redirect('hrm_dashboard')
         
         elif action == 'reject':
-            # Implement rejection logic
-            claim.status = 'rejected'
-            claim.manager_approved_by = approver_employee
-            claim.manager_approved_on = timezone.now()
-            claim.manager_comments = comments
-            claim.save()
-            
-            Notification.objects.create(
-                recipient=claim.employee,
-                sender=approver_employee,
-                message=f"Your reimbursement claim has been rejected: {comments}",
-                notification_type='reimbursement',
-                reference_id=str(claim.id),
-                reference_model='ReimbursementClaim'
-            )
-            
-            messages.success(request, 'Claim rejected.')
+            try:
+                # Rejection logic - can reject from any approvable status
+                if claim.status in ['P', 'MA']:
+                    claim.status = 'R'  # Rejected
+                    
+                    # Set appropriate rejection fields based on current status
+                    if claim.status == 'P':
+                        claim.manager_approved_by = approver_employee
+                        claim.manager_approved_on = timezone.now()
+                        claim.manager_comments = f"REJECTED: {comments}"
+                    else:  # MA status
+                        claim.final_approved_by = approver_employee
+                        claim.final_approved_on = timezone.now()
+                        claim.final_comments = f"REJECTED: {comments}"
+                    
+                    claim.save()
+                    
+                    # Create rejection notification
+                    rejection_message = f"Your reimbursement claim for ₹{claim.total_amount} has been rejected by {approver_employee.user.get_full_name()} ({approver_role})."
+                    if is_direct_top_management_approval:
+                        rejection_message += " (Rejected by top management)"
+                    if comments:
+                        rejection_message += f" Reason: {comments}"
+                    
+                    Notification.objects.create(
+                        recipient=claim.employee,
+                        sender=approver_employee,
+                        message=rejection_message,
+                        notification_type='reimbursement',
+                        reference_id=str(claim.id),
+                        reference_model='ReimbursementClaim'
+                    )
+                    
+                    messages.success(request, f'Claim rejected successfully. (Amount: ₹{claim.total_amount})')
+                else:
+                    messages.error(request, f'Cannot reject claim with status: {claim.get_status_display()}')
+                    return redirect('hrm_dashboard')
+                
+            except Exception as e:
+                print(f"DEBUG: Exception during rejection: {e}")
+                messages.error(request, f'Error rejecting claim: {str(e)}')
         
         return redirect('hrm_dashboard')
     
+    # Determine what actions are available based on claim status, user role, and approval flow
+    can_manager_approve = (claim.status == 'P' and 
+                          len(required_approvers) >= 2 and 
+                          approver_role == required_approvers[0])
+    
+    can_final_approve = (claim.status == 'MA' and 
+                        approver_role in ['top_management', 'business_head'])
+    
+    can_direct_approve = (claim.status == 'P' and 
+                         approver_role in ['top_management', 'business_head'])
+    
+    can_reject = claim.status in ['P', 'MA']
+    
+    # Get expenses for display
+    try:
+        expenses = claim.expenses.all() if hasattr(claim, 'expenses') else []
+    except Exception:
+        expenses = ReimbursementExpense.objects.filter(claim=claim)
+    
+    # Get approval history
+    approval_history = []
+    if claim.manager_approved_by:
+        approval_history.append({
+            'stage': 'First Level Approval' if claim.status in ['MA', 'A'] else 'Manager Approval',
+            'approver': claim.manager_approved_by.user.get_full_name(),
+            'approver_role': claim.manager_approved_by.user.role,
+            'date': claim.manager_approved_on,
+            'comments': claim.manager_comments,
+            'status': 'Approved'
+        })
+    
+    if claim.final_approved_by and claim.status == 'A':
+        approval_history.append({
+            'stage': 'Final Approval',
+            'approver': claim.final_approved_by.user.get_full_name(),
+            'approver_role': claim.final_approved_by.user.role,
+            'date': claim.final_approved_on,
+            'comments': claim.final_comments,
+            'status': 'Approved'
+        })
+    
+    # Show the approval flow for this employee
+    approval_flow_display = []
+    for i, role in enumerate(required_approvers):
+        status = 'completed'
+        if i == 0 and claim.manager_approved_by:
+            status = 'completed'
+        elif i == 1 and claim.final_approved_by:
+            status = 'completed'  
+        elif claim.status == 'P' and i == 0:
+            status = 'current'
+        elif claim.status == 'MA' and i == 1:
+            status = 'current'
+        else:
+            status = 'pending'
+            
+        approval_flow_display.append({
+            'role': role,
+            'status': status,
+            'is_current_user': approver_role == role
+        })
+    
     context = {
         'claim': claim,
-        'expenses': claim.expenses.all(),
+        'expenses': expenses,
         'approver_employee': approver_employee,
+        'can_manager_approve': can_manager_approve,
+        'can_final_approve': can_final_approve,
+        'can_direct_approve': can_direct_approve,
+        'can_reject': can_reject,
+        'claim_status_display': claim.get_status_display() if hasattr(claim, 'get_status_display') else claim.status,
+        'approval_history': approval_history,
+        'approval_flow_display': approval_flow_display,
+        'required_approvers': required_approvers,
+        'employee_role': employee_role,
+        'approver_role': approver_role,
+        'is_direct_top_management_approval': is_direct_top_management_approval,
+        'is_two_step_approval': len(required_approvers) >= 2,
     }
     return render(request, 'hrm/approve_reimbursement.html', context)
+
 
 @login_required
 def final_approve_reimbursement(request, claim_id):
@@ -1056,12 +1669,186 @@ def delete_expense(request, expense_id):
     
     return JsonResponse({'success': True, 'new_total': float(claim.total_amount)})
 
+# Fixed view_notification function for your HRM system
+
 @login_required
 def view_notification(request, notification_id):
-    """View and mark notification as read"""
-    notification = get_object_or_404(Notification, id=notification_id, recipient__user=request.user)
-    notification.mark_as_read()
-    return redirect(notification.action_url) if notification.action_url else redirect('hrm_dashboard')
+    """View and mark notification as read - Compatible with your URL structure"""
+    try:
+        notification = get_object_or_404(Notification, id=notification_id, recipient__user=request.user)
+        
+        # Mark notification as read
+        if hasattr(notification, 'mark_as_read'):
+            notification.mark_as_read()
+        else:
+            notification.is_read = True
+            notification.save()
+        
+        # Determine redirect URL based on notification content and type
+        redirect_url = 'hrm_dashboard'  # Default fallback
+        
+        try:
+            # Check if notification has a direct link field
+            if hasattr(notification, 'link') and notification.link:
+                # If link starts with /, it's a direct URL path
+                if notification.link.startswith('/'):
+                    return redirect(notification.link)
+                else:
+                    # Otherwise treat as named URL
+                    return redirect(notification.link)
+            
+            # Determine redirect based on notification type and message content
+            if hasattr(notification, 'notification_type'):
+                notification_type = notification.notification_type
+                message = notification.message.lower()
+                
+                if notification_type == 'leave':
+                    # Check if it's an approval request
+                    if any(keyword in message for keyword in ['approve', 'approval', 'pending']):
+                        # Check if we have reference_id for direct approval link
+                        if hasattr(notification, 'reference_id') and notification.reference_id:
+                            try:
+                                leave_id = int(notification.reference_id)
+                                # Check if user can approve this leave
+                                if request.user.role in ['rm_head', 'ops_team_lead', 'business_head', 'business_head_ops', 'top_management']:
+                                    redirect_url = f'/hrm/leave/{leave_id}/approve/'
+                                else:
+                                    redirect_url = 'leave_management'
+                            except (ValueError, TypeError):
+                                redirect_url = 'leave_management'
+                        else:
+                            redirect_url = 'leave_management'
+                    elif 'cancel' in message:
+                        # Cancellation request
+                        if hasattr(notification, 'reference_id') and notification.reference_id:
+                            try:
+                                leave_id = int(notification.reference_id)
+                                if request.user.role in ['rm_head', 'ops_team_lead', 'business_head', 'business_head_ops', 'top_management']:
+                                    redirect_url = f'/hrm/leave/{leave_id}/approve/'
+                                else:
+                                    redirect_url = 'leave_management'
+                            except (ValueError, TypeError):
+                                redirect_url = 'leave_management'
+                        else:
+                            redirect_url = 'leave_management'
+                    else:
+                        # General leave notification - go to leave management or calendar
+                        redirect_url = 'leave_calendar'
+                
+                elif notification_type == 'reimbursement':
+                    # Check if it's an approval request
+                    if 'final approval' in message:
+                        # Needs final approval by top management
+                        if hasattr(notification, 'reference_id') and notification.reference_id:
+                            try:
+                                claim_id = int(notification.reference_id)
+                                if request.user.role in ['top_management', 'business_head']:
+                                    redirect_url = f'/hrm/reimbursement/{claim_id}/final-approve/'
+                                else:
+                                    redirect_url = 'reimbursement_claims'
+                            except (ValueError, TypeError):
+                                redirect_url = 'reimbursement_claims'
+                        else:
+                            redirect_url = 'reimbursement_claims'
+                    elif any(keyword in message for keyword in ['approve', 'approval', 'pending']):
+                        # Regular manager approval
+                        if hasattr(notification, 'reference_id') and notification.reference_id:
+                            try:
+                                claim_id = int(notification.reference_id)
+                                if request.user.role in ['rm_head', 'ops_team_lead', 'business_head', 'business_head_ops', 'top_management']:
+                                    redirect_url = f'/hrm/reimbursement/{claim_id}/approve/'
+                                else:
+                                    redirect_url = 'reimbursement_claims'
+                            except (ValueError, TypeError):
+                                redirect_url = 'reimbursement_claims'
+                        else:
+                            redirect_url = 'reimbursement_claims'
+                    else:
+                        # General reimbursement notification
+                        redirect_url = 'reimbursement_claims'
+                
+                elif notification_type == 'attendance':
+                    # Attendance related notification
+                    if request.user.role in ['rm_head', 'ops_team_lead', 'business_head', 'business_head_ops', 'top_management']:
+                        redirect_url = 'monthly_attendance_report'
+                    else:
+                        redirect_url = 'attendance_tracking'
+                
+                else:
+                    # Unknown notification type - go to dashboard
+                    redirect_url = 'hrm_dashboard'
+            
+            else:
+                # No notification type - try to determine from message content
+                message = notification.message.lower() if notification.message else ''
+                
+                if any(keyword in message for keyword in ['leave', 'vacation', 'absent']):
+                    redirect_url = 'leave_management'
+                elif any(keyword in message for keyword in ['reimbursement', 'expense', 'claim']):
+                    redirect_url = 'reimbursement_claims'
+                elif any(keyword in message for keyword in ['attendance', 'login', 'remote']):
+                    redirect_url = 'attendance_tracking'
+                else:
+                    redirect_url = 'hrm_dashboard'
+        
+        except Exception as e:
+            print(f"Error processing notification redirect: {e}")
+            redirect_url = 'hrm_dashboard'
+        
+        # Handle the redirect
+        if redirect_url.startswith('/'):
+            # Direct URL path
+            return redirect(redirect_url)
+        else:
+            # Named URL pattern
+            return redirect(redirect_url)
+    
+    except Notification.DoesNotExist:
+        messages.error(request, 'Notification not found or you do not have permission to view it.')
+        return redirect('hrm_dashboard')
+    
+    except Exception as e:
+        messages.error(request, f'Error processing notification: {str(e)}')
+        return redirect('hrm_dashboard')
+
+# Helper function to create better notifications (add this to your views)
+def create_notification_with_link(recipient, sender, message, notification_type, reference_id=None, reference_model=None):
+    """Create notification with appropriate action link"""
+    
+    link = None
+    
+    if notification_type == 'leave' and reference_id:
+        if 'approve' in message.lower():
+            link = f'/hrm/leave/{reference_id}/approve/'
+        else:
+            link = 'leave_management'
+    elif notification_type == 'reimbursement' and reference_id:
+        if 'final approval' in message.lower():
+            link = f'/hrm/reimbursement/{reference_id}/final-approve/'
+        elif 'approve' in message.lower():
+            link = f'/hrm/reimbursement/{reference_id}/approve/'
+        else:
+            link = 'reimbursement_claims'
+    elif notification_type == 'attendance':
+        link = 'attendance_tracking'
+    
+    # Create notification with appropriate fields
+    notification_data = {
+        'recipient': recipient,
+        'sender': sender,
+        'message': message,
+        'notification_type': notification_type,
+    }
+    
+    # Add optional fields if they exist in your model
+    if hasattr(Notification, 'reference_id'):
+        notification_data['reference_id'] = str(reference_id) if reference_id else None
+    if hasattr(Notification, 'reference_model'):
+        notification_data['reference_model'] = reference_model
+    if hasattr(Notification, 'link'):
+        notification_data['link'] = link
+    
+    return Notification.objects.create(**notification_data)
 
 @require_POST
 @login_required

@@ -12,21 +12,9 @@
             </h2>
             <p class="welcome-role">
               <span class="role-badge">{{ employee.designation }}</span>
-              <span class="department-text"
-                >{{ employee.department.name }}</span
-              >
+              <span class="department-text">{{ employee.department.name }}</span>
             </p>
           </div>
-<!--           <div class="welcome-avatar">
-            <div class="avatar-container">
-              <img
-                src="https://via.placeholder.com/80"
-                alt="Profile"
-                class="avatar-img"
-              />
-              <div class="avatar-status"></div>
-            </div>
-          </div> -->
         </div>
       </div>
 
@@ -78,13 +66,123 @@
               </div>
             </div>
             <div class="stat-trend">
-              <span class="trend-text"
-                >{{ present_days|floatformat:0 }}% present</span
-              >
+              <span class="trend-text">{{ present_days|floatformat:0 }}% present</span>
             </div>
           </div>
         </div>
       </div>
+
+      <!-- TOP MANAGEMENT SPECIAL SECTION - RM Head Approvals -->
+      {% if is_top_management %}
+      <div class="row g-4 mb-4">
+        <div class="col-12">
+          <div class="special-section-card">
+            <div class="special-section-header">
+              <h3 class="special-section-title">
+                <i class="fas fa-crown me-2"></i>
+                RM Head Approvals Required
+              </h3>
+              <span class="special-badge">Top Management</span>
+            </div>
+            
+            <div class="row g-3">
+              <!-- RM Head Reimbursements -->
+              <div class="col-lg-8">
+                <div class="rm-head-section">
+                  <h4 class="rm-head-title">
+                    <i class="fas fa-file-invoice-dollar me-2"></i>
+                    RM Head Reimbursements 
+                    {% if rm_head_reimbursements_count %}
+                      <span class="count-badge">{{ rm_head_reimbursements_count }}</span>
+                    {% endif %}
+                  </h4>
+                  
+                  {% if rm_head_reimbursements %}
+                  <div class="rm-head-list">
+                    {% for claim in rm_head_reimbursements %}
+                    <div class="rm-head-item">
+                      <a href="{% url 'approve_reimbursement' claim.id %}" class="rm-head-link">
+                        <div class="rm-head-content">
+                          <div class="rm-head-header">
+                            <h6 class="rm-head-name">
+                              {{ claim.employee.user.get_full_name }}
+                              <span class="role-indicator">RM Head</span>
+                            </h6>
+                            <div class="rm-head-status">
+                              <span class="status-badge status-{% if claim.status == 'P' %}pending{% elif claim.status == 'MA' %}manager-approved{% endif %}">
+                                {% if claim.status == 'P' %}
+                                  Needs Initial Approval
+                                {% elif claim.status == 'MA' %}
+                                  Needs Final Approval
+                                {% else %}
+                                  {{ claim.get_status_display }}
+                                {% endif %}
+                              </span>
+                              <span class="amount-highlight">₹{{ claim.total_amount|floatformat:0 }}</span>
+                            </div>
+                          </div>
+                          <div class="rm-head-details">
+                            <span class="period">{{ claim.month }}/{{ claim.year }}</span>
+                            <span class="submitted">Submitted {{ claim.submitted_on|timesince }} ago</span>
+                            {% if claim.status == 'MA' %}
+                              <span class="priority-tag">Priority: Final Approval</span>
+                            {% endif %}
+                          </div>
+                        </div>
+                        <div class="rm-head-arrow">
+                          <i class="fas fa-chevron-right"></i>
+                        </div>
+                      </a>
+                    </div>
+                    {% endfor %}
+                  </div>
+                  {% else %}
+                  <div class="empty-state-rm">
+                    <i class="fas fa-check-circle"></i>
+                    <p>No RM Head reimbursements pending approval</p>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+              
+              <!-- RM Head Leaves -->
+              <div class="col-lg-4">
+                <div class="rm-head-section">
+                  <h4 class="rm-head-title">
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    RM Head Leaves
+                    {% if rm_head_leaves_count %}
+                      <span class="count-badge">{{ rm_head_leaves_count }}</span>
+                    {% endif %}
+                  </h4>
+                  
+                  {% if rm_head_leaves %}
+                  <div class="rm-head-leaves-list">
+                    {% for leave in rm_head_leaves %}
+                    <div class="rm-head-leave-item">
+                      <a href="{% url 'approve_leave' leave.id %}" class="rm-head-leave-link">
+                        <div class="leave-employee">{{ leave.employee.user.get_full_name }}</div>
+                        <div class="leave-details">
+                          {{ leave.leave_type.name }} • {{ leave.total_days }} day{{ leave.total_days|pluralize }}
+                        </div>
+                        <div class="leave-dates">{{ leave.start_date|date:"M d" }} - {{ leave.end_date|date:"M d" }}</div>
+                      </a>
+                    </div>
+                    {% endfor %}
+                  </div>
+                  {% else %}
+                  <div class="empty-state-rm small">
+                    <i class="fas fa-check-circle"></i>
+                    <p>No RM Head leaves pending</p>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
 
       <!-- Approval Sections -->
       <div class="row g-4">
@@ -92,11 +190,8 @@
         <div class="col-lg-6">
           <div class="approval-card">
             <div class="approval-header">
-              <h3 class="approval-title">Leaves to Approve</h3>
-              <a
-                href="{% url 'leave_management' %}"
-                class="btn btn-outline-primary btn-sm"
-              >
+              <h3 class="approval-title">All Leaves to Approve</h3>
+              <a href="{% url 'leave_management' %}" class="btn btn-outline-primary btn-sm">
                 <i class="fas fa-external-link-alt me-1"></i>View All
               </a>
             </div>
@@ -104,28 +199,24 @@
               {% if leaves_to_approve %}
               <div class="approval-list">
                 {% for leave in leaves_to_approve %}
-                <a
-                  href="{% url 'approve_leave' leave.id %}"
-                  class="approval-item"
-                >
+                <a href="{% url 'approve_leave' leave.id %}" class="approval-item">
                   <div class="approval-item-content">
                     <div class="approval-item-header">
                       <h6 class="approval-item-name">
                         {{ leave.employee.user.get_full_name }}
+                        {% if leave.employee.user.role == 'rm_head' %}
+                          <span class="role-tag">RM Head</span>
+                        {% endif %}
                       </h6>
-                      <span
-                        class="status-badge status-{% if leave.status == 'P' %}pending{% else %}primary{% endif %}"
-                      >
+                      <span class="status-badge status-{% if leave.status == 'P' %}pending{% else %}primary{% endif %}">
                         {{ leave.get_status_display }}
                       </span>
                     </div>
                     <p class="approval-item-details">
-                      {{ leave.leave_type.name }} • {{ leave.total_days }} day{{
-                      leave.total_days|pluralize }}
+                      {{ leave.leave_type.name }} • {{ leave.total_days }} day{{ leave.total_days|pluralize }}
                     </p>
                     <p class="approval-item-date">
-                      {{ leave.start_date|date:"M d" }} - {{
-                      leave.end_date|date:"M d, Y" }}
+                      {{ leave.start_date|date:"M d" }} - {{ leave.end_date|date:"M d, Y" }}
                     </p>
                   </div>
                   <div class="approval-item-arrow">
@@ -148,11 +239,8 @@
         <div class="col-lg-6">
           <div class="approval-card">
             <div class="approval-header">
-              <h3 class="approval-title">Reimbursements to Approve</h3>
-              <a
-                href="{% url 'reimbursement_claims' %}"
-                class="btn btn-outline-primary btn-sm"
-              >
+              <h3 class="approval-title">All Reimbursements to Approve</h3>
+              <a href="{% url 'reimbursement_claims' %}" class="btn btn-outline-primary btn-sm">
                 <i class="fas fa-external-link-alt me-1"></i>View All
               </a>
             </div>
@@ -160,26 +248,27 @@
               {% if reimbursements_to_approve %}
               <div class="approval-list">
                 {% for claim in reimbursements_to_approve %}
-                <a
-                  href="{% url 'approve_reimbursement' claim.id %}"
-                  class="approval-item"
-                >
+                <a href="{% url 'approve_reimbursement' claim.id %}" class="approval-item">
                   <div class="approval-item-content">
                     <div class="approval-item-header">
                       <h6 class="approval-item-name">
                         {{ claim.employee.user.get_full_name }}
+                        {% if claim.employee.user.role == 'rm_head' %}
+                          <span class="role-tag rm-head">RM Head</span>
+                        {% endif %}
                       </h6>
-                      <span
-                        class="status-badge status-{% if claim.status == 'P' %}pending{% else %}primary{% endif %}"
-                      >
-                        {{ claim.get_status_display }}
+                      <span class="status-badge status-{% if claim.status == 'P' %}pending{% elif claim.status == 'MA' %}manager-approved{% else %}primary{% endif %}">
+                        {% if claim.status == 'P' %}Pending{% elif claim.status == 'MA' %}Final Approval{% else %}{{ claim.get_status_display }}{% endif %}
                       </span>
                     </div>
                     <p class="approval-item-details">
                       <span class="amount">₹{{ claim.total_amount }}</span>
+                      {% if claim.status == 'MA' %}
+                        <span class="final-approval-tag">Needs Final Approval</span>
+                      {% endif %}
                     </p>
                     <p class="approval-item-date">
-                      {{ claim.get_month_display }} {{ claim.year }}
+                      {{ claim.month }}/{{ claim.year }}
                     </p>
                   </div>
                   <div class="approval-item-arrow">
@@ -214,17 +303,12 @@
           {% if notifications %}
           <div class="notification-list">
             {% for notification in notifications %}
-            <a
-              href="{% url 'view_notification' notification.id %}"
-              class="notification-item"
-            >
+            <a href="{% url 'view_notification' notification.id %}" class="notification-item">
               <div class="notification-content">
                 <p class="notification-message">
                   {{ notification.message|truncatechars:60 }}
                 </p>
-                <span class="notification-time"
-                  >{{ notification.created_at|timesince }} ago</span
-                >
+                <span class="notification-time">{{ notification.created_at|timesince }} ago</span>
               </div>
               <div class="notification-indicator"></div>
             </a>
@@ -289,19 +373,13 @@
               <div class="leave-content">
                 <div class="leave-header">
                   <h6 class="leave-type">{{ leave.leave_type.name }}</h6>
-                  <span
-                    class="leave-status status-{% if leave.status == 'A' %}approved{% elif leave.status == 'P' %}pending{% else %}rejected{% endif %}"
-                  >
+                  <span class="leave-status status-{% if leave.status == 'A' %}approved{% elif leave.status == 'P' %}pending{% else %}rejected{% endif %}">
                     {{ leave.get_status_display }}
                   </span>
                 </div>
                 <p class="leave-dates">
-                  {{ leave.start_date|date:"M d" }} - {{ leave.end_date|date:"d,
-                  Y" }}
-                  <span class="leave-duration"
-                    >({{ leave.total_days }} day{{ leave.total_days|pluralize
-                    }})</span
-                  >
+                  {{ leave.start_date|date:"M d" }} - {{ leave.end_date|date:"d, Y" }}
+                  <span class="leave-duration">({{ leave.total_days }} day{{ leave.total_days|pluralize }})</span>
                 </p>
               </div>
             </div>
@@ -320,7 +398,276 @@
 </div>
 
 <style>
-  /* Dashboard Specific Styles */
+  /* Existing styles remain the same, adding new styles for RM Head section */
+  
+  /* Special Section for Top Management */
+  .special-section-card {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: var(--shadow-medium);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .special-section-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 150px;
+    height: 150px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    transform: translate(30%, -30%);
+  }
+  
+  .special-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    position: relative;
+    z-index: 2;
+  }
+  
+  .special-section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+    display: flex;
+    align-items: center;
+  }
+  
+  .special-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  
+  .rm-head-section {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    color: var(--text-primary);
+    height: 100%;
+  }
+  
+  .rm-head-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .count-badge {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    min-width: 20px;
+    text-align: center;
+  }
+  
+  .rm-head-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .rm-head-item {
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all var(--transition-speed) ease;
+  }
+  
+  .rm-head-item:hover {
+    border-color: var(--primary-color);
+    box-shadow: var(--shadow-light);
+    transform: translateY(-2px);
+  }
+  
+  .rm-head-link {
+    display: flex;
+    align-items: center;
+    padding: 1.25rem;
+    text-decoration: none;
+    color: inherit;
+  }
+  
+  .rm-head-link:hover {
+    text-decoration: none;
+    color: inherit;
+  }
+  
+  .rm-head-content {
+    flex: 1;
+  }
+  
+  .rm-head-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+  }
+  
+  .rm-head-name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .role-indicator {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .rm-head-status {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+  }
+  
+  .amount-highlight {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.875rem;
+  }
+  
+  .status-manager-approved {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+  
+  .rm-head-details {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+  }
+  
+  .priority-tag {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .rm-head-arrow {
+    color: var(--text-muted);
+    font-size: 1rem;
+    margin-left: 1rem;
+  }
+  
+  .empty-state-rm {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+  }
+  
+  .empty-state-rm.small {
+    padding: 1rem;
+  }
+  
+  .empty-state-rm i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    color: #22c55e;
+  }
+  
+  .rm-head-leaves-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .rm-head-leave-item {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all var(--transition-speed) ease;
+  }
+  
+  .rm-head-leave-item:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-1px);
+  }
+  
+  .rm-head-leave-link {
+    display: block;
+    padding: 1rem;
+    text-decoration: none;
+    color: inherit;
+  }
+  
+  .leave-employee {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+  }
+  
+  .leave-details {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+  }
+  
+  .leave-dates {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+  }
+  
+  /* Enhanced role tags and status badges */
+  .role-tag {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.125rem 0.5rem;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+  }
+  
+  .role-tag.rm-head {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  }
+  
+  .final-approval-tag {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    padding: 0.125rem 0.5rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+  }
+
+  /* Existing styles remain the same... */
   .dashboard-container {
     padding: 0;
   }
@@ -910,6 +1257,14 @@
     .welcome-name {
       font-size: 1.5rem;
     }
+    
+    .special-section-card {
+      padding: 1.5rem;
+    }
+    
+    .rm-head-section {
+      padding: 1.25rem;
+    }
   }
 
   @media (max-width: 768px) {
@@ -953,6 +1308,23 @@
       margin-bottom: 0;
       margin-right: 0.75rem;
     }
+    
+    .special-section-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+    
+    .rm-head-status {
+      flex-direction: row;
+      align-items: center;
+    }
+    
+    .rm-head-details {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
   }
 
   @media (max-width: 480px) {
@@ -983,9 +1355,24 @@
     .quick-actions {
       padding: 1rem;
     }
+    
+    .special-section-card {
+      padding: 1rem;
+      border-radius: 16px;
+    }
+    
+    .rm-head-section {
+      padding: 1rem;
+    }
+    
+    .rm-head-link {
+      padding: 1rem;
+    }
   }
 </style>
-{% endblock %} {% block scripts %}
+{% endblock %} 
+
+{% block scripts %}
 <script>
   $(document).ready(function () {
     // Mark all notifications as read
@@ -1015,6 +1402,11 @@
         $btn.find("span").text(originalText);
       }, 2000);
     });
+
+    // Highlight RM Head items for top management
+    {% if is_top_management %}
+    $(".role-tag.rm-head").parent().closest(".approval-item, .rm-head-item").addClass("priority-item");
+    {% endif %}
 
     // Auto-refresh notifications every 30 seconds
     setInterval(function () {

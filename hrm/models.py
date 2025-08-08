@@ -411,10 +411,29 @@ class ReimbursementExpense(models.Model):
     expense_date = models.DateField()
     receipt = models.FileField(upload_to='receipts/', blank=True)
     
+    # Additional fields that exist in your database
+    receipt_drive_id = models.CharField(max_length=255, blank=True, null=True, default='')
+    receipt_filename = models.CharField(max_length=255, blank=True, null=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
     def __str__(self):
         return f"{self.claim.employee} - {self.expense_type} - {self.amount}"
     
     def save(self, *args, **kwargs):
+        # Ensure required fields are never None
+        if self.receipt_drive_id is None:
+            self.receipt_drive_id = ''
+        if self.receipt_filename is None:
+            self.receipt_filename = ''
+            
+        # Auto-populate receipt_filename from uploaded file if not provided
+        if not self.receipt_filename and self.receipt:
+            self.receipt_filename = self.receipt.name
+            
         super().save(*args, **kwargs)
         # Update claim total
         self.claim.save()

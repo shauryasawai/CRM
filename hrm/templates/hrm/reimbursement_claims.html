@@ -4,103 +4,252 @@
 <div class="container-fluid">
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h4>My Reimbursement Claims</h4>
-            <a href="{% url 'add_expense' %}" class="btn btn-primary">Add Expense</a>
+            <h4><i class="fas fa-receipt"></i> My Reimbursement Claims</h4>
+            <div class="d-flex gap-2">
+                <!-- Filter by Expense Type -->
+                <select id="typeFilter" class="form-select" style="width: auto;">
+                    <option value="">All Types</option>
+                    <option value="TRAVEL">🚗 Travel</option>
+                    <option value="FOOD">🍽️ Food & Meals</option>
+                    <option value="ACCOMMODATION">🏨 Accommodation</option>
+                    <option value="FUEL">⛽ Fuel</option>
+                    <option value="COMMUNICATION">📱 Communication</option>
+                    <option value="OFFICE_SUPPLIES">📎 Office Supplies</option>
+                    <option value="TRAINING">🎓 Training</option>
+                    <option value="OTHER">📋 Other</option>
+                </select>
+                <a href="{% url 'add_expense' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add Expense
+                </a>
+            </div>
         </div>
         <div class="card-body">
             <div class="mb-4">
-                <h5>Current Month Claim ({{ current_claim.get_month_display }} {{ current_claim.year }})</h5>
-                <div class="alert alert-{% if current_claim.status == 'D' %}info{% elif current_claim.status == 'P' %}warning{% elif current_claim.status == 'A' %}success{% else %}danger{% endif %}">
-                    <strong>Status:</strong> {{ current_claim.get_status_display }}<br>
-                    <strong>Total Amount:</strong> ₹{{ current_claim.total_amount }}<br>
-                    <strong>Expenses:</strong> {{ expenses.count }}
+                <h5><i class="fas fa-calendar"></i> Current Month Claim ({{ current_claim.get_month_display }} {{ current_claim.year }})</h5>
+                
+                <!-- Enhanced Status Card with Type Summary -->
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <div class="alert alert-{% if current_claim.status == 'D' %}info{% elif current_claim.status == 'P' %}warning{% elif current_claim.status == 'A' %}success{% else %}danger{% endif %}">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong><i class="fas fa-info-circle"></i> Status:</strong> {{ current_claim.get_status_display }}<br>
+                                    <strong><i class="fas fa-rupee-sign"></i> Total Amount:</strong> ₹{{ current_claim.total_amount }}<br>
+                                    <strong><i class="fas fa-list"></i> Total Expenses:</strong> {{ expenses.count }}
+                                </div>
+                                <div class="col-md-6">
+                                    <strong><i class="fas fa-chart-pie"></i> Breakdown by Type:</strong><br>
+                                    <div id="typeSummary" class="mt-2">
+                                        <!-- Will be populated by JavaScript -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <!-- Quick Stats -->
+                        <div class="card bg-light">
+                            <div class="card-body p-3">
+                                <h6 class="card-title mb-2"><i class="fas fa-analytics"></i> Quick Stats</h6>
+                                <div class="d-flex justify-content-between">
+                                    <small class="text-muted">Avg per expense:</small>
+                                    <small><strong>₹<span id="avgExpense">0</span></strong></small>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <small class="text-muted">Highest expense:</small>
+                                    <small><strong>₹<span id="maxExpense">0</span></strong></small>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <small class="text-muted">Most used type:</small>
+                                    <small><strong><span id="topType">-</span></strong></small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
                 {% if expenses %}
                 <div class="table-responsive">
-                    <table class="table table-striped">
+                    <table id="expensesTable" class="table table-striped">
                         <thead>
                             <tr>
-                                <th>Date</th>
-                                <th>Type</th>
-                                <th>Description</th>
-                                <th>Amount</th>
-                                <th>Receipt</th>
-                                <th>Actions</th>
+                                <th>
+                                    <i class="fas fa-calendar-alt"></i> Date
+                                    <i class="fas fa-sort sort-icon" onclick="sortTable(0)" style="cursor: pointer; margin-left: 5px;"></i>
+                                </th>
+                                <th>
+                                    <i class="fas fa-tags"></i> Type
+                                    <i class="fas fa-sort sort-icon" onclick="sortTable(1)" style="cursor: pointer; margin-left: 5px;"></i>
+                                </th>
+                                <th><i class="fas fa-edit"></i> Description</th>
+                                <th>
+                                    <i class="fas fa-rupee-sign"></i> Amount
+                                    <i class="fas fa-sort sort-icon" onclick="sortTable(3)" style="cursor: pointer; margin-left: 5px;"></i>
+                                </th>
+                                <th><i class="fas fa-receipt"></i> Receipt</th>
+                                <th><i class="fas fa-cogs"></i> Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for expense in expenses %}
-                            <tr>
+                            <tr data-type="{{ expense.expense_type }}" data-amount="{{ expense.amount }}" data-date="{{ expense.expense_date|date:'Y-m-d' }}">
                                 <td>{{ expense.expense_date|date:"M d, Y" }}</td>
-                                <td>{{ expense.get_expense_type_display }}</td>
-                                <td>{{ expense.description }}</td>
-                                <td>₹{{ expense.amount }}</td>
+                                <td>
+                                    <span class="badge bg-{% if expense.expense_type == 'TRAVEL' %}primary{% elif expense.expense_type == 'FOOD' %}success{% elif expense.expense_type == 'ACCOMMODATION' %}warning{% elif expense.expense_type == 'FUEL' %}info{% elif expense.expense_type == 'COMMUNICATION' %}secondary{% elif expense.expense_type == 'OFFICE_SUPPLIES' %}dark{% elif expense.expense_type == 'TRAINING' %}danger{% else %}light text-dark{% endif %}">
+                                        {% if expense.expense_type == 'TRAVEL' %}🚗
+                                        {% elif expense.expense_type == 'FOOD' %}🍽️
+                                        {% elif expense.expense_type == 'ACCOMMODATION' %}🏨
+                                        {% elif expense.expense_type == 'FUEL' %}⛽
+                                        {% elif expense.expense_type == 'COMMUNICATION' %}📱
+                                        {% elif expense.expense_type == 'OFFICE_SUPPLIES' %}📎
+                                        {% elif expense.expense_type == 'TRAINING' %}🎓
+                                        {% else %}📋{% endif %}
+                                        {{ expense.get_expense_type_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="expense-description" title="{{ expense.description }}">
+                                        {{ expense.description|truncatechars:40 }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <strong>₹{{ expense.amount }}</strong>
+                                    {% if expense.amount > 1000 %}
+                                    <small class="text-warning"><i class="fas fa-exclamation-triangle" title="High amount"></i></small>
+                                    {% endif %}
+                                </td>
                                 <td>
                                     {% if expense.receipt %}
-                                    <a href="{{ expense.receipt.url }}" target="_blank">View</a>
+                                    <a href="{{ expense.receipt.url }}" target="_blank" class="btn btn-sm btn-outline-info">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
                                     {% else %}
-                                    None
+                                    <span class="text-muted">
+                                        <i class="fas fa-times-circle"></i> None
+                                    </span>
                                     {% endif %}
                                 </td>
                                 <td>
                                     {% if current_claim.status == 'D' %}
-                                    <button class="btn btn-sm btn-outline-danger delete-expense" data-id="{{ expense.id }}">Delete</button>
+                                    <button class="btn btn-sm btn-outline-danger delete-expense" data-id="{{ expense.id }}" title="Delete expense">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    {% else %}
+                                    <span class="text-muted">
+                                        <i class="fas fa-lock"></i> Locked
+                                    </span>
                                     {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
                         </tbody>
+                        <tfoot>
+                            <tr class="table-info">
+                                <td colspan="3"><strong><i class="fas fa-calculator"></i> Total</strong></td>
+                                <td><strong>₹<span id="filteredTotal">{{ current_claim.total_amount }}</span></strong></td>
+                                <td colspan="2">
+                                    <small class="text-muted">
+                                        <span id="filteredCount">{{ expenses.count }}</span> expense(s)
+                                    </small>
+                                </td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
                 
                 {% if current_claim.status == 'D' and expenses %}
-                <form method="post" action="{% url 'submit_claim' current_claim.id %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-success">Submit Claim</button>
-                </form>
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div>
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle"></i> 
+                            Review all expenses before submitting. You won't be able to modify them after submission.
+                        </small>
+                    </div>
+                    <form method="post" action="{% url 'submit_claim' current_claim.id %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success" onclick="return confirm('Are you sure you want to submit this claim? You won\'t be able to modify it after submission.')">
+                            <i class="fas fa-paper-plane"></i> Submit Claim
+                        </button>
+                    </form>
+                </div>
                 {% endif %}
                 {% else %}
-                <p>No expenses added yet.</p>
+                <div class="text-center py-4">
+                    <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No expenses added yet</h5>
+                    <p class="text-muted">Start by adding your first expense for this month</p>
+                    <a href="{% url 'add_expense' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add Your First Expense
+                    </a>
+                </div>
                 {% endif %}
             </div>
             
             <hr>
             
-            <h5>Previous Claims</h5>
+            <h5><i class="fas fa-history"></i> Previous Claims</h5>
             <div class="table-responsive">
                 <table class="table table-striped">
                     <thead>
                         <tr>
-                            <th>Month/Year</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                            <th>Submitted On</th>
-                            <th>Actions</th>
+                            <th><i class="fas fa-calendar"></i> Month/Year</th>
+                            <th><i class="fas fa-rupee-sign"></i> Amount</th>
+                            <th><i class="fas fa-flag"></i> Status</th>
+                            <th><i class="fas fa-clock"></i> Submitted On</th>
+                            <th><i class="fas fa-chart-bar"></i> Top Type</th>
+                            <th><i class="fas fa-cogs"></i> Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for claim in claims %}
                         <tr>
                             <td>{{ claim.get_month_display }} {{ claim.year }}</td>
-                            <td>₹{{ claim.total_amount }}</td>
+                            <td><strong>₹{{ claim.total_amount }}</strong></td>
                             <td>
                                 <span class="badge 
                                     {% if claim.status == 'A' %}bg-success
-                                    {% elif claim.status == 'P' or claim.status == 'MA' %}bg-warning
+                                    {% elif claim.status == 'P' or claim.status == 'MA' %}bg-warning text-dark
                                     {% elif claim.status == 'R' %}bg-danger
                                     {% else %}bg-info{% endif %}">
+                                    {% if claim.status == 'A' %}<i class="fas fa-check"></i>
+                                    {% elif claim.status == 'P' %}<i class="fas fa-clock"></i>
+                                    {% elif claim.status == 'MA' %}<i class="fas fa-user-check"></i>
+                                    {% elif claim.status == 'R' %}<i class="fas fa-times"></i>
+                                    {% else %}<i class="fas fa-draft"></i>{% endif %}
                                     {{ claim.get_status_display }}
                                 </span>
                             </td>
-                            <td>{{ claim.submitted_on|date:"M d, Y" }}</td>
                             <td>
-                                <a href="#" class="btn btn-sm btn-outline-primary">View</a>
+                                {% if claim.submitted_on %}
+                                {{ claim.submitted_on|date:"M d, Y" }}
+                                {% else %}
+                                <span class="text-muted">Not submitted</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    {% if claim.expenses.count > 0 %}
+                                        <!-- You'll need to add this logic in your view -->
+                                        <span class="badge badge-light">{{ claim.expenses.first.get_expense_type_display }}</span>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </small>
+                            </td>
+                            <td>
+                                <a href="#" class="btn btn-sm btn-outline-primary" title="View details">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="5" class="text-center">No previous claims found</td>
+                            <td colspan="6" class="text-center">
+                                <div class="py-3">
+                                    <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted mb-0">No previous claims found</p>
+                                </div>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -109,14 +258,124 @@
         </div>
     </div>
 </div>
+
+<style>
+.badge {
+    font-size: 0.75em;
+    padding: 0.5em 0.75em;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+#typeSummary small {
+    line-height: 1.4;
+}
+
+.sort-icon {
+    font-size: 0.8em;
+    color: #6c757d;
+    transition: color 0.2s;
+}
+
+.sort-icon:hover, .sort-icon.active {
+    color: #495057;
+}
+
+.expense-description {
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gap-2 {
+    gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .d-flex.gap-2 {
+        flex-direction: column;
+    }
+    
+    .form-select {
+        width: 100% !important;
+        margin-bottom: 0.5rem;
+    }
+    
+    .card-header .d-flex {
+        align-items: stretch !important;
+    }
+    
+    .expense-description {
+        max-width: 150px;
+    }
+}
+
+@media (max-width: 576px) {
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+    
+    .badge {
+        font-size: 0.7em;
+        padding: 0.3em 0.5em;
+    }
+}
+</style>
 {% endblock %}
 
 {% block scripts %}
 <script>
 $(document).ready(function() {
+    // Calculate and display type summary and stats
+    updateTypeSummaryAndStats();
+    
+    // Type filter functionality
+    $('#typeFilter').change(function() {
+        const selectedType = $(this).val();
+        let visibleRows = 0;
+        let filteredTotal = 0;
+        
+        $('#expensesTable tbody tr').each(function() {
+            const rowType = $(this).data('type');
+            const amount = parseFloat($(this).data('amount')) || 0;
+            
+            if (selectedType === '' || rowType === selectedType) {
+                $(this).show();
+                visibleRows++;
+                filteredTotal += amount;
+            } else {
+                $(this).hide();
+            }
+        });
+        
+        // Update filtered total and count
+        $('#filteredTotal').text(filteredTotal.toFixed(2));
+        $('#filteredCount').text(visibleRows);
+        
+        // Update stats for filtered data
+        if (selectedType !== '') {
+            updateStatsForType(selectedType);
+        } else {
+            updateTypeSummaryAndStats();
+        }
+    });
+    
+    // Delete expense functionality with enhanced UX
     $('.delete-expense').click(function() {
         const expenseId = $(this).data('id');
-        if (!confirm('Are you sure you want to delete this expense?')) return;
+        const row = $(this).closest('tr');
+        const expenseType = row.find('.badge').text().trim();
+        const amount = row.find('td:nth-child(4) strong').text();
+        
+        if (!confirm(`Are you sure you want to delete this ${expenseType} expense of ${amount}?\n\nThis action cannot be undone.`)) {
+            return;
+        }
+        
+        // Show loading state
+        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
         
         $.ajax({
             url: `{% url 'delete_expense' 0 %}`.replace('0', expenseId),
@@ -126,13 +385,162 @@ $(document).ready(function() {
             },
             success: function(data) {
                 if (data.error) {
-                    alert(data.error);
+                    alert('Error: ' + data.error);
+                    // Reset button
+                    $('.delete-expense[data-id="' + expenseId + '"]')
+                        .prop('disabled', false)
+                        .html('<i class="fas fa-trash"></i>');
                 } else {
-                    location.reload();
+                    // Fade out row before reload
+                    row.fadeOut(300, function() {
+                        location.reload();
+                    });
                 }
+            },
+            error: function() {
+                alert('An error occurred while deleting the expense. Please try again.');
+                // Reset button
+                $('.delete-expense[data-id="' + expenseId + '"]')
+                    .prop('disabled', false)
+                    .html('<i class="fas fa-trash"></i>');
             }
         });
     });
 });
+
+function updateTypeSummaryAndStats() {
+    const typeCount = {};
+    const typeTotal = {};
+    let totalAmount = 0;
+    let maxAmount = 0;
+    let expenseCount = 0;
+    
+    $('#expensesTable tbody tr:visible').each(function() {
+        const type = $(this).data('type');
+        const amount = parseFloat($(this).data('amount')) || 0;
+        
+        if (type) {
+            typeCount[type] = (typeCount[type] || 0) + 1;
+            typeTotal[type] = (typeTotal[type] || 0) + amount;
+            totalAmount += amount;
+            maxAmount = Math.max(maxAmount, amount);
+            expenseCount++;
+        }
+    });
+    
+    // Update type summary
+    let summaryHtml = '';
+    Object.keys(typeCount).forEach(type => {
+        const displayName = getTypeDisplayName(type);
+        const emoji = getTypeEmoji(type);
+        summaryHtml += `<small><strong>${emoji} ${displayName}:</strong> ${typeCount[type]} (₹${typeTotal[type].toFixed(2)})</small><br>`;
+    });
+    $('#typeSummary').html(summaryHtml || '<small class="text-muted">No expenses yet</small>');
+    
+    // Update stats
+    const avgExpense = expenseCount > 0 ? (totalAmount / expenseCount) : 0;
+    const mostUsedType = Object.keys(typeCount).reduce((a, b) => typeCount[a] > typeCount[b] ? a : b, '');
+    
+    $('#avgExpense').text(avgExpense.toFixed(2));
+    $('#maxExpense').text(maxAmount.toFixed(2));
+    $('#topType').text(mostUsedType ? getTypeDisplayName(mostUsedType) : '-');
+}
+
+function updateStatsForType(selectedType) {
+    let typeTotal = 0;
+    let typeCount = 0;
+    let maxAmount = 0;
+    
+    $('#expensesTable tbody tr:visible').each(function() {
+        const type = $(this).data('type');
+        const amount = parseFloat($(this).data('amount')) || 0;
+        
+        if (type === selectedType) {
+            typeTotal += amount;
+            typeCount++;
+            maxAmount = Math.max(maxAmount, amount);
+        }
+    });
+    
+    const avgExpense = typeCount > 0 ? (typeTotal / typeCount) : 0;
+    
+    $('#avgExpense').text(avgExpense.toFixed(2));
+    $('#maxExpense').text(maxAmount.toFixed(2));
+    $('#topType').text(getTypeDisplayName(selectedType));
+}
+
+function getTypeDisplayName(type) {
+    const typeNames = {
+        'TRAVEL': 'Travel',
+        'FOOD': 'Food & Meals',
+        'ACCOMMODATION': 'Accommodation',
+        'FUEL': 'Fuel',
+        'COMMUNICATION': 'Communication',
+        'OFFICE_SUPPLIES': 'Office Supplies',
+        'TRAINING': 'Training',
+        'OTHER': 'Other'
+    };
+    return typeNames[type] || type;
+}
+
+function getTypeEmoji(type) {
+    const typeEmojis = {
+        'TRAVEL': '🚗',
+        'FOOD': '🍽️',
+        'ACCOMMODATION': '🏨',
+        'FUEL': '⛽',
+        'COMMUNICATION': '📱',
+        'OFFICE_SUPPLIES': '📎',
+        'TRAINING': '🎓',
+        'OTHER': '📋'
+    };
+    return typeEmojis[type] || '📋';
+}
+
+function sortTable(columnIndex) {
+    const table = document.getElementById('expensesTable');
+    const tbody = table.tBodies[0];
+    const rows = Array.from(tbody.rows);
+    
+    // Determine sort direction
+    const currentDirection = table.getAttribute('data-sort-direction');
+    const isAscending = currentDirection !== 'asc';
+    table.setAttribute('data-sort-direction', isAscending ? 'asc' : 'desc');
+    
+    rows.sort((a, b) => {
+        let aVal, bVal;
+        
+        if (columnIndex === 3) { // Amount column
+            aVal = parseFloat(a.getAttribute('data-amount')) || 0;
+            bVal = parseFloat(b.getAttribute('data-amount')) || 0;
+        } else if (columnIndex === 1) { // Type column
+            aVal = a.getAttribute('data-type') || '';
+            bVal = b.getAttribute('data-type') || '';
+        } else if (columnIndex === 0) { // Date column
+            aVal = new Date(a.getAttribute('data-date') || 0);
+            bVal = new Date(b.getAttribute('data-date') || 0);
+        }
+        
+        if (isAscending) {
+            return aVal > bVal ? 1 : -1;
+        } else {
+            return aVal < bVal ? 1 : -1;
+        }
+    });
+    
+    // Re-append sorted rows
+    rows.forEach(row => tbody.appendChild(row));
+    
+    // Update sort icons
+    const sortIcons = table.querySelectorAll('.sort-icon');
+    sortIcons.forEach(icon => {
+        icon.className = 'fas fa-sort sort-icon';
+    });
+    
+    const currentIcon = table.querySelectorAll('th')[columnIndex].querySelector('.sort-icon');
+    if (currentIcon) {
+        currentIcon.className = isAscending ? 'fas fa-sort-up sort-icon active' : 'fas fa-sort-down sort-icon active';
+    }
+}
 </script>
 {% endblock %}
