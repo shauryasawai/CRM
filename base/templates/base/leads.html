@@ -87,7 +87,7 @@
                             <th>Name</th>
                             <th>Contact</th>
                             <th>Status</th>
-                            <th>Assigned To</th>
+                            <th>Assignment</th> <!-- MODIFIED: Changed header to show assignment info -->
                             <th>Created</th>
                             <th>Actions</th>
                         </tr>
@@ -136,73 +136,135 @@
                                 {% endif %}
                             </td>
                             <td>
-                                {% if lead.assigned_to %}
-                                    {{ lead.assigned_to.get_full_name }}
-                                {% else %}
-                                    <span class="text-muted">Not assigned</span>
-                                {% endif %}
-                                {% if lead.final_assigned_rm and lead.final_assigned_rm != lead.assigned_to %}
-                                <br><small class="text-muted">
-                                    <i class="fas fa-arrow-right"></i> {{ lead.final_assigned_rm.get_full_name }}
-                                </small>
-                                {% endif %}
+                                <!-- MODIFIED: Enhanced assignment information -->
+                                <div class="assignment-info">
+                                    <!-- Current Assignment -->
+                                    <div class="current-assignment">
+                                        <strong>Assigned to:</strong>
+                                        {% if lead.assigned_to %}
+                                            <span class="text-primary">
+                                                <i class="fas fa-user"></i> 
+                                                {{ lead.assigned_to.get_full_name|default:lead.assigned_to.username }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">Not assigned</span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Assignment History -->
+                                    <div class="assignment-history mt-1">
+                                        <small class="text-muted">
+                                            <i class="fas fa-user-plus"></i> 
+                                            <strong>Assigned by:</strong>
+                                            {% if lead.created_by %}
+                                                {{ lead.created_by.get_full_name|default:lead.created_by.username }}
+                                                {% if lead.created_by.role %}
+                                                    <span class="badge badge-sm bg-light text-dark">{{ lead.created_by.get_role_display }}</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">Unknown</span>
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                    
+                                    <!-- Final Assignment (if different) -->
+                                    {% if lead.final_assigned_rm and lead.final_assigned_rm != lead.assigned_to %}
+                                    <div class="final-assignment mt-1">
+                                        <small class="text-success">
+                                            <i class="fas fa-arrow-right"></i> 
+                                            <strong>Final RM:</strong> {{ lead.final_assigned_rm.get_full_name|default:lead.final_assigned_rm.username }}
+                                        </small>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <!-- Conversion Requester (if applicable) -->
+                                    {% if lead.conversion_requested_by and lead.status == 'conversion_requested' %}
+                                    <div class="conversion-request mt-1">
+                                        <small class="text-warning">
+                                            <i class="fas fa-exchange-alt"></i> 
+                                            <strong>Conversion by:</strong> {{ lead.conversion_requested_by.get_full_name|default:lead.conversion_requested_by.username }}
+                                        </small>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <!-- Business Verification (if applicable) -->
+                                    {% if lead.business_verified_by and lead.status == 'converted' %}
+                                    <div class="business-verification mt-1">
+                                        <small class="text-info">
+                                            <i class="fas fa-check-double"></i> 
+                                            <strong>Verified by:</strong> {{ lead.business_verified_by.get_full_name|default:lead.business_verified_by.username }}
+                                        </small>
+                                    </div>
+                                    {% endif %}
+                                </div>
                             </td>
-                            <td>{{ lead.created_at|date:"d M Y" }}</td>
+                            <td>
+                                <div class="creation-info">
+                                    <strong>{{ lead.created_at|date:"d M Y" }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ lead.created_at|date:"H:i" }}</small>
+                                    {% if lead.created_by %}
+                                    <br>
+                                    <small class="text-muted">
+                                        <i class="fas fa-user-plus"></i> 
+                                        by {{ lead.created_by.get_full_name|default:lead.created_by.username }}
+                                    </small>
+                                    {% endif %}
+                                </div>
+                            </td>
                             <td>
                                 <!-- Standard Actions -->
-                                <a href="{% url 'lead_detail' lead.pk %}" class="btn btn-sm btn-info" title="View Details">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                
-                                {% if user.role != 'ops_team_lead' or lead.status != 'conversion_requested' %}
-                                <a href="{% url 'lead_update' lead.pk %}" class="btn btn-sm btn-primary" title="Edit">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                {% endif %}
-                                
-                                {% if user.role == 'business_head' or user.role == 'top_management' or lead.assigned_to == user or lead.created_by == user %}
-                                <a href="{% url 'lead_delete' lead.pk %}" class="btn btn-sm btn-danger" title="Delete">
-                                    <i class="fas fa-trash"></i>
-                                </a>
-                                {% endif %}
-                                
-                                <!-- Special Actions for Ops Team Lead -->
-                                {% if user.role == 'ops_team_lead' and lead.status == 'conversion_requested' %}
-                                <a href="{% url 'ops_pending_approvals' %}" class="btn btn-sm btn-warning" title="Review for Approval">
-                                    <i class="fas fa-clipboard-check"></i> Review
-                                </a>
-                                {% endif %}
-                                
-                                <!-- Show Client Link if Converted - Fixed Version -->
-                                {% if lead.status == 'converted' %}
-                                    {% if lead.generated_client %}
-                                        <!-- Try multiple possible client URL patterns -->
-                                        {% url 'client_detail' lead.generated_client.pk as client_url %}
-                                        {% if client_url %}
-                                        <a href="{{ client_url }}" class="btn btn-sm btn-success" title="View Client">
-                                            <i class="fas fa-user"></i>
-                                        </a>
-                                        {% else %}
-                                            <!-- Alternative URL patterns to try -->
-                                            {% url 'client_profile' lead.generated_client.pk as client_profile_url %}
-                                            {% if client_profile_url %}
-                                            <a href="{{ client_profile_url }}" class="btn btn-sm btn-success" title="View Client">
+                                <div class="action-buttons">
+                                    <a href="{% url 'lead_detail' lead.pk %}" class="btn btn-sm btn-info mb-1" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    
+                                    {% if user.role != 'ops_team_lead' or lead.status != 'conversion_requested' %}
+                                    <a href="{% url 'lead_update' lead.pk %}" class="btn btn-sm btn-primary mb-1" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% endif %}
+                                    
+                                    {% if user.role == 'business_head' or user.role == 'top_management' or lead.assigned_to == user or lead.created_by == user %}
+                                    <a href="{% url 'lead_delete' lead.pk %}" class="btn btn-sm btn-danger mb-1" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                    {% endif %}
+                                    
+                                    <!-- Special Actions for Ops Team Lead -->
+                                    {% if user.role == 'ops_team_lead' and lead.status == 'conversion_requested' %}
+                                    <a href="{% url 'ops_pending_approvals' %}" class="btn btn-sm btn-warning mb-1" title="Review for Approval">
+                                        <i class="fas fa-clipboard-check"></i> Review
+                                    </a>
+                                    {% endif %}
+                                    
+                                    <!-- Show Client Link if Converted -->
+                                    {% if lead.status == 'converted' %}
+                                        {% if lead.generated_client %}
+                                            {% url 'client_detail' lead.generated_client.pk as client_url %}
+                                            {% if client_url %}
+                                            <a href="{{ client_url }}" class="btn btn-sm btn-success mb-1" title="View Client">
                                                 <i class="fas fa-user"></i>
                                             </a>
                                             {% else %}
-                                                <!-- If no client URL exists, show client ID as text -->
-                                                <span class="btn btn-sm btn-success disabled" title="Client: {{ lead.client_id }}">
-                                                    <i class="fas fa-user"></i> {{ lead.client_id }}
-                                                </span>
+                                                {% url 'client_profile' lead.generated_client.pk as client_profile_url %}
+                                                {% if client_profile_url %}
+                                                <a href="{{ client_profile_url }}" class="btn btn-sm btn-success mb-1" title="View Client">
+                                                    <i class="fas fa-user"></i>
+                                                </a>
+                                                {% else %}
+                                                    <span class="btn btn-sm btn-success disabled mb-1" title="Client: {{ lead.client_id }}">
+                                                        <i class="fas fa-user"></i> {{ lead.client_id }}
+                                                    </span>
+                                                {% endif %}
                                             {% endif %}
+                                        {% elif lead.client_id %}
+                                            <span class="btn btn-sm btn-success disabled mb-1" title="Client ID: {{ lead.client_id }}">
+                                                <i class="fas fa-user"></i> {{ lead.client_id }}
+                                            </span>
                                         {% endif %}
-                                    {% elif lead.client_id %}
-                                        <!-- Show client ID if no generated_client relation exists -->
-                                        <span class="btn btn-sm btn-success disabled" title="Client ID: {{ lead.client_id }}">
-                                            <i class="fas fa-user"></i> {{ lead.client_id }}
-                                        </span>
                                     {% endif %}
-                                {% endif %}
+                                </div>
                             </td>
                         </tr>
                         {% empty %}
@@ -266,7 +328,46 @@
     </div>
     {% endif %}
 
+</div>
+
 <style>
+/* Custom styles for enhanced assignment display */
+.assignment-info {
+    min-width: 220px;
+}
+
+.current-assignment {
+    font-size: 0.9rem;
+}
+
+.assignment-history,
+.final-assignment,
+.conversion-request,
+.business-verification {
+    font-size: 0.8rem;
+    line-height: 1.2;
+}
+
+.creation-info {
+    min-width: 120px;
+}
+
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 80px;
+}
+
+.action-buttons .btn {
+    margin-bottom: 2px !important;
+}
+
+.badge-sm {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+}
+
 /* Custom styles for pending approval highlights */
 .table-warning {
     background-color: rgba(255, 193, 7, 0.1) !important;
@@ -306,6 +407,35 @@
     100% {
         opacity: 1;
     }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .assignment-info {
+        min-width: auto;
+    }
+    
+    .action-buttons {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    
+    .table-responsive {
+        font-size: 0.85rem;
+    }
+}
+
+/* Hover effects for better UX */
+.assignment-info:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+    border-radius: 4px;
+    padding: 2px;
+}
+
+.creation-info:hover {
+    background-color: rgba(108, 117, 125, 0.05);
+    border-radius: 4px;
+    padding: 2px;
 }
 </style>
 {% endblock %}

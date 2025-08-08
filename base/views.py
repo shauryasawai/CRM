@@ -3010,9 +3010,40 @@ def lead_delete(request, pk):
 def add_interaction(request, pk):
     lead = get_object_or_404(Lead, pk=pk)
     
-    # Check permissions
+    # Check basic permissions
     if not request.user.can_access_user_data(lead.assigned_to):
         raise PermissionDenied("You don't have permission to add interactions for this lead.")
+    
+    # Check if this is the first interaction
+    existing_interactions = lead.interactions.exists()
+    
+    if not existing_interactions:
+        # First interaction - only RM can add
+        if request.user != lead.assigned_to:
+            messages.error(
+                request, 
+                f"Only the assigned RM ({lead.assigned_to.get_full_name()}) can add the first interaction for this lead."
+            )
+            return redirect('lead_detail', pk=pk)
+    else:
+        # Subsequent interactions - RM and RM Head can add
+        allowed_roles = ['rm', 'rm_head']
+        if request.user.role not in allowed_roles:
+            messages.error(
+                request, 
+                "Only RM and RM Head can add interactions after the first interaction."
+            )
+            return redirect('lead_detail', pk=pk)
+        
+        # Additional check: RM Head should have access to this lead's RM
+        if request.user.role == 'rm_head':
+            # Check if the assigned RM is under this RM Head
+            if not request.user.can_access_user_data(lead.assigned_to):
+                messages.error(
+                    request, 
+                    "You can only add interactions for leads assigned to your team members."
+                )
+                return redirect('lead_detail', pk=pk)
     
     form = LeadInteractionForm(request.POST)
     
@@ -3034,7 +3065,7 @@ def add_interaction(request, pk):
             interaction.save()
             
             # Handle first interaction logic
-            if not lead.first_interaction_date:
+            if not existing_interactions:
                 lead.first_interaction_date = interaction.interaction_date
                 lead.status = 'contacted'
                 lead.save()
@@ -3046,8 +3077,16 @@ def add_interaction(request, pk):
                     new_status='contacted',
                     notes='First interaction completed'
                 )
-            
-            messages.success(request, f"{interaction.get_interaction_type_display()} interaction added successfully.")
+                
+                messages.success(
+                    request, 
+                    f"First {interaction.get_interaction_type_display()} interaction added successfully. Lead status updated to 'Contacted'."
+                )
+            else:
+                messages.success(
+                    request, 
+                    f"{interaction.get_interaction_type_display()} interaction added successfully."
+                )
     
     except Exception as e:
         messages.error(request, f"Failed to save interaction: {str(e)}")
