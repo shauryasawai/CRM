@@ -50,58 +50,6 @@
         .status-in_execution { background: #e0e7ff; color: #3730a3; }
         .status-completed { background: #dcfce7; color: #166534; }
         
-        .action-card {
-            background: white;
-            border: 1px solid var(--gray-200);
-            border-radius: 12px;
-            margin-bottom: 1rem;
-            transition: all 0.2s ease;
-        }
-        
-        .action-card:hover {
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-        
-        .action-header {
-            padding: 1rem;
-            border-bottom: 1px solid var(--gray-200);
-            display: flex;
-            align-items: center;
-            justify-content: between;
-        }
-        
-        .action-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-            margin-right: 1rem;
-        }
-        
-        .action-icon.purchase { background: #dcfce7; color: var(--success-color); }
-        .action-icon.redemption { background: #fee2e2; color: var(--danger-color); }
-        .action-icon.switch { background: #dbeafe; color: var(--primary-color); }
-        .action-icon.stp_start { background: #e0e7ff; color: #6366f1; }
-        .action-icon.sip_start { background: #fed7aa; color: var(--warning-color); }
-        
-        .action-body {
-            padding: 1rem;
-        }
-        
-        .action-status {
-            font-size: 0.75rem;
-            font-weight: 600;
-            padding: 0.25rem 0.75rem;
-            border-radius: 6px;
-        }
-        
-        .action-status.pending { background: #fef3c7; color: #92400e; }
-        .action-status.completed { background: #dcfce7; color: #166534; }
-        .action-status.failed { background: #fee2e2; color: #991b1b; }
-        
         .card-minimal {
             background: white;
             border: 1px solid var(--gray-200);
@@ -153,6 +101,88 @@
         .section-title i {
             margin-right: 0.5rem;
             color: var(--gray-500);
+        }
+        
+        /* Pointer/Bullet format for actions */
+        .actions-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .action-item {
+            position: relative;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .action-item:last-child {
+            border-bottom: none;
+        }
+        
+        .action-pointer {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-top: 0.5rem;
+            flex-shrink: 0;
+        }
+        
+        .action-pointer.purchase { background: var(--success-color); }
+        .action-pointer.redemption { background: var(--danger-color); }
+        .action-pointer.switch { background: var(--primary-color); }
+        .action-pointer.stp_start { background: #6366f1; }
+        .action-pointer.sip_start { background: var(--warning-color); }
+        
+        .action-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .action-title {
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .action-details {
+            color: var(--gray-700);
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin-bottom: 0.5rem;
+        }
+        
+        .action-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+            font-size: 0.875rem;
+            color: var(--gray-500);
+        }
+        
+        .action-status-pointer {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            text-transform: uppercase;
+        }
+        
+        .action-status-pointer.pending { background: #fef3c7; color: #92400e; }
+        .action-status-pointer.completed { background: #dcfce7; color: #166534; }
+        .action-status-pointer.failed { background: #fee2e2; color: #991b1b; }
+        
+        .action-buttons {
+            margin-left: auto;
+            display: flex;
+            gap: 0.5rem;
         }
         
         .workflow-timeline {
@@ -227,10 +257,15 @@
         }
         
         @media (max-width: 768px) {
-            .action-header {
+            .action-meta {
                 flex-direction: column;
                 align-items: flex-start;
-                gap: 1rem;
+                gap: 0.5rem;
+            }
+            
+            .action-buttons {
+                margin-left: 0;
+                margin-top: 0.5rem;
             }
             
             .btn-group-mobile {
@@ -483,7 +518,7 @@
                     </div>
                 </div>
 
-                <!-- Actions -->
+                <!-- Actions in Pointer Format -->
                 <div class="card-minimal mb-4">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -494,99 +529,69 @@
                         </div>
 
                         {% if actions %}
-                            {% for action in actions %}
-                            <div class="action-card">
-                                <div class="action-header">
-                                    <div class="d-flex align-items-center flex-grow-1">
-                                        <div class="action-icon {{ action.action_type }}">
+                            <ul class="actions-list">
+                                {% for action in actions %}
+                                <li class="action-item">
+                                    <div class="action-pointer {{ action.action_type }}"></div>
+                                    <div class="action-content">
+                                        <div class="action-title">
                                             {% if action.action_type == 'purchase' %}
-                                                <i class="fas fa-plus"></i>
+                                                <i class="fas fa-plus text-success"></i>
                                             {% elif action.action_type == 'redemption' %}
-                                                <i class="fas fa-minus"></i>
+                                                <i class="fas fa-minus text-danger"></i>
                                             {% elif action.action_type == 'switch' %}
-                                                <i class="fas fa-exchange-alt"></i>
+                                                <i class="fas fa-exchange-alt text-primary"></i>
                                             {% elif action.action_type == 'stp_start' %}
-                                                <i class="fas fa-arrow-right"></i>
+                                                <i class="fas fa-arrow-right" style="color: #6366f1;"></i>
                                             {% elif action.action_type == 'sip_start' %}
-                                                <i class="fas fa-calendar-alt"></i>
+                                                <i class="fas fa-calendar-alt text-warning"></i>
                                             {% else %}
-                                                <i class="fas fa-cog"></i>
+                                                <i class="fas fa-cog text-secondary"></i>
                                             {% endif %}
+                                            {{ action.get_action_type_display|default:action.action_type|title }}
                                         </div>
-                                        <div>
-                                            <h6 class="mb-1">{{ action.get_action_type_display|default:action.action_type|title }}</h6>
-                                            <small class="text-muted">Action #{{ forloop.counter }}</small>
-                                        </div>
-                                    </div>
-                                    <span class="action-status {{ action.status }}">
-                                        {{ action.get_status_display|default:action.status|title }}
-                                    </span>
-                                </div>
-                                
-                                <div class="action-body">
-                                    <div class="row">
-                                        <div class="col-md-8">
+                                        
+                                        <div class="action-details">
                                             {% if action.scheme or action.portfolio_scheme_name %}
-                                            <div class="mb-2">
-                                                <small class="text-muted">Scheme:</small>
-                                                <span class="ms-2">{{ action.scheme.scheme_name|default:action.portfolio_scheme_name|default:"Unknown Scheme" }}</span>
-                                            </div>
+                                                <strong>{{ action.scheme.scheme_name|default:action.portfolio_scheme_name|default:"Unknown Scheme" }}</strong>
                                             {% endif %}
                                             
                                             {% if action.target_scheme %}
-                                            <div class="mb-2">
-                                                <small class="text-muted">Target:</small>
-                                                <span class="ms-2">{{ action.target_scheme.scheme_name }}</span>
-                                            </div>
+                                                → <strong>{{ action.target_scheme.scheme_name }}</strong>
                                             {% endif %}
                                             
                                             {% if action.amount %}
-                                            <div class="mb-2">
-                                                <small class="text-muted">Amount:</small>
-                                                <strong class="ms-2 text-success">₹{{ action.amount|floatformat:0 }}</strong>
-                                            </div>
+                                                <span class="text-success fw-bold">₹{{ action.amount|floatformat:0 }}</span>
                                             {% endif %}
                                             
                                             {% if action.units %}
-                                            <div class="mb-2">
-                                                <small class="text-muted">Units:</small>
-                                                <span class="ms-2">{{ action.units|floatformat:3 }}</span>
-                                            </div>
-                                            {% endif %}
-                                            
-                                            {% if action.sip_date %}
-                                            <div class="mb-2">
-                                                <small class="text-muted">SIP Date:</small>
-                                                <span class="ms-2">{{ action.sip_date }}</span>
-                                            </div>
+                                                ({{ action.units|floatformat:3 }} units)
                                             {% endif %}
                                             
                                             {% if action.frequency %}
-                                            <div class="mb-2">
-                                                <small class="text-muted">Frequency:</small>
-                                                <span class="ms-2">{{ action.frequency|title }}</span>
-                                            </div>
+                                                <span class="text-muted">• {{ action.frequency|title }}</span>
+                                            {% endif %}
+                                            
+                                            {% if action.sip_date %}
+                                                <span class="text-muted">• SIP Date: {{ action.sip_date }}</span>
                                             {% endif %}
                                         </div>
                                         
-                                        <div class="col-md-4">
-                                            <div class="text-md-end">
-                                                {% if action.executed_by %}
-                                                <div class="mb-2">
-                                                    <small class="text-muted d-block">Executed By</small>
-                                                    <span>{{ action.executed_by.get_full_name|default:action.executed_by.username }}</span>
-                                                </div>
-                                                {% endif %}
-                                                
-                                                {% if action.executed_at %}
-                                                <div class="mb-2">
-                                                    <small class="text-muted d-block">Executed On</small>
-                                                    <span>{{ action.executed_at|date:"M d, H:i" }}</span>
-                                                </div>
-                                                {% endif %}
-                                                
-                                                {% if execution_plan.status == 'in_execution' and can_execute and action.status == 'pending' %}
-                                                <div class="btn-group-vertical btn-group-sm no-print" role="group">
+                                        <div class="action-meta">
+                                            <span class="action-status-pointer {{ action.status }}">
+                                                {{ action.get_status_display|default:action.status|title }}
+                                            </span>
+                                            
+                                            {% if action.executed_by %}
+                                                <span><i class="fas fa-user-check me-1"></i>{{ action.executed_by.get_full_name|default:action.executed_by.username }}</span>
+                                            {% endif %}
+                                            
+                                            {% if action.executed_at %}
+                                                <span><i class="fas fa-clock me-1"></i>{{ action.executed_at|date:"M d, H:i" }}</span>
+                                            {% endif %}
+                                            
+                                            {% if execution_plan.status == 'in_execution' and can_execute and action.status == 'pending' %}
+                                                <div class="action-buttons">
                                                     <button class="btn btn-outline-success btn-sm" onclick="executeAction({{ action.id }})">
                                                         <i class="fas fa-check me-1"></i>Execute
                                                     </button>
@@ -594,27 +599,26 @@
                                                         <i class="fas fa-times me-1"></i>Failed
                                                     </button>
                                                 </div>
-                                                {% endif %}
-                                            </div>
+                                            {% endif %}
                                         </div>
+                                        
+                                        {% if action.notes %}
+                                        <div class="mt-2 pt-2 border-top">
+                                            <small class="text-muted d-block">Notes:</small>
+                                            <div class="small text-muted">{{ action.notes|linebreaks }}</div>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if action.failure_reason %}
+                                        <div class="alert alert-danger mt-2 mb-0 small">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            <strong>Failure:</strong> {{ action.failure_reason }}
+                                        </div>
+                                        {% endif %}
                                     </div>
-                                    
-                                    {% if action.notes %}
-                                    <div class="mt-3 pt-3 border-top">
-                                        <small class="text-muted d-block mb-1">Notes</small>
-                                        <p class="mb-0 small">{{ action.notes|linebreaks }}</p>
-                                    </div>
-                                    {% endif %}
-                                    
-                                    {% if action.failure_reason %}
-                                    <div class="alert alert-danger mt-3 mb-0">
-                                        <i class="fas fa-exclamation-triangle me-2"></i>
-                                        <strong>Failure:</strong> {{ action.failure_reason }}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            {% endfor %}
+                                </li>
+                                {% endfor %}
+                            </ul>
                         {% else %}
                             <div class="text-center py-5 text-muted">
                                 <i class="fas fa-tasks fa-3x mb-3 opacity-25"></i>
