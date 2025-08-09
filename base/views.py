@@ -2798,6 +2798,14 @@ def lead_create(request):
         
     if request.method == 'POST':
         form = LeadForm(request.POST, current_user=request.user)
+        
+        # Debug: Print form errors to understand what's failing
+        if not form.is_valid():
+            print("Form errors:", form.errors)  # Remove this after debugging
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
+        
         if form.is_valid():
             lead = form.save(commit=False)
             lead.created_by = request.user
@@ -14302,3 +14310,53 @@ def change_password(request):
     }
     
     return render(request, 'registration/change_password.html', context)
+
+# Add this to your views.py file
+
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def get_clients_api(request):
+    """Simple API endpoint to provide client data for autocomplete"""
+    try:
+        clients = []
+        
+        # Get client profiles if available
+        try:
+            from .models import ClientProfile
+            profiles = ClientProfile.objects.filter(
+                status='active'
+            ).only('id', 'client_full_name').order_by('client_full_name')[:50]
+            
+            for profile in profiles:
+                clients.append({
+                    'type': 'profile',
+                    'id': profile.id,
+                    'name': profile.client_full_name,
+                    'email': getattr(profile, 'client_email', '') or '',
+                    'mobile': getattr(profile, 'client_mobile', '') or '',
+                    'display': profile.client_full_name
+                })
+        except ImportError:
+            pass
+        
+        # Get converted leads
+        converted_leads = Lead.objects.filter(
+            converted=True
+        ).only('id', 'name', 'email', 'mobile').order_by('name')[:50]
+        
+        for lead in converted_leads:
+            clients.append({
+                'type': 'lead',
+                'id': lead.id,
+                'name': lead.name,
+                'email': lead.email or '',
+                'mobile': lead.mobile or '',
+                'display': f"{lead.name} - {lead.email}" if lead.email else lead.name
+            })
+        
+        return JsonResponse({'clients': clients})
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e), 'clients': []})

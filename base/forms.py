@@ -2058,7 +2058,6 @@ class ServiceRequestDocumentForm(forms.ModelForm):
         return instance
 
 
-# Updated Lead Form with operations awareness
 class LeadForm(forms.ModelForm):
     """Optimized lead form with reduced database queries and simplified client display"""
     
@@ -2075,11 +2074,15 @@ class LeadForm(forms.ModelForm):
         initial='other'
     )
     
-    existing_client_choice = forms.ChoiceField(
+    existing_client_name = forms.CharField(
         required=False,
         label="Existing Client Name",
-        widget=forms.Select(attrs={'class': 'form-select'}),
-        choices=[]
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Start typing client name...',
+            'autocomplete': 'off',
+            'list': 'client-datalist'
+        })
     )
     
     reference_client = forms.ModelChoiceField(
@@ -2148,59 +2151,94 @@ class LeadForm(forms.ModelForm):
         if not self.instance.pk:
             self.instance.status = 'new'
         
-        self.configure_source_fields()
         self.populate_existing_client_choices()
         
         # Optimized user display in dropdown
         self.fields['assigned_to'].label_from_instance = lambda obj: obj.get_full_name() or obj.username
     
     def populate_existing_client_choices(self):
-        """Optimized client choices with just names and minimal queries"""
-        choices = [('', 'Select an existing client...')]
+        """Prepare client data for autocomplete datalist"""
+        self.client_data = []
         
-        # Get client profiles with minimal fields
-        client_profiles = self.get_accessible_client_profiles().only('id', 'client_full_name')
+        try:
+            # Get client profiles with minimal fields
+            client_profiles = self.get_accessible_client_profiles()
+            
+            # Add client profiles to data
+            for profile in client_profiles:
+                self.client_data.append({
+                    'type': 'profile',
+                    'id': profile.id,
+                    'name': profile.client_full_name,
+                    'email': getattr(profile, 'client_email', '') or '',
+                    'mobile': getattr(profile, 'client_mobile', '') or '',
+                    'display': profile.client_full_name
+                })
+            
+            # Add converted leads
+            converted_leads = Lead.objects.filter(
+                converted=True
+            ).only('id', 'name', 'email', 'mobile').order_by('name')
+            
+            for lead in converted_leads:
+                self.client_data.append({
+                    'type': 'lead',
+                    'id': lead.id,
+                    'name': lead.name,
+                    'email': lead.email or '',
+                    'mobile': lead.mobile or '',
+                    'display': f"{lead.name} - {lead.email}" if lead.email else lead.name
+                })
+                
+        except Exception as e:
+            print(f"Error populating client data: {e}")
+            self.client_data = []
         
-        # Add simplified client names
-        choices.extend((f'profile_{p.id}', p.client_full_name) for p in client_profiles)
-        
-        # Add converted leads with minimal query
-        converted_leads = Lead.objects.filter(converted=True).only('id', 'name').order_by('name')
-        if converted_leads.exists():
-            choices.append(('separator', '--- Converted Leads ---'))
-            choices.extend((f'lead_{l.id}', l.name) for l in converted_leads)
-        
-        self.fields['existing_client_choice'].choices = choices
-        
-        # Set initial value if editing
+        # Set initial value if editing and has reference client
         if self.instance.pk and self.instance.reference_client_id:
-            self.fields['existing_client_choice'].initial = f'lead_{self.instance.reference_client_id}'
-            self.fields['reference_client'].queryset = Lead.objects.filter(pk=self.instance.reference_client_id)
+            try:
+                ref_lead = Lead.objects.get(id=self.instance.reference_client_id)
+                self.fields['existing_client_name'].initial = ref_lead.name
+            except Lead.DoesNotExist:
+                pass
     
     def get_accessible_client_profiles(self):
-        """Optimized client profile query based on user role"""
-        base_query = ClientProfile.objects.filter(status='active').order_by('client_full_name')
-        
-        if not self.current_user:
-            return base_query.only('id', 'client_full_name')
-        
-        if self.current_user.role == 'rm':
-            return base_query.filter(mapped_rm=self.current_user).only('id', 'client_full_name')
-        elif self.current_user.role == 'rm_head':
-            try:
-                if hasattr(self.current_user, 'get_accessible_users'):
-                    accessible_users = self.current_user.get_accessible_users()
-                    return base_query.filter(mapped_rm__in=accessible_users.filter(role='rm'))
-                else:
-                    team_rms = self.current_user.subordinates.filter(role='rm')
+        """Get client profiles based on user role"""
+        try:
+            from .models import ClientProfile  # Adjust import as needed
+            base_query = ClientProfile.objects.filter(
+                status='active'
+            ).only('id', 'client_full_name').order_by('client_full_name')
+            
+            if not self.current_user:
+                return base_query
+            
+            if self.current_user.role == 'rm':
+                return base_query.filter(mapped_rm=self.current_user)
+            elif self.current_user.role == 'rm_head':
+                # Get team RMs
+                try:
+                    if hasattr(self.current_user, 'get_accessible_users'):
+                        accessible_users = self.current_user.get_accessible_users()
+                        team_rms = accessible_users.filter(role='rm')
+                    else:
+                        team_rms = self.current_user.subordinates.filter(role='rm')
                     return base_query.filter(mapped_rm__in=team_rms)
-            except Exception:
-                return base_query.only('id', 'client_full_name')
-        else:
-            return base_query.only('id', 'client_full_name')
+                except:
+                    return base_query
+            else:
+                # Business heads and top management see all
+                return base_query
+                
+        except ImportError:
+            # ClientProfile model doesn't exist, return empty queryset
+            return Lead.objects.none()
+        except Exception as e:
+            print(f"Error getting client profiles: {e}")
+            return Lead.objects.none()
     
     def configure_assignment_field(self):
-        """Optimized user assignment configuration"""
+        """Configure the assigned_to field based on user role"""
         try:
             if not self.current_user:
                 self.fields['assigned_to'].queryset = User.objects.filter(
@@ -2214,6 +2252,7 @@ class LeadForm(forms.ModelForm):
                     role__in=['rm', 'rm_head', 'business_head'],
                     is_active=True
                 ).only('id', 'first_name', 'last_name', 'username').order_by('first_name', 'last_name')
+                
             elif self.current_user.role == 'rm_head':
                 try:
                     if hasattr(self.current_user, 'get_accessible_users'):
@@ -2222,27 +2261,32 @@ class LeadForm(forms.ModelForm):
                             role__in=['rm', 'rm_head']
                         ).only('id', 'first_name', 'last_name', 'username').order_by('first_name', 'last_name')
                     else:
-                        subordinates = self.current_user.subordinates.filter(role='rm').only('id')
+                        subordinates = self.current_user.subordinates.filter(role='rm')
                         all_assignable = User.objects.filter(
-                            id__in=[self.current_user.id] + list(subordinates.values_list('id', flat=True)))
+                            id__in=[self.current_user.id] + list(subordinates.values_list('id', flat=True))
+                        )
                         self.fields['assigned_to'].queryset = all_assignable.only(
-                            'id', 'first_name', 'last_name', 'username').order_by('first_name', 'last_name')
+                            'id', 'first_name', 'last_name', 'username'
+                        ).order_by('first_name', 'last_name')
                 except Exception:
                     self.fields['assigned_to'].queryset = User.objects.filter(
                         role__in=['rm', 'rm_head'],
                         is_active=True
                     ).only('id', 'first_name', 'last_name', 'username').order_by('first_name', 'last_name')
+                    
             elif self.current_user.role == 'rm':
                 self.fields['assigned_to'].queryset = User.objects.filter(id=self.current_user.id)
                 self.fields['assigned_to'].initial = self.current_user
                 self.fields['assigned_to'].widget.attrs['disabled'] = True
+                
             else:
                 self.fields['assigned_to'].queryset = User.objects.filter(
                     role__in=['rm', 'rm_head', 'business_head'],
                     is_active=True
                 ).only('id', 'first_name', 'last_name', 'username').order_by('first_name', 'last_name')
                 
-        except Exception:
+        except Exception as e:
+            print(f"Error configuring assignment field: {e}")
             self.fields['assigned_to'].queryset = User.objects.filter(
                 role__in=['rm', 'rm_head', 'business_head'],
                 is_active=True
@@ -2254,175 +2298,140 @@ class LeadForm(forms.ModelForm):
                 is_active=True
             ).only('id', 'first_name', 'last_name', 'username').order_by('first_name', 'last_name')
     
-    def configure_source_fields(self):
-        """Optimized source field configuration"""
-        source = self.data.get('source') if 'source' in self.data else (
-            self.instance.source if self.instance.pk else self.fields['source'].initial
-        )
-        
-        if source == 'existing_client':
-            self.fields['existing_client_choice'].required = True
-            self.fields['source_details'].required = False
-        elif source == 'other':
-            self.fields['source_details'].required = True
-            self.fields['existing_client_choice'].required = False
-        else:
-            self.fields['source_details'].required = False
-            self.fields['existing_client_choice'].required = False
-    
     def clean(self):
+        """Custom validation for the form"""
         cleaned_data = super().clean()
+        
         source = cleaned_data.get('source')
-        existing_client_choice = cleaned_data.get('existing_client_choice')
+        existing_client_name = cleaned_data.get('existing_client_name')
         
+        # Handle existing client source validation
         if source == 'existing_client':
-            if not existing_client_choice or existing_client_choice == 'separator':
-                self.add_error('existing_client_choice', 'Please select an existing client')
+            if not existing_client_name or not existing_client_name.strip():
+                self.add_error('existing_client_name', 'Please enter an existing client name')
             else:
-                if existing_client_choice.startswith('profile_'):
-                    try:
-                        profile_id = int(existing_client_choice.split('_')[1])
-                        cleaned_data['selected_client_profile'] = ClientProfile.objects.only('id', 'client_full_name').get(id=profile_id)
-                        cleaned_data['selected_client_type'] = 'profile'
-                        cleaned_data['reference_client'] = None
-                    except (ValueError, ClientProfile.DoesNotExist):
-                        self.add_error('existing_client_choice', 'Selected client profile not found')
-                elif existing_client_choice.startswith('lead_'):
-                    try:
-                        lead_id = int(existing_client_choice.split('_')[1])
-                        lead = Lead.objects.only('id', 'name').get(id=lead_id)
-                        cleaned_data['selected_client_type'] = 'lead'
-                        cleaned_data['reference_client'] = lead
-                    except (ValueError, Lead.DoesNotExist):
-                        self.add_error('existing_client_choice', 'Selected lead not found')
-        elif source == 'other' and not cleaned_data.get('source_details'):
-            self.add_error('source_details', 'Please specify the source details')
-        
-        if 'probability' in cleaned_data and (cleaned_data['probability'] < 0 or cleaned_data['probability'] > 100):
-            self.add_error('probability', 'Probability must be between 0 and 100')
-        
-        return cleaned_data
-    
-    def save(self, commit=True):
-        lead = super().save(commit=False)
-        
-        if not lead.pk and self.current_user:
-            lead.created_by = self.current_user
-        
-        if lead.source == 'existing_client':
-            client_type = self.cleaned_data.get('selected_client_type')
-            if client_type == 'profile':
-                profile = self.cleaned_data.get('selected_client_profile')
-                lead.source_details = f"Existing Client: {profile.client_full_name}"
-            elif client_type == 'lead':
-                selected_lead = lead.reference_client
-                lead.source_details = f"Existing Client: {selected_lead.name}"
-        elif lead.source == 'other':
-            lead.source_details = self.cleaned_data.get('source_details', '')
-        
-        if commit:
-            lead.save()
-            if hasattr(self, 'save_m2m'):
-                self.save_m2m()
-        
-        return lead
-    
-    def configure_assignment_field(self):
-        """Configure the assigned_to field based on user role"""
-        try:
-            if not self.current_user:
-                # If no current user, show all active users with relevant roles
-                self.fields['assigned_to'].queryset = User.objects.filter(
-                    role__in=['rm', 'rm_head', 'business_head'],
-                    is_active=True
-                ).order_by('first_name', 'last_name')
-                return
-            
-            if self.current_user.role in ['top_management', 'business_head', 'business_head_ops']:
-                # Can assign to any RM or RM Head
-                self.fields['assigned_to'].queryset = User.objects.filter(
-                    role__in=['rm', 'rm_head', 'business_head'],
-                    is_active=True
-                ).order_by('first_name', 'last_name')
-            elif self.current_user.role == 'rm_head':
-                # Can assign to team members or self
-                accessible_users = self.current_user.get_accessible_users()
-                self.fields['assigned_to'].queryset = accessible_users.filter(
-                    role__in=['rm', 'rm_head']
-                ).order_by('first_name', 'last_name')
-            elif self.current_user.role == 'rm':
-                # Can only assign to self
-                self.fields['assigned_to'].queryset = User.objects.filter(id=self.current_user.id)
-                self.fields['assigned_to'].initial = self.current_user
-                self.fields['assigned_to'].widget.attrs['disabled'] = True
-            else:
-                # Default: show all users with relevant roles (excluding operations-only roles for leads)
-                self.fields['assigned_to'].queryset = User.objects.filter(
-                    role__in=['rm', 'rm_head', 'business_head'],
-                    is_active=True
-                ).order_by('first_name', 'last_name')
+                # Try to find matching client by name (case-insensitive)
+                client_name = existing_client_name.strip()
+                matched_client = None
                 
-        except Exception as e:
-            # Fallback: show all active users with relevant roles
-            print(f"Error configuring assignment field: {e}")
-            self.fields['assigned_to'].queryset = User.objects.filter(
-                role__in=['rm', 'rm_head', 'business_head'],
-                is_active=True
-            ).order_by('first_name', 'last_name')
-        
-        # Ensure queryset is not empty
-        if not self.fields['assigned_to'].queryset.exists():
-            self.fields['assigned_to'].queryset = User.objects.filter(
-                is_active=True
-            ).order_by('first_name', 'last_name')
-    
-    def configure_source_fields(self):
-        """Configure source-related fields and their requirements"""
-        if 'source' in self.data:  # Form was submitted
-            source = self.data.get('source')
-        elif self.instance.pk:  # Editing existing lead
-            source = self.instance.source
-        else:  # New form
-            source = self.fields['source'].initial
-        
-        # Show/hide and require fields based on source selection
-        if source == 'existing_client':
-            self.fields['reference_client'].required = True
-            self.fields['source_details'].required = False
-        elif source == 'other':
-            self.fields['source_details'].required = True
-            self.fields['reference_client'].required = False
+                # First try to find in client profiles
+                try:
+                    from .models import ClientProfile
+                    profile = ClientProfile.objects.filter(
+                        client_full_name__iexact=client_name
+                    ).first()
+                    
+                    if profile:
+                        matched_client = {
+                            'type': 'profile',
+                            'data': profile,
+                            'name': profile.client_full_name,
+                            'email': getattr(profile, 'client_email', '') or '',
+                            'mobile': getattr(profile, 'client_mobile', '') or ''
+                        }
+                except ImportError:
+                    pass
+                
+                # If not found in profiles, try converted leads
+                if not matched_client:
+                    lead = Lead.objects.filter(
+                        converted=True,
+                        name__iexact=client_name
+                    ).first()
+                    
+                    if lead:
+                        matched_client = {
+                            'type': 'lead',
+                            'data': lead,
+                            'name': lead.name,
+                            'email': lead.email or '',
+                            'mobile': lead.mobile or ''
+                        }
+                        cleaned_data['reference_client'] = lead
+                
+                if matched_client:
+                    # Populate lead data from matched client
+                    cleaned_data['name'] = matched_client['name']
+                    cleaned_data['email'] = matched_client['email']
+                    cleaned_data['mobile'] = matched_client['mobile']
+                    
+                    # Store matched client info for use in save method
+                    cleaned_data['matched_client'] = matched_client
+                    
+                    # Clear manual field validation errors
+                    for field in ['name', 'email', 'mobile']:
+                        if field in self.errors:
+                            del self.errors[field]
+                else:
+                    # Client name entered but no match found - warn but allow creation
+                    # User might be entering a new client name
+                    pass
         else:
-            self.fields['source_details'].required = False
-            self.fields['reference_client'].required = False
-    
-    def clean(self):
-        cleaned_data = super().clean()
-        source = cleaned_data.get('source')
+            # For non-existing client sources, validate manual fields
+            name = cleaned_data.get('name')
+            email = cleaned_data.get('email')
+            
+            if not name:
+                self.add_error('name', 'Name is required')
+            if not email:
+                self.add_error('email', 'Email is required')
         
-        # Validate source-specific fields
-        if source == 'existing_client' and not cleaned_data.get('reference_client'):
-            self.add_error('reference_client', 'Please select an existing client')
-        elif source == 'other' and not cleaned_data.get('source_details'):
-            self.add_error('source_details', 'Please specify the source details')
+        # Handle other source details
+        if source == 'other':
+            source_details = cleaned_data.get('source_details')
+            if not source_details:
+                self.add_error('source_details', 'Please provide source details')
         
         # Validate probability range
         probability = cleaned_data.get('probability', 0)
-        if probability < 0 or probability > 100:
+        if probability is not None and (probability < 0 or probability > 100):
             self.add_error('probability', 'Probability must be between 0 and 100')
         
         return cleaned_data
     
+    def clean_mobile(self):
+        """Validate mobile number"""
+        mobile = self.cleaned_data.get('mobile')
+        source = self.data.get('source')
+        existing_client = self.data.get('existing_client_choice')
+        
+        # Skip validation if using existing client (data comes from existing records)
+        if source == 'existing_client' and existing_client:
+            return mobile
+            
+        if mobile:
+            # Remove any non-digit characters for validation
+            digits_only = ''.join(filter(str.isdigit, mobile))
+            
+            if len(digits_only) != 10:
+                raise forms.ValidationError("Mobile number should be exactly 10 digits.")
+            
+            return digits_only  # Return cleaned mobile number
+            
+        return mobile
+    
     def save(self, commit=True):
+        """Save the lead with proper handling of existing client data"""
         lead = super().save(commit=False)
         
         # Set created_by for new leads
         if not lead.pk and self.current_user:
             lead.created_by = self.current_user
         
-        # Handle source data
-        if lead.source == 'existing_client' and lead.reference_client:
-            lead.source_details = f"Existing Client: {lead.reference_client.name}"
+        # Handle source details based on source type
+        if lead.source == 'existing_client':
+            existing_client_name = self.cleaned_data.get('existing_client_name', '').strip()
+            matched_client = self.cleaned_data.get('matched_client')
+            
+            if matched_client:
+                if matched_client['type'] == 'profile':
+                    lead.source_details = f"Existing Client Profile: {matched_client['name']}"
+                else:  # lead type
+                    lead.source_details = f"Existing Client Lead: {matched_client['name']}"
+            else:
+                # Use the entered name even if no exact match was found
+                lead.source_details = f"Existing Client: {existing_client_name}"
+                
         elif lead.source == 'other':
             lead.source_details = self.cleaned_data.get('source_details', '')
         

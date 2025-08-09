@@ -281,5 +281,6 @@ urlpatterns = [
     path('generate-client-id/', views.generate_client_id_view, name='generate_client_id'),
     path('debug-ops-workflow/', views.debug_ops_workflow, name='debug_ops_workflow'),
     path('ajax/search-clients/', views.ajax_search_clients, name='ajax_search_clients'),
+    path('api/clients/', views.get_clients_api, name='clients_api'),
 
 ]

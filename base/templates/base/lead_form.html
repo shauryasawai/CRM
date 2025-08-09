@@ -128,6 +128,14 @@
         vertical-align: middle;
     }
 
+    .existing-client-section {
+        background: #f8f9fa;
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
     /* Responsive adjustments */
     @media (max-width: 768px) {
         .card-body {
@@ -201,6 +209,70 @@
             <form method="post" id="leadForm" novalidate class="needs-validation">
                 {% csrf_token %}
                 
+                <!-- Source Selection First -->
+                <div class="row mb-4">
+                    <div class="col-12 form-field">
+                        <label class="form-label">Source *</label>
+                        <div class="source-radio">
+                            {% for radio in form.source %}
+                            <div class="form-check">
+                                {{ radio.tag }}
+                                <label for="{{ radio.id_for_label }}" class="form-check-label">
+                                    {{ radio.choice_label }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% if form.source.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.source.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Existing Client Selection -->
+                <div class="row mb-4" id="existing-client-section" style="display: none;">
+                    <div class="col-12">
+                        <div class="existing-client-section">
+                            <h5>Enter Existing Client Name</h5>
+                            <div class="form-field">
+                                <label for="{{ form.existing_client_name.id_for_label }}" class="form-label">Client Name *</label>
+                                {{ form.existing_client_name }}
+                                <datalist id="client-datalist">
+                                    <!-- Client names will be populated here via JavaScript -->
+                                </datalist>
+                                <small class="form-text text-muted">Start typing to see suggestions from existing clients</small>
+                                {% if form.existing_client_name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.existing_client_name.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Source Details for 'other' source -->
+                <div class="row mb-4" id="source-details-section" style="display: none;">
+                    <div class="col-12 form-field">
+                        <label for="{{ form.source_details.id_for_label }}" class="form-label">Source Details *</label>
+                        {{ form.source_details }}
+                        {% if form.source_details.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.source_details.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Lead Details -->
                 <div class="row mb-4">
                     <div class="col-md-6 form-field">
                         <label for="{{ form.name.id_for_label }}" class="form-label">Name *</label>
@@ -253,55 +325,6 @@
 
                 <div class="row mb-4">
                     <div class="col-md-6 form-field">
-                        <label class="form-label">Source *</label>
-                        <div class="source-radio">
-                            {% for radio in form.source %}
-                            <div class="form-check">
-                                {{ radio.tag }}
-                                <label for="{{ radio.id_for_label }}" class="form-check-label">
-                                    {{ radio.choice_label }}
-                                </label>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        {% if form.source.errors %}
-                        <div class="invalid-feedback d-block">
-                            {% for error in form.source.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="col-md-6 form-field" id="reference-client-field" style="display: none;">
-                        <label for="{{ form.existing_client_choice.id_for_label }}" class="form-label">Existing Client</label>
-                        {{ form.existing_client_choice }}
-                        {% if form.existing_client_choice.errors %}
-                        <div class="invalid-feedback d-block">
-                            {% for error in form.existing_client_choice.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                        <!-- Keep the hidden reference_client field -->
-                        {{ form.reference_client }}
-                    </div>
-
-                    <div class="col-md-6 form-field" id="source-details-field" style="display: none;">
-                        <label for="{{ form.source_details.id_for_label }}" class="form-label">Source Details</label>
-                        {{ form.source_details }}
-                        {% if form.source_details.errors %}
-                        <div class="invalid-feedback d-block">
-                            {% for error in form.source_details.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="row mb-4">
-                    <div class="col-md-6 form-field">
                         <label for="{{ form.probability.id_for_label }}" class="form-label">Conversion Probability</label>
                         <div class="d-flex align-items-center">
                             {{ form.probability }}
@@ -310,6 +333,17 @@
                         {% if form.probability.errors %}
                         <div class="invalid-feedback d-block">
                             {% for error in form.probability.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 form-field">
+                        <label for="{{ form.next_interaction_date.id_for_label }}" class="form-label">Next Follow-up Date</label>
+                        {{ form.next_interaction_date }}
+                        {% if form.next_interaction_date.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.next_interaction_date.errors %}
                                 {{ error }}
                             {% endfor %}
                         </div>
@@ -328,6 +362,9 @@
                     </div>
                     {% endif %}
                 </div>
+
+                <!-- Hidden fields -->
+                {{ form.reference_client }}
 
                 <div class="d-flex justify-content-between mt-5">
                     <a href="{% if lead %}{% url 'lead_detail' lead.pk %}{% else %}{% url 'lead_list' %}{% endif %}" 
@@ -352,24 +389,284 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Source field handling
     const sourceRadios = document.querySelectorAll('input[name="source"]');
-    const referenceField = document.getElementById('reference-client-field');
-    const detailsField = document.getElementById('source-details-field');
+    const existingClientSection = document.getElementById('existing-client-section');
+    const sourceDetailsSection = document.getElementById('source-details-section');
+    const existingClientInput = document.querySelector('input[name="existing_client_name"]');
+    const clientDatalist = document.getElementById('client-datalist');
+    
+    // Form fields that get populated from existing client
+    const nameField = document.querySelector('input[name="name"]');
+    const emailField = document.querySelector('input[name="email"]');
+    const mobileField = document.querySelector('input[name="mobile"]');
+    
+    // Client data for autocomplete (this would be populated from backend)
+    let clientData = [];
+    
+    // Populate client datalist (this should be populated from your backend data)
+    function populateClientDatalist() {
+        // Clear existing options
+        clientDatalist.innerHTML = '';
+        
+        // Get client data from backend (passed from Django view)
+        let clients = [];
+        try {
+            clients = {{ client_data_json|default:"[]"|safe }};
+        } catch (e) {
+            console.log('No client data available:', e);
+            clients = [];
+        }
+        
+        // If no data from backend, try to create some basic options
+        if (clients.length === 0) {
+            // Fallback: try to load client data via AJAX
+            loadClientDataViaAjax();
+        } else {
+            clients.forEach(client => {
+                const option = document.createElement('option');
+                option.value = client.display || client.name;
+                option.dataset.clientType = client.type;
+                option.dataset.clientId = client.id;
+                option.dataset.clientName = client.name;
+                option.dataset.clientEmail = client.email || '';
+                option.dataset.clientMobile = client.mobile || '';
+                clientDatalist.appendChild(option);
+            });
+            
+            clientData = clients;
+        }
+        
+        console.log(`Loaded ${clientData.length} client suggestions`);
+    }
+    
+    // Fallback function to load client data via AJAX
+    function loadClientDataViaAjax() {
+        console.log('Loading client data via AJAX fallback...');
+        
+        // Try to fetch from API endpoint
+        fetch('/api/clients/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.clients && data.clients.length > 0) {
+                    console.log(`Loaded ${data.clients.length} clients via API`);
+                    
+                    // Clear existing datalist
+                    clientDatalist.innerHTML = '';
+                    
+                    // Add new options
+                    data.clients.forEach(client => {
+                        const option = document.createElement('option');
+                        option.value = client.display;
+                        option.dataset.clientType = client.type;
+                        option.dataset.clientId = client.id;
+                        option.dataset.clientName = client.name;
+                        option.dataset.clientEmail = client.email || '';
+                        option.dataset.clientMobile = client.mobile || '';
+                        clientDatalist.appendChild(option);
+                    });
+                    
+                    clientData = data.clients;
+                } else {
+                    loadSampleData();
+                }
+            })
+            .catch(error => {
+                console.log('Error loading client data via API:', error);
+                loadSampleData();
+            });
+    }
+    
+    // Load sample data for testing
+    function loadSampleData() {
+        console.log('Loading sample data for testing...');
+        
+        const sampleClients = [
+            {
+                type: 'lead',
+                id: 1,
+                name: 'John Doe',
+                email: 'john.doe@example.com',
+                mobile: '1234567890',
+                display: 'John Doe - john.doe@example.com'
+            },
+            {
+                type: 'lead',
+                id: 2,
+                name: 'Jane Smith',
+                email: 'jane.smith@example.com',
+                mobile: '0987654321',
+                display: 'Jane Smith - jane.smith@example.com'
+            },
+            {
+                type: 'profile',
+                id: 3,
+                name: 'ABC Corporation',
+                email: 'contact@abc.com',
+                mobile: '5555555555',
+                display: 'ABC Corporation'
+            }
+        ];
+        
+        // Add sample data
+        sampleClients.forEach(client => {
+            const option = document.createElement('option');
+            option.value = client.display;
+            option.dataset.clientType = client.type;
+            option.dataset.clientId = client.id;
+            option.dataset.clientName = client.name;
+            option.dataset.clientEmail = client.email;
+            option.dataset.clientMobile = client.mobile;
+            clientDatalist.appendChild(option);
+        });
+        
+        clientData = sampleClients;
+    }
     
     function toggleSourceFields() {
         const checkedRadio = document.querySelector('input[name="source"]:checked');
         if (checkedRadio) {
             const selectedValue = checkedRadio.value;
-            referenceField.style.display = selectedValue === 'existing_client' ? 'block' : 'none';
-            detailsField.style.display = selectedValue === 'other' ? 'block' : 'none';
             
-            // Add animation when showing fields
-            if (selectedValue === 'existing_client' || selectedValue === 'other') {
-                const fieldToShow = selectedValue === 'existing_client' ? referenceField : detailsField;
-                fieldToShow.style.animation = 'fadeIn 0.5s ease-out forwards';
-                fieldToShow.style.opacity = '0';
+            // Hide all conditional sections first
+            existingClientSection.style.display = 'none';
+            sourceDetailsSection.style.display = 'none';
+            
+            // Show relevant section
+            if (selectedValue === 'existing_client') {
+                existingClientSection.style.display = 'block';
+                existingClientSection.style.animation = 'fadeIn 0.5s ease-out forwards';
+                
+                // Make existing client input required
+                existingClientInput.required = true;
+                
+                // Make manual fields optional (they'll be populated automatically)
+                nameField.required = false;
+                emailField.required = false;
+                mobileField.required = false;
+                
+            } else if (selectedValue === 'other') {
+                sourceDetailsSection.style.display = 'block';
+                sourceDetailsSection.style.animation = 'fadeIn 0.5s ease-out forwards';
+                
+                // Make source details required
+                document.querySelector('input[name="source_details"]').required = true;
+                
+                // Reset existing client input
+                existingClientInput.value = '';
+                existingClientInput.required = false;
+                
+                // Make manual fields required again
+                nameField.required = true;
+                emailField.required = true;
+                
+            } else {
+                // For other sources, reset everything
+                existingClientInput.value = '';
+                existingClientInput.required = false;
+                document.querySelector('input[name="source_details"]').required = false;
+                
+                // Make manual fields required
+                nameField.required = true;
+                emailField.required = true;
             }
         }
     }
+    
+    // Handle existing client input with autocomplete
+    existingClientInput.addEventListener('input', function() {
+        const inputValue = this.value.trim();
+        
+        if (inputValue.length >= 2) {
+            // Find matching client in data
+            const matchedClient = clientData.find(client => 
+                client.name.toLowerCase().includes(inputValue.toLowerCase()) ||
+                client.display.toLowerCase().includes(inputValue.toLowerCase())
+            );
+            
+            if (matchedClient) {
+                // Show suggestion but don't auto-populate yet
+                this.style.borderColor = '#28a745'; // Green border for match
+                this.title = `Match found: ${matchedClient.display}`;
+            } else {
+                this.style.borderColor = '#ffc107'; // Yellow border for new client
+                this.title = 'New client - will create new entry';
+            }
+        } else {
+            this.style.borderColor = '';
+            this.title = '';
+        }
+    });
+    
+    // Handle client selection from datalist
+    existingClientInput.addEventListener('change', function() {
+        const inputValue = this.value.trim();
+        
+        // Find exact match in client data
+        const exactMatch = clientData.find(client => 
+            client.display === inputValue || client.name === inputValue
+        );
+        
+        if (exactMatch) {
+            // Populate form fields with client data
+            nameField.value = exactMatch.name;
+            emailField.value = exactMatch.email || '';
+            mobileField.value = exactMatch.mobile || '';
+            
+            // Make fields readonly to prevent editing
+            nameField.readOnly = true;
+            emailField.readOnly = true;
+            mobileField.readOnly = true;
+            
+            // Add visual indication
+            nameField.style.backgroundColor = '#f8f9fa';
+            emailField.style.backgroundColor = '#f8f9fa';
+            mobileField.style.backgroundColor = '#f8f9fa';
+            
+            this.style.borderColor = '#28a745';
+            this.title = 'Existing client selected';
+            
+            // Clear validation errors
+            nameField.classList.remove('is-invalid');
+            emailField.classList.remove('is-invalid');
+            mobileField.classList.remove('is-invalid');
+        } else if (inputValue) {
+            // New client name entered
+            nameField.value = inputValue;
+            emailField.value = '';
+            mobileField.value = '';
+            
+            // Make fields editable
+            nameField.readOnly = false;
+            emailField.readOnly = false;
+            mobileField.readOnly = false;
+            
+            // Reset styling
+            nameField.style.backgroundColor = '';
+            emailField.style.backgroundColor = '';
+            mobileField.style.backgroundColor = '';
+            
+            this.style.borderColor = '#ffc107';
+            this.title = 'New client - please fill in details';
+            
+            // Focus on email field for new client
+            emailField.focus();
+        } else {
+            // Clear everything
+            nameField.value = '';
+            emailField.value = '';
+            mobileField.value = '';
+            
+            nameField.readOnly = false;
+            emailField.readOnly = false;
+            mobileField.readOnly = false;
+            
+            nameField.style.backgroundColor = '';
+            emailField.style.backgroundColor = '';
+            mobileField.style.backgroundColor = '';
+            
+            this.style.borderColor = '';
+            this.title = '';
+        }
+    });
     
     sourceRadios.forEach(radio => {
         radio.addEventListener('change', toggleSourceFields);
@@ -377,56 +674,118 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize on page load
     toggleSourceFields();
+    populateClientDatalist();
+    
+    // Debug function - remove this after testing
+    window.debugClientData = function() {
+        console.log('Client Data:', clientData);
+        console.log('Datalist options:', clientDatalist.children.length);
+        console.log('Raw backend data:', '{{ client_data_json|default:"No data"|safe }}');
+    };
+    
+    // Call debug function to help troubleshoot
+    console.log('Debug info available - run debugClientData() in console');
     
     // Form submission handling
     form.addEventListener('submit', function(e) {
         // Show loading state
         submitBtn.disabled = true;
         spinner.classList.remove('d-none');
-        submitBtn.querySelector('span:not(.spinner-border)').style.display = 'none';
         
-        // Basic validation
-        const requiredFields = [
-            { element: form.querySelector('input[name="name"]'), message: 'Name is required' },
-            { element: form.querySelector('input[name="email"]'), message: 'Email is required' },
-            { element: form.querySelector('select[name="assigned_to"]'), message: 'Please select who this lead should be assigned to' }
-        ];
-        
-        let isValid = true;
-        
-        requiredFields.forEach(field => {
-            if (!field.element.value.trim()) {
-                isValid = false;
-                const invalidFeedback = field.element.nextElementSibling;
-                
-                if (invalidFeedback && invalidFeedback.classList.contains('invalid-feedback')) {
-                    invalidFeedback.textContent = field.message;
-                    invalidFeedback.style.display = 'block';
-                } else {
-                    alert(field.message);
-                }
-                
-                field.element.classList.add('is-invalid');
-            } else {
-                field.element.classList.remove('is-invalid');
-                const invalidFeedback = field.element.nextElementSibling;
-                if (invalidFeedback && invalidFeedback.classList.contains('invalid-feedback')) {
-                    invalidFeedback.style.display = 'none';
-                }
-            }
-        });
-        
-        if (!isValid) {
+        // For existing client source, ensure the client name is entered
+        const sourceValue = document.querySelector('input[name="source"]:checked')?.value;
+        if (sourceValue === 'existing_client' && !existingClientInput.value.trim()) {
             e.preventDefault();
+            alert('Please enter an existing client name');
+            existingClientInput.focus();
             resetSubmitButton();
             return;
+        }
+        
+        // For other source, ensure source details are provided
+        if (sourceValue === 'other') {
+            const sourceDetails = document.querySelector('input[name="source_details"]').value;
+            if (!sourceDetails.trim()) {
+                e.preventDefault();
+                alert('Please provide source details');
+                resetSubmitButton();
+                return;
+            }
+        }
+        
+        // For non-existing client sources, validate required fields
+        if (sourceValue !== 'existing_client') {
+            const requiredFields = [
+                { element: nameField, message: 'Name is required' },
+                { element: emailField, message: 'Email is required' },
+                { element: form.querySelector('select[name="assigned_to"]'), message: 'Please select who this lead should be assigned to' }
+            ];
+            
+            let isValid = true;
+            
+            requiredFields.forEach(field => {
+                if (!field.element.value.trim()) {
+                    isValid = false;
+                    alert(field.message);
+                    field.element.focus();
+                    return;
+                }
+            });
+            
+            if (!isValid) {
+                e.preventDefault();
+                resetSubmitButton();
+                return;
+            }
+        } else {
+            // For existing client, validate that client name is entered and assigned_to is filled
+            const clientName = existingClientInput.value.trim();
+            const assignedTo = form.querySelector('select[name="assigned_to"]');
+            
+            if (!clientName) {
+                e.preventDefault();
+                alert('Please enter the client name');
+                existingClientInput.focus();
+                resetSubmitButton();
+                return;
+            }
+            
+            if (!assignedTo.value) {
+                e.preventDefault();
+                alert('Please select who this lead should be assigned to');
+                assignedTo.focus();
+                resetSubmitButton();
+                return;
+            }
+            
+            // For new clients (not in datalist), ensure name/email are filled
+            const isExistingClient = clientData.some(client => 
+                client.display === clientName || client.name === clientName
+            );
+            
+            if (!isExistingClient) {
+                if (!nameField.value.trim()) {
+                    e.preventDefault();
+                    alert('Please enter the client name in the Name field');
+                    nameField.focus();
+                    resetSubmitButton();
+                    return;
+                }
+                
+                if (!emailField.value.trim()) {
+                    e.preventDefault();
+                    alert('Please enter the client email');
+                    emailField.focus();
+                    resetSubmitButton();
+                    return;
+                }
+            }
         }
     });
     
     function resetSubmitButton() {
         submitBtn.disabled = false;
         spinner.classList.add('d-none');
-        submitBtn.querySelector('span:not(.spinner-border)').style.display = 'inline';
     }
     
     // Reset button state if form submission fails
