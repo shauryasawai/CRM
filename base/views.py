@@ -9762,7 +9762,7 @@ def save_execution_plan_portfolio_independent(request):
 
 
 def process_action_data_portfolio_independent(action_data, execution_plan, client, priority):
-    """Process individual action data with complete portfolio independence - FIXED VERSION"""
+    """Process individual action data with ISIN-based scheme mapping - ENHANCED VERSION"""
     action_type = action_data.get('action_type')
     
     if not action_type:
@@ -9812,6 +9812,13 @@ def process_action_data_portfolio_independent(action_data, execution_plan, clien
             action_data.get('scheme')
         )
         
+        # NEW: Check for ISIN in portfolio actions
+        scheme_isin = (
+            action_data.get('source_isin') or
+            action_data.get('portfolio_isin') or
+            action_data.get('isin_number')
+        )
+        
         if portfolio_holding_id:
             try:
                 # Verify portfolio holding exists and get scheme details
@@ -9848,11 +9855,12 @@ def process_action_data_portfolio_independent(action_data, execution_plan, clien
                 logger.error(f"Error accessing portfolio holding {portfolio_holding_id}: {str(e)}")
                 raise ValueError(f"Error accessing portfolio holding: {str(e)}")
                 
-        elif scheme_name:
-            # Direct scheme name provided (fallback for portfolio actions)
+        elif scheme_name or scheme_isin:
+            # Direct scheme name or ISIN provided (fallback for portfolio actions)
             portfolio_scheme_name = scheme_name
+            portfolio_isin = scheme_isin
             action_mode = 'portfolio'
-            logger.info(f"Using provided portfolio scheme name: {scheme_name}")
+            logger.info(f"Using provided portfolio scheme - Name: {scheme_name}, ISIN: {scheme_isin}")
         else:
             # This might be a new investment action
             action_mode = 'new_investment'
@@ -9860,31 +9868,73 @@ def process_action_data_portfolio_independent(action_data, execution_plan, clien
     # Handle new investment actions or when no portfolio reference is found
     if action_mode == 'new_investment' or action_type in ['purchase', 'sip_start']:
         scheme_id = action_data.get('scheme_id') or action_data.get('target_scheme_id')
+        scheme_name = action_data.get('scheme_name') or action_data.get('source_scheme')
+        scheme_isin = action_data.get('isin_number') or action_data.get('isin_growth')
+        scheme_lookup_by_name = action_data.get('scheme_lookup_by_name', False)
         
+        # ENHANCED: Try multiple methods to find the scheme
         if scheme_id:
             try:
                 scheme_obj = MutualFundScheme.objects.get(id=scheme_id)
                 action_mode = 'new_investment'
-                logger.info(f"New investment scheme: {scheme_obj.scheme_name}")
+                logger.info(f"Found scheme by ID: {scheme_obj.scheme_name}")
             except MutualFundScheme.DoesNotExist:
                 logger.error(f"MutualFundScheme with ID {scheme_id} not found")
                 raise ValueError(f"Selected scheme with ID {scheme_id} not found")
-        else:
-            # If no scheme_id provided and no portfolio reference, this is an error for new investments
-            if not portfolio_scheme_name and action_type in ['purchase', 'sip_start']:
-                raise ValueError(f"Scheme ID required for new investment action {action_type}")
+        
+        # NEW: Try to find scheme by ISIN first (most reliable)
+        elif scheme_isin:
+            scheme_obj = find_scheme_by_isin(scheme_isin)
+            if scheme_obj:
+                action_mode = 'new_investment'
+                logger.info(f"Found scheme by ISIN {scheme_isin}: {scheme_obj.scheme_name}")
+            else:
+                logger.warning(f"No scheme found with ISIN: {scheme_isin}")
+        
+        # Try to find scheme by name if ISIN lookup failed
+        elif scheme_name and (scheme_lookup_by_name or not scheme_obj):
+            scheme_obj = find_scheme_by_name_enhanced(scheme_name)
+            if scheme_obj:
+                action_mode = 'new_investment'
+                logger.info(f"Found scheme by name '{scheme_name}': {scheme_obj.scheme_name}")
+            else:
+                logger.warning(f"No scheme found with name: {scheme_name}")
+        
+        # Final validation for new investment actions
+        if not scheme_obj and not portfolio_scheme_name and action_type in ['purchase', 'sip_start']:
+            error_msg = f"Scheme ID required for new investment action {action_type}"
+            logger.error(error_msg)
+            logger.error(f"Action data: {action_data}")
+            raise ValueError(error_msg)
     
-    # Handle target scheme for switch/STP operations
+    # Handle target scheme for switch/STP operations (also use ISIN lookup)
     if action_type in ['switch', 'stp_start']:
         target_scheme_id = action_data.get('target_scheme_id')
+        target_scheme_name = action_data.get('target_scheme_name')
+        target_scheme_isin = action_data.get('target_isin')
         
         if target_scheme_id:
             try:
                 target_scheme_obj = MutualFundScheme.objects.get(id=target_scheme_id)
-                logger.info(f"Target scheme for {action_type}: {target_scheme_obj.scheme_name}")
+                logger.info(f"Found target scheme by ID: {target_scheme_obj.scheme_name}")
             except MutualFundScheme.DoesNotExist:
                 raise ValueError(f"Target scheme with ID {target_scheme_id} not found")
-        else:
+        
+        # NEW: Try ISIN lookup for target scheme
+        elif target_scheme_isin:
+            target_scheme_obj = find_scheme_by_isin(target_scheme_isin)
+            if target_scheme_obj:
+                logger.info(f"Found target scheme by ISIN {target_scheme_isin}: {target_scheme_obj.scheme_name}")
+            else:
+                logger.warning(f"Target scheme not found with ISIN: {target_scheme_isin}")
+        
+        # Try name lookup for target scheme
+        elif target_scheme_name:
+            target_scheme_obj = find_scheme_by_name_enhanced(target_scheme_name)
+            if target_scheme_obj:
+                logger.info(f"Found target scheme by name '{target_scheme_name}': {target_scheme_obj.scheme_name}")
+        
+        if not target_scheme_obj:
             raise ValueError(f"Target scheme required for {action_type}")
     
     # Validate that we have either scheme or portfolio reference
@@ -9906,7 +9956,7 @@ def process_action_data_portfolio_independent(action_data, execution_plan, clien
             portfolio_isin=portfolio_isin,
             portfolio_folio_number=portfolio_folio_number,
             action_mode=action_mode,
-            amount=safe_decimal(action_data.get('amount') or action_data.get('redeem_amount')),
+            amount=safe_decimal(action_data.get('amount') or action_data.get('redeem_amount') or action_data.get('purchase_amount')),
             units=safe_decimal(action_data.get('units') or action_data.get('redeem_units')),
             sip_date=safe_int(action_data.get('sip_date')),
             frequency=action_data.get('frequency'),
@@ -9959,6 +10009,103 @@ def process_action_data_portfolio_independent(action_data, execution_plan, clien
         logger.error(f"Action data: {action_data}")
         logger.error(f"Processed values - Mode: {action_mode}, Scheme: {scheme_obj}, Portfolio: {portfolio_scheme_name}")
         raise ValueError(f"Failed to create action: {str(e)}")
+
+
+def find_scheme_by_isin(isin):
+    """Find scheme by ISIN number - PRIMARY LOOKUP METHOD"""
+    if not isin:
+        return None
+    
+    isin = isin.strip().upper()
+    
+    try:
+        # Try ISIN Growth first
+        scheme = MutualFundScheme.objects.filter(
+            isin_growth__iexact=isin,
+            is_active=True
+        ).first()
+        
+        if scheme:
+            logger.info(f"Found scheme by ISIN Growth: {isin} -> {scheme.scheme_name}")
+            return scheme
+        
+        # Try ISIN Dividend Reinvestment
+        scheme = MutualFundScheme.objects.filter(
+            isin_div_reinvestment__iexact=isin,
+            is_active=True
+        ).first()
+        
+        if scheme:
+            logger.info(f"Found scheme by ISIN Div Reinvestment: {isin} -> {scheme.scheme_name}")
+            return scheme
+        
+        logger.warning(f"No scheme found with ISIN: {isin}")
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error finding scheme by ISIN {isin}: {e}")
+        return None
+
+
+def find_scheme_by_name_enhanced(scheme_name):
+    """Enhanced scheme name lookup with fuzzy matching"""
+    if not scheme_name:
+        return None
+    
+    scheme_name = scheme_name.strip()
+    
+    try:
+        # Try exact match first
+        scheme = MutualFundScheme.objects.filter(
+            scheme_name__iexact=scheme_name,
+            is_active=True
+        ).first()
+        
+        if scheme:
+            logger.info(f"Found scheme by exact name match: {scheme_name}")
+            return scheme
+        
+        # Try partial match (contains)
+        scheme = MutualFundScheme.objects.filter(
+            scheme_name__icontains=scheme_name,
+            is_active=True
+        ).first()
+        
+        if scheme:
+            logger.info(f"Found scheme by partial match: {scheme_name} -> {scheme.scheme_name}")
+            return scheme
+        
+        # Try reverse partial match (scheme name contains search term)
+        words = scheme_name.split()
+        significant_words = [word for word in words if len(word) > 3]
+        
+        for word in significant_words:
+            scheme = MutualFundScheme.objects.filter(
+                scheme_name__icontains=word,
+                is_active=True
+            ).first()
+            
+            if scheme:
+                logger.info(f"Found scheme by word match '{word}': {scheme_name} -> {scheme.scheme_name}")
+                return scheme
+        
+        # Try AMC name match
+        scheme = MutualFundScheme.objects.filter(
+            amc_name__icontains=words[0] if words else scheme_name,
+            is_active=True
+        ).first()
+        
+        if scheme:
+            logger.info(f"Found scheme by AMC match: {scheme_name} -> {scheme.scheme_name}")
+            return scheme
+        
+        logger.warning(f"No scheme found with name: {scheme_name}")
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error finding scheme by name {scheme_name}: {e}")
+        return None
+
 
 
 def safe_decimal(value):

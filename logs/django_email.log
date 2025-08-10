@@ -1501,3 +1501,42 @@ INFO 2025-08-09 10:39:50,211 views 32392 24008 Enhanced client email sent succes
 INFO 2025-08-09 10:55:46,351 views 35180 31468 Generating fresh Excel for download
 ERROR 2025-08-09 10:55:46,610 views 35180 31468 Error generating Excel: 'PlanAction' object has no attribute 'name'
 ERROR 2025-08-09 10:55:46,611 views 35180 31468 Error downloading Excel file for plan 65: 'PlanAction' object has no attribute 'name'
+INFO 2025-08-10 20:57:30,002 views 7912 6008 create_plan_step2 called with client_id: 1594 (type: <class 'str'>)
+INFO 2025-08-10 20:57:30,103 views 7912 6008 Found legacy client: SAMIR NALIN KAPADIA (ID: 1594)
+INFO 2025-08-10 20:57:30,509 views 7912 6008 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-10 20:57:30,527 views 7912 6008 Found linked profile for client 1594
+INFO 2025-08-10 20:57:30,636 views 7912 6008 Found 25 portfolio holdings for client 1594
+INFO 2025-08-10 20:58:27,582 views 7912 23060 Search query: 'sch', action_type: ''
+INFO 2025-08-10 20:58:27,696 views 7912 23060 Total schemes matching search (before active filter): 80
+INFO 2025-08-10 20:58:27,858 views 7912 15736 Search query: 'sch', action_type: ''
+INFO 2025-08-10 20:58:27,888 views 7912 23060 Final schemes count: 80
+INFO 2025-08-10 20:58:27,978 views 7912 15736 Total schemes matching search (before active filter): 80
+INFO 2025-08-10 20:58:28,228 views 7912 23060 Returning 80 schemes for query 'sch'
+INFO 2025-08-10 20:58:28,246 views 7912 15736 Final schemes count: 80
+INFO 2025-08-10 20:58:28,554 views 7912 15736 Returning 80 schemes for query 'sch'
+INFO 2025-08-10 20:58:44,434 views 7912 8080 Created execution plan EP202508100004 for client 1594
+INFO 2025-08-10 20:58:44,434 views 7912 8080 Processing action 1: {'action_type': 'redeem', 'source_scheme': 'Bandhan Small Cap Fund Reg (G)', 'target_scheme': None, 'notes': 'ok', 'portfolio_id': 15482, 'source_portfolio_id': 15482, 'source_scheme_name': 'Bandhan Small Cap Fund Reg (G)', 'redeem_by': 'specific_amount', 'redeem_amount': 1000, 'redeem_units': None, 'scheme': 'Bandhan Small Cap Fund Reg (G)', 'scheme_name': 'Bandhan Small Cap Fund Reg (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-10 20:58:44,523 views 7912 8080 Portfolio action for holding 15482: Bandhan Small Cap Fund Reg (G)
+INFO 2025-08-10 20:58:44,523 views 7912 8080 Processed values - Mode: portfolio, Scheme: None, Portfolio: Bandhan Small Cap Fund Reg (G)
+INFO 2025-08-10 20:58:44,782 views 7912 8080 Created portfolio mapping for action 40
+INFO 2025-08-10 20:58:44,788 views 7912 8080 Successfully created action 40
+INFO 2025-08-10 20:58:44,788 views 7912 8080 Processing action 2: {'action_type': 'purchase', 'source_scheme': 'WhiteOak Capital Flexi Cap Fund (G)', 'target_scheme': None, 'notes': 'ok', 'portfolio_id': 15504, 'source_portfolio_id': 15504, 'source_scheme_name': 'WhiteOak Capital Flexi Cap Fund (G)', 'purchase_type': 'existing_scheme', 'purchase_amount': 10000, 'investment_option': 'growth', 'plan_type': 'direct', 'folio_number': 'na', 'scheme': 'WhiteOak Capital Flexi Cap Fund (G)', 'scheme_name': 'WhiteOak Capital Flexi Cap Fund (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+ERROR 2025-08-10 20:58:44,788 views 7912 8080 Error creating action 2: Scheme ID required for new investment action purchase
+ERROR 2025-08-10 20:58:44,788 views 7912 8080 Action data: {'action_type': 'purchase', 'source_scheme': 'WhiteOak Capital Flexi Cap Fund (G)', 'target_scheme': None, 'notes': 'ok', 'portfolio_id': 15504, 'source_portfolio_id': 15504, 'source_scheme_name': 'WhiteOak Capital Flexi Cap Fund (G)', 'purchase_type': 'existing_scheme', 'purchase_amount': 10000, 'investment_option': 'growth', 'plan_type': 'direct', 'folio_number': 'na', 'scheme': 'WhiteOak Capital Flexi Cap Fund (G)', 'scheme_name': 'WhiteOak Capital Flexi Cap Fund (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-10 20:58:44,788 views 7912 8080 Processing action 3: {'action_type': 'stp', 'source_scheme': 'SBI Small Cap Fund Reg (G)', 'target_scheme': 'Aditya Birla Sun Life Debt Plus Arbitrage FoF Scheme - REGULAR - IDCW', 'notes': 'ok', 'portfolio_id': 15501, 'source_portfolio_id': 15501, 'source_scheme_name': 'SBI Small Cap Fund Reg (G)', 'target_scheme_id': 12557, 'target_scheme_code': 'INF084M01AI3', 'target_scheme_name': 'Aditya Birla Sun Life Debt Plus Arbitrage FoF Scheme - REGULAR - IDCW', 'stp_amount': 1000, 'stp_frequency': 'weekly', 'scheme': 'SBI Small Cap Fund Reg (G)', 'scheme_name': 'SBI Small Cap Fund Reg (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-10 20:58:44,886 views 7912 8080 Portfolio action for holding 15501: SBI Small Cap Fund Reg (G)
+INFO 2025-08-10 20:58:44,971 views 7912 8080 Target scheme for stp_start: Aditya Birla Sun Life Debt Plus Arbitrage FoF Scheme - REGULAR - IDCW
+INFO 2025-08-10 20:58:44,972 views 7912 8080 Processed values - Mode: portfolio, Scheme: None, Portfolio: SBI Small Cap Fund Reg (G)
+INFO 2025-08-10 20:58:45,233 views 7912 8080 Created portfolio mapping for action 41
+INFO 2025-08-10 20:58:45,233 views 7912 8080 Created Portfolio action 41: stp_start - SBI Small Cap Fund Reg (G) (Portfolio)
+INFO 2025-08-10 20:58:45,233 views 7912 8080 Successfully created action 41
+INFO 2025-08-10 20:58:45,532 views 7912 8080 Plan EP202508100004 submitted for approval
+INFO 2025-08-10 20:58:49,860 views 7912 8080 Found 2 actions for execution plan 71
+INFO 2025-08-10 20:58:49,897 views 7912 8080 Portfolio-independent Excel generated in memory for plan 71
+INFO 2025-08-10 20:58:49,897 views 7912 8080 Portfolio actions: 2, New investments: 0
+INFO 2025-08-10 20:58:49,903 views 7912 8080 Generated Excel data for plan EP202508100004
+INFO 2025-08-10 21:13:45,377 views 7912 23320 create_plan_step2 called with client_id: 1594 (type: <class 'str'>)
+INFO 2025-08-10 21:13:45,463 views 7912 23320 Found legacy client: SAMIR NALIN KAPADIA (ID: 1594)
+INFO 2025-08-10 21:13:45,790 views 7912 23320 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-10 21:13:45,812 views 7912 23320 Found linked profile for client 1594
+INFO 2025-08-10 21:13:45,902 views 7912 23320 Found 25 portfolio holdings for client 1594
