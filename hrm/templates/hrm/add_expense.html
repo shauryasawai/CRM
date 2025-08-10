@@ -10,7 +10,7 @@
           <span class="badge bg-info">Quick & Easy</span>
         </div>
         <div class="card-body">
-          <form method="post" enctype="multipart/form-data" id="expenseForm">
+          <form method="post" id="expenseForm">
             {% csrf_token %}
             
             <!-- Expense Type with enhanced features -->
@@ -93,24 +93,57 @@
               </div>
             </div>
 
-            <!-- Receipt upload with preview -->
+            <!-- Enhanced Receipt upload with cloud storage -->
             <div class="mb-3">
-              <label for="{{ form.receipt.id_for_label }}" class="form-label">
+              <label for="receiptInput" class="form-label">
                 <i class="fas fa-receipt"></i> Receipt
               </label>
-              {{ form.receipt }}
-              <div class="form-text">Upload receipt (JPG, PNG or PDF) - Optional but recommended</div>
+              
+              <!-- File input with drag and drop -->
+              <div class="receipt-upload-area" id="receiptUploadArea">
+                <div class="upload-content">
+                  <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                  <p class="text-muted">Drag & drop your receipt here or <strong>click to browse</strong></p>
+                  <small class="text-muted">Supports JPG, PNG, PDF (Max 5MB)</small>
+                  <input type="file" id="receiptInput" name="receipt" accept=".jpg,.jpeg,.png,.pdf" class="d-none">
+                </div>
+                
+                <!-- Upload progress -->
+                <div id="uploadProgress" class="upload-progress d-none">
+                  <div class="progress">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" style="width: 0%"></div>
+                  </div>
+                  <small class="text-muted">Uploading receipt...</small>
+                </div>
+              </div>
+              
+              <!-- Upload status -->
+              <div id="uploadStatus" class="mt-2"></div>
               
               <!-- Receipt preview -->
               <div id="receiptPreview" class="mt-3 d-none">
                 <div class="card bg-light">
                   <div class="card-body p-3">
-                    <h6 class="card-title">Receipt Preview:</h6>
-                    <div id="previewContent"></div>
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div>
+                        <h6 class="card-title mb-1">Receipt Uploaded:</h6>
+                        <small id="receiptFilename" class="text-muted"></small>
+                      </div>
+                      <button type="button" class="btn btn-sm btn-outline-danger" id="removeReceiptBtn">
+                        <i class="fas fa-times"></i> Remove
+                      </button>
+                    </div>
+                    <div id="previewContent" class="mt-2"></div>
                   </div>
                 </div>
               </div>
             </div>
+
+            <!-- Hidden fields for receipt data -->
+            <input type="hidden" id="receiptPublicId" name="receipt_public_id">
+            <input type="hidden" id="receiptUrl" name="receipt_url">
+            <input type="hidden" id="receiptFileName" name="receipt_filename">
 
             <!-- Form summary before submit -->
             <div id="formSummary" class="card bg-light d-none mb-3">
@@ -178,10 +211,47 @@
   border-left: none;
 }
 
+/* Receipt upload area styling */
+.receipt-upload-area {
+  border: 2px dashed #dee2e6;
+  border-radius: 8px;
+  padding: 30px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #f8f9fa;
+}
+
+.receipt-upload-area:hover {
+  border-color: #007bff;
+  background: #f0f4ff;
+}
+
+.receipt-upload-area.dragover {
+  border-color: #007bff;
+  background: #e7f1ff;
+  transform: scale(1.02);
+}
+
+.receipt-upload-area.uploading {
+  border-color: #28a745;
+  background: #f0fff4;
+}
+
+.upload-progress {
+  padding: 20px;
+}
+
+.progress {
+  height: 8px;
+  margin-bottom: 10px;
+}
+
 #receiptPreview img {
   max-width: 100%;
   max-height: 200px;
   border-radius: 5px;
+  border: 1px solid #dee2e6;
 }
 
 .amount-warning {
@@ -203,6 +273,24 @@
   margin-top: 0.25rem;
   font-size: 0.875em;
 }
+
+.upload-success {
+  color: #155724;
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.upload-error {
+  color: #721c24;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+  margin-top: 0.5rem;
+}
 </style>
 
 <script>
@@ -210,8 +298,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const expenseTypeSelect = document.getElementById('{{ form.expense_type.id_for_label }}');
     const descriptionInput = document.getElementById('{{ form.description.id_for_label }}');
     const amountInput = document.getElementById('{{ form.amount.id_for_label }}');
-    const receiptInput = document.getElementById('{{ form.receipt.id_for_label }}');
+    const receiptInput = document.getElementById('receiptInput');
     const dateInput = document.getElementById('{{ form.expense_date.id_for_label }}');
+    const uploadArea = document.getElementById('receiptUploadArea');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const uploadStatus = document.getElementById('uploadStatus');
+
+    // Receipt upload data
+    let uploadedReceipt = null;
 
     // Type-specific data
     const typeData = {
@@ -286,13 +380,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 };
                 suggestionTags.appendChild(tag);
             });
-            suggestionsDiv.classList.remove('d-none');
-            
-            // Show typical range
-            rangeText.textContent = `Typical range: ₹${data.ranges.min} - ₹${data.ranges.max}`;
-            amountRange.classList.remove('d-none');
-        } else {
-            tipDiv.classList.add('d-none');
             suggestionsDiv.classList.add('d-none');
             amountRange.classList.add('d-none');
         }
@@ -323,29 +410,181 @@ document.addEventListener('DOMContentLoaded', function() {
         updateFormSummary();
     });
 
-    // Handle receipt preview
+    // Enhanced receipt upload handling
+    uploadArea.addEventListener('click', function() {
+        receiptInput.click();
+    });
+
+    // Drag and drop functionality
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        this.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileUpload(files[0]);
+        }
+    });
+
     receiptInput.addEventListener('change', function() {
-        const file = this.files[0];
+        if (this.files.length > 0) {
+            handleFileUpload(this.files[0]);
+        }
+    });
+
+    function handleFileUpload(file) {
+        // Validate file
+        if (!validateFile(file)) {
+            return;
+        }
+
+        // Show upload progress
+        showUploadProgress();
+        
+        // Create FormData
+        const formData = new FormData();
+        formData.append('receipt', file);
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+        // Upload file
+        fetch('{% url "upload_receipt_ajax" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideUploadProgress();
+            
+            if (data.success) {
+                uploadedReceipt = data;
+                showUploadSuccess(data);
+                updateFormSummary();
+                
+                // Store receipt data in hidden fields
+                document.getElementById('receiptPublicId').value = data.public_id;
+                document.getElementById('receiptUrl').value = data.secure_url;
+                document.getElementById('receiptFileName').value = data.filename;
+            } else {
+                showUploadError(data.error);
+            }
+        })
+        .catch(error => {
+            hideUploadProgress();
+            showUploadError('Upload failed. Please try again.');
+            console.error('Upload error:', error);
+        });
+    }
+
+    function validateFile(file) {
+        // Check file size (5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            showUploadError('File size must be less than 5MB');
+            return false;
+        }
+
+        // Check file type
+        const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+        if (!allowedTypes.includes(file.type)) {
+            showUploadError('Only JPG, PNG, and PDF files are allowed');
+            return false;
+        }
+
+        return true;
+    }
+
+    function showUploadProgress() {
+        uploadArea.classList.add('uploading');
+        uploadProgress.classList.remove('d-none');
+        uploadStatus.innerHTML = '';
+        
+        // Animate progress bar
+        const progressBar = uploadProgress.querySelector('.progress-bar');
+        let width = 0;
+        const interval = setInterval(() => {
+            width += 5;
+            progressBar.style.width = width + '%';
+            if (width >= 90) {
+                clearInterval(interval);
+            }
+        }, 100);
+    }
+
+    function hideUploadProgress() {
+        uploadArea.classList.remove('uploading');
+        uploadProgress.classList.add('d-none');
+        const progressBar = uploadProgress.querySelector('.progress-bar');
+        progressBar.style.width = '0%';
+    }
+
+    function showUploadSuccess(data) {
+        uploadStatus.innerHTML = `
+            <div class="upload-success">
+                <i class="fas fa-check-circle"></i> Receipt uploaded successfully
+            </div>
+        `;
+        
+        showReceiptPreview(data);
+    }
+
+    function showUploadError(message) {
+        uploadStatus.innerHTML = `
+            <div class="upload-error">
+                <i class="fas fa-exclamation-circle"></i> ${message}
+            </div>
+        `;
+    }
+
+    function showReceiptPreview(data) {
         const previewDiv = document.getElementById('receiptPreview');
         const previewContent = document.getElementById('previewContent');
+        const filenameSpan = document.getElementById('receiptFilename');
         
-        if (file) {
-            previewContent.innerHTML = '';
-            
-            if (file.type.startsWith('image/')) {
-                const img = document.createElement('img');
-                img.src = URL.createObjectURL(file);
-                img.onload = () => URL.revokeObjectURL(img.src);
-                previewContent.appendChild(img);
-            } else {
-                previewContent.innerHTML = `<i class="fas fa-file-pdf fa-2x text-danger"></i><br><small>${file.name}</small>`;
-            }
-            
-            previewDiv.classList.remove('d-none');
+        filenameSpan.textContent = data.filename;
+        
+        // Show preview based on file type
+        if (data.secure_url.includes('.pdf')) {
+            previewContent.innerHTML = `
+                <div class="text-center">
+                    <i class="fas fa-file-pdf fa-3x text-danger mb-2"></i>
+                    <p class="small text-muted">PDF Receipt</p>
+                    <a href="${data.secure_url}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-external-link-alt"></i> View PDF
+                    </a>
+                </div>
+            `;
         } else {
-            previewDiv.classList.add('d-none');
+            previewContent.innerHTML = `
+                <div class="text-center">
+                    <img src="${data.secure_url}" alt="Receipt preview" class="img-thumbnail">
+                </div>
+            `;
         }
         
+        previewDiv.classList.remove('d-none');
+    }
+
+    // Remove receipt functionality
+    document.getElementById('removeReceiptBtn').addEventListener('click', function() {
+        uploadedReceipt = null;
+        document.getElementById('receiptPreview').classList.add('d-none');
+        document.getElementById('receiptPublicId').value = '';
+        document.getElementById('receiptUrl').value = '';
+        document.getElementById('receiptFileName').value = '';
+        receiptInput.value = '';
+        uploadStatus.innerHTML = '';
         updateFormSummary();
     });
 
@@ -363,7 +602,7 @@ document.addEventListener('DOMContentLoaded', function() {
             summaryType.textContent = expenseTypeSelect.options[expenseTypeSelect.selectedIndex].text || '-';
             summaryDate.textContent = dateInput.value || '-';
             summaryAmount.textContent = amountInput.value || '0';
-            summaryReceipt.textContent = receiptInput.files[0] ? receiptInput.files[0].name : 'Not uploaded';
+            summaryReceipt.textContent = uploadedReceipt ? uploadedReceipt.filename : 'Not uploaded';
             summaryDiv.classList.remove('d-none');
         } else {
             summaryDiv.classList.add('d-none');
@@ -379,6 +618,13 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!dateInput.value) {
         dateInput.valueAsDate = new Date();
     }
+
+    // Form submission handling
+    document.getElementById('expenseForm').addEventListener('submit', function(e) {
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding Expense...';
+        submitBtn.disabled = true;
+    });
 });
 </script>
 {% endblock %}

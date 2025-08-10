@@ -1,3 +1,4 @@
+import cloudinary
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -1067,6 +1068,29 @@ def reimbursement_claims(request):
     }
     return render(request, 'hrm/reimbursement_claims.html', context)
 
+def validate_receipt_file(file):
+    """Validate receipt file format and size"""
+    # Check file size (5MB limit)
+    if file.size > 5 * 1024 * 1024:
+        return False
+    
+    # Check file extension
+    allowed_extensions = ['.jpg', '.jpeg', '.png', '.pdf']
+    file_extension = file.name.lower().split('.')[-1]
+    if f'.{file_extension}' not in allowed_extensions:
+        return False
+    
+    # Check MIME type
+    allowed_mimes = ['image/jpeg', 'image/png', 'application/pdf']
+    if hasattr(file, 'content_type') and file.content_type not in allowed_mimes:
+        return False
+    
+    return True
+
+from django.core.exceptions import ValidationError
+
+
+    
 @login_required
 def add_expense(request):
     try:
@@ -1078,28 +1102,78 @@ def add_expense(request):
     if request.method == 'POST':
         form = ReimbursementExpenseForm(request.POST, request.FILES)
         if form.is_valid():
-            print("Form data before save:", form.cleaned_data)  # Debug form data
-            
-            expense = form.save(commit=False)
-            
-            # Get or create claim - debug the status value
-            today = timezone.now().date()
-            claim, created = ReimbursementClaim.objects.get_or_create(
-                employee=employee,
-                month=today.month,
-                year=today.year,
-                defaults={
-                    'status': 'D',  # Ensure this is exactly 'D' (1 char)
-                    'submitted_on': None
-                }
-            )
-            print("Claim status:", claim.status)  # Debug claim status
-            
-            expense.claim = claim
-            expense.save()  # Error occurs here
-            
-            messages.success(request, 'Expense added successfully!')
-            return redirect('reimbursement_claims')
+            try:
+                print("Form data before save:", form.cleaned_data)
+                
+                expense = form.save(commit=False)
+                
+                # Get or create claim
+                today = timezone.now().date()
+                claim, created = ReimbursementClaim.objects.get_or_create(
+                    employee=employee,
+                    month=today.month,
+                    year=today.year,
+                    defaults={
+                        'status': 'D',
+                        'submitted_on': None
+                    }
+                )
+                print("Claim status:", claim.status)
+                
+                expense.claim = claim
+                
+                # Handle receipt upload from hidden fields (uploaded via AJAX)
+                receipt_public_id = request.POST.get('receipt_public_id')
+                receipt_url = request.POST.get('receipt_url')
+                receipt_filename = request.POST.get('receipt_filename')
+                
+                if receipt_public_id and receipt_url:
+                    expense.receipt_public_id = receipt_public_id
+                    expense.receipt_url = receipt_url
+                    expense.receipt_filename = receipt_filename
+                    print(f"Receipt linked: {receipt_url}")
+                
+                # Handle direct file upload (fallback)
+                elif 'receipt' in request.FILES:
+                    receipt_file = request.FILES['receipt']
+                    
+                    if not validate_receipt_file(receipt_file):
+                        messages.error(request, 'Invalid file format. Please upload JPG, PNG, or PDF files only.')
+                        return render(request, 'hrm/add_expense.html', {'form': form, 'employee': employee})
+                    
+                    try:
+                        # Upload to Cloudinary with minimal parameters
+                        upload_result = cloudinary.uploader.upload(
+                            receipt_file,
+                            folder=f"receipts/{employee.employee_id}",
+                            resource_type='auto',
+                            tags=[f"employee_{employee.employee_id}", "expense_receipt"]
+                        )
+                        
+                        # Store Cloudinary details
+                        expense.receipt_public_id = upload_result['public_id']
+                        expense.receipt_url = upload_result['secure_url']
+                        expense.receipt_filename = receipt_file.name
+                        
+                        print(f"Receipt uploaded successfully: {upload_result['secure_url']}")
+                        
+                    except Exception as e:
+                        print(f"Error uploading receipt: {e}")
+                        messages.error(request, 'Error uploading receipt. Please try again.')
+                        return render(request, 'hrm/add_expense.html', {'form': form, 'employee': employee})
+                
+                expense.save()
+                
+                messages.success(request, 'Expense added successfully!')
+                return redirect('reimbursement_claims')
+                
+            except Exception as e:
+                print(f"Error saving expense: {e}")
+                messages.error(request, f'Error saving expense: {str(e)}')
+                return render(request, 'hrm/add_expense.html', {'form': form, 'employee': employee})
+        else:
+            print("Form errors:", form.errors)
+            messages.error(request, 'Please correct the errors below.')
     else:
         form = ReimbursementExpenseForm()
     
@@ -1109,6 +1183,70 @@ def add_expense(request):
     }
     return render(request, 'hrm/add_expense.html', context)
 
+def format_file_size(size_bytes):
+    """Format file size in human readable format"""
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024 * 1024:
+        return f"{round(size_bytes / 1024, 1)} KB"
+    else:
+        return f"{round(size_bytes / (1024 * 1024), 1)} MB"
+
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+import os
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@login_required
+def upload_receipt_ajax(request):
+    """AJAX endpoint for receipt upload with progress"""
+    try:
+        if 'receipt' not in request.FILES:
+            return JsonResponse({'success': False, 'error': 'No file provided'})
+        
+        receipt_file = request.FILES['receipt']
+        
+        if not validate_receipt_file(receipt_file):
+            return JsonResponse({'success': False, 'error': 'Invalid file format or size'})
+        
+        employee = Employee.objects.get(user=request.user)
+        
+        # Verify Cloudinary configuration
+        if not all([
+            os.getenv('CLOUDINARY_CLOUD_NAME'),
+            os.getenv('CLOUDINARY_API_KEY'),
+            os.getenv('CLOUDINARY_API_SECRET')
+        ]):
+            return JsonResponse({
+                'success': False, 
+                'error': 'Cloudinary configuration missing. Please check environment variables.'
+            })
+        
+        # Upload to Cloudinary with minimal parameters
+        upload_result = cloudinary.uploader.upload(
+            receipt_file,
+            folder=f"receipts/{employee.employee_id}",
+            resource_type='auto',
+            tags=[f"employee_{employee.employee_id}", "temp_receipt"]
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'public_id': upload_result['public_id'],
+            'secure_url': upload_result['secure_url'],
+            'filename': receipt_file.name,
+            'file_size': receipt_file.size,
+            'file_size_formatted': format_file_size(receipt_file.size)
+        })
+        
+    except Employee.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Employee not found'})
+    except Exception as e:
+        print(f"Error in AJAX upload: {e}")
+        return JsonResponse({'success': False, 'error': f'Upload failed: {str(e)}'})
+
+    
 @login_required
 def submit_claim(request, claim_id):
     """Submit monthly reimbursement claim"""
@@ -1129,7 +1267,6 @@ def submit_claim(request, claim_id):
     
     messages.success(request, 'Reimbursement claim submitted successfully!')
     return redirect('reimbursement_claims')
-
 
 @login_required
 def approve_reimbursement(request, claim_id):

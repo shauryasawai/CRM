@@ -1,4 +1,5 @@
 from django import forms
+
 from .models import (
     Department, LeaveRequest, Employee, LeaveType, Attendance,
     Holiday, ReimbursementClaim, ReimbursementExpense
@@ -78,6 +79,27 @@ class AttendanceForm(forms.ModelForm):
             'notes': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
         }
 
+from django.utils import timezone
+
+def validate_receipt_file(file):
+    """Validate receipt file format and size"""
+    # Check file size (5MB limit)
+    if file.size > 5 * 1024 * 1024:
+        return False
+    
+    # Check file extension
+    allowed_extensions = ['.jpg', '.jpeg', '.png', '.pdf']
+    file_extension = file.name.lower().split('.')[-1]
+    if f'.{file_extension}' not in allowed_extensions:
+        return False
+    
+    # Check MIME type
+    allowed_mimes = ['image/jpeg', 'image/png', 'application/pdf']
+    if hasattr(file, 'content_type') and file.content_type not in allowed_mimes:
+        return False
+    
+    return True
+
 class ReimbursementClaimForm(forms.ModelForm):
     class Meta:
         model = ReimbursementClaim
@@ -91,32 +113,77 @@ class ReimbursementClaimForm(forms.ModelForm):
             ], attrs={'class': 'form-control'}),
             'year': forms.NumberInput(attrs={'class': 'form-control', 'min': '2020', 'max': '2030'}),
         }
+        
+def get_allowed_file_types():
+    """Get list of allowed file types for display"""
+    return ['JPG', 'JPEG', 'PNG', 'PDF']
 
 class ReimbursementExpenseForm(forms.ModelForm):
     class Meta:
         model = ReimbursementExpense
-        fields = ['expense_date', 'description', 'amount', 'receipt']
+        fields = ['expense_type', 'description', 'amount', 'expense_date']
         widgets = {
-            'expense_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'category': forms.TextInput(attrs={'class': 'form-control'}),
-            'description': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
-            'amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
-            'receipt': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*,.pdf'}),
+            'expense_date': forms.DateInput(
+                attrs={
+                    'type': 'date',
+                    'class': 'form-control',
+                    'max': timezone.now().date().isoformat()
+                }
+            ),
+            'description': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Enter expense description...',
+                    'maxlength': 255
+                }
+            ),
+            'amount': forms.NumberInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': '0.00',
+                    'step': '0.01',
+                    'min': '0.01'
+                }
+            ),
+            'expense_type': forms.Select(
+                attrs={'class': 'form-select'}
+            )
         }
-
+    
+    # Separate receipt field for manual handling
+    receipt = forms.FileField(
+        required=False,
+        widget=forms.FileInput(
+            attrs={
+                'class': 'form-control',
+                'accept': '.jpg,.jpeg,.png,.pdf',
+                'id': 'receiptInput'
+            }
+        ),
+        help_text=f'Upload receipt ({", ".join(get_allowed_file_types())}) - Max 5MB'
+    )
+    
     def clean_amount(self):
         amount = self.cleaned_data.get('amount')
         if amount and amount <= 0:
-            raise forms.ValidationError("Amount must be greater than zero.")
+            raise forms.ValidationError('Amount must be greater than zero.')
         return amount
-
+    
     def clean_expense_date(self):
         expense_date = self.cleaned_data.get('expense_date')
-        if expense_date:
-            from django.utils import timezone
-            if expense_date > timezone.now().date():
-                raise forms.ValidationError("Expense date cannot be in the future.")
+        if expense_date and expense_date > timezone.now().date():
+            raise forms.ValidationError('Expense date cannot be in the future.')
         return expense_date
+    
+    def clean_receipt(self):
+        receipt = self.cleaned_data.get('receipt')
+        if receipt:
+            try:
+                validate_receipt_file(receipt)
+            except forms.ValidationError as e:
+                raise forms.ValidationError(str(e))
+        return receipt
+
 
 class HolidayForm(forms.ModelForm):
     class Meta:

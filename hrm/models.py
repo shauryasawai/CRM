@@ -1,3 +1,4 @@
+import cloudinary
 from django.db import models
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -6,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Sum
 from decimal import Decimal
 import uuid
+from cloudinary.models import CloudinaryField
 from datetime import datetime
 
 # Import from your CRM module
@@ -387,6 +389,13 @@ class ReimbursementClaim(models.Model):
             return True
         return False
 
+from django.db import models
+from django.conf import settings
+from cloudinary.models import CloudinaryField
+import cloudinary.uploader
+from decimal import Decimal
+
+
 class ReimbursementExpense(models.Model):
     """Individual expenses within a claim"""
     EXPENSE_TYPES = [
@@ -401,7 +410,7 @@ class ReimbursementExpense(models.Model):
     ]
     
     claim = models.ForeignKey(
-        ReimbursementClaim, 
+        'ReimbursementClaim', 
         on_delete=models.CASCADE, 
         related_name='expenses'
     )
@@ -409,11 +418,27 @@ class ReimbursementExpense(models.Model):
     description = models.CharField(max_length=255)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     expense_date = models.DateField()
-    receipt = models.FileField(upload_to='receipts/', blank=True)
     
-    # Additional fields that exist in your database
+    # Use CloudinaryField instead of FileField for Vercel compatibility
+    receipt = CloudinaryField(
+        'receipt', 
+        blank=True, 
+        null=True,
+        folder='receipts',
+        resource_type='auto',  # Allows images and PDFs
+        format='auto',
+        transformation=[
+            {'quality': 'auto:good'},
+            {'fetch_format': 'auto'}
+        ]
+    )
+    
+    # Keep these fields for backward compatibility and additional metadata
     receipt_drive_id = models.CharField(max_length=255, blank=True, null=True, default='')
     receipt_filename = models.CharField(max_length=255, blank=True, null=True, default='')
+    receipt_url = models.URLField(blank=True, null=True)  # Store the cloud URL
+    receipt_public_id = models.CharField(max_length=255, blank=True, null=True)  # Cloudinary public ID
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -430,13 +455,38 @@ class ReimbursementExpense(models.Model):
         if self.receipt_filename is None:
             self.receipt_filename = ''
             
-        # Auto-populate receipt_filename from uploaded file if not provided
-        if not self.receipt_filename and self.receipt:
-            self.receipt_filename = self.receipt.name
-            
+        # Handle receipt metadata
+        if self.receipt:
+            if hasattr(self.receipt, 'public_id'):
+                self.receipt_public_id = self.receipt.public_id
+                self.receipt_url = self.receipt.url
+            if hasattr(self.receipt, 'original_filename'):
+                self.receipt_filename = self.receipt.original_filename
+            elif not self.receipt_filename:
+                self.receipt_filename = f"receipt_{self.pk or 'new'}"
+        
         super().save(*args, **kwargs)
         # Update claim total
-        self.claim.save()
+        if hasattr(self, 'claim') and self.claim:
+            self.claim.save()
+
+    def get_receipt_url(self):
+        """Get the receipt URL for display"""
+        if self.receipt:
+            return self.receipt.url
+        return self.receipt_url
+    
+    def delete_receipt(self):
+        """Delete receipt from cloud storage"""
+        if self.receipt_public_id:
+            try:
+                cloudinary.uploader.destroy(self.receipt_public_id)
+            except Exception as e:
+                print(f"Error deleting receipt from cloudinary: {e}")
+
+    def has_receipt(self):
+        """Check if expense has a receipt"""
+        return bool(self.receipt or self.receipt_url or self.receipt_public_id)
 
 class Notification(models.Model):
     """Enhanced notifications aligned with CRM hierarchy"""

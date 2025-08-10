@@ -1,3 +1,4 @@
+# hrm/urls.py - Your complete URLs file with new endpoints added
 from django.urls import path
 from . import views
 
@@ -46,6 +47,10 @@ urlpatterns = [
     path('api/holiday/<int:holiday_id>/delete/', views.delete_holiday, name='delete_holiday'),
     path('api/expense/<int:expense_id>/delete/', views.delete_expense, name='delete_expense'),
     
+    # Receipt Upload (AJAX) - Updated and new endpoints
+    path('upload-receipt/', views.upload_receipt_ajax, name='upload_receipt_ajax'),
+    
     # Utility Functions
     path('utils/auto-approve-leaves/', views.auto_approve_leaves_view, name='auto_approve_leaves'),
+
 ]

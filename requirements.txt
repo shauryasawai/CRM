@@ -70,3 +70,6 @@ whitenoise==6.9.0
 # API development (if building REST APIs)
 djangorestframework>=3.14.0  # Uncomment if building REST APIs
 django-filter>=23.0          # Uncomment for API filtering
+cloudinary==1.36.0
+django-cloudinary-storage==0.3.0
+python-dotenv==1.0.0
