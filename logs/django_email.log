@@ -1540,3 +1540,127 @@ INFO 2025-08-10 21:13:45,463 views 7912 23320 Found legacy client: SAMIR NALIN K
 INFO 2025-08-10 21:13:45,790 views 7912 23320 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
 INFO 2025-08-10 21:13:45,812 views 7912 23320 Found linked profile for client 1594
 INFO 2025-08-10 21:13:45,902 views 7912 23320 Found 25 portfolio holdings for client 1594
+INFO 2025-08-10 21:26:09,340 views 27232 11948 create_plan_step2 called with client_id: 1594 (type: <class 'str'>)
+INFO 2025-08-10 21:26:09,423 views 27232 11948 Found legacy client: SAMIR NALIN KAPADIA (ID: 1594)
+INFO 2025-08-10 21:26:09,736 views 27232 11948 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-10 21:26:09,755 views 27232 11948 Found linked profile for client 1594
+INFO 2025-08-10 21:26:09,844 views 27232 11948 Found 25 portfolio holdings for client 1594
+INFO 2025-08-10 21:26:22,570 views 27232 22092 Created execution plan EP202508100005 for client 1594
+INFO 2025-08-10 21:26:22,571 views 27232 22092 Processing action 1: {'action_type': 'redeem', 'source_scheme': 'Bandhan Small Cap Fund Reg (G)', 'target_scheme': None, 'notes': 'ok', 'portfolio_id': 15482, 'source_portfolio_id': 15482, 'source_scheme_name': 'Bandhan Small Cap Fund Reg (G)', 'redeem_by': 'specific_amount', 'redeem_amount': 1000, 'redeem_units': None, 'scheme': 'Bandhan Small Cap Fund Reg (G)', 'scheme_name': 'Bandhan Small Cap Fund Reg (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-10 21:26:22,664 views 27232 22092 Portfolio action for holding 15482: Bandhan Small Cap Fund Reg (G)
+INFO 2025-08-10 21:26:22,665 views 27232 22092 Processed values - Mode: portfolio, Scheme: None, Portfolio: Bandhan Small Cap Fund Reg (G)
+INFO 2025-08-10 21:26:22,913 views 27232 22092 Created portfolio mapping for action 42
+INFO 2025-08-10 21:26:22,924 views 27232 22092 Successfully created action 42
+INFO 2025-08-10 21:26:22,925 views 27232 22092 Processing action 2: {'action_type': 'purchase', 'source_scheme': 'WhiteOak Capital Flexi Cap Fund (G)', 'target_scheme': None, 'notes': 'ok', 'portfolio_id': 15504, 'source_portfolio_id': 15504, 'source_scheme_name': 'WhiteOak Capital Flexi Cap Fund (G)', 'purchase_type': 'existing_scheme', 'purchase_amount': 10000, 'investment_option': 'growth', 'plan_type': 'direct', 'folio_number': 'na', 'scheme': 'WhiteOak Capital Flexi Cap Fund (G)', 'scheme_name': 'WhiteOak Capital Flexi Cap Fund (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-10 21:26:23,450 views 27232 22092 Found scheme by word match 'WhiteOak': WhiteOak Capital Flexi Cap Fund (G) -> WhiteOak Capital Arbitrage Fund Direct Plan Growth
+INFO 2025-08-10 21:26:23,450 views 27232 22092 Found scheme by name 'WhiteOak Capital Flexi Cap Fund (G)': WhiteOak Capital Arbitrage Fund Direct Plan Growth
+INFO 2025-08-10 21:26:23,450 views 27232 22092 Processed values - Mode: new_investment, Scheme: WhiteOak - WhiteOak Capital Arbitrage Fund Direct Plan Growth, Portfolio: None
+INFO 2025-08-10 21:26:23,542 views 27232 22092 Successfully created action 43
+INFO 2025-08-10 21:26:23,542 views 27232 22092 Processing action 3: {'action_type': 'stp', 'source_scheme': 'SBI Small Cap Fund Reg (G)', 'target_scheme': 'Aditya Birla Sun Life Debt Plus Arbitrage FoF Scheme - REGULAR - IDCW', 'notes': 'ok', 'portfolio_id': 15501, 'source_portfolio_id': 15501, 'source_scheme_name': 'SBI Small Cap Fund Reg (G)', 'target_scheme_id': 12557, 'target_scheme_code': 'INF084M01AI3', 'target_scheme_name': 'Aditya Birla Sun Life Debt Plus Arbitrage FoF Scheme - REGULAR - IDCW', 'stp_amount': 1000, 'stp_frequency': 'weekly', 'scheme': 'SBI Small Cap Fund Reg (G)', 'scheme_name': 'SBI Small Cap Fund Reg (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-10 21:26:23,640 views 27232 22092 Portfolio action for holding 15501: SBI Small Cap Fund Reg (G)
+INFO 2025-08-10 21:26:23,738 views 27232 22092 Found target scheme by ID: Aditya Birla Sun Life Debt Plus Arbitrage FoF Scheme - REGULAR - IDCW
+INFO 2025-08-10 21:26:23,739 views 27232 22092 Processed values - Mode: portfolio, Scheme: None, Portfolio: SBI Small Cap Fund Reg (G)
+INFO 2025-08-10 21:26:24,035 views 27232 22092 Created portfolio mapping for action 44
+INFO 2025-08-10 21:26:24,036 views 27232 22092 Created Portfolio action 44: stp_start - SBI Small Cap Fund Reg (G) (Portfolio)
+INFO 2025-08-10 21:26:24,037 views 27232 22092 Successfully created action 44
+INFO 2025-08-10 21:26:24,367 views 27232 22092 Plan EP202508100005 submitted for approval
+INFO 2025-08-10 21:26:29,253 views 27232 22092 Found 3 actions for execution plan 72
+INFO 2025-08-10 21:26:29,389 views 27232 22092 Portfolio-independent Excel generated in memory for plan 72
+INFO 2025-08-10 21:26:29,389 views 27232 22092 Portfolio actions: 2, New investments: 1
+INFO 2025-08-10 21:26:29,394 views 27232 22092 Generated Excel data for plan EP202508100005
+INFO 2025-08-10 21:27:02,646 views 27232 22092 Found 3 actions for execution plan 72
+INFO 2025-08-10 21:27:02,824 views 27232 22092 Portfolio-independent Excel generated in memory for plan 72
+INFO 2025-08-10 21:27:02,825 views 27232 22092 Portfolio actions: 2, New investments: 1
+INFO 2025-08-10 21:28:06,136 views 27232 22092 Rejection notification sent to narayan@gmail.com
+INFO 2025-08-10 21:28:12,980 views 27232 22092 Rejection notification sent to narayan@gmail.com
+INFO 2025-08-10 21:29:43,814 views 27232 22092 create_plan_step2 called with client_id: 1594 (type: <class 'str'>)
+INFO 2025-08-10 21:29:43,885 views 27232 22092 Found legacy client: SAMIR NALIN KAPADIA (ID: 1594)
+INFO 2025-08-10 21:29:44,232 views 27232 22092 RM Head narayan access check: TeamDirect=True, TeamProfile=True, CanAccess=True
+INFO 2025-08-10 21:29:44,241 views 27232 22092 Found linked profile for client 1594
+INFO 2025-08-10 21:29:44,336 views 27232 22092 Found 25 portfolio holdings for client 1594
+INFO 2025-08-10 21:30:19,778 views 27232 2340 Search query: 'fo', action_type: ''
+INFO 2025-08-10 21:30:19,930 views 27232 2340 Total schemes matching search (before active filter): 1132
+INFO 2025-08-10 21:30:20,170 views 27232 2340 Final schemes count: 100
+INFO 2025-08-10 21:30:20,507 views 27232 2340 Returning 100 schemes for query 'fo'
+INFO 2025-08-10 21:30:35,108 views 27232 2340 Search query: 'axis', action_type: ''
+INFO 2025-08-10 21:30:35,265 views 27232 2340 Total schemes matching search (before active filter): 391
+INFO 2025-08-10 21:30:35,543 views 27232 2340 Final schemes count: 100
+INFO 2025-08-10 21:30:36,123 views 27232 2340 Returning 100 schemes for query 'axis'
+INFO 2025-08-10 21:31:07,173 views 27232 2340 Search query: 'woo', action_type: ''
+INFO 2025-08-10 21:31:07,342 views 27232 2340 Total schemes matching search (before active filter): 0
+WARNING 2025-08-10 21:31:07,493 views 27232 2340 No active schemes found, showing all matching schemes
+INFO 2025-08-10 21:31:07,636 views 27232 2340 Final schemes count: 0
+INFO 2025-08-10 21:31:08,011 views 27232 2340 Returning 0 schemes for query 'woo'
+INFO 2025-08-10 21:31:08,224 views 27232 15432 Search query: 'wood', action_type: ''
+INFO 2025-08-10 21:31:08,366 views 27232 15432 Total schemes matching search (before active filter): 0
+WARNING 2025-08-10 21:31:08,482 views 27232 15432 No active schemes found, showing all matching schemes
+INFO 2025-08-10 21:31:08,643 views 27232 15432 Final schemes count: 0
+INFO 2025-08-10 21:31:08,971 views 27232 15432 Returning 0 schemes for query 'wood'
+INFO 2025-08-10 21:31:10,720 views 27232 15432 Search query: 'wood', action_type: ''
+INFO 2025-08-10 21:31:10,899 views 27232 15432 Total schemes matching search (before active filter): 0
+WARNING 2025-08-10 21:31:11,060 views 27232 15432 No active schemes found, showing all matching schemes
+INFO 2025-08-10 21:31:11,201 views 27232 15432 Final schemes count: 0
+INFO 2025-08-10 21:31:11,526 views 27232 15432 Returning 0 schemes for query 'wood'
+INFO 2025-08-10 21:31:15,008 views 27232 15432 Search query: 'caners', action_type: ''
+INFO 2025-08-10 21:31:15,196 views 27232 15432 Total schemes matching search (before active filter): 0
+WARNING 2025-08-10 21:31:15,366 views 27232 15432 No active schemes found, showing all matching schemes
+INFO 2025-08-10 21:31:15,526 views 27232 15432 Final schemes count: 0
+INFO 2025-08-10 21:31:15,924 views 27232 15432 Returning 0 schemes for query 'caners'
+INFO 2025-08-10 21:31:16,303 views 27232 15432 Search query: 'caner', action_type: ''
+INFO 2025-08-10 21:31:16,425 views 27232 15432 Total schemes matching search (before active filter): 0
+WARNING 2025-08-10 21:31:16,541 views 27232 15432 No active schemes found, showing all matching schemes
+INFO 2025-08-10 21:31:16,686 views 27232 15432 Final schemes count: 0
+INFO 2025-08-10 21:31:16,865 views 27232 2340 Search query: 'canera', action_type: ''
+INFO 2025-08-10 21:31:17,039 views 27232 2340 Total schemes matching search (before active filter): 0
+INFO 2025-08-10 21:31:17,058 views 27232 15432 Returning 0 schemes for query 'caner'
+WARNING 2025-08-10 21:31:17,190 views 27232 2340 No active schemes found, showing all matching schemes
+INFO 2025-08-10 21:31:17,358 views 27232 2340 Final schemes count: 0
+INFO 2025-08-10 21:31:17,832 views 27232 2340 Returning 0 schemes for query 'canera'
+INFO 2025-08-10 21:31:23,408 views 27232 2340 Search query: 'ho', action_type: ''
+INFO 2025-08-10 21:31:23,594 views 27232 2340 Total schemes matching search (before active filter): 1561
+INFO 2025-08-10 21:31:23,921 views 27232 2340 Final schemes count: 100
+INFO 2025-08-10 21:31:24,394 views 27232 2340 Returning 100 schemes for query 'ho'
+INFO 2025-08-10 21:31:49,185 views 27232 2340 Created execution plan EP202508100006 for client 1594
+INFO 2025-08-10 21:31:49,185 views 27232 2340 Processing action 1: {'action_type': 'purchase', 'source_scheme': 'Aditya Birla SL Digital India Fund Reg (G)', 'target_scheme': None, 'notes': 'ok', 'portfolio_id': 15480, 'source_portfolio_id': 15480, 'source_scheme_name': 'Aditya Birla SL Digital India Fund Reg (G)', 'purchase_type': 'existing_scheme', 'purchase_amount': 1000, 'investment_option': 'dividend_payout', 'plan_type': 'regular', 'folio_number': 'ok', 'scheme': 'Aditya Birla SL Digital India Fund Reg (G)', 'scheme_name': 'Aditya Birla SL Digital India Fund Reg (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-10 21:31:49,499 views 27232 2340 Found scheme by word match 'Aditya': Aditya Birla SL Digital India Fund Reg (G) -> Aditya Birla Sun Life Arbitrage Fund - Growth - Direct Plan
+INFO 2025-08-10 21:31:49,499 views 27232 2340 Found scheme by name 'Aditya Birla SL Digital India Fund Reg (G)': Aditya Birla Sun Life Arbitrage Fund - Growth - Direct Plan
+INFO 2025-08-10 21:31:49,500 views 27232 2340 Processed values - Mode: new_investment, Scheme: Aditya Birla Sun Life - Aditya Birla Sun Life Arbitrage Fund - Growth - Direct Plan, Portfolio: None
+INFO 2025-08-10 21:31:49,596 views 27232 2340 Successfully created action 45
+INFO 2025-08-10 21:31:49,596 views 27232 2340 Processing action 2: {'action_type': 'redeem', 'source_scheme': 'Axis Large & Mid Cap Fund Reg (G)', 'target_scheme': None, 'notes': 'ok', 'portfolio_id': 15481, 'source_portfolio_id': 15481, 'source_scheme_name': 'Axis Large & Mid Cap Fund Reg (G)', 'redeem_by': 'specific_amount', 'redeem_amount': 1500, 'redeem_units': None, 'scheme': 'Axis Large & Mid Cap Fund Reg (G)', 'scheme_name': 'Axis Large & Mid Cap Fund Reg (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-10 21:31:49,693 views 27232 2340 Portfolio action for holding 15481: Axis Large & Mid Cap Fund Reg (G)
+INFO 2025-08-10 21:31:49,693 views 27232 2340 Processed values - Mode: portfolio, Scheme: None, Portfolio: Axis Large & Mid Cap Fund Reg (G)
+INFO 2025-08-10 21:31:49,957 views 27232 2340 Created portfolio mapping for action 46
+INFO 2025-08-10 21:31:49,964 views 27232 2340 Successfully created action 46
+INFO 2025-08-10 21:31:49,964 views 27232 2340 Processing action 3: {'action_type': 'switch', 'source_scheme': 'Bandhan Small Cap Fund Reg (G)', 'target_scheme': '360 ONE Focused Fund-Direct Plan-Growth', 'notes': 'ok', 'portfolio_id': 15482, 'source_portfolio_id': 15482, 'source_scheme_name': 'Bandhan Small Cap Fund Reg (G)', 'target_scheme_id': 11153, 'target_scheme_code': 'INF579M01902', 'target_scheme_name': '360 ONE Focused Fund-Direct Plan-Growth', 'switch_by': 'specific_amount', 'switch_amount': 1000, 'switch_units': None, 'scheme': 'Bandhan Small Cap Fund Reg (G)', 'scheme_name': 'Bandhan Small Cap Fund Reg (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-10 21:31:50,061 views 27232 2340 Portfolio action for holding 15482: Bandhan Small Cap Fund Reg (G)
+INFO 2025-08-10 21:31:50,141 views 27232 2340 Found target scheme by ID: 360 ONE Focused Fund-Direct Plan-Growth
+INFO 2025-08-10 21:31:50,142 views 27232 2340 Processed values - Mode: portfolio, Scheme: None, Portfolio: Bandhan Small Cap Fund Reg (G)
+INFO 2025-08-10 21:31:50,402 views 27232 2340 Created portfolio mapping for action 47
+INFO 2025-08-10 21:31:50,402 views 27232 2340 Created Portfolio action 47: switch - Bandhan Small Cap Fund Reg (G) (Portfolio)
+INFO 2025-08-10 21:31:50,403 views 27232 2340 Successfully created action 47
+INFO 2025-08-10 21:31:50,403 views 27232 2340 Processing action 4: {'action_type': 'stp', 'source_scheme': 'Canara Robeco ELSS Tax Saver Fund Reg (G)', 'target_scheme': 'Axis Aggressive Hybrid Fund - Direct Plan - Monthly IDCW', 'notes': 'ok', 'portfolio_id': 15483, 'source_portfolio_id': 15483, 'source_scheme_name': 'Canara Robeco ELSS Tax Saver Fund Reg (G)', 'target_scheme_id': 11426, 'target_scheme_code': 'INF846K01E33', 'target_scheme_name': 'Axis Aggressive Hybrid Fund - Direct Plan - Monthly IDCW', 'stp_amount': 1000, 'stp_frequency': 'monthly', 'scheme': 'Canara Robeco ELSS Tax Saver Fund Reg (G)', 'scheme_name': 'Canara Robeco ELSS Tax Saver Fund Reg (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-10 21:31:50,513 views 27232 2340 Portfolio action for holding 15483: Canara Robeco ELSS Tax Saver Fund Reg (G)
+INFO 2025-08-10 21:31:50,606 views 27232 2340 Found target scheme by ID: Axis Aggressive Hybrid Fund - Direct Plan - Monthly IDCW
+INFO 2025-08-10 21:31:50,607 views 27232 2340 Processed values - Mode: portfolio, Scheme: None, Portfolio: Canara Robeco ELSS Tax Saver Fund Reg (G)
+INFO 2025-08-10 21:31:50,909 views 27232 2340 Created portfolio mapping for action 48
+INFO 2025-08-10 21:31:50,909 views 27232 2340 Created Portfolio action 48: stp_start - Canara Robeco ELSS Tax Saver Fund Reg (G) (Portfolio)
+INFO 2025-08-10 21:31:50,909 views 27232 2340 Successfully created action 48
+INFO 2025-08-10 21:31:50,909 views 27232 2340 Processing action 5: {'action_type': 'swp', 'source_scheme': 'Quant ELSS Tax Saver Fund (G)', 'target_scheme': None, 'notes': 'ok', 'portfolio_id': 15497, 'source_portfolio_id': 15497, 'source_scheme_name': 'Quant ELSS Tax Saver Fund (G)', 'swp_amount': 10000, 'swp_frequency': 'weekly', 'swp_date': 18, 'scheme': 'Quant ELSS Tax Saver Fund (G)', 'scheme_name': 'Quant ELSS Tax Saver Fund (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-08-10 21:31:51,013 views 27232 2340 Portfolio action for holding 15497: Quant ELSS Tax Saver Fund (G)
+INFO 2025-08-10 21:31:51,013 views 27232 2340 Processed values - Mode: portfolio, Scheme: None, Portfolio: Quant ELSS Tax Saver Fund (G)
+INFO 2025-08-10 21:31:51,318 views 27232 2340 Created portfolio mapping for action 49
+INFO 2025-08-10 21:31:51,318 views 27232 2340 Created Portfolio action 49: swp_start - Quant ELSS Tax Saver Fund (G) (Portfolio)
+INFO 2025-08-10 21:31:51,318 views 27232 2340 Successfully created action 49
+INFO 2025-08-10 21:31:51,318 views 27232 2340 Processing action 6: {'action_type': 'sip', 'source_scheme': None, 'target_scheme': 'Aditya Birla Sun Life Short Term Fund - Growth - Regular Plan', 'notes': 'ok', 'portfolio_id': None, 'target_scheme_id': 8399, 'target_scheme_code': 'INF209K01942', 'target_scheme_name': 'Aditya Birla Sun Life Short Term Fund - Growth - Regular Plan', 'sip_amount': 1000, 'sip_frequency': 'daily', 'sip_date': 18, 'investment_option': 'growth', 'plan_type': 'direct', 'scheme': 'Aditya Birla Sun Life Short Term Fund - Growth - Regular Plan', 'scheme_name': 'Aditya Birla Sun Life Short Term Fund - Growth - Regular Plan', 'scheme_id': '8399'}
+INFO 2025-08-10 21:31:51,409 views 27232 2340 Found scheme by ID: Aditya Birla Sun Life Short Term Fund - Growth - Regular Plan
+INFO 2025-08-10 21:31:51,411 views 27232 2340 Processed values - Mode: new_investment, Scheme: Aditya Birla Sun Life - Aditya Birla Sun Life Short Term Fund - Growth - Regular Plan, Portfolio: None
+INFO 2025-08-10 21:31:51,506 views 27232 2340 Created New Investment action 50: sip_start - Aditya Birla Sun Life Short Term Fund - Growth - Regular Plan (New Investment)
+INFO 2025-08-10 21:31:51,506 views 27232 2340 Successfully created action 50
+INFO 2025-08-10 21:31:51,862 views 27232 2340 Plan EP202508100006 submitted for approval
+INFO 2025-08-10 21:31:56,554 views 27232 2340 Found 6 actions for execution plan 73
+INFO 2025-08-10 21:31:56,781 views 27232 2340 Portfolio-independent Excel generated in memory for plan 73
+INFO 2025-08-10 21:31:56,781 views 27232 2340 Portfolio actions: 4, New investments: 2
+INFO 2025-08-10 21:31:56,784 views 27232 2340 Generated Excel data for plan EP202508100006
+INFO 2025-08-10 21:32:11,496 views 27232 2340 Found 6 actions for execution plan 73
+INFO 2025-08-10 21:32:11,822 views 27232 2340 Portfolio-independent Excel generated in memory for plan 73
+INFO 2025-08-10 21:32:11,823 views 27232 2340 Portfolio actions: 4, New investments: 2
