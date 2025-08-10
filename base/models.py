@@ -4621,6 +4621,58 @@ class ClientUpload(models.Model):
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         return f"CU{timestamp}"
     
+    def generate_unique_pan_id(self, row_number, client_name):
+        """Generate a unique PAN ID that fits in 10 characters with collision handling"""
+        import hashlib
+        import time
+        from django.db import IntegrityError
+        
+        # Add timestamp to ensure uniqueness across uploads
+        timestamp = str(int(time.time()))[-4:]  # Last 4 digits of timestamp
+        
+        # Create base hash input
+        base_input = f"{row_number}_{client_name}_{self.upload_id}_{timestamp}"
+        hash_obj = hashlib.md5(base_input.encode())
+        hash_hex = hash_obj.hexdigest()[:4]  # Take first 4 characters of hash
+        
+        # Format: NA + 4 char hash + 4 char timestamp = 10 characters total
+        unique_id = f"NA{hash_hex.upper()}{timestamp}"
+        
+        # Ensure we don't exceed 10 characters
+        unique_id = unique_id[:10]
+        
+        # Check for existing PAN in database to avoid duplicates
+        counter = 0
+        original_id = unique_id
+        
+        while self._pan_exists_in_db(unique_id):
+            counter += 1
+            # If collision, use counter at the end
+            counter_str = str(counter)
+            if len(original_id) + len(counter_str) > 10:
+                # Truncate original and add counter
+                truncated_length = 10 - len(counter_str)
+                unique_id = f"{original_id[:truncated_length]}{counter_str}"
+            else:
+                unique_id = f"{original_id}{counter_str}"
+            
+            # Safety check to prevent infinite loop
+            if counter > 999:
+                # Fallback to pure timestamp + counter
+                fallback_time = str(int(time.time()))[-6:]
+                unique_id = f"NA{fallback_time[:4]}"
+                break
+        
+        return unique_id
+    
+    def _pan_exists_in_db(self, pan_number):
+        """Check if PAN number already exists in database"""
+        try:
+            from django.core.exceptions import ObjectDoesNotExist
+            return ClientProfile.objects.filter(pan_number=pan_number).exists()
+        except Exception:
+            return False
+    
     def __str__(self):
         return f"{self.upload_id} - {self.file.name} ({self.get_status_display()})"
     
@@ -4637,7 +4689,7 @@ class ClientUpload(models.Model):
         )
     
     def process_upload_with_logging(self):
-        """Main method to process the uploaded client file - OPTIMIZED VERSION"""
+        """Main method to process the uploaded client file - OPTIMIZED VERSION WITH FIXED PAN HANDLING"""
         import os
         import pandas as pd
         from django.db import transaction
@@ -4684,13 +4736,18 @@ class ClientUpload(models.Model):
             log_entries.append(self._create_log_entry(0, 'success', f"Columns found: {', '.join(columns_found)}"))
             
             # Expected columns validation
-            required_columns = ['NAME', 'PAN']
+            required_columns = ['NAME']  # Remove PAN as required since we now handle NA
             missing_columns = [col for col in required_columns if col not in df.columns]
             
             if missing_columns:
                 error_msg = f"Missing required columns: {', '.join(missing_columns)}"
                 log_entries.append(self._create_log_entry(0, 'error', error_msg))
                 raise Exception(error_msg)
+            
+            # Check if PAN column exists, if not add a warning
+            if 'PAN' not in df.columns:
+                log_entries.append(self._create_log_entry(0, 'warning', "PAN column not found, all entries will be treated as new profiles"))
+                df['PAN'] = 'NA'  # Add a default PAN column with NA values
             
             log_entries.append(self._create_log_entry(0, 'success', f"Column validation successful"))
             
@@ -4705,11 +4762,14 @@ class ClientUpload(models.Model):
             clients_to_create = []
             clients_to_update = []
             
+            # Track generated PAN IDs in this batch to avoid duplicates
+            generated_pan_ids = set()
+            
             # Process each row
             for index, row in df.iterrows():
                 try:
                     result = self._process_single_client_row_optimized(
-                        row, index + 1, existing_profiles_map, users_map, existing_clients_map, log_entries
+                        row, index + 1, existing_profiles_map, users_map, existing_clients_map, log_entries, generated_pan_ids
                     )
                     
                     if result:
@@ -4740,90 +4800,225 @@ class ClientUpload(models.Model):
                     self.failed_rows += 1
                     continue
             
-            # OPTIMIZATION 3: Bulk database operations - FIXED VERSION
+            # OPTIMIZATION 3: Bulk database operations - FIXED VERSION WITH DUPLICATE HANDLING
             with transaction.atomic():
-                # Bulk create new profiles
+                # Bulk create new profiles - FIXED to avoid duplicates
                 if profiles_to_create:
-                    # Convert dictionaries to ClientProfile objects
-                    profile_objects = []
+                    # Filter out any profiles that might already exist (safety check)
+                    safe_profiles_to_create = []
+                    duplicate_count = 0
+                    
                     for profile_data in profiles_to_create:
-                        profile_objects.append(ClientProfile(**profile_data))
+                        pan_number = profile_data.get('pan_number')
+                        
+                        # Double-check that this PAN doesn't exist
+                        if not ClientProfile.objects.filter(pan_number=pan_number).exists():
+                            safe_profiles_to_create.append(profile_data)
+                        else:
+                            duplicate_count += 1
+                            log_entries.append(self._create_log_entry(0, 'warning', 
+                                f"Skipped duplicate PAN during bulk create: {pan_number}"))
                     
-                    created_profiles = ClientProfile.objects.bulk_create(profile_objects, batch_size=1000)
-                    self.successful_rows += len(created_profiles)
+                    if duplicate_count > 0:
+                        log_entries.append(self._create_log_entry(0, 'warning', 
+                            f"Filtered out {duplicate_count} duplicate profiles from bulk create"))
                     
-                    # Update existing_profiles_map with new profiles
-                    for profile in created_profiles:
-                        existing_profiles_map[profile.pan_number] = profile
+                    if safe_profiles_to_create:
+                        # Convert dictionaries to ClientProfile objects
+                        profile_objects = []
+                        for profile_data in safe_profiles_to_create:
+                            try:
+                                profile_objects.append(ClientProfile(**profile_data))
+                            except Exception as e:
+                                log_entries.append(self._create_log_entry(0, 'error', 
+                                    f"Failed to create profile object for PAN {profile_data.get('pan_number', 'unknown')}: {str(e)}"))
+                        
+                        if profile_objects:
+                            try:
+                                created_profiles = ClientProfile.objects.bulk_create(
+                                    profile_objects, 
+                                    batch_size=1000,
+                                    ignore_conflicts=True  # This will ignore duplicate key violations
+                                )
+                                self.successful_rows += len(created_profiles)
+                                log_entries.append(self._create_log_entry(0, 'success', 
+                                    f"Bulk created {len(created_profiles)} new profiles (ignored conflicts)"))
+                                
+                                # Update existing_profiles_map with new profiles
+                                for profile in created_profiles:
+                                    existing_profiles_map[profile.pan_number] = profile
+                            except Exception as e:
+                                log_entries.append(self._create_log_entry(0, 'error', 
+                                    f"Bulk create failed: {str(e)}"))
+                                # Fallback to individual saves
+                                individual_success = 0
+                                for profile_obj in profile_objects:
+                                    try:
+                                        profile_obj.save()
+                                        existing_profiles_map[profile_obj.pan_number] = profile_obj
+                                        individual_success += 1
+                                    except Exception as individual_error:
+                                        log_entries.append(self._create_log_entry(0, 'error', 
+                                            f"Individual save failed for PAN {profile_obj.pan_number}: {str(individual_error)}"))
+                                
+                                self.successful_rows += individual_success
+                                log_entries.append(self._create_log_entry(0, 'warning', 
+                                    f"Fallback individual saves: {individual_success} profiles created"))
                 
-                # Bulk update existing profiles
+                # Bulk update existing profiles - IMPROVED ERROR HANDLING
                 if profiles_to_update:
                     update_batch = []
                     for profile_data in profiles_to_update:
-                        pan_number = profile_data.pop('pan_number')
+                        pan_number = profile_data.get('pan_number')
+                        
+                        # Check if profile exists in the map
+                        if not pan_number or pan_number not in existing_profiles_map:
+                            log_entries.append(self._create_log_entry(0, 'error', 
+                                f"Profile not found in existing_profiles_map for PAN: {pan_number}"))
+                            continue
+                            
                         profile = existing_profiles_map[pan_number]
                         
+                        # Verify profile is not None
+                        if profile is None:
+                            log_entries.append(self._create_log_entry(0, 'error', 
+                                f"Profile is None for PAN: {pan_number}"))
+                            continue
+                        
+                        # Create a copy of profile_data for updating (don't modify original)
+                        update_data = profile_data.copy()
+                        update_data.pop('pan_number', None)  # Remove pan_number from update data
+                        
                         # Update profile attributes
-                        for field, value in profile_data.items():
+                        for field, value in update_data.items():
                             if field not in ['created_by']:  # Skip fields that shouldn't be updated
                                 setattr(profile, field, value)
                         
                         update_batch.append(profile)
                         
                         if len(update_batch) >= 1000:
+                            try:
+                                ClientProfile.objects.bulk_update(update_batch, [
+                                    'client_full_name', 'email', 'mobile_number', 'address_kyc',
+                                    'family_head_name', 'mapped_rm', 'mapped_ops_exec', 'date_of_birth',
+                                    'first_investment_date', 'status'
+                                ])
+                                self.updated_rows += len(update_batch)
+                                log_entries.append(self._create_log_entry(0, 'success', 
+                                    f"Bulk updated {len(update_batch)} profiles"))
+                            except Exception as e:
+                                log_entries.append(self._create_log_entry(0, 'error', 
+                                    f"Bulk update failed: {str(e)}"))
+                            update_batch = []
+                    
+                    # Handle remaining profiles in batch
+                    if update_batch:
+                        try:
                             ClientProfile.objects.bulk_update(update_batch, [
                                 'client_full_name', 'email', 'mobile_number', 'address_kyc',
                                 'family_head_name', 'mapped_rm', 'mapped_ops_exec', 'date_of_birth',
                                 'first_investment_date', 'status'
                             ])
                             self.updated_rows += len(update_batch)
-                            update_batch = []
-                    
-                    if update_batch:
-                        ClientProfile.objects.bulk_update(update_batch, [
-                            'client_full_name', 'email', 'mobile_number', 'address_kyc',
-                            'family_head_name', 'mapped_rm', 'mapped_ops_exec', 'date_of_birth',
-                            'first_investment_date', 'status'
-                        ])
-                        self.updated_rows += len(update_batch)
+                            log_entries.append(self._create_log_entry(0, 'success', 
+                                f"Final bulk updated {len(update_batch)} profiles"))
+                        except Exception as e:
+                            log_entries.append(self._create_log_entry(0, 'error', 
+                                f"Final bulk update failed: {str(e)}"))
                 
-                # Bulk create/update clients
+                # Bulk create/update clients - IMPROVED ERROR HANDLING
                 if clients_to_create:
                     client_objects = []
                     for client_data in clients_to_create:
-                        pan_number = client_data.pop('pan_number')
-                        client_data.pop('operation')  # Remove the operation flag
+                        pan_number = client_data.get('pan_number')
+                        
+                        # Verify profile exists
+                        if not pan_number or pan_number not in existing_profiles_map:
+                            log_entries.append(self._create_log_entry(0, 'error', 
+                                f"Cannot create client - profile not found for PAN: {pan_number}"))
+                            continue
+                            
+                        profile = existing_profiles_map[pan_number]
+                        if profile is None:
+                            log_entries.append(self._create_log_entry(0, 'error', 
+                                f"Cannot create client - profile is None for PAN: {pan_number}"))
+                            continue
+                        
+                        client_data_copy = client_data.copy()
+                        client_data_copy.pop('pan_number', None)
+                        client_data_copy.pop('operation', None)
                         
                         client_objects.append(Client(
-                            client_profile=existing_profiles_map[pan_number],
-                            name=client_data['name'],
-                            contact_info=client_data['contact_info'],
-                            aum=client_data['aum'],
-                            user=client_data.get('user'),
+                            client_profile=profile,
+                            name=client_data_copy.get('name', ''),
+                            contact_info=client_data_copy.get('contact_info', 'N/A'),
+                            aum=client_data_copy.get('aum', 0),
+                            user=client_data_copy.get('user'),
                             created_by=self.uploaded_by
                         ))
                     
-                    Client.objects.bulk_create(client_objects, batch_size=1000)
+                    if client_objects:
+                        try:
+                            created_clients = Client.objects.bulk_create(
+                                client_objects, 
+                                batch_size=1000,
+                                ignore_conflicts=True  # Ignore conflicts if any
+                            )
+                            log_entries.append(self._create_log_entry(0, 'success', 
+                                f"Bulk created {len(created_clients)} new clients"))
+                        except Exception as e:
+                            log_entries.append(self._create_log_entry(0, 'error', 
+                                f"Client bulk create failed: {str(e)}"))
                 
                 if clients_to_update:
                     client_update_batch = []
                     for client_data in clients_to_update:
-                        pan_number = client_data.pop('pan_number')
-                        client_data.pop('operation')  # Remove the operation flag
+                        pan_number = client_data.get('pan_number')
                         
+                        # Check if client exists
+                        if not pan_number or pan_number not in existing_clients_map:
+                            log_entries.append(self._create_log_entry(0, 'warning', 
+                                f"Client not found for update, PAN: {pan_number}"))
+                            continue
+                            
                         client = existing_clients_map[pan_number]
-                        client.name = client_data['name']
-                        client.contact_info = client_data['contact_info']
-                        client.aum = client_data['aum']
-                        client.user = client_data.get('user')
+                        
+                        # Verify client is not None
+                        if client is None:
+                            log_entries.append(self._create_log_entry(0, 'warning', 
+                                f"Client is None for PAN: {pan_number}"))
+                            continue
+                        
+                        # Create a copy and remove operation flags
+                        update_data = client_data.copy()
+                        update_data.pop('pan_number', None)
+                        update_data.pop('operation', None)
+                        
+                        client.name = update_data.get('name', client.name)
+                        client.contact_info = update_data.get('contact_info', client.contact_info)
+                        client.aum = update_data.get('aum', client.aum)
+                        client.user = update_data.get('user', client.user)
                         client_update_batch.append(client)
                         
                         if len(client_update_batch) >= 1000:
-                            Client.objects.bulk_update(client_update_batch, ['name', 'contact_info', 'aum', 'user'])
+                            try:
+                                Client.objects.bulk_update(client_update_batch, ['name', 'contact_info', 'aum', 'user'])
+                                log_entries.append(self._create_log_entry(0, 'success', 
+                                    f"Bulk updated {len(client_update_batch)} clients"))
+                            except Exception as e:
+                                log_entries.append(self._create_log_entry(0, 'error', 
+                                    f"Client bulk update failed: {str(e)}"))
                             client_update_batch = []
                     
+                    # Handle remaining clients
                     if client_update_batch:
-                        Client.objects.bulk_update(client_update_batch, ['name', 'contact_info', 'aum', 'user'])
+                        try:
+                            Client.objects.bulk_update(client_update_batch, ['name', 'contact_info', 'aum', 'user'])
+                            log_entries.append(self._create_log_entry(0, 'success', 
+                                f"Final bulk updated {len(client_update_batch)} clients"))
+                        except Exception as e:
+                            log_entries.append(self._create_log_entry(0, 'error', 
+                                f"Final client bulk update failed: {str(e)}"))
             
             # Complete processing
             if self.failed_rows == 0:
@@ -4875,45 +5070,86 @@ class ClientUpload(models.Model):
 
     def _preload_existing_profiles(self, df):
         """Pre-load all existing profiles to avoid repeated queries"""
-        pan_numbers = df['PAN'].dropna().str.upper().str.strip().unique()
-        existing_profiles = ClientProfile.objects.filter(pan_number__in=pan_numbers).select_related()
-        return {profile.pan_number: profile for profile in existing_profiles}
+        try:
+            # Filter out NA and empty PAN numbers for preloading
+            pan_numbers = df['PAN'].dropna().str.upper().str.strip()
+            pan_numbers = pan_numbers[pan_numbers != ''].unique()
+            # Remove NA entries from preloading since they won't match existing records
+            pan_numbers = [pan for pan in pan_numbers if pan != 'NA' and not pan.startswith('NA')]
+            
+            if pan_numbers:
+                existing_profiles = ClientProfile.objects.filter(pan_number__in=pan_numbers).select_related()
+                profiles_map = {profile.pan_number: profile for profile in existing_profiles}
+            else:
+                profiles_map = {}
+            
+            # Also preload any existing NA-prefixed PANs to avoid collisions
+            existing_na_profiles = ClientProfile.objects.filter(pan_number__startswith='NA').values_list('pan_number', flat=True)
+            self._existing_na_pans = set(existing_na_profiles)
+            
+            # Log how many profiles were found
+            self.create_log(0, 'success', f"Pre-loaded {len(profiles_map)} existing profiles from {len(pan_numbers)} unique valid PANs and {len(self._existing_na_pans)} existing NA entries")
+            
+            return profiles_map
+        except Exception as e:
+            self.create_log(0, 'error', f"Failed to preload existing profiles: {str(e)}")
+            self._existing_na_pans = set()
+            return {}
 
     def _preload_users(self):
         """Pre-load all users for mapping"""
-        users = User.objects.filter(role__in=['rm', 'ops_exec', 'ops_team_lead']).only(
-            'id', 'first_name', 'last_name', 'role'
-        )
-        users_map = {
-            'rm': {},
-            'ops': {}
-        }
-        
-        for user in users:
-            full_name = f"{user.first_name} {user.last_name}".strip().lower()
-            first_name = user.first_name.lower() if user.first_name else ''
-            last_name = user.last_name.lower() if user.last_name else ''
+        try:
+            users = User.objects.filter(role__in=['rm', 'ops_exec', 'ops_team_lead']).only(
+                'id', 'first_name', 'last_name', 'role'
+            )
+            users_map = {
+                'rm': {},
+                'ops': {}
+            }
             
-            if user.role == 'rm':
-                users_map['rm'][full_name] = user
-                users_map['rm'][first_name] = user
-                if last_name:
-                    users_map['rm'][last_name] = user
-            elif user.role in ['ops_exec', 'ops_team_lead']:
-                users_map['ops'][full_name] = user
-                users_map['ops'][first_name] = user
-                if last_name:
-                    users_map['ops'][last_name] = user
-        
-        return users_map
+            for user in users:
+                full_name = f"{user.first_name} {user.last_name}".strip().lower()
+                first_name = user.first_name.lower() if user.first_name else ''
+                last_name = user.last_name.lower() if user.last_name else ''
+                
+                if user.role == 'rm':
+                    users_map['rm'][full_name] = user
+                    users_map['rm'][first_name] = user
+                    if last_name:
+                        users_map['rm'][last_name] = user
+                elif user.role in ['ops_exec', 'ops_team_lead']:
+                    users_map['ops'][full_name] = user
+                    users_map['ops'][first_name] = user
+                    if last_name:
+                        users_map['ops'][last_name] = user
+            
+            self.create_log(0, 'success', f"Pre-loaded {len(users)} users for mapping")
+            return users_map
+        except Exception as e:
+            self.create_log(0, 'error', f"Failed to preload users: {str(e)}")
+            return {'rm': {}, 'ops': {}}
 
     def _preload_existing_clients(self):
         """Pre-load existing clients"""
-        clients = Client.objects.select_related('client_profile').all()
-        return {client.client_profile.pan_number: client for client in clients}
+        try:
+            clients = Client.objects.select_related('client_profile').all()
+            # Only include clients with valid PANs (not NA entries)
+            clients_map = {}
+            for client in clients:
+                if (client.client_profile and 
+                    client.client_profile.pan_number and 
+                    client.client_profile.pan_number != 'NA' and 
+                    not client.client_profile.pan_number.startswith('NA')):
+                    clients_map[client.client_profile.pan_number] = client
+            
+            self.create_log(0, 'success', f"Pre-loaded {len(clients_map)} existing clients")
+            return clients_map
+        except Exception as e:
+            self.create_log(0, 'error', f"Failed to preload existing clients: {str(e)}")
+            return {}
 
-    def _process_single_client_row_optimized(self, row, row_number, existing_profiles_map, users_map, existing_clients_map, log_entries):
-        """Optimized version of single row processing"""
+    def _process_single_client_row_optimized(self, row, row_number, existing_profiles_map, users_map, existing_clients_map, log_entries, generated_pan_ids):
+        """Optimized version of single row processing - FIXED PAN GENERATION WITH COLLISION HANDLING"""
         try:
             import pandas as pd
             from decimal import Decimal
@@ -4964,14 +5200,27 @@ class ClientUpload(models.Model):
                 return None
             
             def validate_pan(pan):
-                if not pan:
-                    return False, "PAN number is required"
+                if not pan or pan.strip() == '':
+                    return True, "NA"  # Return NA instead of failing
+                
                 pan = pan.upper().strip()
+                
+                # If it's already NA, keep it as NA
+                if pan == "NA":
+                    return True, "NA"
+                
+                # Validate proper PAN format only if not empty/NA
                 if len(pan) != 10:
-                    return False, f"PAN must be exactly 10 characters long: {pan}"
+                    log_entries.append(self._create_log_entry(row_number, 'warning', 
+                        f"Invalid PAN length, setting to NA: {pan}"))
+                    return True, "NA"
+                
                 pan_pattern = r'^[A-Z]{5}[0-9]{4}[A-Z]{1}$'
-                if not re.match(pan_pattern, pan) or len(pan) != 10:
-                    return False, f"Invalid PAN format: {pan}"
+                if not re.match(pan_pattern, pan):
+                    log_entries.append(self._create_log_entry(row_number, 'warning', 
+                        f"Invalid PAN format, setting to NA: {pan}"))
+                    return True, "NA"
+                
                 return True, pan
             
             def combine_address(row):
@@ -5005,7 +5254,7 @@ class ClientUpload(models.Model):
             
             # Extract data
             client_name = safe_string_convert(row.get('NAME', ''))
-            pan_number = safe_string_convert(row.get('PAN', ''))[:10]
+            pan_number = safe_string_convert(row.get('PAN', ''))[:10] if safe_string_convert(row.get('PAN', '')) else ''
             email = safe_string_convert(row.get('EMAIL', ''))
             mobile_number = safe_string_convert(row.get('MOBILE', ''))
             
@@ -5015,14 +5264,54 @@ class ClientUpload(models.Model):
                 log_entries.append(self._create_log_entry(row_number, 'error', "Client name is required", client_name, pan_number))
                 return None
             
-            # Validate PAN
+            # Validate PAN - now handles empty/invalid PANs gracefully
             pan_valid, pan_result = validate_pan(pan_number)
             if not pan_valid:
+                # This should never happen now since validate_pan always returns True
                 self.failed_rows += 1
                 log_entries.append(self._create_log_entry(row_number, 'error', pan_result, client_name, pan_number))
                 return None
             
             pan_number = pan_result
+            
+            # Generate unique identifier for NA PAN entries - FIXED WITH COLLISION HANDLING
+            if pan_number == "NA":
+                unique_id = self.generate_unique_pan_id(row_number, client_name)
+                
+                # Check against already generated IDs in this batch
+                counter = 0
+                original_id = unique_id
+                while unique_id in generated_pan_ids or self._pan_exists_in_db(unique_id):
+                    counter += 1
+                    # Create new variation
+                    counter_str = str(counter)
+                    if len(original_id) + len(counter_str) > 10:
+                        truncated_length = 10 - len(counter_str)
+                        unique_id = f"{original_id[:truncated_length]}{counter_str}"
+                    else:
+                        unique_id = f"{original_id}{counter_str}"[:10]
+                    
+                    # Safety check
+                    if counter > 999:
+                        # Generate completely new ID using current timestamp
+                        import time
+                        timestamp = str(int(time.time() * 1000))[-6:]  # Microsecond precision
+                        unique_id = f"NA{timestamp}"[:10]
+                        break
+                
+                # Add to generated set
+                generated_pan_ids.add(unique_id)
+                
+                # Double-check length constraint
+                if len(unique_id) > 10:
+                    # Final fallback to sequential numbering
+                    import time
+                    timestamp = str(int(time.time()))[-4:]
+                    unique_id = f"NA{timestamp}{counter:02d}"[:10]
+                
+                log_entries.append(self._create_log_entry(row_number, 'warning',
+                    f"PAN is NA for {client_name}, using unique ID: {unique_id}", client_name, unique_id))
+                pan_number = unique_id
             
             # Parse dates
             date_of_birth = parse_date(row.get('DATE OF BIRTH'))
@@ -5043,8 +5332,15 @@ class ClientUpload(models.Model):
             mapped_ops = find_user_optimized(ops_name, 'ops')
             
             # Check existing profile using pre-loaded data
-            existing_profile = existing_profiles_map.get(pan_number)
-            update_existing = existing_profile is not None
+            # For NA PAN entries, we'll treat them as new profiles since we can't match them
+            if pan_number.startswith("NA"):
+                existing_profile = None
+                update_existing = False
+                log_entries.append(self._create_log_entry(row_number, 'info',
+                    f"Generated unique PAN entry will be created as new profile: {client_name}", client_name, pan_number))
+            else:
+                existing_profile = existing_profiles_map.get(pan_number)
+                update_existing = existing_profile is not None
             
             if existing_profile and not self.update_existing:
                 log_entries.append(self._create_log_entry(row_number, 'warning',
@@ -5164,6 +5460,14 @@ class ClientUploadLog(models.Model):
 
 
 # Signal to auto-process uploads
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.db import transaction
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 @receiver(post_save, sender=ClientUpload)
 def auto_process_client_upload(sender, instance, created, **kwargs):
     """Automatically process client uploads when created"""
