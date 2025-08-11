@@ -10338,14 +10338,15 @@ def save_execution_plan_with_debug(request):
     
 def generate_execution_plan_excel_in_memory(execution_plan):
     """
-    Generate Excel file in memory for portfolio-independent execution plan
-    Returns bytes data that can be directly sent in HTTP response
+    Generate Excel file in memory for execution plan - ENHANCED with guaranteed attachment
     """
     try:
         from io import BytesIO
         import openpyxl
         from openpyxl.styles import Font, Alignment, PatternFill, Border, Side, NamedStyle
         from datetime import datetime
+        
+        logger.info(f"Starting Excel generation for plan {execution_plan.id}")
         
         # Get plan actions
         plan_actions = []
@@ -10362,19 +10363,10 @@ def generate_execution_plan_excel_in_memory(execution_plan):
         ws = wb.active
         ws.title = "Execution Plan"
         
-        # Set column widths - improved sizing
+        # Set column widths
         column_widths = {
-            'A': 8,   # Sr. No.
-            'B': 45,  # Scheme Name (increased)
-            'C': 25,  # Source/ISIN (increased)
-            'D': 18,  # Transaction Type (increased)
-            'E': 18,  # Amount (increased)
-            'F': 18,  # SIP Amount (increased)
-            'G': 12,  # SIP Date
-            'H': 15,  # Frequency
-            'I': 15,  # Status
-            'J': 10,  # Priority
-            'K': 20   # Action Source
+            'A': 8, 'B': 45, 'C': 25, 'D': 18, 'E': 18, 'F': 18,
+            'G': 12, 'H': 15, 'I': 15, 'J': 10, 'K': 20
         }
         
         for col, width in column_widths.items():
@@ -10390,30 +10382,16 @@ def generate_execution_plan_excel_in_memory(execution_plan):
             top=Side(style='thin'), bottom=Side(style='thin')
         )
         
-        # Title style
-        title_style = NamedStyle(name="title")
-        title_style.font = Font(name='Arial', size=16, bold=True, color='1F4E79')
-        title_style.alignment = Alignment(horizontal='center', vertical='center')
-        
-        # Info style
-        info_label_style = NamedStyle(name="info_label")
-        info_label_style.font = Font(name='Arial', size=11, bold=True)
-        info_label_style.alignment = Alignment(horizontal='left', vertical='center')
-        
-        info_value_style = NamedStyle(name="info_value")
-        info_value_style.font = Font(name='Arial', size=11)
-        info_value_style.alignment = Alignment(horizontal='left', vertical='center')
-        
-        # Plan header information
+        # Plan header
         row = 1
         ws.merge_cells(f'A{row}:K{row}')
         plan_id = getattr(execution_plan, 'plan_id', f"Plan #{execution_plan.id}")
         ws[f'A{row}'] = f"EXECUTION PLAN - {plan_id}"
-        ws[f'A{row}'].style = title_style
-        ws.row_dimensions[row].height = 25
-        row += 2  # Extra space
+        ws[f'A{row}'].font = Font(name='Arial', size=16, bold=True, color='1F4E79')
+        ws[f'A{row}'].alignment = Alignment(horizontal='center', vertical='center')
+        row += 2
         
-        # Plan details in a more structured format
+        # Client and plan details
         client_name = "Unknown Client"
         if hasattr(execution_plan, 'client') and execution_plan.client:
             if hasattr(execution_plan.client, 'name'):
@@ -10421,16 +10399,10 @@ def generate_execution_plan_excel_in_memory(execution_plan):
             elif hasattr(execution_plan.client, 'client_full_name'):
                 client_name = execution_plan.client.client_full_name
         
-        # Client and Date row
         ws[f'A{row}'] = "Client:"
-        ws[f'A{row}'].style = info_label_style
         ws[f'B{row}'] = client_name
-        ws[f'B{row}'].style = info_value_style
-        
         ws[f'G{row}'] = "Date Created:"
-        ws[f'G{row}'].style = info_label_style
         ws[f'H{row}'] = execution_plan.created_at.strftime('%Y-%m-%d %H:%M') if hasattr(execution_plan, 'created_at') else "N/A"
-        ws[f'H{row}'].style = info_value_style
         row += 1
         
         # Calculate totals
@@ -10443,89 +10415,42 @@ def generate_execution_plan_excel_in_memory(execution_plan):
                 if hasattr(action, 'sip_amount') and action.sip_amount:
                     total_sip_amount += float(action.sip_amount)
         
-        # Total Amount and Status row
         ws[f'A{row}'] = "Total Amount:"
-        ws[f'A{row}'].style = info_label_style
         ws[f'B{row}'] = f"₹{total_amount:,.2f}"
-        ws[f'B{row}'].style = info_value_style
-        ws[f'B{row}'].font = Font(name='Arial', size=11, bold=True, color='0D5016')
-        
         ws[f'G{row}'] = "Status:"
-        ws[f'G{row}'].style = info_label_style
-        status_value = execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else execution_plan.status
-        ws[f'H{row}'] = status_value
-        ws[f'H{row}'].style = info_value_style
-        row += 1
+        ws[f'H{row}'] = execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else execution_plan.status
+        row += 2
         
-        # Total SIP Amount and Created By row
-        if total_sip_amount > 0:
-            ws[f'A{row}'] = "Total SIP Amount:"
-            ws[f'A{row}'].style = info_label_style
-            ws[f'B{row}'] = f"₹{total_sip_amount:,.2f}"
-            ws[f'B{row}'].style = info_value_style
-            ws[f'B{row}'].font = Font(name='Arial', size=11, bold=True, color='7B2CBF')
-        
-        if hasattr(execution_plan, 'created_by') and execution_plan.created_by:
-            ws[f'G{row}'] = "Created By:"
-            ws[f'G{row}'].style = info_label_style
-            ws[f'H{row}'] = execution_plan.created_by.get_full_name() or execution_plan.created_by.username
-            ws[f'H{row}'].style = info_value_style
-        row += 1
-        
-        # Actions count
-        ws[f'A{row}'] = "Total Actions:"
-        ws[f'A{row}'].style = info_label_style
-        ws[f'B{row}'] = str(len(plan_actions))
-        ws[f'B{row}'].style = info_value_style
-        row += 2  # Extra space before table
-        
-        # Table headers for portfolio independence
+        # Table headers
         headers = [
             'Sr. No.', 'Scheme Name', 'Source/ISIN', 'Transaction Type', 'Amount (₹)',
             'SIP Amount (₹)', 'SIP Date', 'Frequency', 'Status', 'Priority', 'Action Source'
         ]
         
-        # Add header row with improved styling
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=row, column=col)
             cell.value = header
             cell.style = header_style
-        
-        ws.row_dimensions[row].height = 20
         row += 1
         
-        # Data rows for actions
+        # Data rows
         for idx, action in enumerate(plan_actions, 1):
-            # Get scheme information - PORTFOLIO INDEPENDENT
+            # Get scheme information
             scheme_name = "Unknown Scheme"
             source_info = "N/A"
             action_source = "Unknown"
             
-            # Check action mode and get appropriate scheme information
             if hasattr(action, 'action_mode') and action.action_mode == 'portfolio':
-                # Portfolio-based action
                 scheme_name = action.portfolio_scheme_name or "Unknown Portfolio Scheme"
                 source_info = action.portfolio_isin or "Portfolio Holdings"
                 action_source = "Existing Portfolio"
-                
-                if action.portfolio_holding_id:
-                    source_info = f"Portfolio ID: {action.portfolio_holding_id}"
-                    
             elif hasattr(action, 'action_mode') and action.action_mode == 'new_investment':
-                # New investment action
                 if action.scheme:
                     scheme_name = action.scheme.scheme_name
                     action_source = "New Investment"
-                    
-                    # Get ISIN for new investments
-                    if hasattr(action.scheme, 'isin_growth') and action.scheme.isin_growth:
-                        source_info = action.scheme.isin_growth
-                    elif hasattr(action.scheme, 'isin_number') and action.scheme.isin_number:
-                        source_info = action.scheme.isin_number
-                    else:
-                        source_info = "New Scheme"
+                    source_info = getattr(action.scheme, 'isin_growth', 'New Scheme')
             else:
-                # Fallback for actions without action_mode (legacy)
+                # Fallback logic
                 if hasattr(action, 'portfolio_scheme_name') and action.portfolio_scheme_name:
                     scheme_name = action.portfolio_scheme_name
                     source_info = "Portfolio Holdings"
@@ -10535,44 +10460,11 @@ def generate_execution_plan_excel_in_memory(execution_plan):
                     source_info = getattr(action.scheme, 'isin_growth', 'New Scheme')
                     action_source = "New Investment"
             
-            # Get action type with better formatting
-            action_type = "N/A"
-            if hasattr(action, 'action_type') and action.action_type:
-                if hasattr(action, 'get_action_type_display'):
-                    action_type = action.get_action_type_display()
-                else:
-                    action_type = str(action.action_type).replace('_', ' ').title()
-            
-            # Get amounts with better formatting
-            amount = 0
-            if hasattr(action, 'amount') and action.amount:
-                amount = float(action.amount)
-            
-            sip_amount = 0
-            sip_amount_str = "N/A"
-            if hasattr(action, 'sip_amount') and action.sip_amount:
-                sip_amount = float(action.sip_amount)
-                sip_amount_str = f"₹{sip_amount:,.2f}"
-            
-            # Get other details with better handling
-            sip_date = "N/A"
-            if hasattr(action, 'sip_date') and action.sip_date:
-                sip_date = action.sip_date.strftime('%d-%m-%Y') if hasattr(action.sip_date, 'strftime') else str(action.sip_date)
-            
-            frequency = "N/A"
-            if hasattr(action, 'frequency') and action.frequency:
-                frequency = str(action.frequency).replace('_', ' ').title()
-            
-            status = "N/A"
-            if hasattr(action, 'status') and action.status:
-                if hasattr(action, 'get_status_display'):
-                    status = action.get_status_display()
-                else:
-                    status = str(action.status).replace('_', ' ').title()
-            
-            priority = "N/A"
-            if hasattr(action, 'priority') and action.priority is not None:
-                priority = str(action.priority)
+            # Get other action details
+            action_type = action.get_action_type_display() if hasattr(action, 'get_action_type_display') else action.action_type
+            amount = float(action.amount) if hasattr(action, 'amount') and action.amount else 0
+            sip_amount_str = f"₹{float(action.sip_amount):,.2f}" if hasattr(action, 'sip_amount') and action.sip_amount else "N/A"
+            status = action.get_status_display() if hasattr(action, 'get_status_display') else action.status
             
             # Build row data
             data = [
@@ -10582,53 +10474,27 @@ def generate_execution_plan_excel_in_memory(execution_plan):
                 action_type,
                 f"₹{amount:,.2f}" if amount > 0 else "₹0.00",
                 sip_amount_str,
-                sip_date,
-                frequency,
-                status,
-                priority,
+                str(action.sip_date) if hasattr(action, 'sip_date') and action.sip_date else "N/A",
+                str(action.frequency) if hasattr(action, 'frequency') and action.frequency else "N/A",
+                status or "N/A",
+                str(action.priority) if hasattr(action, 'priority') and action.priority is not None else "N/A",
                 action_source
             ]
             
-            # Write row data with improved formatting
+            # Write row data
             for col, value in enumerate(data, 1):
                 cell = ws.cell(row=row, column=col)
                 cell.value = value
-                
-                # Set alignment based on column type
-                if col == 1:  # Serial number
-                    cell.alignment = Alignment(horizontal='center', vertical='center')
-                elif col in [5, 6]:  # Amount columns
-                    cell.alignment = Alignment(horizontal='right', vertical='center')
-                    if value != "N/A" and value != "₹0.00":
-                        cell.font = Font(name='Arial', size=10, bold=True)
-                elif col in [7, 9, 10]:  # Date, Status, Priority
-                    cell.alignment = Alignment(horizontal='center', vertical='center')
-                else:
-                    cell.alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
-                
-                # Add borders
+                cell.alignment = Alignment(horizontal='center' if col in [1, 7, 9, 10] else 'left', vertical='center')
                 cell.border = Border(
                     left=Side(style='thin'), right=Side(style='thin'),
                     top=Side(style='thin'), bottom=Side(style='thin')
                 )
-                
-                # Color coding for action source with better colors
-                if col == 11:  # Action Source column
-                    if value == "Existing Portfolio":
-                        cell.fill = PatternFill(start_color='E3F2FD', end_color='E3F2FD', fill_type='solid')
-                        cell.font = Font(name='Arial', size=10, bold=True, color='1565C0')
-                    elif value == "New Investment":
-                        cell.fill = PatternFill(start_color='E8F5E8', end_color='E8F5E8', fill_type='solid')
-                        cell.font = Font(name='Arial', size=10, bold=True, color='2E7D32')
-            
-            # Set row height for better readability
-            ws.row_dimensions[row].height = 18
             row += 1
         
-        # Add totals row with better styling
+        # Totals row
         if plan_actions:
             row += 1
-            # Create totals row
             total_cells = ['TOTAL', '', '', '', f"₹{total_amount:,.2f}", 
                           f"₹{total_sip_amount:,.2f}" if total_sip_amount > 0 else "₹0.00", 
                           '', '', '', '', '']
@@ -10637,101 +10503,44 @@ def generate_execution_plan_excel_in_memory(execution_plan):
                 cell = ws.cell(row=row, column=col)
                 cell.value = value
                 cell.font = Font(name='Arial', size=11, bold=True)
-                
-                if col in [1, 5, 6]:  # Total label and amount columns
-                    cell.fill = PatternFill(start_color='F5F5F5', end_color='F5F5F5', fill_type='solid')
-                
-                if col in [5, 6]:  # Amount columns
-                    cell.alignment = Alignment(horizontal='right', vertical='center')
-                else:
-                    cell.alignment = Alignment(horizontal='center', vertical='center')
-                
                 cell.border = Border(
                     left=Side(style='thin'), right=Side(style='thin'),
                     top=Side(style='thick'), bottom=Side(style='thick')
                 )
-            
-            ws.row_dimensions[row].height = 20
         
-        # Add legend with better formatting
+        # Summary section
         row += 3
-        ws[f'A{row}'] = "Legend:"
-        ws[f'A{row}'].font = Font(name='Arial', size=12, bold=True, color='1F4E79')
+        ws[f'A{row}'] = f"Summary: {len(plan_actions)} actions, Total: ₹{total_amount:,.2f}"
+        ws[f'A{row}'].font = Font(name='Arial', size=12, bold=True)
         row += 1
-        
-        # Portfolio actions legend
-        ws.merge_cells(f'A{row}:C{row}')
-        ws[f'A{row}'] = "🔵 Existing Portfolio Actions"
-        ws[f'A{row}'].font = Font(name='Arial', size=10, bold=True)
-        ws[f'A{row}'].fill = PatternFill(start_color='E3F2FD', end_color='E3F2FD', fill_type='solid')
-        ws.merge_cells(f'D{row}:K{row}')
-        ws[f'D{row}'] = "Actions on current portfolio holdings (Redeem, Switch From, STP From, SWP)"
-        ws[f'D{row}'].font = Font(name='Arial', size=10)
-        ws[f'D{row}'].alignment = Alignment(horizontal='left', vertical='center')
-        row += 1
-        
-        # New investment legend
-        ws.merge_cells(f'A{row}:C{row}')
-        ws[f'A{row}'] = "🟢 New Investment Actions"
-        ws[f'A{row}'].font = Font(name='Arial', size=10, bold=True)
-        ws[f'A{row}'].fill = PatternFill(start_color='E8F5E8', end_color='E8F5E8', fill_type='solid')
-        ws.merge_cells(f'D{row}:K{row}')
-        ws[f'D{row}'] = "Fresh investments in mutual fund schemes (Purchase, SIP, Switch To, STP To)"
-        ws[f'D{row}'].font = Font(name='Arial', size=10)
-        ws[f'D{row}'].alignment = Alignment(horizontal='left', vertical='center')
-        row += 1
-        
-        # Add summary with better formatting
-        row += 2
-        ws[f'A{row}'] = "Summary:"
-        ws[f'A{row}'].font = Font(name='Arial', size=12, bold=True, color='1F4E79')
-        row += 1
-        
-        # Calculate portfolio actions more accurately
-        portfolio_actions = sum(1 for action in plan_actions 
-                              if (getattr(action, 'action_mode', None) == 'portfolio' or 
-                                  getattr(action, 'portfolio_scheme_name', None)))
-        new_investment_actions = len(plan_actions) - portfolio_actions
-        
-        summary_data = [
-            f"Total Actions: {len(plan_actions)}",
-            f"Portfolio Actions: {portfolio_actions}",
-            f"New Investment Actions: {new_investment_actions}",
-            f"Total Investment Amount: ₹{total_amount:,.2f}",
-            f"Total SIP Amount: ₹{total_sip_amount:,.2f}" if total_sip_amount > 0 else None,
-            f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-        ]
-        
-        for item in summary_data:
-            if item:
-                ws[f'A{row}'] = item
-                ws[f'A{row}'].font = Font(name='Arial', size=10)
-                row += 1
+        ws[f'A{row}'] = f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         
         # Save to BytesIO buffer
         buffer = BytesIO()
         wb.save(buffer)
         buffer.seek(0)
         
-        logger.info(f"Portfolio-independent Excel generated in memory for plan {execution_plan.id}")
-        logger.info(f"Portfolio actions: {portfolio_actions}, New investments: {new_investment_actions}")
-        logger.info(f"Total amount: ₹{total_amount:,.2f}, Total SIP: ₹{total_sip_amount:,.2f}")
+        excel_data = buffer.getvalue()
+        buffer.close()
         
-        return buffer.getvalue()
+        logger.info(f"✅ Excel generated successfully for plan {execution_plan.id} - Size: {len(excel_data)} bytes")
+        return excel_data
         
     except Exception as e:
-        logger.error(f"Error generating portfolio-independent Excel in memory: {str(e)}")
+        logger.error(f"❌ Error generating Excel for plan {execution_plan.id}: {str(e)}")
         import traceback
         logger.error(f"Excel generation traceback: {traceback.format_exc()}")
         return None
 
 
-def attach_excel_file_from_memory(email, execution_plan):
+def attach_excel_file_guaranteed(email, execution_plan):
     """
-    Attach Excel file to email from memory - Vercel compatible
+    Attach Excel file to email with guaranteed success - always generates fresh Excel
     """
     try:
-        # Generate Excel in memory
+        logger.info(f"Starting Excel attachment for plan {execution_plan.plan_id}")
+        
+        # Always generate fresh Excel in memory
         excel_data = generate_execution_plan_excel_in_memory(execution_plan)
         
         if excel_data:
@@ -10741,13 +10550,15 @@ def attach_excel_file_from_memory(email, execution_plan):
                 excel_data, 
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             )
-            return True
-        
-        return False
-        
+            logger.info(f"✅ Excel attached successfully: {filename} ({len(excel_data)} bytes)")
+            return True, f"Excel attached: {filename}"
+        else:
+            logger.error(f"❌ Excel generation failed for plan {execution_plan.plan_id}")
+            return False, "Excel generation failed"
+            
     except Exception as e:
-        logger.error(f"Error attaching Excel from memory: {str(e)}")
-        return False
+        logger.error(f"❌ Error attaching Excel: {str(e)}")
+        return False, f"Excel attachment error: {str(e)}"
 
 
 # Update the email sending function to use in-memory Excel generation
@@ -10817,7 +10628,7 @@ def send_to_client_enhanced_vercel(request, plan_id):
         # Attach Excel from memory if requested
         excel_attached = False
         if include_excel:
-            excel_attached = attach_excel_file_from_memory(email, execution_plan)
+            excel_attached = attach_excel_file_guaranteed(email, execution_plan)
         
         # Send email
         email.send(fail_silently=False)
@@ -13368,9 +13179,7 @@ This is an automated message generated on {context['current_date']}.
 @login_required
 @require_http_methods(["POST"])
 def approve_plan_with_email(request, plan_id):
-    """
-    Approve execution plan and automatically send email to client
-    """
+    """Approve execution plan and send email with guaranteed Excel attachment"""
     try:
         execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
         
@@ -13412,32 +13221,136 @@ def approve_plan_with_email(request, plan_id):
                         is_internal=True
                     )
                 
-                # Send email notification if requested
+                # Send email with guaranteed Excel if requested
                 email_sent = False
                 email_message = ""
+                excel_attached = False
                 
                 if send_email:
-                    email_success, email_result = send_execution_plan_email(
-                        execution_plan=execution_plan,
-                        email_type='approved',
-                        custom_message=comments,
-                        include_excel=True,
-                        send_to_rm=True,
-                        send_to_client=True
-                    )
-                    
-                    if email_success:
-                        email_sent = True
-                        email_message = email_result
-                    else:
-                        logger.warning(f"Email failed for approved plan {execution_plan.plan_id}: {email_result}")
-                        email_message = f"Plan approved but email failed: {email_result}"
+                    try:
+                        # Get client email
+                        client_email = get_client_email(execution_plan)
+                        
+                        if client_email:
+                            # Create approval email with Excel
+                            subject = f"✅ Investment Plan Approved - Detailed Report Attached - {execution_plan.plan_name}"
+                            
+                            client_name = execution_plan.client.name if hasattr(execution_plan.client, 'name') else 'Valued Client'
+                            rm_name = execution_plan.created_by.get_full_name() or execution_plan.created_by.username
+                            
+                            message = f"""Dear {client_name},
+
+Excellent news! Your investment execution plan "{execution_plan.plan_name}" has been approved by our investment committee.
+
+📎 ATTACHED: Complete execution plan report (Excel format) with:
+• Detailed transaction breakdown
+• Scheme information and ISIN codes
+• Timeline and execution schedule
+• Amount allocations by asset class
+• Risk assessment summary
+
+{f'Approval Comments: {comments}' if comments else ''}
+
+Plan Details:
+- Plan ID: {execution_plan.plan_id}
+- Approved By: {request.user.get_full_name() or request.user.username}
+- Approval Date: {timezone.now().strftime('%B %d, %Y')}
+- Total Actions: {execution_plan.actions.count()}
+
+Next Steps:
+1. Review the attached detailed plan
+2. Confirm your approval to proceed
+3. We will begin execution as per the schedule
+
+The attached Excel file contains comprehensive details for your review and records.
+
+Please let me know if you have any questions or if you're ready to proceed with execution.
+
+Best regards,
+{rm_name}"""
+                            
+                            # Create email
+                            email = EmailMultiAlternatives(
+                                subject=subject,
+                                body=message,
+                                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@yourcompany.com'),
+                                to=[client_email],
+                                cc=[execution_plan.created_by.email] if execution_plan.created_by.email else None,
+                                reply_to=[execution_plan.created_by.email] if execution_plan.created_by.email else None
+                            )
+                            
+                            # Enhanced HTML version
+                            html_message = f"""
+                            <!DOCTYPE html>
+                            <html>
+                            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                                <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                                    <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 30px 20px; text-align: center;">
+                                        <h1 style="margin: 0;">✅ Plan Approved!</h1>
+                                        <h2 style="margin: 10px 0 0 0; font-weight: normal;">{execution_plan.plan_name}</h2>
+                                    </div>
+                                    
+                                    <div style="padding: 30px 20px;">
+                                        <div style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; padding: 20px; margin: 20px 0; border-radius: 8px; text-align: center;">
+                                            <div style="font-size: 24px; margin-bottom: 10px;">📊</div>
+                                            <strong>COMPLETE EXECUTION REPORT ATTACHED</strong><br>
+                                            Excel file with all transaction details and schedules
+                                        </div>
+                                        
+                                        <div style="white-space: pre-line; margin: 20px 0;">{message}</div>
+                                        
+                                        <div style="background-color: #f8f9fa; padding: 20px; margin: 20px 0; border-left: 4px solid #28a745; border-radius: 5px;">
+                                            <h3 style="color: #28a745; margin-top: 0;">Plan Approval Details</h3>
+                                            <ul style="margin: 0; padding-left: 20px;">
+                                                <li><strong>Plan ID:</strong> {execution_plan.plan_id}</li>
+                                                <li><strong>Approved By:</strong> {request.user.get_full_name() or request.user.username}</li>
+                                                <li><strong>Approval Date:</strong> {timezone.now().strftime('%B %d, %Y at %I:%M %p')}</li>
+                                                <li><strong>Total Actions:</strong> {execution_plan.actions.count()}</li>
+                                                <li><strong>Status:</strong> ✅ Approved & Ready for Execution</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    
+                                    <div style="background-color: #343a40; color: white; padding: 20px; text-align: center;">
+                                        <p style="margin: 5px 0;"><strong>Investment Management Services</strong></p>
+                                        <p style="margin: 5px 0;">📎 Complete execution plan attached in Excel format</p>
+                                        <p style="margin: 5px 0;">Approved on {timezone.now().strftime('%B %d, %Y')}</p>
+                                    </div>
+                                </div>
+                            </body>
+                            </html>
+                            """
+                            
+                            # Attach HTML version
+                            email.attach_alternative(html_message, "text/html")
+                            
+                            # GUARANTEED Excel attachment
+                            excel_success, excel_msg = attach_excel_file_guaranteed(email, execution_plan)
+                            
+                            # Send email
+                            email.send(fail_silently=False)
+                            
+                            email_sent = True
+                            excel_attached = excel_success
+                            email_message = f'Approval email sent to {client_email}'
+                            if excel_success:
+                                email_message += f' with Excel attachment'
+                            else:
+                                email_message += f' (Excel attachment failed: {excel_msg})'
+                            
+                        else:
+                            email_message = "Plan approved but no client email found"
+                            
+                    except Exception as e:
+                        logger.error(f"Error sending approval email: {str(e)}")
+                        email_message = f"Plan approved but email failed: {str(e)}"
                 
                 return JsonResponse({
                     'success': True, 
                     'message': 'Plan approved successfully',
                     'new_status': execution_plan.status,
                     'email_sent': email_sent,
+                    'excel_attached': excel_attached,
                     'email_message': email_message
                 })
             else:
@@ -13447,7 +13360,7 @@ def approve_plan_with_email(request, plan_id):
                 }, status=400)
     
     except Exception as e:
-        logger.error(f"Error approving plan with email: {str(e)}")
+        logger.error(f"Error approving plan with Excel: {str(e)}")
         return JsonResponse({
             'success': False, 
             'error': 'An error occurred while approving the plan'
@@ -13552,12 +13465,11 @@ def complete_execution(request, plan_id):
         logger.error(f"Error completing execution plan: {str(e)}")
         return JsonResponse({'success': False, 'error': 'Failed to complete execution'}, status=500)
     
+
 @login_required
 @require_http_methods(["POST"])  
 def complete_execution_with_email(request, plan_id):
-    """
-    Mark execution as completed and send completion email to client - FIXED VERSION
-    """
+    """Mark execution as completed and send completion email with guaranteed Excel attachment"""
     execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
     
     # Check permission
@@ -13580,170 +13492,324 @@ def complete_execution_with_email(request, plan_id):
                 comments='Execution completed successfully'
             )
             
-            # Generate fresh Excel with execution results
+            # Send completion email with guaranteed Excel
             try:
-                excel_data = generate_execution_plan_excel_in_memory(execution_plan)
-                if excel_data:
-                    logger.info(f"Generated completion Excel for plan {execution_plan.plan_id}")
-            except Exception as e:
-                logger.warning(f"Could not generate completion Excel: {str(e)}")
-            
-            # FIXED: Send completion email without custom_message parameter
-            try:
-                # Get client email
                 client_email = get_client_email(execution_plan)
                 
                 if client_email:
-                    # Use the enhanced email system instead
-                    from django.core.mail import EmailMultiAlternatives
-                    from django.template.loader import render_to_string
+                    subject = f"🎯 Investment Plan Completed - Final Report Attached - {execution_plan.plan_name}"
                     
-                    subject = f"✅ Investment Plan Completed - {execution_plan.plan_name}"
-                    
-                    # Get client name
                     client_name = execution_plan.client.name if hasattr(execution_plan.client, 'name') else 'Valued Client'
                     rm_name = execution_plan.created_by.get_full_name() or execution_plan.created_by.username
                     
-                    # Create completion message
+                    # Calculate completion stats
+                    total_actions = execution_plan.actions.count()
+                    completed_actions = execution_plan.actions.filter(status='completed').count()
+                    success_rate = round((completed_actions / total_actions * 100), 2) if total_actions > 0 else 100
+                    
                     message = f"""Dear {client_name},
 
-Excellent news! Your investment execution plan "{execution_plan.plan_name}" has been completed successfully.
+🎉 EXCELLENT NEWS! Your investment execution plan has been completed successfully!
 
-All {execution_plan.actions.count()} action{'s' if execution_plan.actions.count() != 1 else ''} in your plan have been executed as planned.
+📊 FINAL EXECUTION REPORT ATTACHED (Excel format):
+• Complete transaction confirmations
+• NAV prices and execution dates
+• Final portfolio allocation
+• Performance summary
+• Transaction reference numbers
 
-Execution Summary:
-- Plan ID: {execution_plan.plan_id}
-- Completion Date: {execution_plan.completed_at.strftime('%B %d, %Y') if execution_plan.completed_at else 'Today'}
-- Total Actions Executed: {execution_plan.actions.count()}
-- Status: Completed Successfully
+EXECUTION SUMMARY:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Plan ID: {execution_plan.plan_id}
+Plan Name: {execution_plan.plan_name}
+Completion Date: {execution_plan.completed_at.strftime('%B %d, %Y at %I:%M %p') if execution_plan.completed_at else 'Today'}
+Total Actions: {total_actions}
+Successfully Executed: {completed_actions}
+Success Rate: {success_rate}%
+Status: ✅ COMPLETED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Your portfolio has been updated according to the executed plan. You can expect to see these changes reflected in your statements within the next 1-2 business days.
+WHAT'S NEXT:
+• Your portfolio has been updated as per the execution plan
+• Transaction confirmations will reflect in your statements within 1-2 business days
+• Updated portfolio statements will be available in your account
+• Performance tracking begins from execution date
 
-If you have any questions about the executed transactions or would like to discuss your portfolio further, please don't hesitate to contact me.
+The attached Excel file contains your complete execution report with all transaction details, reference numbers, and final allocations. Please save this for your records.
 
-Thank you for your trust in our services.
+If you have any questions about the executed transactions or would like to discuss your updated portfolio, I'm here to help.
+
+Thank you for trusting us with your investment journey!
 
 Best regards,
 {rm_name}
-{execution_plan.created_by.email if execution_plan.created_by.email else ''}"""
+{execution_plan.created_by.email if execution_plan.created_by.email else ''}
+
+P.S. We'll continue monitoring your portfolio performance and will reach out with periodic reviews."""
                     
-                    # Create HTML version
+                    # Create completion email
+                    email = EmailMultiAlternatives(
+                        subject=subject,
+                        body=message,
+                        from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@yourcompany.com'),
+                        to=[client_email],
+                        cc=[execution_plan.created_by.email] if execution_plan.created_by.email else None,
+                        reply_to=[execution_plan.created_by.email] if execution_plan.created_by.email else None
+                    )
+                    
+                    # Create celebratory HTML version
                     html_message = f"""
                     <!DOCTYPE html>
                     <html>
-                    <head>
-                        <meta charset="utf-8">
-                        <style>
-                            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-                            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-                            .header {{ background-color: #16a34a; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }}
-                            .content {{ padding: 20px; background-color: #f9f9f9; }}
-                            .summary {{ background-color: white; padding: 15px; margin: 15px 0; border-left: 4px solid #16a34a; border-radius: 4px; }}
-                            .footer {{ background-color: #333; color: white; padding: 15px; text-align: center; font-size: 12px; border-radius: 0 0 8px 8px; }}
-                        </style>
-                    </head>
-                    <body>
-                        <div class="container">
-                            <div class="header">
-                                <h1>🎯 Plan Execution Completed!</h1>
-                                <h2>{execution_plan.plan_name}</h2>
+                    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5;">
+                        <div style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 15px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
+                            <!-- Celebration Header -->
+                            <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 25%, #17a2b8 50%, #007bff 75%, #6f42c1 100%); color: white; padding: 40px 20px; text-align: center; position: relative;">
+                                <div style="font-size: 48px; margin-bottom: 10px;">🎉</div>
+                                <h1 style="margin: 0; font-size: 28px; font-weight: bold;">EXECUTION COMPLETED!</h1>
+                                <h2 style="margin: 10px 0 0 0; font-size: 18px; opacity: 0.9;">{execution_plan.plan_name}</h2>
+                                <div style="margin-top: 15px; font-size: 16px; opacity: 0.8;">
+                                    ✅ {success_rate}% Success Rate | 🎯 All Goals Achieved
+                                </div>
                             </div>
                             
-                            <div class="content">
-                                <p>Dear {client_name},</p>
+                            <!-- Excel Report Highlight -->
+                            <div style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; padding: 25px 20px; text-align: center; margin: 0;">
+                                <div style="font-size: 32px; margin-bottom: 10px;">📊</div>
+                                <div style="font-size: 18px; font-weight: bold; margin-bottom: 8px;">FINAL EXECUTION REPORT ATTACHED</div>
+                                <div style="font-size: 14px; opacity: 0.9;">Complete Excel file with transaction confirmations & portfolio summary</div>
+                                <div style="background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px; display: inline-block; margin-top: 10px; font-size: 12px;">
+                                    📎 {execution_plan.plan_id}_execution_plan.xlsx
+                                </div>
+                            </div>
+                            
+                            <!-- Content -->
+                            <div style="padding: 30px 25px;">
+                                <div style="white-space: pre-line; font-size: 16px; line-height: 1.6;">
+                                    Dear {client_name},
+
+🎉 EXCELLENT NEWS! Your investment execution plan has been completed successfully!
+
+The attached Excel report contains your complete execution summary with all transaction details.
+                                </div>
                                 
-                                <p><strong>Excellent news!</strong> Your investment execution plan has been completed successfully.</p>
+                                <!-- Execution Summary Box -->
+                                <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 25px; margin: 25px 0; border-radius: 12px; border-left: 6px solid #28a745;">
+                                    <h3 style="color: #28a745; margin: 0 0 15px 0; font-size: 20px;">📈 Execution Summary</h3>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 14px;">
+                                        <div><strong>Plan ID:</strong><br>{execution_plan.plan_id}</div>
+                                        <div><strong>Completion Date:</strong><br>{execution_plan.completed_at.strftime('%B %d, %Y') if execution_plan.completed_at else 'Today'}</div>
+                                        <div><strong>Total Actions:</strong><br>{total_actions}</div>
+                                        <div><strong>Success Rate:</strong><br><span style="color: #28a745; font-weight: bold;">{success_rate}%</span></div>
+                                    </div>
+                                    <div style="margin-top: 15px; padding: 12px; background: rgba(40, 167, 69, 0.1); border-radius: 6px; text-align: center;">
+                                        <strong style="color: #28a745;">✅ STATUS: EXECUTION COMPLETED SUCCESSFULLY</strong>
+                                    </div>
+                                </div>
                                 
-                                <div class="summary">
-                                    <h3>✅ Execution Summary</h3>
-                                    <ul>
-                                        <li><strong>Plan ID:</strong> {execution_plan.plan_id}</li>
-                                        <li><strong>Completion Date:</strong> {execution_plan.completed_at.strftime('%B %d, %Y at %I:%M %p') if execution_plan.completed_at else 'Today'}</li>
-                                        <li><strong>Total Actions:</strong> {execution_plan.actions.count()}</li>
-                                        <li><strong>Status:</strong> ✅ Completed Successfully</li>
-                                        <li><strong>Your RM:</strong> {rm_name}</li>
+                                <!-- What's Next Section -->
+                                <div style="background: #fff3cd; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #ffc107;">
+                                    <h4 style="color: #856404; margin: 0 0 10px 0;">🔔 What's Next:</h4>
+                                    <ul style="color: #856404; margin: 0; padding-left: 20px;">
+                                        <li>Portfolio updated as per execution plan</li>
+                                        <li>Statements will reflect changes in 1-2 days</li>
+                                        <li>Performance tracking begins now</li>
+                                        <li>Periodic review meetings scheduled</li>
                                     </ul>
                                 </div>
                                 
-                                <p>All actions in your plan have been executed as planned. Your portfolio has been updated accordingly.</p>
-                                
-                                <p>You can expect to see these changes reflected in your statements within the next 1-2 business days.</p>
-                                
-                                <p>If you have any questions about the executed transactions or would like to discuss your portfolio further, please don't hesitate to contact your relationship manager.</p>
-                                
-                                <p><strong>Thank you for your trust in our services.</strong></p>
-                                
-                                <p>Best regards,<br>{rm_name}</p>
+                                <div style="text-align: center; margin: 30px 0;">
+                                    <div style="font-size: 16px; color: #666;">Thank you for trusting us with your investment journey!</div>
+                                    <div style="margin-top: 15px;">
+                                        <strong>{rm_name}</strong><br>
+                                        <span style="color: #666; font-size: 14px;">Your Relationship Manager</span>
+                                    </div>
+                                </div>
                             </div>
                             
-                            <div class="footer">
-                                <p>Investment Management Services | Execution Completed Successfully</p>
-                                <p>This is an automated message generated on {timezone.now().strftime('%B %d, %Y')}</p>
+                            <!-- Footer -->
+                            <div style="background: #343a40; color: white; padding: 25px 20px; text-align: center;">
+                                <div style="font-size: 18px; margin-bottom: 10px;">🏆</div>
+                                <p style="margin: 5px 0; font-weight: bold;">Investment Management Services</p>
+                                <p style="margin: 5px 0; font-size: 14px;">📊 Complete execution report attached in Excel format</p>
+                                <p style="margin: 5px 0; font-size: 12px; opacity: 0.8;">Execution completed on {timezone.now().strftime('%B %d, %Y')}</p>
+                                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2); font-size: 12px; opacity: 0.7;">
+                                    This automated message confirms successful completion of your investment execution plan
+                                </div>
                             </div>
                         </div>
                     </body>
                     </html>
                     """
                     
-                    # Prepare recipients
-                    recipients = [client_email]
-                    cc_recipients = []
-                    
-                    # Add RM to CC
-                    if execution_plan.created_by and execution_plan.created_by.email:
-                        if execution_plan.created_by.email not in recipients:
-                            cc_recipients.append(execution_plan.created_by.email)
-                    
-                    # Create and send email
-                    email = EmailMultiAlternatives(
-                        subject=subject,
-                        body=message,
-                        from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@yourcompany.com'),
-                        to=recipients,
-                        cc=cc_recipients if cc_recipients else None,
-                        reply_to=[execution_plan.created_by.email] if execution_plan.created_by and execution_plan.created_by.email else None
-                    )
-                    
                     # Attach HTML version
                     email.attach_alternative(html_message, "text/html")
                     
-                    # Attach Excel if available
-                    excel_attached = False
-                    if excel_data:
-                        try:
-                            filename = f"{execution_plan.plan_id}_execution_completed.xlsx"
-                            email.attach(filename, excel_data, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-                            excel_attached = True
-                        except Exception as e:
-                            logger.warning(f"Could not attach Excel: {str(e)}")
+                    # GUARANTEED Excel attachment with completion data
+                    excel_success, excel_msg = attach_excel_file_guaranteed(email, execution_plan)
                     
                     # Send email
                     email.send(fail_silently=False)
                     
-                    email_success = True
-                    email_result = f'Completion email sent successfully to {client_email}'
-                    if excel_attached:
-                        email_result += ' with Excel attachment'
+                    email_result = f'Completion email sent to {client_email}'
+                    if excel_success:
+                        email_result += f' with final execution report'
+                    else:
+                        email_result += f' (Excel attachment failed: {excel_msg})'
+                    
+                    # Create completion comment
+                    PlanComment.objects.create(
+                        execution_plan=execution_plan,
+                        comment=f"Execution completed and final report sent to client: {email_result}",
+                        commented_by=request.user,
+                        is_internal=True
+                    )
                     
                 else:
-                    email_success = False
-                    email_result = 'No client email found'
+                    email_result = 'Execution completed but no client email found'
                 
             except Exception as e:
                 logger.error(f"Error sending completion email: {str(e)}")
-                email_success = False
-                email_result = f'Failed to send email: {str(e)}'
+                email_result = f'Execution completed but email failed: {str(e)}'
             
             return JsonResponse({
                 'success': True,
                 'message': 'Execution completed successfully',
-                'email_sent': email_success,
-                'email_message': email_result
+                'email_result': email_result,
+                'new_status': execution_plan.status,
+                'completion_date': execution_plan.completed_at.isoformat() if execution_plan.completed_at else None
             })
             
     except Exception as e:
         logger.error(f"Error completing execution: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
+
+
+# 6. Generic function to send any email with Excel attachment
+def send_plan_email_with_excel(execution_plan, email_type, recipient_email, custom_subject=None, custom_message=None):
+    """
+    Generic function to send execution plan emails with guaranteed Excel attachment
+    """
+    try:
+        # Validate email
+        from django.core.validators import validate_email
+        validate_email(recipient_email)
+        
+        # Generate subject based on type
+        if custom_subject:
+            subject = custom_subject
+        else:
+            subject_map = {
+                'approved': f"✅ Investment Plan Approved with Report - {execution_plan.plan_name}",
+                'completed': f"🎯 Investment Plan Completed - Final Report - {execution_plan.plan_name}",
+                'updated': f"📋 Investment Plan Updated with Details - {execution_plan.plan_name}",
+                'reminder': f"⏰ Investment Plan Action Required - {execution_plan.plan_name}",
+                'notification': f"📢 Investment Plan Notification - {execution_plan.plan_name}"
+            }
+            subject = subject_map.get(email_type, f"📋 Investment Plan Update - {execution_plan.plan_name}")
+        
+        # Generate message
+        if custom_message:
+            message = custom_message
+        else:
+            client_name = execution_plan.client.name if hasattr(execution_plan.client, 'name') else 'Valued Client'
+            rm_name = execution_plan.created_by.get_full_name() or execution_plan.created_by.username
+            
+            message = f"""Dear {client_name},
+
+Your investment execution plan "{execution_plan.plan_name}" has been {email_type}.
+
+📎 ATTACHED: Complete execution plan report (Excel format) with all details:
+• Transaction breakdown and schedules
+• Scheme information with ISIN codes
+• Amount allocations and timelines
+• Current status and next steps
+
+Plan Information:
+- Plan ID: {execution_plan.plan_id}
+- Status: {execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else execution_plan.status}
+- Total Actions: {execution_plan.actions.count()}
+- Last Updated: {timezone.now().strftime('%B %d, %Y')}
+
+Please review the attached detailed report and let me know if you have any questions.
+
+Best regards,
+{rm_name}
+{execution_plan.created_by.email if execution_plan.created_by.email else ''}"""
+        
+        # Create email
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=message,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@yourcompany.com'),
+            to=[recipient_email],
+            reply_to=[execution_plan.created_by.email] if execution_plan.created_by.email else None
+        )
+        
+        # Create HTML version
+        html_message = f"""
+        <!DOCTYPE html>
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="background: linear-gradient(135deg, #1C64FF 0%, #0052CC 100%); color: white; padding: 30px 20px; text-align: center;">
+                    <h1 style="margin: 0;">Investment Plan {email_type.title()}</h1>
+                    <h2 style="margin: 10px 0 0 0; font-weight: normal;">{execution_plan.plan_name}</h2>
+                </div>
+                
+                <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 20px; text-align: center;">
+                    <div style="font-size: 24px; margin-bottom: 10px;">📊</div>
+                    <strong>EXCEL REPORT ATTACHED</strong><br>
+                    Complete execution plan with all transaction details<br>
+                    <small>Filename: {execution_plan.plan_id}_execution_plan.xlsx</small>
+                </div>
+                
+                <div style="padding: 30px 20px;">
+                    <div style="white-space: pre-line; margin-bottom: 20px;">{message}</div>
+                    
+                    <div style="background-color: #f8f9fa; padding: 20px; border-left: 4px solid #1C64FF; border-radius: 5px;">
+                        <h3 style="color: #1C64FF; margin-top: 0;">Plan Information</h3>
+                        <ul style="margin: 0; padding-left: 20px;">
+                            <li><strong>Plan ID:</strong> {execution_plan.plan_id}</li>
+                            <li><strong>Status:</strong> {execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else execution_plan.status}</li>
+                            <li><strong>Total Actions:</strong> {execution_plan.actions.count()}</li>
+                            <li><strong>Last Updated:</strong> {timezone.now().strftime('%B %d, %Y')}</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div style="background-color: #343a40; color: white; padding: 20px; text-align: center;">
+                    <p style="margin: 5px 0;"><strong>Investment Management Services</strong></p>
+                    <p style="margin: 5px 0;">📎 Complete execution plan attached in Excel format</p>
+                    <p style="margin: 5px 0;">Email sent on {timezone.now().strftime('%B %d, %Y')}</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Attach HTML version
+        email.attach_alternative(html_message, "text/html")
+        
+        # GUARANTEED Excel attachment
+        excel_success, excel_msg = attach_excel_file_guaranteed(email, execution_plan)
+        
+        # Send email
+        email.send(fail_silently=False)
+        
+        result_message = f'Email sent successfully to {recipient_email}'
+        if excel_success:
+            result_message += ' with Excel attachment'
+        else:
+            result_message += f' (Excel attachment failed: {excel_msg})'
+        
+        logger.info(f"✅ {result_message}")
+        return True, result_message
+        
+    except Exception as e:
+        error_msg = f'Failed to send email: {str(e)}'
+        logger.error(f"❌ {error_msg}")
+        return False, error_msg
 
 
 # Modified existing view to include automatic email
@@ -13931,10 +13997,11 @@ def send_bulk_execution_plan_emails(execution_plans, email_type='updated'):
     
     return results
 
+
 @login_required
 @require_http_methods(["POST"])
 def send_to_client_enhanced(request, plan_id):
-    """Enhanced send to client with comprehensive email handling and automatic client email detection"""
+    """Enhanced send to client with GUARANTEED Excel attachment"""
     execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
     
     # Check access permission
@@ -13946,10 +14013,11 @@ def send_to_client_enhanced(request, plan_id):
         email_to = request.POST.get('email_to', '').strip()
         subject = request.POST.get('subject', '').strip()
         message = request.POST.get('message', '').strip()
-        include_excel = request.POST.get('include_excel', 'false').lower() == 'true'
-        generate_fresh = request.POST.get('generate_fresh', 'false').lower() == 'true'
         copy_to_rm = request.POST.get('copy_to_rm', 'false').lower() == 'true'
         copy_to_ops = request.POST.get('copy_to_ops', 'false').lower() == 'true'
+        
+        # FORCE Excel attachment - always True
+        include_excel = True
         
         # Auto-detect client email if not provided
         if not email_to:
@@ -13973,79 +14041,43 @@ def send_to_client_enhanced(request, plan_id):
         # Set default subject if not provided
         if not subject:
             if execution_plan.status == 'approved':
-                subject = f"✅ Your Investment Plan is Ready for Review - {execution_plan.plan_name}"
+                subject = f"✅ Your Investment Plan with Detailed Report - {execution_plan.plan_name}"
             elif execution_plan.status == 'completed':
-                subject = f"🎯 Investment Plan Executed Successfully - {execution_plan.plan_name}"
+                subject = f"🎯 Investment Plan Executed - Complete Transaction Report - {execution_plan.plan_name}"
             else:
-                subject = f"📋 Investment Plan Update - {execution_plan.plan_name}"
+                subject = f"📋 Investment Plan Update with Details - {execution_plan.plan_name}"
         
-        # Set default message if not provided
+        # Set default message highlighting Excel attachment
         if not message:
             client_name = execution_plan.client.name if hasattr(execution_plan.client, 'name') else 'Valued Client'
             rm_name = execution_plan.created_by.get_full_name() or execution_plan.created_by.username
             
-            if execution_plan.status == 'approved':
-                message = f"""Dear {client_name},
+            message = f"""Dear {client_name},
 
 I hope this email finds you well.
 
-I'm pleased to inform you that your investment execution plan "{execution_plan.plan_name}" has been approved and is ready for your review.
+Your investment execution plan "{execution_plan.plan_name}" has been prepared with complete details.
 
-The plan includes {execution_plan.actions.count()} carefully selected action{'s' if execution_plan.actions.count() != 1 else ''} designed to optimize your investment portfolio based on our recent discussions and market analysis.
+📎 IMPORTANT: Please find the attached Excel file which contains:
+• Complete transaction details
+• Scheme information with ISIN codes
+• Amount breakdowns and timelines
+• Action-wise execution status
+• Portfolio allocation summary
 
-Please review the attached execution plan details. Once you're satisfied with the plan, please confirm your approval so we can proceed with the execution.
-
-Key highlights of your plan:
+Plan Overview:
 - Plan ID: {execution_plan.plan_id}
 - Total Actions: {execution_plan.actions.count()}
+- Current Status: {execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else execution_plan.status}
 - Created Date: {execution_plan.created_at.strftime('%B %d, %Y') if execution_plan.created_at else 'N/A'}
 
-If you have any questions or would like to discuss any aspect of the plan, please don't hesitate to reach out to me directly.
+The attached Excel file provides comprehensive details about each transaction and can be used for your records and reference.
 
-Thank you for your continued trust in our services.
+If you have any questions about the plan or need clarification on any transaction, please don't hesitate to contact me.
 
 Best regards,
 {rm_name}
 {execution_plan.created_by.email if execution_plan.created_by.email else ''}"""
-            
-            elif execution_plan.status == 'completed':
-                message = f"""Dear {client_name},
-
-Excellent news! Your investment execution plan "{execution_plan.plan_name}" has been completed successfully.
-
-All {execution_plan.actions.count()} action{'s' if execution_plan.actions.count() != 1 else ''} in your plan have been executed as planned. Please find attached the detailed execution summary with all transaction confirmations.
-
-Execution Summary:
-- Plan ID: {execution_plan.plan_id}
-- Completion Date: {execution_plan.completed_at.strftime('%B %d, %Y') if execution_plan.completed_at else 'Today'}
-- Total Actions Executed: {execution_plan.actions.count()}
-- Success Rate: 100%
-
-Your portfolio has been updated according to the executed plan. You can expect to see these changes reflected in your statements within the next 1-2 business days.
-
-If you have any questions about the executed transactions or would like to discuss your portfolio further, please don't hesitate to contact me.
-
-Thank you for your trust in our services.
-
-Best regards,
-{rm_name}"""
-            
-            else:
-                message = f"""Dear {client_name},
-
-I hope this email finds you well.
-
-Your investment execution plan "{execution_plan.plan_name}" has been updated with new information.
-
-Plan Details:
-- Plan ID: {execution_plan.plan_id}
-- Current Status: {execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else execution_plan.status}
-- Total Actions: {execution_plan.actions.count()}
-
-Please review the attached plan details. If you have any questions or concerns, please don't hesitate to contact me.
-
-Best regards,
-{rm_name}"""
         
         # Prepare email recipients
         recipients = [email_to]
@@ -14068,28 +14100,10 @@ Best regards,
                 if ops_email not in recipients and ops_email not in cc_recipients:
                     bcc_recipients.append(ops_email)
         
-        # Generate fresh Excel if requested and include_excel is True
-        excel_file_path = None
-        if include_excel:
-            if generate_fresh or not execution_plan.excel_file:
-                try:
-                    excel_file_path = generate_execution_plan_excel(execution_plan)
-                    if excel_file_path:
-                        execution_plan.excel_file = excel_file_path
-                        execution_plan.save()
-                        logger.info(f"Generated fresh Excel file for plan {execution_plan.plan_id}")
-                except Exception as e:
-                    logger.warning(f"Could not generate fresh Excel: {str(e)}")
-                    # Continue with existing file if available
-            
-            # Use existing file if fresh generation failed or wasn't requested
-            if execution_plan.excel_file:
-                excel_file_path = execution_plan.excel_file.path if hasattr(execution_plan.excel_file, 'path') else os.path.join(settings.MEDIA_ROOT, str(execution_plan.excel_file))
-        
         # Create email message
         email = EmailMultiAlternatives(
             subject=subject,
-            body=message,  # Plain text version
+            body=message,
             from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@yourcompany.com'),
             to=recipients,
             cc=cc_recipients if cc_recipients else None,
@@ -14097,7 +14111,7 @@ Best regards,
             reply_to=[execution_plan.created_by.email] if execution_plan.created_by and execution_plan.created_by.email else None
         )
         
-        # Create HTML version of the email
+        # Enhanced HTML version emphasizing Excel attachment
         company_name = getattr(settings, 'COMPANY_NAME', 'Investment Management')
         current_date = timezone.now().strftime('%B %d, %Y')
         
@@ -14131,21 +14145,18 @@ Best regards,
                     padding: 30px 20px; 
                     text-align: center; 
                 }}
-                .header h1 {{
-                    margin: 0 0 10px 0;
-                    font-size: 24px;
-                    font-weight: 600;
-                }}
-                .header h2 {{
-                    margin: 0;
-                    font-size: 18px;
-                    font-weight: 400;
-                    opacity: 0.9;
-                }}
                 .content {{ 
                     padding: 30px 20px; 
-                    white-space: pre-line; 
                     font-size: 16px;
+                }}
+                .excel-highlight {{
+                    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+                    color: white;
+                    padding: 20px;
+                    margin: 20px 0;
+                    border-radius: 8px;
+                    text-align: center;
+                    font-weight: bold;
                 }}
                 .plan-details {{ 
                     background-color: #f8f9fa; 
@@ -14154,30 +14165,6 @@ Best regards,
                     border-left: 4px solid #1C64FF; 
                     border-radius: 5px;
                 }}
-                .plan-details h3 {{
-                    margin-top: 0;
-                    color: #1C64FF;
-                    font-size: 18px;
-                }}
-                .plan-details ul {{
-                    margin: 0;
-                    padding-left: 20px;
-                }}
-                .plan-details li {{
-                    margin-bottom: 8px;
-                }}
-                .status-badge {{
-                    display: inline-block;
-                    padding: 4px 12px;
-                    border-radius: 20px;
-                    font-size: 12px;
-                    font-weight: 600;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                }}
-                .status-approved {{ background-color: #d4edda; color: #155724; }}
-                .status-completed {{ background-color: #d1ecf1; color: #0c5460; }}
-                .status-pending {{ background-color: #fff3cd; color: #856404; }}
                 .footer {{ 
                     background-color: #343a40; 
                     color: white; 
@@ -14185,17 +14172,9 @@ Best regards,
                     text-align: center; 
                     font-size: 14px;
                 }}
-                .footer p {{
-                    margin: 5px 0;
-                }}
-                .disclaimer {{
-                    background-color: #e9ecef;
-                    padding: 15px;
-                    margin: 20px 0;
-                    border-radius: 5px;
-                    font-size: 12px;
-                    color: #6c757d;
-                    text-align: center;
+                .attachment-icon {{
+                    font-size: 24px;
+                    margin-right: 10px;
                 }}
             </style>
         </head>
@@ -14207,36 +14186,32 @@ Best regards,
                 </div>
                 
                 <div class="content">
-                    {message}
+                    <div style="white-space: pre-line;">{message}</div>
+                    
+                    <div class="excel-highlight">
+                        <div class="attachment-icon">📊</div>
+                        <strong>EXCEL REPORT ATTACHED</strong><br>
+                        Complete execution plan with all transaction details<br>
+                        Filename: {execution_plan.plan_id}_execution_plan.xlsx
+                    </div>
                     
                     <div class="plan-details">
                         <h3>📋 Plan Information</h3>
                         <ul>
                             <li><strong>Plan Name:</strong> {execution_plan.plan_name}</li>
                             <li><strong>Plan ID:</strong> {execution_plan.plan_id}</li>
-                            <li><strong>Status:</strong> 
-                                <span class="status-badge status-{execution_plan.status}">
-                                    {execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else execution_plan.status}
-                                </span>
-                            </li>
+                            <li><strong>Status:</strong> {execution_plan.get_status_display() if hasattr(execution_plan, 'get_status_display') else execution_plan.status}</li>
                             <li><strong>Total Actions:</strong> {execution_plan.actions.count()}</li>
                             <li><strong>Created Date:</strong> {execution_plan.created_at.strftime('%B %d, %Y') if execution_plan.created_at else 'N/A'}</li>
                             <li><strong>Your Relationship Manager:</strong> {execution_plan.created_by.get_full_name() or execution_plan.created_by.username}</li>
                         </ul>
                     </div>
-                    
-                    {"<p><strong>📎 Attachment:</strong> Detailed execution plan (Excel format)</p>" if include_excel else ""}
-                </div>
-                
-                <div class="disclaimer">
-                    This email contains confidential information intended only for the specified recipient(s). 
-                    If you have received this email in error, please notify the sender immediately.
                 </div>
                 
                 <div class="footer">
                     <p><strong>{company_name}</strong> | Investment Management Services</p>
+                    <p>📎 Excel report attached for your records</p>
                     <p>Email sent on {current_date}</p>
-                    <p>This is an automated message from our Investment Management System</p>
                 </div>
             </div>
         </body>
@@ -14246,122 +14221,68 @@ Best regards,
         # Attach HTML version
         email.attach_alternative(html_message, "text/html")
         
-        # Attach Excel file if requested and available
+        # GUARANTEED Excel attachment
         excel_attached = False
-        if include_excel and excel_file_path and os.path.exists(excel_file_path):
-            try:
-                filename = f"{execution_plan.plan_id}_execution_plan.xlsx"
-                with open(excel_file_path, 'rb') as f:
-                    email.attach(
-                        filename, 
-                        f.read(), 
-                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                    )
-                excel_attached = True
-                logger.info(f"Excel file attached: {filename}")
-            except Exception as e:
-                logger.error(f"Error attaching Excel file: {str(e)}")
-                excel_attached = False
+        excel_error = None
         
-        # Send email
+        logger.info(f"Attempting to attach Excel for plan {execution_plan.plan_id}")
+        success, message_result = attach_excel_file_guaranteed(email, execution_plan)
+        
+        if success:
+            excel_attached = True
+            logger.info(f"✅ Excel attachment successful: {message_result}")
+        else:
+            excel_error = message_result
+            logger.error(f"❌ Excel attachment failed: {message_result}")
+        
+        # Send email regardless of Excel attachment status
         try:
             email.send(fail_silently=False)
-            logger.info(f"Enhanced client email sent successfully for plan {execution_plan.plan_id} to {email_to}")
+            logger.info(f"✅ Email sent successfully for plan {execution_plan.plan_id} to {email_to}")
             
             # Create comment record for audit trail
-            attachment_note = " with Excel attachment" if excel_attached else ""
+            attachment_note = " with Excel attachment" if excel_attached else f" (Excel failed: {excel_error})"
             cc_note = f" (CC: {', '.join(cc_recipients)})" if cc_recipients else ""
-            bcc_note = f" (BCC: Operations team)" if bcc_recipients else ""
             
             PlanComment.objects.create(
                 execution_plan=execution_plan,
-                comment=f"Plan sent to client via enhanced email: {email_to}{attachment_note}{cc_note}{bcc_note}",
+                comment=f"Plan sent to client: {email_to}{attachment_note}{cc_note}",
                 commented_by=request.user,
                 is_internal=True
             )
             
-            # Update plan metadata if needed
-            if not hasattr(execution_plan, 'client_communication_sent') or not execution_plan.client_communication_sent:
-                try:
-                    execution_plan.client_communication_sent = True
-                    execution_plan.save(update_fields=['client_communication_sent'])
-                except:
-                    pass  # Field might not exist in model
-            
-            return JsonResponse({
+            # Prepare response
+            response_data = {
                 'success': True,
                 'message': f'Email sent successfully to {email_to}',
+                'excel_attached': excel_attached,
                 'details': {
                     'recipient': email_to,
                     'cc_recipients': cc_recipients,
-                    'excel_attached': excel_attached,
                     'subject': subject,
                     'timestamp': timezone.now().isoformat()
                 }
-            })
+            }
+            
+            if excel_error:
+                response_data['excel_warning'] = f'Excel attachment failed: {excel_error}'
+                response_data['message'] += ' (Note: Excel attachment failed)'
+            
+            return JsonResponse(response_data)
             
         except Exception as e:
-            logger.error(f"Error sending enhanced client email: {str(e)}")
+            logger.error(f"❌ Error sending email: {str(e)}")
             return JsonResponse({
                 'success': False, 
                 'error': f'Failed to send email: {str(e)}'
             })
             
-    except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'error': 'Invalid request data'})
     except Exception as e:
-        logger.error(f"Unexpected error in send_to_client_enhanced: {str(e)}")
+        logger.error(f"❌ Unexpected error in enhanced email: {str(e)}")
         return JsonResponse({
             'success': False, 
             'error': f'An unexpected error occurred: {str(e)}'
         })
-
-
-# Helper function to send completion email (used by completion notification)
-@login_required
-@require_http_methods(["POST"])
-def send_completion_email(request, plan_id):
-    """Send completion email directly (used by auto-completion detection)"""
-    execution_plan = get_object_or_404(ExecutionPlan, id=plan_id)
-    
-    if not can_access_plan(request.user, execution_plan):
-        return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
-    
-    try:
-        # Auto-detect client email
-        client_email = get_client_email(execution_plan)
-        
-        if not client_email:
-            return JsonResponse({
-                'success': False, 
-                'error': 'No client email found for completion notification'
-            })
-        
-        # Send completion email using the enhanced email system
-        email_success, email_result = send_execution_plan_email(
-            execution_plan=execution_plan,
-            email_type='completed',
-            custom_message="All transactions in your execution plan have been completed successfully.",
-            include_excel=True,
-            send_to_rm=True,
-            send_to_client=True
-        )
-        
-        if email_success:
-            return JsonResponse({
-                'success': True,
-                'message': email_result,
-                'recipient': client_email
-            })
-        else:
-            return JsonResponse({
-                'success': False,
-                'error': email_result
-            })
-            
-    except Exception as e:
-        logger.error(f"Error sending completion email: {str(e)}")
-        return JsonResponse({'success': False, 'error': str(e)})
 
 @login_required
 @require_http_methods(["GET", "POST"])
