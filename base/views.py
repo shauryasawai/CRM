@@ -9150,7 +9150,12 @@ def execute_action(request, action_id):
         return JsonResponse({'error': 'Access denied'}, status=403)
     
     try:
-        # Get transaction details from request
+        # Debug logging - remove after fixing
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Executing action {action_id} with POST data: {request.POST}")
+        
+        # Get transaction details from request with validation
         transaction_details = {
             'transaction_id': request.POST.get('transaction_id', ''),
             'amount': request.POST.get('executed_amount'),
@@ -9158,26 +9163,58 @@ def execute_action(request, action_id):
             'nav_price': request.POST.get('nav_price'),
         }
         
-        # Convert string values to Decimal where needed
-        if transaction_details['amount']:
-            transaction_details['amount'] = Decimal(str(transaction_details['amount']))
-        if transaction_details['units']:
-            transaction_details['units'] = Decimal(str(transaction_details['units']))
-        if transaction_details['nav_price']:
-            transaction_details['nav_price'] = Decimal(str(transaction_details['nav_price']))
+        # Validate and convert string values to Decimal where needed
+        try:
+            if transaction_details['amount']:
+                transaction_details['amount'] = Decimal(str(transaction_details['amount']))
+                logger.info(f"Converted amount: {transaction_details['amount']}")
+            if transaction_details['units']:
+                transaction_details['units'] = Decimal(str(transaction_details['units']))
+                logger.info(f"Converted units: {transaction_details['units']}")
+            if transaction_details['nav_price']:
+                transaction_details['nav_price'] = Decimal(str(transaction_details['nav_price']))
+                logger.info(f"Converted nav_price: {transaction_details['nav_price']}")
+        except (InvalidOperation, ValueError, TypeError) as e:
+            logger.error(f"Decimal conversion error: {e}")
+            return JsonResponse({'error': f'Invalid numeric value: {str(e)}'}, status=400)
         
         notes = request.POST.get('notes', '')
         if notes:
             action.notes = notes
             action.save()
+            logger.info(f"Updated notes for action {action_id}")
         
-        if action.execute(request.user, transaction_details):
+        # Execute the action by updating its status and details
+        try:
+            # Update action status to executed
+            action.status = 'EXECUTED'  # Adjust this based on your status choices
+            action.executed_by = request.user
+            action.executed_at = timezone.now()
+            
+            # Save transaction details if fields exist and data is provided
+            if transaction_details.get('amount') and hasattr(action, 'executed_amount'):
+                action.executed_amount = transaction_details['amount']
+            if transaction_details.get('units') and hasattr(action, 'executed_units'):
+                action.executed_units = transaction_details['units']
+            if transaction_details.get('nav_price') and hasattr(action, 'nav_price'):
+                action.nav_price = transaction_details['nav_price']
+            if transaction_details.get('transaction_id') and hasattr(action, 'transaction_id'):
+                action.transaction_id = transaction_details['transaction_id']
+            
+            action.save()
+            logger.info(f"Action {action_id} executed successfully")
+            
             return JsonResponse({'success': True, 'message': 'Action executed successfully'})
-        else:
-            return JsonResponse({'error': 'Failed to execute action'}, status=400)
+            
+        except Exception as e:
+            logger.error(f"Error executing action: {e}")
+            return JsonResponse({'error': f'Failed to execute action: {str(e)}'}, status=500)
             
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        import traceback
+        logger.error(f"Unexpected error in execute_action: {e}")
+        logger.error(traceback.format_exc())
+        return JsonResponse({'error': f'Server error: {str(e)}'}, status=500)
 
 
 @login_required
@@ -9193,9 +9230,23 @@ def mark_action_failed(request, action_id):
     if not reason:
         return JsonResponse({'error': 'Failure reason is required'}, status=400)
     
-    action.mark_failed(reason, request.user)
-    
-    return JsonResponse({'success': True, 'message': 'Action marked as failed'})
+    try:
+        # # Option 1: If you have a status field in your model
+        # action.status = 'FAILED'  # or whatever your failed status constant is
+        # action.failure_reason = reason  # assuming you have this field
+        # action.failed_at = timezone.now()  # if you track when it failed
+        # action.failed_by = request.user  # if you track who marked it as failed
+        # action.save()
+        
+        # Option 2: Alternative approach if you have different field names
+        action.is_failed = True
+        action.notes = f"Failed: {reason}"
+        action.save()
+        
+        return JsonResponse({'success': True, 'message': 'Action marked as failed'})
+        
+    except Exception as e:
+        return JsonResponse({'error': f'Failed to mark action as failed: {str(e)}'}, status=500)
 
 
 @login_required

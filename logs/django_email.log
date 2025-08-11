@@ -1664,3 +1664,12 @@ INFO 2025-08-10 21:31:56,784 views 27232 2340 Generated Excel data for plan EP20
 INFO 2025-08-10 21:32:11,496 views 27232 2340 Found 6 actions for execution plan 73
 INFO 2025-08-10 21:32:11,822 views 27232 2340 Portfolio-independent Excel generated in memory for plan 73
 INFO 2025-08-10 21:32:11,823 views 27232 2340 Portfolio actions: 4, New investments: 2
+INFO 2025-08-11 12:36:50,751 views 10804 26756 Starting Excel generation for plan 73
+INFO 2025-08-11 12:36:50,838 views 10804 26756 Found 6 actions for execution plan 73
+INFO 2025-08-11 12:37:49,954 views 10804 28296 Approval notification sent to narayan@gmail.com
+INFO 2025-08-11 12:38:04,348 views 10804 13488 Attempting to attach Excel for plan EP202508100006
+INFO 2025-08-11 12:38:04,351 views 10804 13488 Starting Excel attachment for plan EP202508100006
+INFO 2025-08-11 12:38:04,351 views 10804 13488 Starting Excel generation for plan 73
+INFO 2025-08-11 12:38:04,429 views 10804 13488 Found 6 actions for execution plan 73
+INFO 2025-08-11 20:21:29,069 views 23804 13380 Executing action 51 with POST data: <QueryDict: {'csrfmiddlewaretoken': ['YKISFL2zqH5I6meGmwLuxPIlEDXS6h3DqqVV8ho38cBKPcMERLHDhCw2JEBVnSME']}>
+ERROR 2025-08-11 20:21:29,072 views 23804 13380 PlanAction object has no execute method
