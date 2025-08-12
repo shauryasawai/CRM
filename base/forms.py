@@ -2074,21 +2074,14 @@ class LeadForm(forms.ModelForm):
         initial='other'
     )
     
-    existing_client_name = forms.CharField(
+    existing_client = forms.ChoiceField(
+        choices=[],  # Will be populated in __init__
         required=False,
-        label="Existing Client Name",
-        widget=forms.TextInput(attrs={
+        widget=forms.Select(attrs={
             'class': 'form-control',
-            'placeholder': 'Start typing client name...',
-            'autocomplete': 'off',
-            'list': 'client-datalist'
-        })
-    )
-    
-    reference_client = forms.ModelChoiceField(
-        queryset=Lead.objects.none(),  # Empty by default, will be set in __init__
-        required=False,
-        widget=forms.HiddenInput()
+            'placeholder': 'Choose from existing clients'
+        }),
+        label="Existing Client"
     )
     
     source_details = forms.CharField(
@@ -2102,20 +2095,20 @@ class LeadForm(forms.ModelForm):
     class Meta:
         model = Lead
         fields = [
-            'name', 'email', 'mobile', 'source', 'source_details', 'reference_client',
+            'name', 'email', 'mobile', 'source', 'source_details',
             'assigned_to', 'probability', 'notes', 'next_interaction_date'
         ]
         widgets = {
             'name': forms.TextInput(attrs={
-                'placeholder': 'Full Name',
+                'placeholder': 'Full Name (Lead Contact Person)',
                 'class': 'form-control'
             }),
             'email': forms.EmailInput(attrs={
-                'placeholder': 'Email Address',
+                'placeholder': 'Email Address (Lead Contact)',
                 'class': 'form-control'
             }),
             'mobile': forms.TextInput(attrs={
-                'placeholder': 'Mobile Number',
+                'placeholder': 'Mobile Number (Lead Contact)',
                 'pattern': '[0-9]{10}',
                 'title': '10 digit mobile number',
                 'class': 'form-control'
@@ -2137,6 +2130,9 @@ class LeadForm(forms.ModelForm):
             }),
         }
         labels = {
+            'name': 'Lead Contact Name',
+            'email': 'Lead Contact Email',
+            'mobile': 'Lead Contact Mobile',
             'probability': 'Conversion Probability (%)',
             'next_interaction_date': 'Next Follow-up Date'
         }
@@ -2155,52 +2151,67 @@ class LeadForm(forms.ModelForm):
         
         # Optimized user display in dropdown
         self.fields['assigned_to'].label_from_instance = lambda obj: obj.get_full_name() or obj.username
+        
+        # Set initial value if editing and has existing client reference in source_details
+        if self.instance.pk and self.instance.source == 'existing_client':
+            source_details = self.instance.source_details or ''
+            if 'Client Profile ID:' in source_details:
+                try:
+                    profile_id = source_details.split('Client Profile ID: ')[1].split(' - ')[0]
+                    self.fields['existing_client'].initial = f'profile_{profile_id}'
+                except:
+                    pass
+            elif 'Existing Client Lead:' in source_details:
+                # Try to find the lead by name
+                try:
+                    client_name = source_details.replace('Existing Client Lead: ', '')
+                    lead = Lead.objects.filter(name=client_name, converted=True).first()
+                    if lead:
+                        self.fields['existing_client'].initial = f'lead_{lead.id}'
+                except:
+                    pass
     
     def populate_existing_client_choices(self):
-        """Prepare client data for autocomplete datalist"""
-        self.client_data = []
-        
+        """Populate existing client choices from both client profiles and converted leads"""
         try:
+            # Combine client profiles and converted leads
+            client_choices = []
+            
             # Get client profiles with minimal fields
             client_profiles = self.get_accessible_client_profiles()
             
-            # Add client profiles to data
+            # Add client profiles to choices
             for profile in client_profiles:
-                self.client_data.append({
-                    'type': 'profile',
-                    'id': profile.id,
-                    'name': profile.client_full_name,
-                    'email': getattr(profile, 'client_email', '') or '',
-                    'mobile': getattr(profile, 'client_mobile', '') or '',
-                    'display': profile.client_full_name
-                })
+                client_choices.append((
+                    f'profile_{profile.id}',
+                    f"{profile.client_full_name} (Client Profile)"
+                ))
             
             # Add converted leads
             converted_leads = Lead.objects.filter(
                 converted=True
-            ).only('id', 'name', 'email', 'mobile').order_by('name')
+            ).only('id', 'name', 'email').order_by('name')
             
             for lead in converted_leads:
-                self.client_data.append({
-                    'type': 'lead',
-                    'id': lead.id,
-                    'name': lead.name,
-                    'email': lead.email or '',
-                    'mobile': lead.mobile or '',
-                    'display': f"{lead.name} - {lead.email}" if lead.email else lead.name
-                })
+                display_name = f"{lead.name}"
+                if lead.email:
+                    display_name += f" ({lead.email})"
+                display_name += " (Converted Lead)"
                 
+                client_choices.append((
+                    f'lead_{lead.id}',
+                    display_name
+                ))
+            
+            # Sort choices by display name
+            client_choices.sort(key=lambda x: x[1])
+            
+            # Set choices for the dropdown
+            self.fields['existing_client'].choices = [('', 'Select an existing client...')] + client_choices
+            
         except Exception as e:
-            print(f"Error populating client data: {e}")
-            self.client_data = []
-        
-        # Set initial value if editing and has reference client
-        if self.instance.pk and self.instance.reference_client_id:
-            try:
-                ref_lead = Lead.objects.get(id=self.instance.reference_client_id)
-                self.fields['existing_client_name'].initial = ref_lead.name
-            except Lead.DoesNotExist:
-                pass
+            print(f"Error populating client choices: {e}")
+            self.fields['existing_client'].choices = [('', 'No existing clients available')]
     
     def get_accessible_client_profiles(self):
         """Get client profiles based on user role"""
@@ -2303,83 +2314,30 @@ class LeadForm(forms.ModelForm):
         cleaned_data = super().clean()
         
         source = cleaned_data.get('source')
-        existing_client_name = cleaned_data.get('existing_client_name')
+        existing_client = cleaned_data.get('existing_client')
         
         # Handle existing client source validation
         if source == 'existing_client':
-            if not existing_client_name or not existing_client_name.strip():
-                self.add_error('existing_client_name', 'Please enter an existing client name')
+            if not existing_client:
+                self.add_error('existing_client', 'Please select an existing client')
             else:
-                # Try to find matching client by name (case-insensitive)
-                client_name = existing_client_name.strip()
-                matched_client = None
-                
-                # First try to find in client profiles
-                try:
-                    from .models import ClientProfile
-                    profile = ClientProfile.objects.filter(
-                        client_full_name__iexact=client_name
-                    ).first()
-                    
-                    if profile:
-                        matched_client = {
-                            'type': 'profile',
-                            'data': profile,
-                            'name': profile.client_full_name,
-                            'email': getattr(profile, 'client_email', '') or '',
-                            'mobile': getattr(profile, 'client_mobile', '') or ''
-                        }
-                except ImportError:
-                    pass
-                
-                # If not found in profiles, try converted leads
-                if not matched_client:
-                    lead = Lead.objects.filter(
-                        converted=True,
-                        name__iexact=client_name
-                    ).first()
-                    
-                    if lead:
-                        matched_client = {
-                            'type': 'lead',
-                            'data': lead,
-                            'name': lead.name,
-                            'email': lead.email or '',
-                            'mobile': lead.mobile or ''
-                        }
-                        cleaned_data['reference_client'] = lead
-                
-                if matched_client:
-                    # Populate lead data from matched client
-                    cleaned_data['name'] = matched_client['name']
-                    cleaned_data['email'] = matched_client['email']
-                    cleaned_data['mobile'] = matched_client['mobile']
-                    
-                    # Store matched client info for use in save method
-                    cleaned_data['matched_client'] = matched_client
-                    
-                    # Clear manual field validation errors
-                    for field in ['name', 'email', 'mobile']:
-                        if field in self.errors:
-                            del self.errors[field]
-                else:
-                    # Client name entered but no match found - warn but allow creation
-                    # User might be entering a new client name
-                    pass
-        else:
-            # For non-existing client sources, validate manual fields
-            name = cleaned_data.get('name')
-            email = cleaned_data.get('email')
-            
-            if not name:
-                self.add_error('name', 'Name is required')
-            if not email:
-                self.add_error('email', 'Email is required')
+                # Just validate that the selection is valid - no data population needed
+                if not existing_client.startswith(('profile_', 'lead_')):
+                    self.add_error('existing_client', 'Invalid client selection')
+        
+        # Manual lead data validation (always required regardless of source)
+        name = cleaned_data.get('name')
+        email = cleaned_data.get('email')
+        
+        if not name or not name.strip():
+            self.add_error('name', 'Lead contact name is required')
+        if not email or not email.strip():
+            self.add_error('email', 'Lead contact email is required')
         
         # Handle other source details
         if source == 'other':
             source_details = cleaned_data.get('source_details')
-            if not source_details:
+            if not source_details or not source_details.strip():
                 self.add_error('source_details', 'Please provide source details')
         
         # Validate probability range
@@ -2392,12 +2350,6 @@ class LeadForm(forms.ModelForm):
     def clean_mobile(self):
         """Validate mobile number"""
         mobile = self.cleaned_data.get('mobile')
-        source = self.data.get('source')
-        existing_client = self.data.get('existing_client_choice')
-        
-        # Skip validation if using existing client (data comes from existing records)
-        if source == 'existing_client' and existing_client:
-            return mobile
             
         if mobile:
             # Remove any non-digit characters for validation
@@ -2420,18 +2372,24 @@ class LeadForm(forms.ModelForm):
         
         # Handle source details based on source type
         if lead.source == 'existing_client':
-            existing_client_name = self.cleaned_data.get('existing_client_name', '').strip()
-            matched_client = self.cleaned_data.get('matched_client')
-            
-            if matched_client:
-                if matched_client['type'] == 'profile':
-                    lead.source_details = f"Existing Client Profile: {matched_client['name']}"
-                else:  # lead type
-                    lead.source_details = f"Existing Client Lead: {matched_client['name']}"
-            else:
-                # Use the entered name even if no exact match was found
-                lead.source_details = f"Existing Client: {existing_client_name}"
+            existing_client = self.cleaned_data.get('existing_client')
+            if existing_client:
+                client_type, client_id = existing_client.split('_', 1)
                 
+                if client_type == 'lead':
+                    try:
+                        ref_lead = Lead.objects.get(id=client_id, converted=True)
+                        lead.source_details = f"Existing Client Lead: {ref_lead.name}"
+                    except Lead.DoesNotExist:
+                        lead.source_details = "Existing Client Lead (reference not found)"
+                elif client_type == 'profile':
+                    try:
+                        from .models import ClientProfile
+                        profile = ClientProfile.objects.get(id=client_id)
+                        lead.source_details = f"Client Profile ID: {profile.id} - {profile.client_full_name}"
+                    except:
+                        lead.source_details = "Client Profile (reference not found)"
+                    
         elif lead.source == 'other':
             lead.source_details = self.cleaned_data.get('source_details', '')
         

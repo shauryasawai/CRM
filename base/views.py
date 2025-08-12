@@ -2799,7 +2799,7 @@ def lead_create(request):
     if request.method == 'POST':
         form = LeadForm(request.POST, current_user=request.user)
         
-        # Debug: Print form errors to understand what's failing
+        # Debug: Print form data to understand what's being submitted
         if not form.is_valid():
             print("Form errors:", form.errors)  # Remove this after debugging
             for field, errors in form.errors.items():
@@ -2811,6 +2811,14 @@ def lead_create(request):
             lead.created_by = request.user
             lead.status = 'new'  # Default status
             lead.lead_id = generate_lead_id()  # Custom function to generate ID
+            
+            # Handle existing client reference (store as text reference only)
+            existing_client = form.cleaned_data.get('existing_client')
+            if existing_client and lead.source == 'existing_client':
+                # The client reference is already stored in source_details by the form
+                # No database relationships needed
+                pass
+            
             lead.save()
             
             # Create initial status change record
@@ -2822,19 +2830,25 @@ def lead_create(request):
                 notes='Lead created'
             )
             
-            messages.success(request, "Lead created successfully.")
+            # Success message with context
+            if lead.source == 'existing_client':
+                client_ref = lead.source_details.split(': ', 1)[-1] if lead.source_details else "Unknown"
+                messages.success(request, 
+                    f"Lead created successfully with reference to existing client: {client_ref}. "
+                    f"Lead contact: {lead.name} ({lead.email})"
+                )
+            else:
+                messages.success(request, f"Lead created successfully for {lead.name}")
+            
             return redirect('lead_detail', pk=lead.pk)
     else:
         form = LeadForm(current_user=request.user)
     
-    # Get client names for ultra-fast datalist
-    client_names = get_client_names_for_user(request.user)
-    
     return render(request, 'base/lead_form.html', {
         'form': form, 
-        'action': 'Create',
-        'client_names': client_names
+        'action': 'Create'
     })
+
 
 def get_client_names_for_user(user):
     """Ultra-fast client name retrieval with role-based filtering"""

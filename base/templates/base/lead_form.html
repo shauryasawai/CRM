@@ -4,377 +4,206 @@
 {% block title %}{{ action }} Lead{% endblock %}
 
 {% block extra_css %}
-<style>
-    /* Modern form styling with CSS variables */
-    :root {
-        --primary-color: #4a6cf7;
-        --secondary-color: #6c757d;
-        --success-color: #28a745;
-        --danger-color: #dc3545;
-        --light-color: #f8f9fa;
-        --dark-color: #343a40;
-        --border-color: #e9ecef;
-        --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-        --transition: all 0.3s ease;
-    }
-
-    .lead-form-container {
-        max-width: 900px;
-        margin: 2rem auto;
-    }
-
-    .lead-form-header {
-        margin-bottom: 2rem;
-        text-align: center;
-    }
-
-    .lead-form-header h1 {
-        font-weight: 700;
-        color: var(--dark-color);
-        margin-bottom: 0.5rem;
-    }
-
-    .lead-form-card {
-        border: none;
-        border-radius: 12px;
-        box-shadow: var(--card-shadow);
-        overflow: hidden;
-        transition: var(--transition);
-    }
-
-    .lead-form-card:hover {
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-    }
-
-    .card-body {
-        padding: 2.5rem;
-    }
-
-    .form-label {
-        font-weight: 600;
-        color: var(--dark-color);
-        margin-bottom: 0.5rem;
-        display: block;
-    }
-
-    .form-control, .form-select {
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 0.75rem 1rem;
-        transition: var(--transition);
-        height: auto;
-    }
-
-    .form-control:focus, .form-select:focus {
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 0.25rem rgba(74, 108, 247, 0.15);
-    }
-
-    .form-check {
-        margin-bottom: 0.5rem;
-    }
-
-    .form-check-input {
-        width: 1.2em;
-        height: 1.2em;
-        margin-top: 0.15em;
-    }
-
-    .form-check-label {
-        margin-left: 0.5rem;
-    }
-
-    .source-radio {
-        background: var(--light-color);
-        padding: 1rem;
-        border-radius: 8px;
-    }
-
-    .invalid-feedback {
-        font-size: 0.875rem;
-        margin-top: 0.25rem;
-    }
-
-    .btn {
-        border-radius: 8px;
-        padding: 0.75rem 1.5rem;
-        font-weight: 600;
-        transition: var(--transition);
-    }
-
-    .btn-primary {
-        background-color: var(--primary-color);
-        border-color: var(--primary-color);
-    }
-
-    .btn-primary:hover {
-        background-color: #3a5bd9;
-        border-color: #3a5bd9;
-        transform: translateY(-2px);
-    }
-
-    .btn-secondary {
-        background-color: var(--secondary-color);
-        border-color: var(--secondary-color);
-    }
-
-    .btn-secondary:hover {
-        background-color: #5a6268;
-        border-color: #5a6268;
-        transform: translateY(-2px);
-    }
-
-    .spinner-border {
-        vertical-align: middle;
-    }
-
-    .existing-client-section {
-        background: #f8f9fa;
-        border: 2px dashed #dee2e6;
-        border-radius: 8px;
-        padding: 1.5rem;
-        margin-bottom: 1rem;
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .card-body {
-            padding: 1.5rem;
-        }
-
-        .lead-form-header h1 {
-            font-size: 1.75rem;
-        }
-    }
-
-    @media (max-width: 576px) {
-        .card-body {
-            padding: 1.25rem;
-        }
-
-        .btn {
-            width: 100%;
-            margin-bottom: 0.5rem;
-        }
-
-        .d-flex.justify-content-between {
-            flex-direction: column;
-        }
-    }
-
-    /* Animation for form fields */
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    .form-field {
-        animation: fadeIn 0.5s ease-out forwards;
-        opacity: 0;
-    }
-
-    /* Create staggered animation delays */
-    .form-field:nth-child(1) { animation-delay: 0.1s; }
-    .form-field:nth-child(2) { animation-delay: 0.2s; }
-    .form-field:nth-child(3) { animation-delay: 0.3s; }
-    .form-field:nth-child(4) { animation-delay: 0.4s; }
-    .form-field:nth-child(5) { animation-delay: 0.5s; }
-    .form-field:nth-child(6) { animation-delay: 0.6s; }
-    .form-field:nth-child(7) { animation-delay: 0.7s; }
-    .form-field:nth-child(8) { animation-delay: 0.8s; }
-</style>
 {% endblock %}
 
 {% block content %}
-<div class="lead-form-container">
-    <div class="lead-form-header">
-        <h1>{{ action }} Lead</h1>
-        <p class="text-muted">Fill in the details below to {{ action|lower }} this lead</p>
-    </div>
-    
-    <!-- Messages -->
-    {% if messages %}
-    <div class="messages mb-4">
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-    
-    <div class="card lead-form-card">
-        <div class="card-body">
-            <form method="post" id="leadForm" novalidate class="needs-validation">
-                {% csrf_token %}
-                
-                <!-- Source Selection First -->
-                <div class="row mb-4">
-                    <div class="col-12 form-field">
-                        <label class="form-label">Source *</label>
-                        <div class="source-radio">
-                            {% for radio in form.source %}
-                            <div class="form-check">
-                                {{ radio.tag }}
-                                <label for="{{ radio.id_for_label }}" class="form-check-label">
-                                    {{ radio.choice_label }}
-                                </label>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        {% if form.source.errors %}
-                        <div class="invalid-feedback d-block">
-                            {% for error in form.source.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                    </div>
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">{{ action }} Lead</h4>
                 </div>
-
-                <!-- Existing Client Selection -->
-                <div class="row mb-4" id="existing-client-section" style="display: none;">
-                    <div class="col-12">
-                        <div class="existing-client-section">
-                            <h5>Enter Existing Client Name</h5>
-                            <div class="form-field">
-                                <label for="{{ form.existing_client_name.id_for_label }}" class="form-label">Client Name *</label>
-                                {{ form.existing_client_name }}
-                                <datalist id="client-datalist">
-                                    <!-- Client names will be populated here via JavaScript -->
-                                </datalist>
-                                <small class="form-text text-muted">Start typing to see suggestions from existing clients</small>
-                                {% if form.existing_client_name.errors %}
+                <div class="card-body">
+                    <!-- Messages -->
+                    {% if messages %}
+                    <div class="messages mb-4">
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <form method="post" id="leadForm" novalidate class="needs-validation">
+                        {% csrf_token %}
+                        
+                        <!-- Source Selection First -->
+                        <div class="row mb-4">
+                            <div class="col-12 form-field">
+                                <label class="form-label">Source *</label>
+                                <div class="source-radio">
+                                    {% for radio in form.source %}
+                                    <div class="form-check">
+                                        {{ radio.tag }}
+                                        <label for="{{ radio.id_for_label }}" class="form-check-label">
+                                            {{ radio.choice_label }}
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% if form.source.errors %}
                                 <div class="invalid-feedback d-block">
-                                    {% for error in form.existing_client_name.errors %}
+                                    {% for error in form.source.errors %}
                                         {{ error }}
                                     {% endfor %}
                                 </div>
                                 {% endif %}
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <!-- Source Details for 'other' source -->
-                <div class="row mb-4" id="source-details-section" style="display: none;">
-                    <div class="col-12 form-field">
-                        <label for="{{ form.source_details.id_for_label }}" class="form-label">Source Details *</label>
-                        {{ form.source_details }}
-                        {% if form.source_details.errors %}
-                        <div class="invalid-feedback d-block">
-                            {% for error in form.source_details.errors %}
-                                {{ error }}
-                            {% endfor %}
+                        <!-- Existing Client Selection -->
+                        <div class="row mb-4" id="existing-client-section" style="display: none;">
+                            <div class="col-12">
+                                <div class="existing-client-section">
+                                    <h5>Select Existing Client</h5>
+                                    <div class="info-note">
+                                        <strong>Note:</strong> This will only serve as a reference for where this lead came from. 
+                                        You still need to fill in the specific lead contact information below.
+                                    </div>
+                                    <div class="form-field">
+                                        <label for="{{ form.existing_client.id_for_label }}" class="form-label">Existing Client *</label>
+                                        {{ form.existing_client }}
+                                        <small class="form-text text-muted">This is just for reference - select the existing client this lead is related to</small>
+                                        {% if form.existing_client.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.existing_client.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        {% endif %}
-                    </div>
-                </div>
-                
-                <!-- Lead Details -->
-                <div class="row mb-4">
-                    <div class="col-md-6 form-field">
-                        <label for="{{ form.name.id_for_label }}" class="form-label">Name *</label>
-                        {{ form.name }}
-                        {% if form.name.errors %}
-                        <div class="invalid-feedback d-block">
-                            {% for error in form.name.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-6 form-field">
-                        <label for="{{ form.assigned_to.id_for_label }}" class="form-label">Assigned To *</label>
-                        {{ form.assigned_to }}
-                        {% if form.assigned_to.errors %}
-                        <div class="invalid-feedback d-block">
-                            {% for error in form.assigned_to.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
 
-                <div class="row mb-4">
-                    <div class="col-md-6 form-field">
-                        <label for="{{ form.email.id_for_label }}" class="form-label">Email *</label>
-                        {{ form.email }}
-                        {% if form.email.errors %}
-                        <div class="invalid-feedback d-block">
-                            {% for error in form.email.errors %}
-                                {{ error }}
-                            {% endfor %}
+                        <!-- Source Details for 'other' source -->
+                        <div class="row mb-4" id="source-details-section" style="display: none;">
+                            <div class="col-12 form-field">
+                                <label for="{{ form.source_details.id_for_label }}" class="form-label">Source Details *</label>
+                                {{ form.source_details }}
+                                {% if form.source_details.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.source_details.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
                         </div>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-6 form-field">
-                        <label for="{{ form.mobile.id_for_label }}" class="form-label">Mobile</label>
-                        {{ form.mobile }}
-                        {% if form.mobile.errors %}
-                        <div class="invalid-feedback d-block">
-                            {% for error in form.mobile.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
+                        
+                        <!-- Lead Contact Information Section -->
+                        <div class="lead-info-section" id="lead-info-section">
+                            <h5>Lead Contact Information</h5>
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-6 form-field">
+                                    <label for="{{ form.name.id_for_label }}" class="form-label">Lead Contact Name *</label>
+                                    {{ form.name }}
+                                    {% if form.name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.name.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 form-field">
+                                    <label for="{{ form.assigned_to.id_for_label }}" class="form-label">Assigned To *</label>
+                                    {{ form.assigned_to }}
+                                    {% if form.assigned_to.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.assigned_to.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
 
-                <div class="row mb-4">
-                    <div class="col-md-6 form-field">
-                        <label for="{{ form.probability.id_for_label }}" class="form-label">Conversion Probability</label>
-                        <div class="d-flex align-items-center">
-                            {{ form.probability }}
-                            <span class="ms-2">%</span>
+                            <div class="row mb-4">
+                                <div class="col-md-6 form-field">
+                                    <label for="{{ form.email.id_for_label }}" class="form-label">Lead Contact Email *</label>
+                                    {{ form.email }}
+                                    {% if form.email.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.email.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 form-field">
+                                    <label for="{{ form.mobile.id_for_label }}" class="form-label">Lead Contact Mobile</label>
+                                    {{ form.mobile }}
+                                    {% if form.mobile.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.mobile.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
-                        {% if form.probability.errors %}
-                        <div class="invalid-feedback d-block">
-                            {% for error in form.probability.errors %}
-                                {{ error }}
-                            {% endfor %}
+
+                        <!-- Additional Lead Information -->
+                        <div class="row mb-4">
+                            <div class="col-md-6 form-field">
+                                <label for="{{ form.probability.id_for_label }}" class="form-label">Conversion Probability</label>
+                                <div class="d-flex align-items-center">
+                                    {{ form.probability }}
+                                    <span class="ms-2">%</span>
+                                </div>
+                                {% if form.probability.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.probability.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 form-field">
+                                <label for="{{ form.next_interaction_date.id_for_label }}" class="form-label">Next Follow-up Date</label>
+                                {{ form.next_interaction_date }}
+                                {% if form.next_interaction_date.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.next_interaction_date.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
                         </div>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-6 form-field">
-                        <label for="{{ form.next_interaction_date.id_for_label }}" class="form-label">Next Follow-up Date</label>
-                        {{ form.next_interaction_date }}
-                        {% if form.next_interaction_date.errors %}
-                        <div class="invalid-feedback d-block">
-                            {% for error in form.next_interaction_date.errors %}
-                                {{ error }}
-                            {% endfor %}
+
+                        <div class="mb-4 form-field">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">Notes</label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.notes.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
                         </div>
-                        {% endif %}
-                    </div>
-                </div>
 
-                <div class="mb-4 form-field">
-                    <label for="{{ form.notes.id_for_label }}" class="form-label">Notes</label>
-                    {{ form.notes }}
-                    {% if form.notes.errors %}
-                    <div class="invalid-feedback d-block">
-                        {% for error in form.notes.errors %}
-                            {{ error }}
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-                </div>
+                        <!-- Hidden fields -->
+                        <!-- No hidden fields needed since we're not linking -->
 
-                <!-- Hidden fields -->
-                {{ form.reference_client }}
-
-                <div class="d-flex justify-content-between mt-5">
-                    <a href="{% if lead %}{% url 'lead_detail' lead.pk %}{% else %}{% url 'lead_list' %}{% endif %}" 
-                       class="btn btn-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary" id="submitBtn">
-                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                        Save Lead
-                    </button>
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% if lead %}{% url 'lead_detail' lead.pk %}{% else %}{% url 'lead_list' %}{% endif %}" 
+                               class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                Save Lead
+                            </button>
+                        </div>
+                    </form>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 </div>
@@ -391,135 +220,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const sourceRadios = document.querySelectorAll('input[name="source"]');
     const existingClientSection = document.getElementById('existing-client-section');
     const sourceDetailsSection = document.getElementById('source-details-section');
-    const existingClientInput = document.querySelector('input[name="existing_client_name"]');
-    const clientDatalist = document.getElementById('client-datalist');
+    const leadInfoSection = document.getElementById('lead-info-section');
+    const existingClientSelect = document.querySelector('select[name="existing_client"]');
     
-    // Form fields that get populated from existing client
+    // Form fields
     const nameField = document.querySelector('input[name="name"]');
     const emailField = document.querySelector('input[name="email"]');
     const mobileField = document.querySelector('input[name="mobile"]');
-    
-    // Client data for autocomplete (this would be populated from backend)
-    let clientData = [];
-    
-    // Populate client datalist (this should be populated from your backend data)
-    function populateClientDatalist() {
-        // Clear existing options
-        clientDatalist.innerHTML = '';
-        
-        // Get client data from backend (passed from Django view)
-        let clients = [];
-        try {
-            clients = {{ client_data_json|default:"[]"|safe }};
-        } catch (e) {
-            console.log('No client data available:', e);
-            clients = [];
-        }
-        
-        // If no data from backend, try to create some basic options
-        if (clients.length === 0) {
-            // Fallback: try to load client data via AJAX
-            loadClientDataViaAjax();
-        } else {
-            clients.forEach(client => {
-                const option = document.createElement('option');
-                option.value = client.display || client.name;
-                option.dataset.clientType = client.type;
-                option.dataset.clientId = client.id;
-                option.dataset.clientName = client.name;
-                option.dataset.clientEmail = client.email || '';
-                option.dataset.clientMobile = client.mobile || '';
-                clientDatalist.appendChild(option);
-            });
-            
-            clientData = clients;
-        }
-        
-        console.log(`Loaded ${clientData.length} client suggestions`);
-    }
-    
-    // Fallback function to load client data via AJAX
-    function loadClientDataViaAjax() {
-        console.log('Loading client data via AJAX fallback...');
-        
-        // Try to fetch from API endpoint
-        fetch('/api/clients/')
-            .then(response => response.json())
-            .then(data => {
-                if (data.clients && data.clients.length > 0) {
-                    console.log(`Loaded ${data.clients.length} clients via API`);
-                    
-                    // Clear existing datalist
-                    clientDatalist.innerHTML = '';
-                    
-                    // Add new options
-                    data.clients.forEach(client => {
-                        const option = document.createElement('option');
-                        option.value = client.display;
-                        option.dataset.clientType = client.type;
-                        option.dataset.clientId = client.id;
-                        option.dataset.clientName = client.name;
-                        option.dataset.clientEmail = client.email || '';
-                        option.dataset.clientMobile = client.mobile || '';
-                        clientDatalist.appendChild(option);
-                    });
-                    
-                    clientData = data.clients;
-                } else {
-                    loadSampleData();
-                }
-            })
-            .catch(error => {
-                console.log('Error loading client data via API:', error);
-                loadSampleData();
-            });
-    }
-    
-    // Load sample data for testing
-    function loadSampleData() {
-        console.log('Loading sample data for testing...');
-        
-        const sampleClients = [
-            {
-                type: 'lead',
-                id: 1,
-                name: 'John Doe',
-                email: 'john.doe@example.com',
-                mobile: '1234567890',
-                display: 'John Doe - john.doe@example.com'
-            },
-            {
-                type: 'lead',
-                id: 2,
-                name: 'Jane Smith',
-                email: 'jane.smith@example.com',
-                mobile: '0987654321',
-                display: 'Jane Smith - jane.smith@example.com'
-            },
-            {
-                type: 'profile',
-                id: 3,
-                name: 'ABC Corporation',
-                email: 'contact@abc.com',
-                mobile: '5555555555',
-                display: 'ABC Corporation'
-            }
-        ];
-        
-        // Add sample data
-        sampleClients.forEach(client => {
-            const option = document.createElement('option');
-            option.value = client.display;
-            option.dataset.clientType = client.type;
-            option.dataset.clientId = client.id;
-            option.dataset.clientName = client.name;
-            option.dataset.clientEmail = client.email;
-            option.dataset.clientMobile = client.mobile;
-            clientDatalist.appendChild(option);
-        });
-        
-        clientData = sampleClients;
-    }
+    const assignedToField = document.querySelector('select[name="assigned_to"]');
+    const sourceDetailsField = document.querySelector('input[name="source_details"]');
     
     function toggleSourceFields() {
         const checkedRadio = document.querySelector('input[name="source"]:checked');
@@ -530,161 +239,146 @@ document.addEventListener('DOMContentLoaded', function() {
             existingClientSection.style.display = 'none';
             sourceDetailsSection.style.display = 'none';
             
-            // Show relevant section
+            // Show relevant section based on source
             if (selectedValue === 'existing_client') {
                 existingClientSection.style.display = 'block';
                 existingClientSection.style.animation = 'fadeIn 0.5s ease-out forwards';
                 
-                // Make existing client input required
-                existingClientInput.required = true;
+                // Make existing client select required
+                existingClientSelect.required = true;
                 
-                // Make manual fields optional (they'll be populated automatically)
-                nameField.required = false;
-                emailField.required = false;
-                mobileField.required = false;
+                // Clear and make source details not required
+                if (sourceDetailsField) {
+                    sourceDetailsField.value = '';
+                    sourceDetailsField.required = false;
+                }
+                
+                // Lead contact fields remain required (manual entry)
+                nameField.required = true;
+                emailField.required = true;
+                
+                // Update field placeholders and help text
+                updateFieldLabelsForExistingClient(true);
                 
             } else if (selectedValue === 'other') {
                 sourceDetailsSection.style.display = 'block';
                 sourceDetailsSection.style.animation = 'fadeIn 0.5s ease-out forwards';
                 
                 // Make source details required
-                document.querySelector('input[name="source_details"]').required = true;
+                if (sourceDetailsField) {
+                    sourceDetailsField.required = true;
+                }
                 
-                // Reset existing client input
-                existingClientInput.value = '';
-                existingClientInput.required = false;
+                // Clear existing client selection
+                existingClientSelect.value = '';
+                existingClientSelect.required = false;
                 
-                // Make manual fields required again
+                // Lead contact fields remain required
                 nameField.required = true;
                 emailField.required = true;
+                
+                // Update field labels back to normal
+                updateFieldLabelsForExistingClient(false);
                 
             } else {
-                // For other sources, reset everything
-                existingClientInput.value = '';
-                existingClientInput.required = false;
-                document.querySelector('input[name="source_details"]').required = false;
+                // For other sources (website, referral, etc.)
                 
-                // Make manual fields required
+                // Clear and reset fields
+                existingClientSelect.value = '';
+                existingClientSelect.required = false;
+                
+                if (sourceDetailsField) {
+                    sourceDetailsField.value = '';
+                    sourceDetailsField.required = false;
+                }
+                
+                // Lead contact fields remain required
                 nameField.required = true;
                 emailField.required = true;
+                
+                // Update field labels back to normal
+                updateFieldLabelsForExistingClient(false);
             }
         }
     }
     
-    // Handle existing client input with autocomplete
-    existingClientInput.addEventListener('input', function() {
-        const inputValue = this.value.trim();
+    function updateFieldLabelsForExistingClient(isExistingClient) {
+        const nameLabel = document.querySelector('label[for="' + nameField.id + '"]');
+        const emailLabel = document.querySelector('label[for="' + emailField.id + '"]');
+        const mobileLabel = document.querySelector('label[for="' + mobileField.id + '"]');
         
-        if (inputValue.length >= 2) {
-            // Find matching client in data
-            const matchedClient = clientData.find(client => 
-                client.name.toLowerCase().includes(inputValue.toLowerCase()) ||
-                client.display.toLowerCase().includes(inputValue.toLowerCase())
-            );
-            
-            if (matchedClient) {
-                // Show suggestion but don't auto-populate yet
-                this.style.borderColor = '#28a745'; // Green border for match
-                this.title = `Match found: ${matchedClient.display}`;
-            } else {
-                this.style.borderColor = '#ffc107'; // Yellow border for new client
-                this.title = 'New client - will create new entry';
-            }
+        if (isExistingClient) {
+            // Emphasize that these are lead contact details, separate from client info
+            if (nameLabel) nameLabel.innerHTML = 'Lead Contact Name * <small class="text-muted">(Person to contact for this lead)</small>';
+            if (emailLabel) emailLabel.innerHTML = 'Lead Contact Email * <small class="text-muted">(May be different from client email)</small>';
+            if (mobileLabel) mobileLabel.innerHTML = 'Lead Contact Mobile <small class="text-muted">(Direct contact for this lead)</small>';
         } else {
-            this.style.borderColor = '';
-            this.title = '';
+            // Normal labels
+            if (nameLabel) nameLabel.innerHTML = 'Lead Contact Name *';
+            if (emailLabel) emailLabel.innerHTML = 'Lead Contact Email *';
+            if (mobileLabel) mobileLabel.innerHTML = 'Lead Contact Mobile';
         }
-    });
+    }
     
-    // Handle client selection from datalist
-    existingClientInput.addEventListener('change', function() {
-        const inputValue = this.value.trim();
+    // Handle existing client selection changes
+    existingClientSelect.addEventListener('change', function() {
+        const selectedValue = this.value;
         
-        // Find exact match in client data
-        const exactMatch = clientData.find(client => 
-            client.display === inputValue || client.name === inputValue
-        );
-        
-        if (exactMatch) {
-            // Populate form fields with client data
-            nameField.value = exactMatch.name;
-            emailField.value = exactMatch.email || '';
-            mobileField.value = exactMatch.mobile || '';
+        if (selectedValue) {
+            // Show selected client info (but don't populate lead fields)
+            console.log('Selected existing client:', selectedValue);
             
-            // Make fields readonly to prevent editing
-            nameField.readOnly = true;
-            emailField.readOnly = true;
-            mobileField.readOnly = true;
-            
-            // Add visual indication
-            nameField.style.backgroundColor = '#f8f9fa';
-            emailField.style.backgroundColor = '#f8f9fa';
-            mobileField.style.backgroundColor = '#f8f9fa';
-            
+            // Add visual indication that client is selected
             this.style.borderColor = '#28a745';
-            this.title = 'Existing client selected';
+            this.style.backgroundColor = '#f8fff8';
             
-            // Clear validation errors
-            nameField.classList.remove('is-invalid');
-            emailField.classList.remove('is-invalid');
-            mobileField.classList.remove('is-invalid');
-        } else if (inputValue) {
-            // New client name entered
-            nameField.value = inputValue;
-            emailField.value = '';
-            mobileField.value = '';
+            // Show reminder that lead details are still needed
+            showClientSelectedReminder();
             
-            // Make fields editable
-            nameField.readOnly = false;
-            emailField.readOnly = false;
-            mobileField.readOnly = false;
-            
-            // Reset styling
-            nameField.style.backgroundColor = '';
-            emailField.style.backgroundColor = '';
-            mobileField.style.backgroundColor = '';
-            
-            this.style.borderColor = '#ffc107';
-            this.title = 'New client - please fill in details';
-            
-            // Focus on email field for new client
-            emailField.focus();
         } else {
-            // Clear everything
-            nameField.value = '';
-            emailField.value = '';
-            mobileField.value = '';
-            
-            nameField.readOnly = false;
-            emailField.readOnly = false;
-            mobileField.readOnly = false;
-            
-            nameField.style.backgroundColor = '';
-            emailField.style.backgroundColor = '';
-            mobileField.style.backgroundColor = '';
-            
+            // Reset styling
             this.style.borderColor = '';
-            this.title = '';
+            this.style.backgroundColor = '';
+            hideClientSelectedReminder();
         }
     });
     
+    function showClientSelectedReminder() {
+        // Remove any existing reminder
+        hideClientSelectedReminder();
+        
+        // Create reminder element
+        const reminder = document.createElement('div');
+        reminder.id = 'client-selected-reminder';
+        reminder.className = 'alert alert-info mt-2';
+        reminder.innerHTML = `
+            <strong>Client Selected for Reference!</strong> Now please fill in the lead contact information below. 
+            This should be the specific person you'll be dealing with for this lead opportunity.
+        `;
+        
+        // Insert after existing client section
+        existingClientSection.appendChild(reminder);
+        
+        // Scroll to lead info section
+        setTimeout(() => {
+            leadInfoSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 500);
+    }
+    
+    function hideClientSelectedReminder() {
+        const existingReminder = document.getElementById('client-selected-reminder');
+        if (existingReminder) {
+            existingReminder.remove();
+        }
+    }
+    
+    // Add event listeners to source radios
     sourceRadios.forEach(radio => {
         radio.addEventListener('change', toggleSourceFields);
     });
     
     // Initialize on page load
     toggleSourceFields();
-    populateClientDatalist();
-    
-    // Debug function - remove this after testing
-    window.debugClientData = function() {
-        console.log('Client Data:', clientData);
-        console.log('Datalist options:', clientDatalist.children.length);
-        console.log('Raw backend data:', '{{ client_data_json|default:"No data"|safe }}');
-    };
-    
-    // Call debug function to help troubleshoot
-    console.log('Debug info available - run debugClientData() in console');
     
     // Form submission handling
     form.addEventListener('submit', function(e) {
@@ -692,94 +386,48 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.disabled = true;
         spinner.classList.remove('d-none');
         
-        // For existing client source, ensure the client name is entered
         const sourceValue = document.querySelector('input[name="source"]:checked')?.value;
-        if (sourceValue === 'existing_client' && !existingClientInput.value.trim()) {
-            e.preventDefault();
-            alert('Please enter an existing client name');
-            existingClientInput.focus();
-            resetSubmitButton();
-            return;
-        }
+        let isValid = true;
         
-        // For other source, ensure source details are provided
-        if (sourceValue === 'other') {
-            const sourceDetails = document.querySelector('input[name="source_details"]').value;
-            if (!sourceDetails.trim()) {
+        // Validate source-specific fields
+        if (sourceValue === 'existing_client') {
+            if (!existingClientSelect.value) {
+                e.preventDefault();
+                alert('Please select an existing client');
+                existingClientSelect.focus();
+                isValid = false;
+            }
+        } else if (sourceValue === 'other') {
+            if (!sourceDetailsField || !sourceDetailsField.value.trim()) {
                 e.preventDefault();
                 alert('Please provide source details');
-                resetSubmitButton();
-                return;
+                if (sourceDetailsField) sourceDetailsField.focus();
+                isValid = false;
             }
         }
         
-        // For non-existing client sources, validate required fields
-        if (sourceValue !== 'existing_client') {
+        // Validate required lead contact fields (always required regardless of source)
+        if (isValid) {
             const requiredFields = [
-                { element: nameField, message: 'Name is required' },
-                { element: emailField, message: 'Email is required' },
-                { element: form.querySelector('select[name="assigned_to"]'), message: 'Please select who this lead should be assigned to' }
+                { element: nameField, message: 'Lead contact name is required', label: 'Lead Contact Name' },
+                { element: emailField, message: 'Lead contact email is required', label: 'Lead Contact Email' },
+                { element: assignedToField, message: 'Please select who this lead should be assigned to', label: 'Assigned To' }
             ];
             
-            let isValid = true;
-            
-            requiredFields.forEach(field => {
-                if (!field.element.value.trim()) {
-                    isValid = false;
+            for (const field of requiredFields) {
+                if (!field.element.value || !field.element.value.trim()) {
+                    e.preventDefault();
                     alert(field.message);
                     field.element.focus();
-                    return;
-                }
-            });
-            
-            if (!isValid) {
-                e.preventDefault();
-                resetSubmitButton();
-                return;
-            }
-        } else {
-            // For existing client, validate that client name is entered and assigned_to is filled
-            const clientName = existingClientInput.value.trim();
-            const assignedTo = form.querySelector('select[name="assigned_to"]');
-            
-            if (!clientName) {
-                e.preventDefault();
-                alert('Please enter the client name');
-                existingClientInput.focus();
-                resetSubmitButton();
-                return;
-            }
-            
-            if (!assignedTo.value) {
-                e.preventDefault();
-                alert('Please select who this lead should be assigned to');
-                assignedTo.focus();
-                resetSubmitButton();
-                return;
-            }
-            
-            // For new clients (not in datalist), ensure name/email are filled
-            const isExistingClient = clientData.some(client => 
-                client.display === clientName || client.name === clientName
-            );
-            
-            if (!isExistingClient) {
-                if (!nameField.value.trim()) {
-                    e.preventDefault();
-                    alert('Please enter the client name in the Name field');
-                    nameField.focus();
-                    resetSubmitButton();
-                    return;
-                }
-                
-                if (!emailField.value.trim()) {
-                    e.preventDefault();
-                    alert('Please enter the client email');
-                    emailField.focus();
-                    resetSubmitButton();
-                    return;
+                    isValid = false;
+                    break;
                 }
             }
+        }
+        
+        // Reset button if validation failed
+        if (!isValid) {
+            resetSubmitButton();
         }
     });
     
@@ -803,7 +451,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.classList.add('is-invalid');
             }
         });
+        
+        // Remove validation classes on focus
+        input.addEventListener('focus', function() {
+            this.classList.remove('is-valid', 'is-invalid');
+        });
     });
+    
+    // Add helpful tooltips
+    function addTooltips() {
+        // Add tooltip to existing client dropdown
+        if (existingClientSelect) {
+            existingClientSelect.title = "Select an existing client for reference only. This won't copy their information - you'll enter the specific lead contact details separately.";
+        }
+        
+        // Add tooltips to lead contact fields
+        nameField.title = "Enter the name of the person you'll be communicating with for this lead";
+        emailField.title = "Enter the email address where you can reach the lead contact";
+        if (mobileField) {
+            mobileField.title = "Enter the mobile number of the lead contact person";
+        }
+    }
+    
+    addTooltips();
+    
+    // Debug information (remove in production)
+    console.log('Lead form initialized');
+    console.log('Available existing clients:', existingClientSelect ? existingClientSelect.options.length - 1 : 0);
 });
 </script>
 {% endblock %}
