@@ -408,32 +408,6 @@
             flex: 1;
         }
 
-        /* Alternative Admin Panel Styles - uncomment to use different style */
-        /*
-        .admin-panel-link {
-            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-            border: 2px solid transparent;
-        }
-
-        .admin-panel-link:hover {
-            background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
-            border-color: #dc3545;
-        }
-        */
-
-        /* Dark theme admin button - uncomment for dark theme */
-        /*
-        .admin-panel-link {
-            background: linear-gradient(135deg, #212529 0%, #16181b 100%);
-            border: 2px solid #343a40;
-        }
-
-        .admin-panel-link:hover {
-            background: linear-gradient(135deg, #16181b 0%, #0d0e0f 100%);
-            border-color: #6c757d;
-        }
-        */
-
         .login-footer {
             text-align: center;
             margin-top: 2rem;
@@ -638,42 +612,42 @@
             }
         }
 
-            @media (max-width: 480px) {
-                .image-section,
-                .form-section {
-                    padding: 1rem;
-                }
-                
-                .image-section {
-                    min-height: 35vh;
-                }
-                
-                .login-title {
-                    font-size: 1.75rem;
-                }
-
-                .form-control {
-                    padding: 0.9rem 1.1rem;
-                }
-
-                .btn-primary {
-                    padding: 0.9rem;
-                }
-
-                .admin-panel-link {
-                    padding: 0.6rem 1.2rem;
-                    font-size: 0.85rem;
-                    gap: 0.6rem;
-                }
-                
-                .welcome-text h2 {
-                    font-size: 1.75rem;
-                }
-                
-                .welcome-text p {
-                    font-size: 0.95rem;
-                }
+        @media (max-width: 480px) {
+            .image-section,
+            .form-section {
+                padding: 1rem;
             }
+            
+            .image-section {
+                min-height: 35vh;
+            }
+            
+            .login-title {
+                font-size: 1.75rem;
+            }
+
+            .form-control {
+                padding: 0.9rem 1.1rem;
+            }
+
+            .btn-primary {
+                padding: 0.9rem;
+            }
+
+            .admin-panel-link {
+                padding: 0.6rem 1.2rem;
+                font-size: 0.85rem;
+                gap: 0.6rem;
+            }
+            
+            .welcome-text h2 {
+                font-size: 1.75rem;
+            }
+            
+            .welcome-text p {
+                font-size: 0.95rem;
+            }
+        }
 
         /* Large screens - optimize background image display */
         @media (min-width: 1200px) {
@@ -750,7 +724,7 @@
 
         <!-- Right Side - Form Section -->
         <div class="form-section">
-            <div class="login-container" style="animation: none; transform: none; opacity: 1;"> <!-- Removed animation -->
+            <div class="login-container" style="animation: none; transform: none; opacity: 1;">
                 <!-- Header Section -->
                 <div class="login-header">
                     <h1 class="login-title">Finployee</h1>
@@ -913,29 +887,57 @@
         </div>
     </div>
 
-    <!-- Load scripts asynchronously -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" async></script>
+    <!-- Load scripts synchronously for better reliability -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
-        // Immediately focus on username field if empty
+        // Global variable to track submission state
+        let isSubmitting = false;
+
+        // Wait for DOM to be fully loaded before executing any script
         document.addEventListener('DOMContentLoaded', function() {
+            // Initialize form elements after DOM is ready
+            initializeFormElements();
+            
+            // Initialize form validation and submission
+            initializeFormSubmission();
+            
+            // Initialize other features
+            initializePasswordToggle();
+            initializeForgotPassword();
+            initializeOtherFeatures();
+        });
+
+        function initializeFormElements() {
             const usernameInput = document.getElementById('username');
             if (usernameInput && usernameInput.value === '') {
                 usernameInput.focus();
             }
             
-            // Try to get username from local storage
-            const savedUsername = localStorage.getItem('lastUsername');
-            if (savedUsername && usernameInput && !usernameInput.value) {
-                usernameInput.value = savedUsername;
-                document.getElementById('password').focus();
+            // Try to get username from localStorage with error handling
+            try {
+                const savedUsername = localStorage.getItem('lastUsername');
+                if (savedUsername && usernameInput && !usernameInput.value) {
+                    usernameInput.value = savedUsername;
+                    document.getElementById('password').focus();
+                }
+            } catch(e) {
+                console.warn('localStorage not available:', e);
             }
-        });
+        }
 
-        // Simplified login form handler
-        const loginForm = document.getElementById('loginForm');
-        if (loginForm) {
+        function initializeFormSubmission() {
+            const loginForm = document.getElementById('loginForm');
+            if (!loginForm) return;
+
             loginForm.addEventListener('submit', function(e) {
+                // Prevent double submission
+                if (isSubmitting) {
+                    e.preventDefault();
+                    return;
+                }
+
+                // Validate form
                 if (!loginForm.checkValidity()) {
                     e.preventDefault();
                     e.stopPropagation();
@@ -943,10 +945,17 @@
                     return;
                 }
 
-                // Store username in local storage for future visits
-                const usernameInput = document.getElementById('username');
-                if (usernameInput && usernameInput.value) {
-                    localStorage.setItem('lastUsername', usernameInput.value);
+                // Mark as submitting
+                isSubmitting = true;
+
+                // Store username in localStorage with error handling
+                try {
+                    const usernameInput = document.getElementById('username');
+                    if (usernameInput && usernameInput.value) {
+                        localStorage.setItem('lastUsername', usernameInput.value);
+                    }
+                } catch(e) {
+                    console.warn('localStorage not available:', e);
                 }
 
                 // Show loading state
@@ -957,12 +966,52 @@
                     const btnText = loginBtn.querySelector('.btn-text');
                     if (btnText) btnText.textContent = 'Signing In...';
                 }
+
+                // Force form submission after a brief delay to ensure all changes are applied
+                setTimeout(() => {
+                    // Ensure the form submits even if there are JS errors
+                    if (loginForm && !loginForm.hasAttribute('data-submitted')) {
+                        loginForm.setAttribute('data-submitted', 'true');
+                        loginForm.submit();
+                    }
+                }, 100);
+            });
+
+            // Handle form reset on page load errors
+            window.addEventListener('pageshow', function(event) {
+                if (event.persisted) {
+                    // Reset form state if page was loaded from cache
+                    resetFormState();
+                }
+            });
+
+            // Reset form state on page unload issues
+            window.addEventListener('beforeunload', function() {
+                resetFormState();
             });
         }
 
-        // Password visibility toggle (simplified)
-        const togglePassword = document.getElementById('togglePassword');
-        if (togglePassword) {
+        function resetFormState() {
+            const loginBtn = document.getElementById('loginBtn');
+            if (loginBtn) {
+                loginBtn.classList.remove('loading');
+                loginBtn.disabled = false;
+                const btnText = loginBtn.querySelector('.btn-text');
+                if (btnText) btnText.textContent = 'Sign In';
+            }
+            isSubmitting = false;
+            
+            // Remove submission marker
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.removeAttribute('data-submitted');
+            }
+        }
+
+        function initializePasswordToggle() {
+            const togglePassword = document.getElementById('togglePassword');
+            if (!togglePassword) return;
+
             togglePassword.addEventListener('click', function() {
                 const passwordInput = document.getElementById('password');
                 const toggleIcon = document.getElementById('toggleIcon');
@@ -975,24 +1024,17 @@
             });
         }
 
-        // Support link (simplified)
-        const supportLink = document.getElementById('supportLink');
-        if (supportLink) {
-            supportLink.addEventListener('click', function(e) {
-                e.preventDefault();
-                alert('Support contact: support@financialcrm.com\nPhone: +1 (555) 123-4567');
-            });
-        }
+        function initializeForgotPassword() {
+            const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+            if (!forgotPasswordForm) return;
 
-        // Simplified forgot password form handler
-        const forgotPasswordForm = document.getElementById('forgotPasswordForm');
-        if (forgotPasswordForm) {
             forgotPasswordForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 if (!forgotPasswordForm.checkValidity()) {
                     forgotPasswordForm.classList.add('was-validated');
                     return;
                 }
+
                 const resetPasswordBtn = document.getElementById('resetPasswordBtn');
                 if (resetPasswordBtn) {
                     resetPasswordBtn.classList.add('loading');
@@ -1000,9 +1042,11 @@
                     const resetBtnText = resetPasswordBtn.querySelector('.btn-text');
                     if (resetBtnText) resetBtnText.textContent = 'Sending...';
                 }
+
                 const formData = {
                     username_or_email: document.getElementById('resetUsername').value
                 };
+
                 // Make actual API call
                 fetch('{% url "password_reset_request" %}', {
                     method: 'POST',
@@ -1062,72 +1106,118 @@
                     }
                 });
             });
+
+            // Clear modal messages when modal is closed
+            const forgotPasswordModal = document.getElementById('forgotPasswordModal');
+            if (forgotPasswordModal) {
+                forgotPasswordModal.addEventListener('hidden.bs.modal', function() {
+                    const modalMessages = document.getElementById('modalMessages');
+                    if (modalMessages) {
+                        modalMessages.style.display = 'none';
+                        modalMessages.innerHTML = '';
+                    }
+                    
+                    if (forgotPasswordForm) {
+                        forgotPasswordForm.reset();
+                        forgotPasswordForm.classList.remove('was-validated');
+                    }
+                    
+                    const resetPasswordBtn = document.getElementById('resetPasswordBtn');
+                    if (resetPasswordBtn) {
+                        resetPasswordBtn.classList.remove('loading');
+                        resetPasswordBtn.disabled = false;
+                        const resetBtnText = resetPasswordBtn.querySelector('.btn-text');
+                        if (resetBtnText) resetBtnText.textContent = 'Send Reset Link';
+                    }
+                });
+            }
         }
 
-        // Clear modal messages when modal is closed
-        const forgotPasswordModal = document.getElementById('forgotPasswordModal');
-        if (forgotPasswordModal) {
-            forgotPasswordModal.addEventListener('hidden.bs.modal', function() {
-                const modalMessages = document.getElementById('modalMessages');
-                if (modalMessages) {
-                    modalMessages.style.display = 'none';
-                    modalMessages.innerHTML = '';
+        function initializeOtherFeatures() {
+            // Support link handler
+            const supportLink = document.getElementById('supportLink');
+            if (supportLink) {
+                supportLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    alert('Support contact: support@financialcrm.com\nPhone: +1 (555) 123-4567');
+                });
+            }
+
+            // Keyboard shortcuts for faster navigation
+            document.addEventListener('keydown', function(e) {
+                // Alt + L to focus username
+                if (e.altKey && e.key === 'l') {
+                    e.preventDefault();
+                    const usernameInput = document.getElementById('username');
+                    if (usernameInput) usernameInput.focus();
                 }
                 
-                const forgotPasswordForm = document.getElementById('forgotPasswordForm');
-                if (forgotPasswordForm) {
-                    forgotPasswordForm.reset();
-                    forgotPasswordForm.classList.remove('was-validated');
+                // Enter to submit form when focused on inputs
+                if (e.key === 'Enter') {
+                    const activeElement = document.activeElement;
+                    if (activeElement && (activeElement.id === 'username' || activeElement.id === 'password')) {
+                        e.preventDefault();
+                        const loginForm = document.getElementById('loginForm');
+                        if (loginForm) {
+                            const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+                            loginForm.dispatchEvent(submitEvent);
+                        }
+                    }
                 }
-                
-                const resetPasswordBtn = document.getElementById('resetPasswordBtn');
-                if (resetPasswordBtn) {
-                    resetPasswordBtn.classList.remove('loading');
-                    resetPasswordBtn.disabled = false;
-                    const resetBtnText = resetPasswordBtn.querySelector('.btn-text');
-                    if (resetBtnText) resetBtnText.textContent = 'Send Reset Link';
+
+                // Escape key to close modal
+                if (e.key === 'Escape') {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('forgotPasswordModal'));
+                    if (modal) {
+                        modal.hide();
+                    }
                 }
+            });
+
+            // Auto-dismiss alerts after 5 seconds
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                setTimeout(() => {
+                    alert.style.opacity = '0';
+                    alert.style.transform = 'translateY(-20px)';
+                    setTimeout(() => {
+                        alert.remove();
+                    }, 300);
+                }, 5000);
             });
         }
 
-        // Keyboard shortcuts for faster navigation
-        document.addEventListener('keydown', function(e) {
-            // Alt + L to focus username
-            if (e.altKey && e.key === 'l') {
-                e.preventDefault();
-                const usernameInput = document.getElementById('username');
-                if (usernameInput) usernameInput.focus();
-            }
-            
-            // Enter to submit form when focused on inputs
-            if (e.key === 'Enter') {
-                const activeElement = document.activeElement;
-                if (activeElement && (activeElement.id === 'username' || activeElement.id === 'password')) {
-                    e.preventDefault();
-                    const loginForm = document.getElementById('loginForm');
-                    if (loginForm) loginForm.dispatchEvent(new Event('submit'));
-                }
-            }
+        // Global error handler for form submission issues
+        window.addEventListener('error', function(e) {
+            console.error('JavaScript error:', e.error);
+            // Reset form state on any JS errors
+            resetFormState();
+        });
 
-            // Escape key to close modal
-            if (e.key === 'Escape') {
-                const modal = bootstrap.Modal.getInstance(document.getElementById('forgotPasswordModal'));
-                if (modal) {
-                    modal.hide();
-                }
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                // Page is being hidden, reset form state
+                resetFormState();
             }
         });
 
-        // Auto-dismiss alerts after 5 seconds
-        const alerts = document.querySelectorAll('.alert');
-        alerts.forEach(alert => {
-            setTimeout(() => {
-                alert.style.opacity = '0';
-                alert.style.transform = 'translateY(-20px)';
-                setTimeout(() => {
-                    alert.remove();
-                }, 300);
-            }, 5000);
+        // Additional safety net - reset form state after 30 seconds if still loading
+        setTimeout(function() {
+            if (isSubmitting) {
+                console.warn('Form submission taking too long, resetting state');
+                resetFormState();
+            }
+        }, 30000);
+
+        // Handle browser back/forward button
+        window.addEventListener('popstate', function() {
+            resetFormState();
+        });
+
+        // Reset form state when page loads
+        window.addEventListener('load', function() {
+            resetFormState();
         });
     </script>
 </body>

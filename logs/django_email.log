@@ -1680,3 +1680,8 @@ INFO 2025-08-11 20:22:51,822 views 10516 26292 Action 52 executed successfully
 INFO 2025-08-11 20:23:02,869 views 10516 29764 Found client email: None for plan EP202508110001
 INFO 2025-08-11 20:23:20,427 views 10516 26484 Total completed plans in database: 5
 INFO 2025-08-11 20:23:20,488 views 10516 26484 User srushti can see 10 completed plans
+INFO 2025-08-13 08:32:07,698 views 33064 8376 Successful login for user: ceo_admin
+WARNING 2025-08-13 08:32:35,920 views 33064 8376 Failed login attempt for username: ceo_admin
+INFO 2025-08-13 08:45:25,910 views 2032 28680 Successful login - Username: ceo_admin, IP: 127.0.0.1
+WARNING 2025-08-13 08:55:12,757 views 10792 32176 Failed login attempt - Username: ceo_admina, IP: 127.0.0.1, User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36
+INFO 2025-08-13 09:06:29,734 views 14740 34160 Password reset email sent successfully to sawaisushil@gmail.com
