@@ -4,6 +4,26 @@
 {% block title %}{{ action }} Lead{% endblock %}
 
 {% block extra_css %}
+<style>
+.contact-requirement-note {
+    background-color: #e3f2fd;
+    border: 1px solid #2196f3;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 15px;
+    font-size: 0.9em;
+}
+
+.contact-requirement-note .fas {
+    color: #2196f3;
+    margin-right: 8px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -23,6 +43,15 @@
                             {{ message }}
                             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Form-level errors (including our custom validation) -->
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
                         {% endfor %}
                     </div>
                     {% endif %}
@@ -98,6 +127,12 @@
                         <div class="lead-info-section" id="lead-info-section">
                             <h5>Lead Contact Information</h5>
                             
+                            <!-- Contact Information Requirement Notice -->
+                            <div class="contact-requirement-note">
+                                <i class="fas fa-info-circle"></i>
+                                <strong>Contact Requirement:</strong> Please provide either an email address or mobile number (or both) to ensure we can reach this lead.
+                            </div>
+                            
                             <div class="row mb-4">
                                 <div class="col-md-6 form-field">
                                     <label for="{{ form.name.id_for_label }}" class="form-label">Lead Contact Name *</label>
@@ -125,8 +160,12 @@
 
                             <div class="row mb-4">
                                 <div class="col-md-6 form-field">
-                                    <label for="{{ form.email.id_for_label }}" class="form-label">Lead Contact Email *</label>
+                                    <label for="{{ form.email.id_for_label }}" class="form-label">
+                                        Lead Contact Email 
+                                        <span class="text-muted">(Required if no mobile)</span>
+                                    </label>
                                     {{ form.email }}
+                                    <small class="form-text text-muted">Provide email if available</small>
                                     {% if form.email.errors %}
                                     <div class="invalid-feedback d-block">
                                         {% for error in form.email.errors %}
@@ -136,8 +175,12 @@
                                     {% endif %}
                                 </div>
                                 <div class="col-md-6 form-field">
-                                    <label for="{{ form.mobile.id_for_label }}" class="form-label">Lead Contact Mobile</label>
+                                    <label for="{{ form.mobile.id_for_label }}" class="form-label">
+                                        Lead Contact Mobile 
+                                        <span class="text-muted">(Required if no email)</span>
+                                    </label>
                                     {{ form.mobile }}
+                                    <small class="form-text text-muted">Provide mobile number if available</small>
                                     {% if form.mobile.errors %}
                                     <div class="invalid-feedback d-block">
                                         {% for error in form.mobile.errors %}
@@ -190,9 +233,6 @@
                             {% endif %}
                         </div>
 
-                        <!-- Hidden fields -->
-                        <!-- No hidden fields needed since we're not linking -->
-
                         <div class="d-flex justify-content-between mt-4">
                             <a href="{% if lead %}{% url 'lead_detail' lead.pk %}{% else %}{% url 'lead_list' %}{% endif %}" 
                                class="btn btn-secondary">Cancel</a>
@@ -230,6 +270,49 @@ document.addEventListener('DOMContentLoaded', function() {
     const assignedToField = document.querySelector('select[name="assigned_to"]');
     const sourceDetailsField = document.querySelector('input[name="source_details"]');
     
+    // Contact validation elements
+    let contactValidationMessage = null;
+    
+    function createContactValidationMessage() {
+        if (!contactValidationMessage) {
+            contactValidationMessage = document.createElement('div');
+            contactValidationMessage.className = 'alert alert-warning mt-2';
+            contactValidationMessage.style.display = 'none';
+            contactValidationMessage.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Please provide either an email address or mobile number.';
+            
+            // Insert after the mobile field's parent
+            const mobileParent = mobileField.closest('.form-field');
+            mobileParent.appendChild(contactValidationMessage);
+        }
+        return contactValidationMessage;
+    }
+    
+    function validateContactInfo() {
+        const hasEmail = emailField.value && emailField.value.trim();
+        const hasMobile = mobileField.value && mobileField.value.trim();
+        const validationMsg = createContactValidationMessage();
+        
+        if (!hasEmail && !hasMobile) {
+            // Show validation message
+            validationMsg.style.display = 'block';
+            emailField.classList.add('border-warning');
+            mobileField.classList.add('border-warning');
+            return false;
+        } else {
+            // Hide validation message
+            validationMsg.style.display = 'none';
+            emailField.classList.remove('border-warning');
+            mobileField.classList.remove('border-warning');
+            return true;
+        }
+    }
+    
+    // Add real-time validation for contact fields
+    emailField.addEventListener('input', validateContactInfo);
+    mobileField.addEventListener('input', validateContactInfo);
+    emailField.addEventListener('blur', validateContactInfo);
+    mobileField.addEventListener('blur', validateContactInfo);
+    
     function toggleSourceFields() {
         const checkedRadio = document.querySelector('input[name="source"]:checked');
         if (checkedRadio) {
@@ -253,9 +336,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     sourceDetailsField.required = false;
                 }
                 
-                // Lead contact fields remain required (manual entry)
+                // Lead contact fields - name required, email/mobile validated separately
                 nameField.required = true;
-                emailField.required = true;
                 
                 // Update field placeholders and help text
                 updateFieldLabelsForExistingClient(true);
@@ -273,9 +355,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 existingClientSelect.value = '';
                 existingClientSelect.required = false;
                 
-                // Lead contact fields remain required
+                // Lead contact fields - name required, email/mobile validated separately
                 nameField.required = true;
-                emailField.required = true;
                 
                 // Update field labels back to normal
                 updateFieldLabelsForExistingClient(false);
@@ -292,9 +373,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     sourceDetailsField.required = false;
                 }
                 
-                // Lead contact fields remain required
+                // Lead contact fields - name required, email/mobile validated separately
                 nameField.required = true;
-                emailField.required = true;
                 
                 // Update field labels back to normal
                 updateFieldLabelsForExistingClient(false);
@@ -304,19 +384,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function updateFieldLabelsForExistingClient(isExistingClient) {
         const nameLabel = document.querySelector('label[for="' + nameField.id + '"]');
-        const emailLabel = document.querySelector('label[for="' + emailField.id + '"]');
-        const mobileLabel = document.querySelector('label[for="' + mobileField.id + '"]');
         
         if (isExistingClient) {
             // Emphasize that these are lead contact details, separate from client info
             if (nameLabel) nameLabel.innerHTML = 'Lead Contact Name * <small class="text-muted">(Person to contact for this lead)</small>';
-            if (emailLabel) emailLabel.innerHTML = 'Lead Contact Email * <small class="text-muted">(May be different from client email)</small>';
-            if (mobileLabel) mobileLabel.innerHTML = 'Lead Contact Mobile <small class="text-muted">(Direct contact for this lead)</small>';
         } else {
             // Normal labels
             if (nameLabel) nameLabel.innerHTML = 'Lead Contact Name *';
-            if (emailLabel) emailLabel.innerHTML = 'Lead Contact Email *';
-            if (mobileLabel) mobileLabel.innerHTML = 'Lead Contact Mobile';
         }
     }
     
@@ -382,45 +456,60 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Form submission handling
     form.addEventListener('submit', function(e) {
-        // Show loading state
-        submitBtn.disabled = true;
-        spinner.classList.remove('d-none');
-        
-        const sourceValue = document.querySelector('input[name="source"]:checked')?.value;
         let isValid = true;
         
-        // Validate source-specific fields
-        if (sourceValue === 'existing_client') {
-            if (!existingClientSelect.value) {
-                e.preventDefault();
-                alert('Please select an existing client');
-                existingClientSelect.focus();
-                isValid = false;
-            }
-        } else if (sourceValue === 'other') {
-            if (!sourceDetailsField || !sourceDetailsField.value.trim()) {
-                e.preventDefault();
-                alert('Please provide source details');
-                if (sourceDetailsField) sourceDetailsField.focus();
-                isValid = false;
+        // Validate contact information first
+        if (!validateContactInfo()) {
+            e.preventDefault();
+            isValid = false;
+            
+            // Focus on the first empty contact field
+            if (!emailField.value.trim()) {
+                emailField.focus();
+            } else if (!mobileField.value.trim()) {
+                mobileField.focus();
             }
         }
         
-        // Validate required lead contact fields (always required regardless of source)
         if (isValid) {
-            const requiredFields = [
-                { element: nameField, message: 'Lead contact name is required', label: 'Lead Contact Name' },
-                { element: emailField, message: 'Lead contact email is required', label: 'Lead Contact Email' },
-                { element: assignedToField, message: 'Please select who this lead should be assigned to', label: 'Assigned To' }
-            ];
+            // Show loading state
+            submitBtn.disabled = true;
+            spinner.classList.remove('d-none');
             
-            for (const field of requiredFields) {
-                if (!field.element.value || !field.element.value.trim()) {
+            const sourceValue = document.querySelector('input[name="source"]:checked')?.value;
+            
+            // Validate source-specific fields
+            if (sourceValue === 'existing_client') {
+                if (!existingClientSelect.value) {
                     e.preventDefault();
-                    alert(field.message);
-                    field.element.focus();
+                    alert('Please select an existing client');
+                    existingClientSelect.focus();
                     isValid = false;
-                    break;
+                }
+            } else if (sourceValue === 'other') {
+                if (!sourceDetailsField || !sourceDetailsField.value.trim()) {
+                    e.preventDefault();
+                    alert('Please provide source details');
+                    if (sourceDetailsField) sourceDetailsField.focus();
+                    isValid = false;
+                }
+            }
+            
+            // Validate other required fields
+            if (isValid) {
+                const requiredFields = [
+                    { element: nameField, message: 'Lead contact name is required', label: 'Lead Contact Name' },
+                    { element: assignedToField, message: 'Please select who this lead should be assigned to', label: 'Assigned To' }
+                ];
+                
+                for (const field of requiredFields) {
+                    if (!field.element.value || !field.element.value.trim()) {
+                        e.preventDefault();
+                        alert(field.message);
+                        field.element.focus();
+                        isValid = false;
+                        break;
+                    }
                 }
             }
         }
@@ -439,8 +528,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Reset button state if form submission fails
     window.addEventListener('pageshow', resetSubmitButton);
     
-    // Add Bootstrap validation classes on blur
-    const formInputs = form.querySelectorAll('input, select, textarea');
+    // Add Bootstrap validation classes on blur (excluding email and mobile which have custom validation)
+    const formInputs = form.querySelectorAll('input:not([name="email"]):not([name="mobile"]), select, textarea');
     formInputs.forEach(input => {
         input.addEventListener('blur', function() {
             if (this.checkValidity()) {
@@ -467,16 +556,19 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Add tooltips to lead contact fields
         nameField.title = "Enter the name of the person you'll be communicating with for this lead";
-        emailField.title = "Enter the email address where you can reach the lead contact";
+        emailField.title = "Enter the email address where you can reach the lead contact (either email or mobile required)";
         if (mobileField) {
-            mobileField.title = "Enter the mobile number of the lead contact person";
+            mobileField.title = "Enter the mobile number of the lead contact person (either email or mobile required)";
         }
     }
     
     addTooltips();
     
+    // Initialize contact validation on page load
+    setTimeout(validateContactInfo, 100);
+    
     // Debug information (remove in production)
-    console.log('Lead form initialized');
+    console.log('Lead form initialized with contact validation');
     console.log('Available existing clients:', existingClientSelect ? existingClientSelect.options.length - 1 : 0);
 });
 </script>

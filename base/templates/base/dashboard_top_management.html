@@ -1,4 +1,5 @@
 {% extends 'base/base.html' %}
+{% load humanize %}
 {% block title %}Dashboard{% endblock %}
 
 {% block extra_css %}
@@ -662,12 +663,12 @@
 
 {% block content %}
 <div class="main-container">
-    <!-- Header Section -->
+    {% comment %} <!-- Header Section -->
     <div class="header-section">
         <div class="welcome-content">
             <h1 class="welcome-text">Welcome back, <span class="user-name">{{ request.user.get_full_name }}</span></h1>
             <!-- <p class="welcome-text user-name">{{ request.user.get_full_name }}</p> -->
-        </div>
+        </div> {% endcomment %}
         
          
         <div class="header-info">
@@ -706,7 +707,7 @@
                 <i class="fas fa-chart-line"></i>
             </div> -->
             <h2 class="aum-title">Total Assets Under Management</h2>
-            <div class="aum-value" id="aum-counter">₹{{ total_aum|floatformat:0|default:"0" }}</div>
+            <div class="aum-value" id="aum-counter">₹{{ total_aum|floatformat:0|intcomma|default:"0" }}</div>
             <!-- <p class="aum-description">Comprehensive portfolio value across all clients and investment vehicles</p> -->
             <div class="aum-actions">
                 <a href="{% url 'hrm_dashboard' %}" class="aum-btn">

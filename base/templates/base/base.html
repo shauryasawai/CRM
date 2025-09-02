@@ -405,6 +405,95 @@
             margin-left: calc(var(--sidebar-collapsed-width) + 2 * var(--sidebar-margin));
         }
 
+        /* Header Section Styles */
+        .header-section {
+            background: var(--background-color);
+            margin: 1rem;
+            padding: 2rem;
+            border-radius: var(--sidebar-border-radius);
+            box-shadow: var(--shadow-light);
+            border: 1px solid var(--border-color);
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), #0d47a1);
+            border-radius: var(--sidebar-border-radius) var(--sidebar-border-radius) 0 0;
+        }
+
+        .welcome-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .welcome-text {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #333333;
+            margin: 0;
+            line-height: 1.2;
+            background: linear-gradient(135deg, #333333, var(--secondary-text));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .user-name {
+            color: var(--primary-color);
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary-color), #0d47a1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: inline-block;
+            position: relative;
+        }
+
+        .user-name::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary-color), transparent);
+            border-radius: 2px;
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
+        }
+
+        .welcome-text:hover .user-name::after {
+            transform: scaleX(1);
+        }
+
+        /* Animated greeting effect */
+        @keyframes fadeInSlide {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header-section {
+            animation: fadeInSlide 0.6s ease-out;
+        }
+
         .content-wrapper {
             flex: 1;
             padding: 2rem;
@@ -496,6 +585,10 @@
                 --nav-item-border-radius: 10px;
                 --content-margin: 1rem;
             }
+
+            .welcome-text {
+                font-size: 1.75rem;
+            }
         }
 
         @media (max-width: 768px) {
@@ -532,6 +625,16 @@
                 display: flex;
             }
 
+            .header-section {
+                margin: 0.5rem;
+                padding: 1.5rem;
+                border-radius: 16px;
+            }
+
+            .welcome-text {
+                font-size: 1.5rem;
+            }
+
             .content-wrapper {
                 margin: 0.5rem;
                 padding: 1.5rem;
@@ -548,6 +651,16 @@
                 --sidebar-margin: 0;
                 --sidebar-border-radius: 0;
                 --nav-item-border-radius: 6px;
+            }
+
+            .header-section {
+                margin: 0.25rem;
+                padding: 1rem;
+                border-radius: 12px;
+            }
+
+            .welcome-text {
+                font-size: 1.25rem;
             }
 
             .content-wrapper {
@@ -684,7 +797,8 @@
         @media print {
             .sidebar,
             .mobile-header,
-            .sidebar-overlay {
+            .sidebar-overlay,
+            .header-section {
                 display: none !important;
             }
 
@@ -717,6 +831,10 @@
             .nav-link.active {
                 border: 2px solid var(--primary-color);
             }
+
+            .header-section {
+                border: 2px solid var(--primary-color);
+            }
         }
 
         /* Reduced motion support */
@@ -728,6 +846,10 @@
             }
             
             .nav-link.active::after {
+                animation: none !important;
+            }
+
+            .header-section {
                 animation: none !important;
             }
         }
@@ -872,6 +994,13 @@
 
     <!-- Main Content -->
     <div class="main-content" id="mainContent">
+        <!-- Header Section -->
+        <div class="header-section">
+            <div class="welcome-content">
+                <h1 class="welcome-text">Welcome back, <span class="user-name">{{ request.user.get_full_name }}</span></h1>
+            </div>
+        </div>
+
         <div class="content-wrapper">
             <!-- Messages -->
             {% if messages %}

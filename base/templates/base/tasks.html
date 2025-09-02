@@ -24,16 +24,55 @@
     </div>
 
     {% if tasks %}
+    <!-- Search Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="background-color: #FFFFFF;">
+                <div class="card-body p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-6 col-lg-8">
+                            <div class="position-relative">
+                                <i class="fas fa-search position-absolute" style="left: 15px; top: 50%; transform: translateY(-50%); color: #1C64FF; z-index: 10;"></i>
+                                <input 
+                                    type="text" 
+                                    id="taskSearch" 
+                                    class="form-control form-control-lg ps-5" 
+                                    placeholder="Search tasks by title or assigned person..." 
+                                    style="border: 2px solid #D9D9D9; border-radius: 10px; background-color: #F8F9FA;">
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <div class="d-flex gap-2 mt-3 mt-md-0">
+                                <button type="button" id="clearSearch" class="btn btn-outline-secondary flex-fill" style="border-radius: 8px;">
+                                    <i class="fas fa-times me-1"></i>
+                                    Clear
+                                </button>
+                                <div class="d-flex align-items-center ms-3">
+                                    <span id="searchResults" class="text-muted small"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Tasks Table Section -->
     <div class="row">
         <div class="col-12">
             <div class="card border-0 shadow-sm" style="background-color: #FFFFFF;">
                 <div class="card-header bg-light border-0 py-3" style="background-color: #C3E4FF !important;">
-                    <h5 class="mb-0 fw-semibold" style="color: #1C64FF;">All Tasks</h5>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-semibold" style="color: #1C64FF;">All Tasks</h5>
+                        <span id="taskCount" class="badge rounded-pill px-3 py-2" style="background-color: #1C64FF; color: white;">
+                            {{ tasks|length }} task{{ tasks|length|pluralize }}
+                        </span>
+                    </div>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0">
+                        <table class="table table-hover mb-0" id="tasksTable">
                             <thead style="background-color: #1C64FF;">
                                 <tr>
                                     <th scope="col" class=" fw-semibold py-3 px-4 border-0">Title</th>
@@ -46,9 +85,11 @@
                             </thead>
                             <tbody>
                                 {% for task in tasks %}
-                                <tr class="{% if task.completed %}table-light{% endif %}" style="border-bottom: 1px solid #D9D9D9;">
+                                <tr class="task-row {% if task.completed %}table-light{% endif %}" style="border-bottom: 1px solid #D9D9D9;" 
+                                    data-task-title="{{ task.title|lower }}" 
+                                    data-assigned-to="{{ task.assigned_to.get_full_name|lower }}">
                                     <td class="py-3 px-4 align-middle">
-                                        <div class="fw-semibold {% if task.completed %}text-decoration-line-through text-muted{% else %}text-dark{% endif %}">
+                                        <div class="fw-semibold task-title {% if task.completed %}text-decoration-line-through text-muted{% else %}text-dark{% endif %}">
                                             {{ task.title }}
                                         </div>
                                     </td>
@@ -66,7 +107,7 @@
                                     <td class="py-3 px-4 align-middle">
                                         <div class="d-flex align-items-center gap-2" style="color: #696969;">
                                             <i class="fas fa-user" style="color: #1C64FF;"></i>
-                                            <span>{{ task.assigned_to.get_full_name }}</span>
+                                            <span class="assigned-to-name">{{ task.assigned_to.get_full_name }}</span>
                                         </div>
                                     </td>
                                     <td class="py-3 px-4 align-middle">
@@ -124,6 +165,21 @@
                                 {% endfor %}
                             </tbody>
                         </table>
+                    </div>
+                    
+                    <!-- No Search Results Message -->
+                    <div id="noSearchResults" class="text-center py-5" style="display: none;">
+                        <div class="mb-4">
+                            <i class="fas fa-search display-1" style="color: #D9D9D9;"></i>
+                        </div>
+                        <h4 class="fw-bold mb-3" style="color: #1C64FF;">No Tasks Found</h4>
+                        <p class="text-muted mb-4" style="color: #696969;">
+                            No tasks match your search criteria. Try searching by task title or assigned person.
+                        </p>
+                        <button type="button" id="clearSearchFromMessage" class="btn btn-primary" style="background-color: #1C64FF; border-color: #1C64FF;">
+                            <i class="fas fa-times me-2"></i>
+                            Clear Search
+                        </button>
                     </div>
                 </div>
             </div>
@@ -203,7 +259,7 @@
         <div class="toast-header border-0" style="background-color: #C3E4FF;">
             <i class="fas fa-check-circle text-success me-2"></i>
             <strong class="me-auto" style="color: #1C64FF;">Success</strong>
-            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            <button type="button"="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
         <div class="toast-body" style="background-color: #FFFFFF; color: #696969;">
             <span id="successMessage"></span>
@@ -229,6 +285,156 @@ document.addEventListener('DOMContentLoaded', function() {
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
+
+    // Search functionality
+    const searchInput = document.getElementById('taskSearch');
+    const clearSearchBtn = document.getElementById('clearSearch');
+    const clearSearchFromMessageBtn = document.getElementById('clearSearchFromMessage');
+    const searchResults = document.getElementById('searchResults');
+    const noSearchResults = document.getElementById('noSearchResults');
+    const tasksTable = document.getElementById('tasksTable');
+    const taskRows = document.querySelectorAll('.task-row');
+    const taskCount = document.getElementById('taskCount');
+    const totalTasks = taskRows.length;
+
+    // Search input handler
+    searchInput.addEventListener('input', function() {
+        performSearch();
+    });
+
+    // Clear search handlers
+    clearSearchBtn.addEventListener('click', function() {
+        clearSearch();
+    });
+
+    clearSearchFromMessageBtn.addEventListener('click', function() {
+        clearSearch();
+    });
+
+    // Perform search function
+    function performSearch() {
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        let visibleCount = 0;
+
+        taskRows.forEach(function(row) {
+            const taskTitle = row.getAttribute('data-task-title');
+            const assignedTo = row.getAttribute('data-assigned-to');
+            
+            if (searchTerm === '' || taskTitle.includes(searchTerm) || assignedTo.includes(searchTerm)) {
+                row.style.display = '';
+                visibleCount++;
+                
+                // Highlight search term if it exists
+                if (searchTerm !== '') {
+                    highlightSearchTerm(row, searchTerm);
+                } else {
+                    removeHighlight(row);
+                }
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Update UI based on search results
+        updateSearchUI(searchTerm, visibleCount);
+    }
+
+    // Highlight search term in task title and assigned to
+    function highlightSearchTerm(row, searchTerm) {
+        const titleElement = row.querySelector('.task-title');
+        const assignedToElement = row.querySelector('.assigned-to-name');
+        const regex = new RegExp(`(${escapeRegExp(searchTerm)})`, 'gi');
+        
+        // Highlight in title
+        const originalTitle = titleElement.textContent;
+        const highlightedTitle = originalTitle.replace(regex, '<mark style="background-color: #FFE066; padding: 2px 4px; border-radius: 3px;">$1</mark>');
+        titleElement.innerHTML = highlightedTitle;
+        
+        // Highlight in assigned to
+        const originalAssignedTo = assignedToElement.textContent;
+        const highlightedAssignedTo = originalAssignedTo.replace(regex, '<mark style="background-color: #FFE066; padding: 2px 4px; border-radius: 3px;">$1</mark>');
+        assignedToElement.innerHTML = highlightedAssignedTo;
+    }
+
+    // Remove highlighting from task title and assigned to
+    function removeHighlight(row) {
+        const titleElement = row.querySelector('.task-title');
+        const assignedToElement = row.querySelector('.assigned-to-name');
+        
+        titleElement.innerHTML = titleElement.textContent;
+        assignedToElement.innerHTML = assignedToElement.textContent;
+    }
+
+    // Escape special regex characters
+    function escapeRegExp(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    // Update search UI elements
+    function updateSearchUI(searchTerm, visibleCount) {
+        if (searchTerm === '') {
+            // No search term
+            searchResults.textContent = '';
+            noSearchResults.style.display = 'none';
+            tasksTable.style.display = 'table';
+            taskCount.textContent = `${totalTasks} task${totalTasks !== 1 ? 's' : ''}`;
+            clearSearchBtn.disabled = true;
+        } else {
+            // Active search
+            clearSearchBtn.disabled = false;
+            
+            if (visibleCount === 0) {
+                // No results found
+                searchResults.textContent = 'No results found';
+                searchResults.style.color = '#dc3545';
+                noSearchResults.style.display = 'block';
+                tasksTable.style.display = 'none';
+                taskCount.textContent = '0 tasks';
+            } else {
+                // Results found
+                searchResults.textContent = `${visibleCount} of ${totalTasks} task${totalTasks !== 1 ? 's' : ''}`;
+                searchResults.style.color = '#28a745';
+                noSearchResults.style.display = 'none';
+                tasksTable.style.display = 'table';
+                taskCount.textContent = `${visibleCount} task${visibleCount !== 1 ? 's' : ''} (filtered)`;
+            }
+        }
+    }
+
+    // Clear search function
+    function clearSearch() {
+        searchInput.value = '';
+        taskRows.forEach(function(row) {
+            row.style.display = '';
+            removeHighlight(row);
+        });
+        updateSearchUI('', totalTasks);
+        searchInput.focus();
+    }
+
+    // Enhanced search with Enter key
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            clearSearch();
+        }
+    });
+
+    // Search input focus effects
+    searchInput.addEventListener('focus', function() {
+        this.parentElement.style.transform = 'scale(1.02)';
+        this.parentElement.style.transition = 'transform 0.2s ease';
+        this.style.borderColor = '#1C64FF';
+        this.style.boxShadow = '0 0 0 0.2rem rgba(28, 100, 255, 0.25)';
+    });
+
+    searchInput.addEventListener('blur', function() {
+        this.parentElement.style.transform = 'scale(1)';
+        this.style.borderColor = '#D9D9D9';
+        this.style.boxShadow = 'none';
+    });
+
+    // Initialize search state
+    clearSearchBtn.disabled = true;
 
     // Mark Task as Done Function
     document.querySelectorAll('.mark-done-btn').forEach(button => {
@@ -435,16 +641,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Add button hover effects
     document.querySelectorAll('.btn').forEach(button => {
-        button.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-1px)';
-            this.style.transition = 'transform 0.2s ease';
-        });
-        
         button.addEventListener('mouseleave', function() {
             this.style.transform = 'translateY(0)';
         });
     });
 });
 </script>
-
 {% endblock %}

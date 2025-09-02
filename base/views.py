@@ -3036,6 +3036,19 @@ def add_interaction(request, pk):
     if not request.user.can_access_user_data(lead.assigned_to):
         raise PermissionDenied("You don't have permission to add interactions for this lead.")
     
+    # CRITICAL: Prevent adding interactions if conversion is requested
+    if lead.status == 'conversion_requested':
+        messages.error(request, 
+            "Cannot add interactions while conversion request is pending ops team verification. "
+            "Please wait for the ops team to process the conversion request."
+        )
+        return redirect('lead_detail', pk=pk)
+    
+    # Prevent interactions if lead is already converted
+    if lead.converted:
+        messages.error(request, "Cannot add interactions to a converted lead.")
+        return redirect('lead_detail', pk=pk)
+    
     # Check if this is the first interaction
     existing_interactions = lead.interactions.exists()
     
@@ -3124,6 +3137,19 @@ def add_product_discussion(request, pk):
     if not request.user.can_access_user_data(lead.assigned_to):
         raise PermissionDenied("You don't have permission to add product discussions for this lead.")
     
+    # CRITICAL: Prevent adding product discussions if conversion is requested
+    if lead.status == 'conversion_requested':
+        messages.error(request, 
+            "Cannot add product discussions while conversion request is pending ops team verification. "
+            "Please wait for the ops team to process the conversion request."
+        )
+        return redirect('lead_detail', pk=pk)
+    
+    # Prevent product discussions if lead is already converted
+    if lead.converted:
+        messages.error(request, "Cannot add product discussions to a converted lead.")
+        return redirect('lead_detail', pk=pk)
+    
     # Check if this is the first interaction
     if not lead.interactions.exists():
         messages.error(request, "You must have at least one interaction before adding product discussions.")
@@ -3137,7 +3163,13 @@ def add_product_discussion(request, pk):
         discussion.save()
         messages.success(request, "Product discussion added successfully.")
     else:
-        messages.error(request, "Error adding product discussion.")
+        # Collect form errors for better user feedback
+        error_list = []
+        for field, errors in form.errors.items():
+            field_name = form.fields[field].label or field
+            error_list.append(f"{field_name}: {' '.join(errors)}")
+        
+        messages.error(request, "Please correct the errors: " + ", ".join(error_list))
     
     return redirect('lead_detail', pk=lead.pk)
 
@@ -3150,27 +3182,67 @@ def change_lead_status(request, pk):
     if not request.user.can_access_user_data(lead.assigned_to):
         raise PermissionDenied("You don't have permission to change status for this lead.")
     
+    # CRITICAL: Prevent status changes if conversion is requested (except by ops team)
+    if lead.status == 'conversion_requested' and request.user.role not in ['ops_team_lead', 'ops_exec']:
+        messages.error(request, 
+            "Cannot change lead status while conversion request is pending ops team verification. "
+            "Please wait for the ops team to process the conversion request."
+        )
+        return redirect('lead_detail', pk=pk)
+    
+    # Prevent status changes if already converted
+    if lead.converted:
+        messages.error(request, "Cannot change the status of a converted lead.")
+        return redirect('lead_detail', pk=pk)
+    
+    # Ops team members should use the business verification process
+    if request.user.role in ['ops_team_lead', 'ops_exec']:
+        messages.error(request, 
+            "Operations team members should use the business verification process to handle conversion requests."
+        )
+        return redirect('lead_detail', pk=pk)
+    
     form = LeadStatusChangeForm(request.POST)
     if form.is_valid():
         new_status = form.cleaned_data['new_status']
         notes = form.cleaned_data['notes']
         
-        # Record status change
-        LeadStatusChange.objects.create(
-            lead=lead,
-            changed_by=request.user,
-            old_status=lead.status,
-            new_status=new_status,
-            notes=notes
-        )
+        # Prevent direct conversion or conversion_requested status change
+        if new_status in ['converted', 'conversion_requested']:
+            messages.error(request, 
+                "Direct conversion is not allowed. Please use the 'Request Conversion' process."
+            )
+            return redirect('lead_detail', pk=pk)
         
-        # Update lead status
-        lead.status = new_status
-        lead.save()
+        try:
+            with transaction.atomic():
+                old_status = lead.status
+                
+                # Record status change
+                LeadStatusChange.objects.create(
+                    lead=lead,
+                    changed_by=request.user,
+                    old_status=old_status,
+                    new_status=new_status,
+                    notes=notes
+                )
+                
+                # Update lead status
+                lead.status = new_status
+                lead.save()
+                
+                messages.success(request, f"Lead status changed to {lead.get_status_display()}.")
         
-        messages.success(request, f"Lead status changed to {new_status}.")
+        except Exception as e:
+            messages.error(request, f"Error changing lead status: {str(e)}")
     else:
-        messages.error(request, "Error changing lead status.")
+        # Collect form errors for better user feedback
+        error_list = []
+        for field, errors in form.errors.items():
+            field_name = form.fields[field].label or field
+            error_list.append(f"{field_name}: {' '.join(errors)}")
+        
+        messages.error(request, "Please correct the errors: " + ", ".join(error_list))
     
     return redirect('lead_detail', pk=lead.pk)
 
@@ -3190,6 +3262,11 @@ def request_conversion(request, pk):
     # Check if conversion is already requested
     if lead.status == 'conversion_requested':
         messages.warning(request, "Conversion request is already pending ops team verification.")
+        return redirect('lead_detail', pk=pk)
+    
+    # Only certain roles can request conversion
+    if request.user.role not in ['rm', 'rm_head', 'business_head', 'top_management']:
+        messages.error(request, "You don't have permission to request lead conversion.")
         return redirect('lead_detail', pk=pk)
     
     # MANDATORY: All conversion requests must go through ops_team_lead for verification
@@ -3227,7 +3304,8 @@ def request_conversion(request, pk):
             
             messages.success(request, 
                 f"Conversion request sent to ops team for business verification. "
-                f"The request will be reviewed by {ops_team_lead.get_full_name()}."
+                f"The request will be reviewed by {ops_team_lead.get_full_name()}. "
+                f"Lead interactions and product discussions are now locked until the request is processed."
             )
                 
     except Exception as e:
