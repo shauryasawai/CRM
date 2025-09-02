@@ -92,7 +92,7 @@ OPS_ROLES = {'ops_team_lead', 'ops_exec'}
 @never_cache
 @ensure_csrf_cookie
 def user_login(request):
-    """Ultra-fast login view optimized for minimal processing"""
+    """Ultra-fast login view optimized for minimal processing with proper message handling"""
     # Fast bypass for already authenticated users (no DB hit)
     if request.user.is_authenticated:
         return redirect('dashboard')
@@ -105,7 +105,8 @@ def user_login(request):
         
         # Fast empty check (no strip() to save cycles)
         if not username or not password:
-            return render(request, 'base/login.html', {'error': 'Please enter both username and password'})
+            messages.error(request, 'Please enter both username and password')
+            return render(request, 'base/login.html')
         
         try:
             # Authenticate with minimal DB queries
@@ -118,17 +119,20 @@ def user_login(request):
                 # Login with minimal session processing
                 login(request, user)
                 
+                # Optional success message (can be removed for faster redirect)
+                # messages.success(request, f'Welcome back, {user.get_full_name() or user.username}!')
+                
                 # Fast redirect without additional processing
                 return redirect('dashboard')
             
             # Generic error message to prevent username enumeration
-            return render(request, 'base/login.html', {'error': 'Invalid credentials'})
+            messages.error(request, 'Invalid username or password. Please try again.')
             
         except Exception as e:
             logger.error(f"Login error for {username}: {str(e)}", exc_info=True)
-            return render(request, 'base/login.html', {'error': 'Login service unavailable'})
+            messages.error(request, 'Login service temporarily unavailable. Please try again.')
     
-    # GET request - minimal template rendering
+    # GET request or failed POST - minimal template rendering
     return render(request, 'base/login.html')
 
 def _cache_user_data(user):
