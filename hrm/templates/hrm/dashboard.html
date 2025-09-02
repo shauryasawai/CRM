@@ -303,7 +303,7 @@
           {% if notifications %}
           <div class="notification-list">
             {% for notification in notifications %}
-            <a href="{% url 'view_notification' notification.id %}" class="notification-item">
+            <a href="" class="notification-item">
               <div class="notification-content">
                 <p class="notification-message">
                   {{ notification.message|truncatechars:60 }}
