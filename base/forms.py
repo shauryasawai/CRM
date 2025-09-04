@@ -2061,6 +2061,28 @@ class ServiceRequestDocumentForm(forms.ModelForm):
 class LeadForm(forms.ModelForm):
     """Optimized lead form with reduced database queries and simplified client display"""
     
+    # Explicitly define email and mobile fields to override model requirements
+    email = forms.EmailField(
+        required=False,
+        widget=forms.EmailInput(attrs={
+            'placeholder': 'Email Address (Lead Contact)',
+            'class': 'form-control'
+        }),
+        label='Lead Contact Email (Required if Mobile not provided)'
+    )
+    
+    mobile = forms.CharField(
+        required=False,
+        max_length=15,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Mobile Number (Lead Contact)',
+            'pattern': '[0-9]{10}',
+            'title': '10 digit mobile number',
+            'class': 'form-control'
+        }),
+        label='Lead Contact Mobile (Required if Email not provided)'
+    )
+    
     assigned_to = forms.ModelChoiceField(
         queryset=User.objects.filter(is_active=True).order_by('first_name', 'last_name'),
         empty_label="Select a user...",
@@ -2103,16 +2125,6 @@ class LeadForm(forms.ModelForm):
                 'placeholder': 'Full Name (Lead Contact Person)',
                 'class': 'form-control'
             }),
-            'email': forms.EmailInput(attrs={
-                'placeholder': 'Email Address (Lead Contact)',
-                'class': 'form-control'
-            }),
-            'mobile': forms.TextInput(attrs={
-                'placeholder': 'Mobile Number (Lead Contact)',
-                'pattern': '[0-9]{10}',
-                'title': '10 digit mobile number',
-                'class': 'form-control'
-            }),
             'notes': forms.Textarea(attrs={
                 'rows': 4,
                 'placeholder': 'Additional notes about the lead...',
@@ -2131,8 +2143,6 @@ class LeadForm(forms.ModelForm):
         }
         labels = {
             'name': 'Lead Contact Name',
-            'email': 'Lead Contact Email',
-            'mobile': 'Lead Contact Mobile',
             'probability': 'Conversion Probability (%)',
             'next_interaction_date': 'Next Follow-up Date'
         }
@@ -2140,6 +2150,11 @@ class LeadForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
+        
+        # Ensure email and mobile are not required (they're already defined above as not required)
+        # But we'll double-check here
+        self.fields['email'].required = False
+        self.fields['mobile'].required = False
         
         # Initialize with optimized queries
         self.configure_assignment_field()
@@ -2309,44 +2324,6 @@ class LeadForm(forms.ModelForm):
                 is_active=True
             ).only('id', 'first_name', 'last_name', 'username').order_by('first_name', 'last_name')
     
-    def clean(self):
-        """Custom validation for the form"""
-        cleaned_data = super().clean()
-        
-        source = cleaned_data.get('source')
-        existing_client = cleaned_data.get('existing_client')
-        
-        # Handle existing client source validation
-        if source == 'existing_client':
-            if not existing_client:
-                self.add_error('existing_client', 'Please select an existing client')
-            else:
-                # Just validate that the selection is valid - no data population needed
-                if not existing_client.startswith(('profile_', 'lead_')):
-                    self.add_error('existing_client', 'Invalid client selection')
-        
-        # Manual lead data validation (always required regardless of source)
-        name = cleaned_data.get('name')
-        email = cleaned_data.get('email')
-        
-        if not name or not name.strip():
-            self.add_error('name', 'Lead contact name is required')
-        if not email or not email.strip():
-            self.add_error('email', 'Lead contact email is required')
-        
-        # Handle other source details
-        if source == 'other':
-            source_details = cleaned_data.get('source_details')
-            if not source_details or not source_details.strip():
-                self.add_error('source_details', 'Please provide source details')
-        
-        # Validate probability range
-        probability = cleaned_data.get('probability', 0)
-        if probability is not None and (probability < 0 or probability > 100):
-            self.add_error('probability', 'Probability must be between 0 and 100')
-        
-        return cleaned_data
-    
     def clean_mobile(self):
         """Validate mobile number"""
         mobile = self.cleaned_data.get('mobile')
@@ -2361,6 +2338,62 @@ class LeadForm(forms.ModelForm):
             return digits_only  # Return cleaned mobile number
             
         return mobile
+    
+    def clean(self):
+        """Custom validation for the form"""
+        cleaned_data = super().clean()
+        
+        # FIRST: Validate email/mobile requirement
+        email = cleaned_data.get('email')
+        mobile = cleaned_data.get('mobile')
+        
+        # Strip whitespace and check if empty
+        email_empty = not email or not email.strip()
+        mobile_empty = not mobile or not mobile.strip()
+        
+        # Check if both email and mobile are empty
+        if email_empty and mobile_empty:
+            error_msg = "At least one contact method is required. Please provide either an email address or mobile number."
+            self.add_error('email', error_msg)
+            self.add_error('mobile', error_msg)
+        
+        # Clean up whitespace-only values
+        if email and not email.strip():
+            cleaned_data['email'] = ''
+            
+        if mobile and not mobile.strip():
+            cleaned_data['mobile'] = ''
+        
+        # SECOND: Validate other fields
+        source = cleaned_data.get('source')
+        existing_client = cleaned_data.get('existing_client')
+        
+        # Handle existing client source validation
+        if source == 'existing_client':
+            if not existing_client:
+                self.add_error('existing_client', 'Please select an existing client')
+            else:
+                # Just validate that the selection is valid - no data population needed
+                if not existing_client.startswith(('profile_', 'lead_')):
+                    self.add_error('existing_client', 'Invalid client selection')
+        
+        # Name validation
+        name = cleaned_data.get('name')
+        if not name or not name.strip():
+            self.add_error('name', 'Lead contact name is required')
+        
+        # Handle other source details
+        if source == 'other':
+            source_details = cleaned_data.get('source_details')
+            if not source_details or not source_details.strip():
+                self.add_error('source_details', 'Please provide source details')
+        
+        # Validate probability range
+        probability = cleaned_data.get('probability', 0)
+        if probability is not None and (probability < 0 or probability > 100):
+            self.add_error('probability', 'Probability must be between 0 and 100')
+        
+        return cleaned_data
     
     def save(self, commit=True):
         """Save the lead with proper handling of existing client data"""

@@ -1434,6 +1434,12 @@ class ClientProfileModification(models.Model):
         self.approved_at = timezone.now()
         self.save()
         return True
+    
+from django.db import models
+from django.conf import settings
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
+
 
 class Lead(models.Model):
     STATUS_CHOICES = (
@@ -1458,7 +1464,7 @@ class Lead(models.Model):
     
     # Fix the related_name to be unique
     client_profile = models.OneToOneField(
-        ClientProfile,
+        'ClientProfile',  # Use string reference to avoid circular imports
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -1466,7 +1472,7 @@ class Lead(models.Model):
     )
     conversion_requested_at = models.DateTimeField(null=True, blank=True, help_text="When conversion was requested")
     conversion_requested_by = models.ForeignKey(
-        User, 
+        settings.AUTH_USER_MODEL, 
         null=True, 
         blank=True, 
         on_delete=models.SET_NULL,
@@ -1474,7 +1480,7 @@ class Lead(models.Model):
         help_text="RM who requested the conversion"
     )
     business_verified_by = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
@@ -1486,7 +1492,7 @@ class Lead(models.Model):
         help_text="Business verification notes from ops team lead"
     )
     final_assigned_rm = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
@@ -1577,14 +1583,43 @@ class Lead(models.Model):
             ('can_convert_lead', 'Can convert lead to client'),
             ('can_reassign_lead', 'Can reassign lead to another RM'),
         ]
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    models.Q(email__isnull=False, email__gt='') |
+                    models.Q(mobile__isnull=False, mobile__gt='')
+                ),
+                name='lead_contact_method_required',
+                violation_error_message='At least one contact method (email or mobile) is required.'
+            )
+        ]
     
     def __str__(self):
         return f"{self.lead_id} - {self.name} ({self.get_status_display()})"
     
+    def clean(self):
+        """Model-level validation to ensure either email or mobile is provided"""
+        super().clean()
+        
+        # Check if both email and mobile are empty or contain only whitespace
+        email_empty = not self.email or not self.email.strip()
+        mobile_empty = not self.mobile or not self.mobile.strip()
+        
+        if email_empty and mobile_empty:
+            raise ValidationError({
+                '__all__': 'At least one contact method is required. Please provide either an email address or mobile number.'
+            })
+    
     def save(self, *args, **kwargs):
+        # Generate lead_id if not exists
         if not self.lead_id:
             self.lead_id = self.generate_lead_id()
+        
+        # Call clean method to validate
+        self.full_clean()
+        
         super().save(*args, **kwargs)
+
     
     def generate_lead_id(self):
         """Generate a unique lead ID in format LDYYYYMMDDXXXX"""

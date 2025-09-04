@@ -2803,13 +2803,6 @@ def lead_create(request):
     if request.method == 'POST':
         form = LeadForm(request.POST, current_user=request.user)
         
-        # Debug: Print form data to understand what's being submitted
-        if not form.is_valid():
-            print("Form errors:", form.errors)  # Remove this after debugging
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f"{field}: {error}")
-        
         if form.is_valid():
             lead = form.save(commit=False)
             lead.created_by = request.user
@@ -2823,28 +2816,44 @@ def lead_create(request):
                 # No database relationships needed
                 pass
             
-            lead.save()
-            
-            # Create initial status change record
-            LeadStatusChange.objects.create(
-                lead=lead,
-                changed_by=request.user,
-                old_status='',
-                new_status='new',
-                notes='Lead created'
-            )
-            
-            # Success message with context
-            if lead.source == 'existing_client':
-                client_ref = lead.source_details.split(': ', 1)[-1] if lead.source_details else "Unknown"
-                messages.success(request, 
-                    f"Lead created successfully with reference to existing client: {client_ref}. "
-                    f"Lead contact: {lead.name} ({lead.email})"
+            try:
+                lead.save()
+                
+                # Create initial status change record
+                LeadStatusChange.objects.create(
+                    lead=lead,
+                    changed_by=request.user,
+                    old_status='',
+                    new_status='new',
+                    notes='Lead created'
                 )
-            else:
-                messages.success(request, f"Lead created successfully for {lead.name}")
-            
-            return redirect('lead_detail', pk=lead.pk)
+                
+                # Success message with context
+                if lead.source == 'existing_client':
+                    client_ref = lead.source_details.split(': ', 1)[-1] if lead.source_details else "Unknown"
+                    messages.success(request, 
+                        f"Lead created successfully with reference to existing client: {client_ref}. "
+                        f"Lead contact: {lead.name} ({lead.email or lead.mobile})"
+                    )
+                else:
+                    messages.success(request, f"Lead created successfully for {lead.name}")
+                
+                return redirect('lead_detail', pk=lead.pk)
+                
+            except ValidationError as e:
+                # Handle model validation errors
+                for field, errors in e.message_dict.items():
+                    for error in errors:
+                        messages.error(request, f"{field}: {error}")
+        else:
+            # Debug: Print form errors to understand what's being submitted
+            print("Form errors:", form.errors)  # Remove this after debugging
+            for field, errors in form.errors.items():
+                for error in errors:
+                    if field == '__all__':
+                        messages.error(request, error)
+                    else:
+                        messages.error(request, f"{field}: {error}")
     else:
         form = LeadForm(current_user=request.user)
     
