@@ -2150,3 +2150,13 @@ INFO 2025-09-17 18:27:21,231 views 8608 28148 Found legacy client: SNEHA JALAN (
 INFO 2025-09-17 18:27:21,707 views 8608 28148 RM radhika access check: Direct=True, Profile=True, CanAccess=True
 INFO 2025-09-17 18:27:21,722 views 8608 28148 Found linked profile for client 1659
 INFO 2025-09-17 18:27:21,837 views 8608 28148 Found 20 portfolio holdings for client 1659
+INFO 2025-09-17 18:32:40,457 views 25320 28012 Created execution plan EP202509170001 for client 1659 by user radhika (rm)
+INFO 2025-09-17 18:32:40,458 views 25320 28012 Processing action 1: {'action_type': 'purchase', 'source_scheme': 'JM Midcap Fund Reg (G)', 'target_scheme': None, 'notes': '', 'portfolio_id': 15953, 'source_portfolio_id': 15953, 'source_scheme_name': 'JM Midcap Fund Reg (G)', 'purchase_type': 'existing_scheme', 'purchase_amount': 1000, 'investment_option': 'growth', 'plan_type': 'direct', 'folio_number': '', 'scheme': 'JM Midcap Fund Reg (G)', 'scheme_name': 'JM Midcap Fund Reg (G)', 'scheme_id': None, 'scheme_lookup_by_name': True}
+INFO 2025-09-17 18:32:41,633 views 25320 28012 Found scheme by word match 'Midcap': JM Midcap Fund Reg (G) -> Aditya Birla Sun Life Midcap Fund - Growth - Direct Plan
+INFO 2025-09-17 18:32:41,633 views 25320 28012 Found scheme by name 'JM Midcap Fund Reg (G)': Aditya Birla Sun Life Midcap Fund - Growth - Direct Plan
+INFO 2025-09-17 18:32:41,633 views 25320 28012 Processed values - Mode: new_investment, Scheme: Aditya Birla Sun Life - Aditya Birla Sun Life Midcap Fund - Growth - Direct Plan, Portfolio: None
+INFO 2025-09-17 18:32:41,847 views 25320 28012 Successfully created action 53
+INFO 2025-09-17 18:32:42,161 views 25320 28012 Plan EP202509170001 submitted for approval by radhika (rm)
+INFO 2025-09-17 18:32:47,460 views 25320 28012 Starting Excel generation for plan 75
+INFO 2025-09-17 18:32:47,564 views 25320 28012 Found 1 actions for execution plan 75
+INFO 2025-09-17 18:32:47,748 views 25320 28012 Generated Excel data for plan EP202509170001
