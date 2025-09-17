@@ -2140,3 +2140,13 @@ Traceback (most recent call last):
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 django.db.utils.OperationalError: could not translate host name "db.kqskqkvwwhjlwuxbqxcq.supabase.co" to address: No such host is known. 
 
+INFO 2025-09-17 18:25:07,498 views 8608 604 create_plan_step2 called with client_id: 1659 (type: <class 'str'>)
+INFO 2025-09-17 18:25:07,586 views 8608 604 Found legacy client: SNEHA JALAN (ID: 1659)
+INFO 2025-09-17 18:25:07,891 views 8608 604 RM radhika access check: Direct=True, Profile=True, CanAccess=True
+INFO 2025-09-17 18:25:08,030 views 8608 604 Found linked profile for client 1659
+INFO 2025-09-17 18:25:08,138 views 8608 604 Found 20 portfolio holdings for client 1659
+INFO 2025-09-17 18:27:18,208 views 8608 28148 create_plan_step2 called with client_id: 1659 (type: <class 'str'>)
+INFO 2025-09-17 18:27:21,231 views 8608 28148 Found legacy client: SNEHA JALAN (ID: 1659)
+INFO 2025-09-17 18:27:21,707 views 8608 28148 RM radhika access check: Direct=True, Profile=True, CanAccess=True
+INFO 2025-09-17 18:27:21,722 views 8608 28148 Found linked profile for client 1659
+INFO 2025-09-17 18:27:21,837 views 8608 28148 Found 20 portfolio holdings for client 1659

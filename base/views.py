@@ -7736,7 +7736,7 @@ def can_create_action_plan(user, portfolio):
 @login_required
 @require_http_methods(["POST"])
 def save_execution_plan(request):
-    """Save execution plan with actions - FIXED VERSION for Portfolio Independence"""
+    """Save execution plan with actions - MODIFIED VERSION with Enhanced RM Access"""
     try:
         data = json.loads(request.body)
         client_id = data.get('client_id')
@@ -7760,15 +7760,32 @@ def save_execution_plan(request):
         except (ValueError, TypeError):
             return JsonResponse({'error': 'Invalid client ID format'}, status=400)
         
-        # Check access permission
-        if request.user.role == 'rm' and client.user != request.user:
-            return JsonResponse({'error': 'Access denied - not your client'}, status=403)
+        # MODIFIED: Enhanced access permission check for RM roles
+        access_denied = False
+        
+        if request.user.role == 'rm':
+            # RM can access their own clients OR any client if no specific assignment exists
+            if hasattr(client, 'user') and client.user and client.user != request.user:
+                # Only deny if client is specifically assigned to another RM
+                if client.user.role == 'rm':
+                    access_denied = True
         elif request.user.role == 'rm_head':
-            team_members = User.objects.filter(manager=request.user, role='rm')
-            if client.user not in team_members and client.user != request.user:
-                return JsonResponse({'error': 'Access denied - client not in your team'}, status=403)
+            # RM Head can access:
+            # 1. Their own clients
+            # 2. Clients of their team members
+            # 3. Unassigned clients
+            if hasattr(client, 'user') and client.user:
+                team_members = User.objects.filter(manager=request.user, role='rm')
+                if (client.user != request.user and 
+                    client.user not in team_members and 
+                    client.user.role == 'rm'):  # Only restrict if assigned to another RM outside team
+                    access_denied = True
         elif request.user.role not in ['business_head', 'business_head_ops', 'top_management']:
-            return JsonResponse({'error': 'Access denied - insufficient permissions'}, status=403)
+            # All other roles (except the allowed business roles) are denied
+            access_denied = True
+        
+        if access_denied:
+            return JsonResponse({'error': 'Access denied - insufficient permissions for this client'}, status=403)
         
         # Variables to track execution plan and actions
         execution_plan = None
@@ -7786,7 +7803,7 @@ def save_execution_plan(request):
                     status='draft'
                 )
                 
-                logger.info(f"Created execution plan {execution_plan.plan_id} for client {client.id}")
+                logger.info(f"Created execution plan {execution_plan.plan_id} for client {client.id} by user {request.user.username} ({request.user.role})")
                 
                 # Create plan actions
                 for i, action_data in enumerate(actions_data):
@@ -7822,7 +7839,7 @@ def save_execution_plan(request):
                     from_status='',
                     to_status='draft',
                     changed_by=request.user,
-                    comments=f'Execution plan created with {len(created_actions)} actions'
+                    comments=f'Execution plan created with {len(created_actions)} actions by {request.user.role}'
                 )
                 
                 # Submit for approval if requested
@@ -7836,7 +7853,7 @@ def save_execution_plan(request):
                                 changed_by=request.user,
                                 comments='Plan submitted for approval'
                             )
-                            logger.info(f"Plan {execution_plan.plan_id} submitted for approval")
+                            logger.info(f"Plan {execution_plan.plan_id} submitted for approval by {request.user.username} ({request.user.role})")
                             
                             # Notify approval manager
                             try:
@@ -7872,7 +7889,8 @@ def save_execution_plan(request):
                 'message': f'Execution plan created successfully with {len(created_actions)} actions',
                 'actions_created': len(created_actions),
                 'actions_failed': len(failed_actions),
-                'excel_generated': excel_generated
+                'excel_generated': excel_generated,
+                'created_by_role': request.user.role
             }
             
             if failed_actions:
